@@ -15,7 +15,7 @@
     <SortOrder>40</SortOrder>
   </TemplateData>
   <TemplateContent>
-    <Project TargetFileName="OpenSilverSilverlightClassLibrary.csproj" File="OpenSilverSilverlightClassLibrary.csproj" ReplaceParameters="true">
+    <Project TargetFileName="OpenSilverClassLibrary.csproj" File="OpenSilverClassLibrary.csproj" ReplaceParameters="true">
       <ProjectItem ReplaceParameters="true" TargetFileName="Class1.cs">Class1.cs</ProjectItem>
     </Project>
   </TemplateContent>
