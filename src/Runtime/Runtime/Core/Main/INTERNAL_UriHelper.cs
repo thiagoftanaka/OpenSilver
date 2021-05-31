@@ -96,6 +96,10 @@ namespace CSHTML5.Internal
                 if (!outputResourcesPath.EndsWith("/") && outputResourcesPath != "")
                     outputResourcesPath = outputResourcesPath + '/';
 
+                // Avoid having a double slash, which causes issues with some servers (works in IIS but not everywhere):
+                if (html5Path.StartsWith("/") && outputResourcesPath != "")
+                    html5Path = html5Path.Substring(1);
+
                 // Add the above relative path to the beginning of the path:
                 html5Path = outputResourcesPath + html5Path;
 
