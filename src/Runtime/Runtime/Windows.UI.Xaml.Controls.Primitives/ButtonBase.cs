@@ -266,9 +266,16 @@ namespace Windows.UI.Xaml.Controls.Primitives
         /// Identifies the IsPressed dependency property.
         /// </summary>
         public static readonly DependencyProperty IsPressedProperty =
-            DependencyProperty.Register("IsPressed", typeof(bool), typeof(ButtonBase), new PropertyMetadata(false));
+            DependencyProperty.Register("IsPressed", typeof(bool), typeof(ButtonBase), new PropertyMetadata(false, OnIsPressedPropertyChanged));
 
-
+        private static void OnIsPressedPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            ButtonBase buttonBase = d as ButtonBase;
+            if (buttonBase != null)
+            {
+                buttonBase.OnIsPressedChanged(e);
+            }
+        }
 
         /// <summary>
         /// Gets or sets when the Click event occurs. The default value is ClickMode.Release.
@@ -460,23 +467,22 @@ namespace Windows.UI.Xaml.Controls.Primitives
             get { return (bool)GetValue(IsFocusedProperty); }
         }
 
+#endif
         
-
-       
-
-#if MIGRATION
+        
         /// <summary>
         /// Called when the value of the <see cref="ButtonBase.IsPressed"/> property changes.
         /// </summary>
         /// <param name="e">The data for <see cref="DependencyPropertyChangedEventArgs"/></param>
-        [OpenSilver.NotImplemented]
-        protected virtual void OnIsPressedChanged(DependencyPropertyChangedEventArgs e)
+#if MIGRATION
+        protected virtual
+#else
+        private
+#endif
+        void OnIsPressedChanged(DependencyPropertyChangedEventArgs e)
         {
-
+            UpdateVisualStates();
         }
-#endif
-
-#endif
 
         internal override void UpdateVisualStates()
         {
