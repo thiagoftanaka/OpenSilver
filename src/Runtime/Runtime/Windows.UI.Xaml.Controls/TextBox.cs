@@ -1678,7 +1678,7 @@ element.setAttribute(""data-maxlength"", ""{1}"");
                 }
             }
 
-            textBox.UpdateVisualStates();
+            textBox.UpdateVisualState();
         }
 
         public void Select(int start, int length)
@@ -1729,7 +1729,7 @@ element.setAttribute(""data-maxlength"", ""{1}"");
         public double LineHeight { get; set; }
 #endif
 
-        internal override void UpdateVisualStates()
+        internal override void ChangeVisualState(bool useTransitions)
         {
             if (!IsEnabled)
             {

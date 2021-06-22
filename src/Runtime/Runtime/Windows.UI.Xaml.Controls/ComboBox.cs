@@ -285,7 +285,7 @@ namespace Windows.UI.Xaml.Controls
                 if(_selectedItemContainer != null)
                 {
                     _selectedItemContainer.IsSelected = true;
-                    _selectedItemContainer.UpdateVisualStates();
+                    _selectedItemContainer.UpdateVisualState();
                 }
             }
         }

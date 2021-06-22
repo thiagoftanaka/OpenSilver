@@ -38,7 +38,7 @@ namespace Windows.UI.Xaml.Controls
             this.DefaultStyleKey = typeof(ComboBoxItem);
             //this.Loaded += (sender, e) =>
             //{
-            //    UpdateVisualStates();
+            //    UpdateVisualState();
             //};
         }
 
@@ -49,12 +49,12 @@ namespace Windows.UI.Xaml.Controls
 #endif
         {
             base.OnApplyTemplate();
-            this.UpdateVisualStates();
+            this.UpdateVisualState();
         }
 
         protected internal override void HandleIsSelectedChanged(bool oldValue, bool newValue)
         {
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
 #if MIGRATION
@@ -70,7 +70,7 @@ namespace Windows.UI.Xaml.Controls
 #endif
             this.INTERNAL_ParentSelectorControl.NotifyItemMouseEnter(this);
             this.IsMouseOver = true;
-            this.UpdateVisualStates();
+            this.UpdateVisualState();
         }
 
 #if MIGRATION
@@ -85,10 +85,10 @@ namespace Windows.UI.Xaml.Controls
             base.OnPointerExited(eventArgs);
 #endif
             this.IsMouseOver = false;
-            this.UpdateVisualStates();
+            this.UpdateVisualState();
         }
 
-        internal override void UpdateVisualStates()
+        internal override void ChangeVisualState(bool useTransitions)
         {
             if (!IsEnabled)
             {

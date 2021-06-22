@@ -70,7 +70,7 @@ namespace Windows.UI.Xaml.Controls.Primitives
             }
             finally
             {
-                UpdateVisualStates();
+                UpdateVisualState();
             }
         }
 
@@ -426,7 +426,7 @@ namespace Windows.UI.Xaml.Controls.Primitives
             base.OnPointerEntered(eventArgs);
 #endif
             IsMouseOver = true;
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
 #if MIGRATION
@@ -441,7 +441,7 @@ namespace Windows.UI.Xaml.Controls.Primitives
             base.OnPointerExited(eventArgs);
 #endif
             IsMouseOver = false;
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
 #if WORKINPROGRESS
@@ -481,10 +481,10 @@ namespace Windows.UI.Xaml.Controls.Primitives
 #endif
         void OnIsPressedChanged(DependencyPropertyChangedEventArgs e)
         {
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
-        internal override void UpdateVisualStates()
+        internal override void ChangeVisualState(bool useTransitions)
         {
             if (!IsEnabled)
             {

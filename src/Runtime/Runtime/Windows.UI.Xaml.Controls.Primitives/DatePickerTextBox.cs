@@ -67,7 +67,7 @@ namespace Windows.UI.Xaml.Controls.Primitives
         internal void OnLoaded(object sender, RoutedEventArgs e)
         {
             ApplyTemplate();
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
 #endregion
@@ -87,10 +87,10 @@ namespace Windows.UI.Xaml.Controls.Primitives
 
             elementContent = ExtractTemplatePart<ContentControl>(ElementContentName);
             OnWatermarkChanged();
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
-        internal override void UpdateVisualStates()
+        internal override void ChangeVisualState(bool useTransitions)
         {
             if (!IsEnabled)
             {
@@ -169,7 +169,7 @@ namespace Windows.UI.Xaml.Controls.Primitives
             {
                 hasFocus = true;
                 SelectAll();
-                UpdateVisualStates();
+                UpdateVisualState();
             }
         }
 
@@ -188,13 +188,13 @@ namespace Windows.UI.Xaml.Controls.Primitives
                 isHovered = false;
             }
 
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
         private void OnLostFocus(object sender, RoutedEventArgs e)
         {
             hasFocus = false;
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
 #if MIGRATION
@@ -207,7 +207,7 @@ namespace Windows.UI.Xaml.Controls.Primitives
 
             if (!hasFocus)
             {
-                UpdateVisualStates();
+                UpdateVisualState();
             }
         }
 
@@ -221,13 +221,13 @@ namespace Windows.UI.Xaml.Controls.Primitives
 
             if (!hasFocus)
             {
-                UpdateVisualStates();
+                UpdateVisualState();
             }
         }
 
         private void OnTextChanged(object sender, TextChangedEventArgs e)
         {
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
         private void OnWatermarkChanged()
@@ -252,7 +252,7 @@ namespace Windows.UI.Xaml.Controls.Primitives
         {
             DatePickerTextBox datePickerTextBox = sender as DatePickerTextBox;
             datePickerTextBox.OnWatermarkChanged();
-            datePickerTextBox.UpdateVisualStates();
+            datePickerTextBox.UpdateVisualState();
         }
 
         private void SetDefaults()

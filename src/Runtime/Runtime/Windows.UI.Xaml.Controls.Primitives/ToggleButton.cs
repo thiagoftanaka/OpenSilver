@@ -102,7 +102,7 @@ namespace Windows.UI.Xaml.Controls.Primitives
                 button.OnIndeterminate(new RoutedEventArgs { OriginalSource = button });
             }
 
-            button.UpdateVisualStates();
+            button.UpdateVisualState();
         }
 
         /// <summary>
@@ -263,9 +263,9 @@ namespace Windows.UI.Xaml.Controls.Primitives
 
         #region Internal Methods
 
-        internal override void UpdateVisualStates()
+        internal override void ChangeVisualState(bool useTransitions)
         {
-            base.UpdateVisualStates();
+            base.ChangeVisualState(useTransitions);
             // Update the Check state group
             var isChecked = IsChecked;
             if (isChecked == true)

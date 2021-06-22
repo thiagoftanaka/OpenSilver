@@ -107,7 +107,7 @@ namespace Windows.UI.Xaml.Controls
             UpdateTabIndex(IsTabStop, TabIndex);
 
             _isDisabled = !isEnabled; // We remember the value so that when we update the visual states, we know whether we should go to the "Disabled" state or not.
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
         //-----------------------
@@ -835,7 +835,7 @@ namespace Windows.UI.Xaml.Controls
             if (!DisableBaseControlHandlingOfVisualStates)
             {
                 // Go to the default state ("Normal" visual state):
-                UpdateVisualStates();
+                UpdateVisualState();
 
                 bool hasMouseOverState = false;
                 bool hasPressedState = false;
@@ -943,7 +943,7 @@ void Control_PointerEntered(object sender, Input.PointerRoutedEventArgs e)
 #endif
         {
             _isPointerOver = true;
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
 #if MIGRATION
@@ -953,7 +953,7 @@ void Control_PointerExited(object sender, Input.PointerRoutedEventArgs e)
 #endif
         {
             _isPointerOver = false;
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
 #if MIGRATION
@@ -963,7 +963,7 @@ void Control_PointerPressed(object sender, Input.PointerRoutedEventArgs e)
 #endif
         {
             _isPressed = true;
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
 #if MIGRATION
@@ -973,20 +973,32 @@ void Control_PointerReleased(object sender, Input.PointerRoutedEventArgs e)
 #endif
         {
             _isPressed = false;
-            UpdateVisualStates();
+            UpdateVisualState();
         }
 
-        internal virtual void UpdateVisualStates()
+/// <summary>
+        /// Update the current visual state of the control
+        /// </summary>
+        /// <param name="useTransitions">
+        /// true to use transitions when updating the visual state, false to
+        /// snap directly to the new visual state.
+        /// </param>
+        internal void UpdateVisualState(bool useTransitions = true)
+        {
+            ChangeVisualState(useTransitions);
+        }
+
+        internal virtual void ChangeVisualState(bool useTransitions)
         {
             if (!DisableBaseControlHandlingOfVisualStates)
             {
                 if (_isDisabled)
-                    VisualStateManager.GoToState(this, "Disabled", true);
+                    VisualStateManager.GoToState(this, "Disabled", useTransitions);
                 else if (_isPressed)
-                    VisualStateManager.GoToState(this, "Pressed", true);
+                    VisualStateManager.GoToState(this, "Pressed", useTransitions);
                 else if (_isPointerOver)
 #if MIGRATION
-                    VisualStateManager.GoToState(this, "MouseOver", true);
+                    VisualStateManager.GoToState(this, "MouseOver", useTransitions);
 #else
             VisualStateManager.GoToState(this, "PointerOver", true);
 #endif
