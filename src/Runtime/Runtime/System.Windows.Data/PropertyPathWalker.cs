@@ -83,9 +83,6 @@ namespace Windows.UI.Xaml.Data
                             }
                             break;
                         case PropertyNodeType.Indexed:
-                            //throw new NotImplementedException("Indexed properties are not supported yet.");
-                            //todo: when we will handle the indexed properties, uncomment the following
-#if GD_WIP
                             if (FinalNode == null)
                             {
                                 FinalNode = new IndexedPropertyPathNode(index);
@@ -94,9 +91,6 @@ namespace Windows.UI.Xaml.Data
                             {
                                 FinalNode.Next = new IndexedPropertyPathNode(index);
                             }
-#else
-                            FinalNode.Next = new IndexedPropertyPathNode(index);
-#endif
                             break;
                         default:
                             break;

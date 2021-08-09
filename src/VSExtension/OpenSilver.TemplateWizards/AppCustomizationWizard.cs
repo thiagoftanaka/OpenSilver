@@ -38,45 +38,17 @@ namespace OpenSilver.TemplateWizards
             string openSilverAPI = openSilverInfo.Element(defaultNamespace + "Api").Value;
             string openSilverType = openSilverInfo.Element(defaultNamespace + "Type").Value;
 
-            AppConfigurationWindow window = new AppConfigurationWindow(openSilverType);
-
-            bool? result = window.ShowDialog();
-            if (!result.HasValue || !result.Value)
-            {
-                throw new WizardBackoutException("OpenSilver project creation was cancelled by user");
-            }
-
-            if (openSilverAPI == "Silverlight")
-            {
-                switch (window.OpenSilverBuildType)
-                {
-                    case OpenSilverBuildType.Stable:
-                        replacementsDictionary.Add("$opensilverpackagename$", "OpenSilver");
-                        break;
-                    case OpenSilverBuildType.WorkInProgress:
-                        replacementsDictionary.Add("$opensilverpackagename$", "OpenSilver.WorkInProgress");
-                        break;
-                }
-            }
-            else if (openSilverAPI == "UWP")
-            {
-                switch (window.OpenSilverBuildType)
-                {
-                    case OpenSilverBuildType.Stable:
-                        replacementsDictionary.Add("$opensilverpackagename$", "OpenSilver.UWPCompatible");
-                        break;
-                    case OpenSilverBuildType.WorkInProgress:
-                        replacementsDictionary.Add("$opensilverpackagename$", "OpenSilver.UWPCompatible"); //TODO: change this when we have a UWP WorkInProgress package
-                        break;
-                }
-            }
-            else
-            {
-                throw new ArgumentNullException($"Unknown OpenSilver API '{openSilverAPI}'");
-            }
-
             if (openSilverType == "Application")
             {
+                // For now, we have nothing to configure in "Library", so we only show the configuration window in "Application" mode
+                AppConfigurationWindow window = new AppConfigurationWindow(openSilverType);
+
+                bool? result = window.ShowDialog();
+                if (!result.HasValue || !result.Value)
+                {
+                    throw new WizardBackoutException("OpenSilver project creation was cancelled by user");
+                }
+
                 switch (window.BlazorVersion)
                 {
                     case BlazorVersion.Net5:
@@ -90,7 +62,20 @@ namespace OpenSilver.TemplateWizards
                 }
             }
 
-            replacementsDictionary.Add("$opensilverpackageversion$", "1.0.0-alpha-020");
+            if (openSilverAPI == "Silverlight")
+            {
+                replacementsDictionary.Add("$opensilverpackagename$", "OpenSilver");
+            }
+            else if (openSilverAPI == "UWP")
+            {
+                replacementsDictionary.Add("$opensilverpackagename$", "OpenSilver.UWPCompatible");
+            }
+            else
+            {
+                throw new ArgumentNullException($"Unknown OpenSilver API '{openSilverAPI}'");
+            }
+
+            replacementsDictionary.Add("$opensilverpackageversion$", "1.0.0-alpha-021");
         }
 
         public bool ShouldAddProjectItem(string filePath)

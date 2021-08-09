@@ -8,22 +8,6 @@ namespace OpenSilver.TemplateWizards.AppCustomizationWindow
     /// </summary>
     public partial class AppConfigurationWindow : Window
     {
-        public OpenSilverBuildType OpenSilverBuildType
-        {
-            get
-            {
-                switch (BuildTypeComboBox.SelectedIndex)
-                {
-                    case 0:
-                        return OpenSilverBuildType.Stable;
-                    case 1:
-                        return OpenSilverBuildType.WorkInProgress;
-                    default:
-                        throw new InvalidOperationException("Error retrieving selected OpenSilver build type");
-                }
-            }
-        }
-
         public BlazorVersion BlazorVersion
         {
             get

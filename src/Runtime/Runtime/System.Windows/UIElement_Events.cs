@@ -2006,7 +2006,7 @@ namespace Windows.UI.Xaml
             {
                 TappedEventManager.Add((TappedEventHandler)handler, handledEventsToo: handledEventsToo);
             }
-#if GD_WIP
+#if WORKINPROGRESS && MIGRATION
             else if (routedEvent == UIElement.MouseRightButtonDownEvent)
             {
                 
@@ -2127,7 +2127,7 @@ namespace Windows.UI.Xaml
             {
                 TappedEventManager.Remove((TappedEventHandler)handler);
             }
-#if GD_WIP
+#if WORKINPROGRESS && MIGRATION
             else if (routedEvent == UIElement.MouseRightButtonDownEvent)
             {
                 
