@@ -16,9 +16,7 @@
 //#define CHECK_THAT_ID_EXISTS 
 //#define PERFORMANCE_ANALYSIS
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -36,9 +34,7 @@ using Windows.Foundation;
 namespace CSHTML5.Internal
 {
     // Note: this class is intented to be used by the Simulator only, not when compiled to JavaScript.
-#if !BRIDGE
-    [JSIgnore]
-#else
+#if BRIDGE
     [External]
 #endif
 

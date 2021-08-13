@@ -15,9 +15,7 @@
 
 using CSHTML5;
 using CSHTML5.Internal;
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 using System;

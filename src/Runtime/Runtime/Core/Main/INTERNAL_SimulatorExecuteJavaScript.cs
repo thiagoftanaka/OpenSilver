@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -50,9 +48,6 @@ namespace CSHTML5.Internal
         /// <param name="javaScriptToExecute">The JS code to execute.</param>
         /// <param name="commentForDebugging">Some optional comments to write to the log of JS calls.</param>
         /// <returns></returns>
-#if !BRIDGE
-        [JSIgnore]
-#endif
         internal static object ExecuteJavaScriptSync(string javaScriptToExecute, string commentForDebugging = null, bool noImpactOnPendingJSCode = false)
         {
             if (!noImpactOnPendingJSCode)
@@ -81,9 +76,6 @@ namespace CSHTML5.Internal
         /// </summary>
         /// <param name="javaScriptToExecute">The JS code to execute.</param>
         /// <param name="commentForDebugging">Some optional comments to write to the log of JS calls.</param>
-#if !BRIDGE
-        [JSIgnore]
-#endif
         internal static void ExecuteJavaScriptAsync(string javaScriptToExecute, string commentForDebugging = null)
         {
             AddCommentsForDebuggingIfAny(ref javaScriptToExecute, commentForDebugging);
@@ -183,9 +175,6 @@ namespace CSHTML5.Internal
             }
         }
 
-#if !BRIDGE
-        [JSIgnore]
-#endif
         static void ExecutePendingJavaScriptCode(string reasonForPerformingTheCallNow)
         {
             string aggregatedPendingJavaScriptCode = ReadAndClearAggregatedPendingJavaScriptCode();
@@ -196,9 +185,6 @@ namespace CSHTML5.Internal
             }
         }
 
-#if !BRIDGE
-        [JSIgnore]
-#endif
         static string ReadAndClearAggregatedPendingJavaScriptCode()
         {
 #if OPTIMIZATION_LOG
@@ -217,18 +203,12 @@ namespace CSHTML5.Internal
             }
         }
 
-#if !BRIDGE
-        [JSIgnore]
-#endif
         static void AddCommentsForDebuggingIfAny(ref string javaScriptToExecute, string commentForDebugging)
         {
             if (commentForDebugging != null)
                 javaScriptToExecute = "//" + commentForDebugging + Environment.NewLine + javaScriptToExecute;
         }
 
-#if !BRIDGE
-        [JSIgnore]
-#endif
         static object PerformActualInteropCall(string javaScriptToExecute, string reasonForPerformingTheCallNow)
         {
             if (EnableInteropLogging)

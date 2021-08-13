@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -31,9 +29,7 @@ namespace CSHTML5.Internal
 {
     static internal class INTERNAL_WorkaroundObservableCollectionBugWithJSIL
     {
-#if !BRIDGE
-        [JSReplacement("true")]
-#else
+#if BRIDGE
         [Template("true")]
 #endif
         static bool IsRunningInJavaScript()

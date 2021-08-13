@@ -19,9 +19,7 @@ using DotNetBrowser.DOM.Events;
 #endif
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -71,9 +69,7 @@ namespace CSHTML5.Internal
             this._originalEventHandler = originalEventHandler;
         }
 #if !BUILDINGDOCUMENTATION
-#if !BRIDGE
-        [JSIgnore]
-#else
+#if BRIDGE
         [External]
 #endif
         public void OnEvent(object jsEventArg)

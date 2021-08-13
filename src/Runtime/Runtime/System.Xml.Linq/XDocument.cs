@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -124,9 +122,6 @@ $0.parseFromString($1, ""application/xml"")
             }
         }
 
-#if !BRIDGE
-        [JSIgnore]
-#endif
         internal static Dictionary<string, XNode> INTERNAL_idsToXNodes;
 
         internal static XNode GetXNodeFromJSNode(object node)

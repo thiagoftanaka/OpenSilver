@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -23,9 +21,7 @@ namespace CSHTML5.Internal
 {
     public static class Performance
     {
-#if !BRIDGE
-        [JSReplacement("performance.now()")]
-#else
+#if BRIDGE
         [Template("performance.now()")]
 #endif
         public static double now()
@@ -33,9 +29,7 @@ namespace CSHTML5.Internal
             return 0;
         }
 
-#if !BRIDGE
-        [JSReplacement(@"document.addToPerformanceCounters($name, $initialTime)")]
-#else
+#if BRIDGE
         [Template("document.addToPerformanceCounters({name}, {initialTime})")]
 #endif
         public static void Counter(string name, double initialTime)

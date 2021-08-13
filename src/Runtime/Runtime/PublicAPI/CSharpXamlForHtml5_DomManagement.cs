@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -97,9 +95,7 @@ public static partial class CSharpXamlForHtml5
             return _document;
         }
 
-#if !BRIDGE
-        [JSIgnore]
-#else
+#if BRIDGE
         [External]
 #endif
         static Types.Document _document;

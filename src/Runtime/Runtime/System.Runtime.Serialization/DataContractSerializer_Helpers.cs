@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -173,9 +171,7 @@ namespace System.Runtime.Serialization
             }
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$obj.hasValue")]
-#else
+#if BRIDGE
         [Template("{obj}.hasValue")]
 #endif
         internal static bool CheckIfNullableIsNotNull(object obj)

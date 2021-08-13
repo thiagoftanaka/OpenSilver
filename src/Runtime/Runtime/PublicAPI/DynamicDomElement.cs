@@ -14,7 +14,6 @@
 
 
 #if !BRIDGE
-using JSIL.Meta;
 using System.Dynamic;
 #else
 using Bridge;
@@ -33,7 +32,6 @@ public static partial class CSharpXamlForHtml5
             // Note: this class is intented to be used by the Simulator only, not when compiled to JavaScript.
 
 #if !BRIDGE
-            [JSIgnore]
             public class DynamicDomElement : DynamicObject
 #else
             //class used for C# compilation

@@ -15,9 +15,7 @@
 
 using CSHTML5;
 using CSHTML5.Internal;
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -356,9 +354,7 @@ namespace Windows.UI.Xaml
         #endregion
 #endif
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("true")]
-#else
+#if BRIDGE
         [Template("true")]
 #endif
         private static bool IsRunningInJavaScript()

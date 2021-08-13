@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -148,9 +146,7 @@ namespace Windows.UI.Xaml
             }
         }
 
-#if !BRIDGE
-        [JSReplacement("setInterval($action,$intervalInMilliseconds)")]
-#else
+#if BRIDGE
         [Template("setInterval({action},{intervalInMilliseconds})")]
 #endif
         static
@@ -193,11 +189,8 @@ namespace Windows.UI.Xaml
             //            return timer;
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("clearInterval($timer)")]
-#else
+#if BRIDGE
         [Template("clearInterval({timer})")]
-
 #endif
         static void StopTimer(object timer) //Note: "timer" is of type "object" because otherwise JSIL is unable to do the "JSReplacement" of the "StopTimer" method.
         {

@@ -31,8 +31,6 @@ using System.Xml;
 
 #if BRIDGE
 using Bridge;
-#else
-using JSIL.Meta;
 #endif
 
 namespace System.Runtime.Serialization

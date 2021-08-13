@@ -300,9 +300,7 @@ namespace System.Windows.Browser
         /// </summary>
         /// <param name="url">A URL-encoded string to decode.</param>
         /// <returns>A decoded string.</returns>
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("decodeURIComponent($url)")]
-#else
+#if BRIDGE
         [Bridge.Template("decodeURIComponent({url})")]
 #endif
         public static string UrlDecode(string url)
@@ -315,9 +313,7 @@ namespace System.Windows.Browser
         /// </summary>
         /// <param name="url">The text to URL-encode.</param>
         /// <returns>A URL-encoded string.</returns>
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("encodeURIComponent($url)")]
-#else
+#if BRIDGE
         [Bridge.Template("encodeURIComponent({url})")]
 #endif
         public static string UrlEncode(string url)

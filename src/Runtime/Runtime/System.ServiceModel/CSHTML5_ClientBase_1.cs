@@ -19,8 +19,6 @@ extern alias ToBeReplacedAtRuntime;
 
 #if BRIDGE
 using Bridge;
-#else
-using JSIL.Meta;
 #endif
 
 using System;

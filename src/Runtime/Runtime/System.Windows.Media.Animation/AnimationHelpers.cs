@@ -119,9 +119,7 @@ $0.complete = $4;
             }
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$obj.hasValue")]
-#else
+#if BRIDGE
         [Template("{obj}.hasValue")]
 #endif
         internal static bool CheckIfNullableIsNotNull(object obj)

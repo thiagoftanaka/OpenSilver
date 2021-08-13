@@ -15,8 +15,6 @@
 
 #if BRIDGE
 using Bridge;
-#else
-using JSIL.Meta;
 #endif
 using System;
 using System.Collections.Generic;

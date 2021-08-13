@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -1133,9 +1131,7 @@ var range,selection;
 
 #endregion
 
-#if !BRIDGE
-        [JSReplacement("window.IE_VERSION")]
-#else
+#if BRIDGE
         [Template("window.IE_VERSION")]
 #endif
         static bool IsRunningOnInternetExplorer()
@@ -1143,9 +1139,7 @@ var range,selection;
             return false;
         }
 
-#if !BRIDGE
-        [JSReplacement("true")]
-#else
+#if BRIDGE
         [Template("true")]
 #endif
         static bool IsRunningInJavaScript()
@@ -1232,9 +1226,7 @@ return globalIndexes;
             selectionLength = CastToInt(CSHTML5.Interop.ExecuteJavaScript("($0.isEndFound ? $0.endIndex : ($0.isStartFound ? $0.startIndex : 0))", globalIndexes)); //todo: if not "isEndFound", should we raise an exception? (eg. running "STAR" app in the Simulator and clicking the TextBox in the "Products and key performance measures" screen)
         }
 
-#if !BRIDGE
-        [JSReplacement("$value")]
-#else
+#if BRIDGE
         [Template("{value}")]
 #endif
         static int CastToInt(object value) //Bridge : must be static to work properly

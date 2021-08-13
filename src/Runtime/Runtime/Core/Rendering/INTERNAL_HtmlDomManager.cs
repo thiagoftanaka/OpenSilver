@@ -13,13 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL;
-using JSIL.Meta;
-#if !BUILDINGDOCUMENTATION && !CSHTML5NETSTANDARD
-using DotNetBrowser;
-#endif
-#else
+#if BRIDGE
 using Bridge;
 #endif
 using OpenSilver.Internal;
@@ -51,9 +45,6 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
         //------
         // All JavaScript functions (called through dynamic objects) for manipulating the DOM should go here.
         //------
-#if !BRIDGE
-        [JSIgnore]
-#endif
         internal static Dictionary<string, UIElement> INTERNAL_idsToUIElements;
 
         static INTERNAL_HtmlDomManager()
@@ -172,9 +163,7 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
         }
 #endif
 
-#if !BRIDGE
-        [JSIgnore]
-#else
+#if BRIDGE
         [External]
 #endif
         public static INTERNAL_HtmlDomElementReference GetChildDomElementAt(INTERNAL_HtmlDomElementReference domElementRef, int index)
@@ -242,9 +231,7 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
             }
         }
 
-#if !BRIDGE
-        [JSIgnore]
-#else
+#if BRIDGE
         [External]
 #endif
         static void SetFocus_SimulatorOnly(object domElementRef)
@@ -908,9 +895,7 @@ function(){
             }
         }
 
-#if !BRIDGE
-        [JSReplacement("null")]
-#else
+#if BRIDGE
         [External]
 #endif
         static object CreateDomElementAndAppendIt_ForUseByTheSimulator(string domElementTag, object parentRef, UIElement associatedUIElement, int index)
@@ -937,9 +922,7 @@ function(){
             }
         }
 
-#if !BRIDGE
-        [JSReplacement("null")]
-#else
+#if BRIDGE
         [External]
 #endif
         static object CreateDomElementAndInsertIt_ForUseByTheSimulator(string domElementTag, object parentRef, UIElement associatedUIElement, int insertionIndex, string relativePosition)
@@ -1020,9 +1003,7 @@ parentElement.appendChild(child);
             }
         }
 
-#if !BRIDGE
-        [JSReplacement("true")]
-#else
+#if BRIDGE
         [Template("true")]
 #endif
         static bool IsRunningInJavaScript()
@@ -1030,9 +1011,7 @@ parentElement.appendChild(child);
             return false;
         }
 
-#if !BRIDGE
-        [JSReplacement("(window.IE_VERSION)")] // Note: This will return "true" if the variable "IE_VERSION" is defined.
-#else
+#if BRIDGE
         [Template("(window.IE_VERSION)")] // Note: This will return "true" if the variable "IE_VERSION" is defined.
 #endif
         public static bool IsInternetExplorer()
@@ -1040,9 +1019,7 @@ parentElement.appendChild(child);
             return false;
         }
 
-#if !BRIDGE
-        [JSReplacement("(window.IS_EDGE)")] // Note: This will return "true" if the variable "IE_VERSION" is defined.
-#else
+#if BRIDGE
         [Template("(window.IS_EDGE)")] // Note: This will return "true" if the variable "IE_VERSION" is defined.
 #endif
         public static bool IsEdge()
@@ -1051,9 +1028,7 @@ parentElement.appendChild(child);
         }
 
 
-#if !BRIDGE
-        [JSReplacement("(window.FIREFOX_VERSION)")] // Note: This will return "true" if the variable "FIREFOX_VERSION" is defined.
-#else
+#if BRIDGE
         [Template("(window.FIREFOX_VERSION)")] // Note: This will return "true" if the variable "FIREFOX_VERSION" is defined.
 #endif
         public static bool IsFirefox()
@@ -1061,9 +1036,7 @@ parentElement.appendChild(child);
             return false;
         }
 
-#if !BRIDGE
-        [JSReplacement("null")]
-#else
+#if BRIDGE
         [Template("null")]
 #endif
         internal static string EscapeStringForUseInJavaScript(string s)
@@ -1130,9 +1103,7 @@ parentElement.appendChild(child);
             return sb.ToString();
         }
 
-#if !BRIDGE
-        [JSReplacement("null")]
-#else
+#if BRIDGE
         [Template("null")]
 #endif
         public static string ConvertToStringToUseInJavaScriptCode(object obj)
@@ -1163,10 +1134,7 @@ parentElement.appendChild(child);
             }
         }
 
-#if !BRIDGE
-        [JSIgnore]
-
-#else
+#if BRIDGE
         [External]
 #endif
         public static void ExecuteJavaScript(string javaScriptToExecute, string commentForDebugging = null)
@@ -1174,9 +1142,7 @@ parentElement.appendChild(child);
             INTERNAL_SimulatorExecuteJavaScript.ExecuteJavaScriptAsync(javaScriptToExecute, "(Called from HtmlDomManager.ExecuteJavaScript)" + (commentForDebugging != null ? commentForDebugging : ""));
         }
 
-#if !BRIDGE
-        [JSIgnore]
-#else
+#if BRIDGE
         [External]
 #endif
         public static object ExecuteJavaScriptWithResult(string javaScriptToExecute, string commentForDebugging = null, bool noImpactOnPendingJSCode = false)
@@ -1262,9 +1228,7 @@ parentElement.appendChild(child);
 
         static HashSet2<Type> NumericTypes;
 
-#if !BRIDGE
-        [JSIgnore]
-#else
+#if BRIDGE
         [External]
 #endif
         static bool IsNumericType(object obj)

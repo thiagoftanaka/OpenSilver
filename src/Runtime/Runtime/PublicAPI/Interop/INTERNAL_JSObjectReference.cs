@@ -16,8 +16,6 @@
 #if BRIDGE
 using Bridge;
 using DotNetBrowser;
-#else
-using JSIL.Meta;
 #endif
 
 using System;
@@ -27,8 +25,6 @@ namespace CSHTML5.Types
 {
 #if BRIDGE
     [External] //we exclude this class
-#else
-    [JSIgnore]
 #endif
     internal class INTERNAL_JSObjectReference : IConvertible
     {
@@ -55,8 +51,6 @@ namespace CSHTML5.Types
 
 #if BRIDGE
         [External] //we exclude this method
-#else
-        [JSReplacement("null")]
 #endif
         public object GetActualValue()
         {

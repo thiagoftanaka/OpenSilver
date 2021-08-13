@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 using CSHTML5.Internal;
@@ -419,9 +417,7 @@ namespace CSHTML5.Internal
 
 //#if !CSHTML5NETSTANDARD
 
-#if !BRIDGE
-        [JSReplacement("$relativePath")]
-#else
+#if BRIDGE
         [Template("{relativePath}")]
 #endif
         static string GetAbsolutePathIfRunningInCSharp(string relativePath) //todo: test what happens if the path is very long.

@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 using System;
@@ -31,9 +29,7 @@ public static partial class CSharpXamlForHtml5
     {
         public static partial class Types
         {
-#if !BRIDGE
-            [JSIgnore]
-#else
+#if BRIDGE
             [External]
 #endif
             public class DynamicDomElementChildrenCollection

@@ -373,9 +373,7 @@ namespace System.Net
 
 
         // TODOBRIDGE: Remove static on the two next method to allow credentials to works properly
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$e.set_Result($xmlHttpRequest.responseText)")]
-#else
+#if BRIDGE
         [Template("{e}.set_Result({xmlHttpRequest}.responseText)")]
 #endif
         private static void SetDownloadStringCompletedEventArgsResultsInJavascript(DownloadStringCompletedEventArgs e, object xmlHttpRequest)//must be static to work properly
@@ -383,10 +381,7 @@ namespace System.Net
             //do nothing
         }
 
-#if !BRIDGE
-        //todo: IMPORTANT: find a way to manage this kind of things: when the user checks if there was an error while downloading, we want him to be able to know
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.readyState == 4 && $xmlHttpRequest.status == 200")]
-#else
+#if BRIDGE
         [Template("{xmlHttpRequest}.readyState == 4 && {xmlHttpRequest}.status == 200")]
 #endif
         private static bool INTERNAL_TestIfCompletedStatus(object xmlHttpRequest) //must be static to work properly

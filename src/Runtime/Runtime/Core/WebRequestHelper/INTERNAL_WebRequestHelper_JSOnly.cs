@@ -312,9 +312,7 @@ namespace System
             _requester = this;
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("(document.location.protocol === \"file:\")")]
-#else
+#if BRIDGE
         [Template("(document.location.protocol === \"file:\")")]
 #endif
         private static bool GetIsFileProtocol()
@@ -326,9 +324,7 @@ namespace System
 #endif
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.setRequestHeader($key,$header)")]
-#else
+#if BRIDGE
         [Template("{xmlHttpRequest}.setRequestHeader({key},{header})")]
 #endif
         private static void SetRequestHeader(object xmlHttpRequest, string key, string header)
@@ -338,9 +334,7 @@ namespace System
 #endif
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("new XMLHttpRequest()")]
-#else
+#if BRIDGE
         [Template("new XMLHttpRequest()")]
 #endif
         internal static dynamic GetWebRequest()
@@ -352,9 +346,7 @@ namespace System
 #endif
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.onloadend = $OnDownloadStatusCompleted")]
-#else
+#if BRIDGE
         [Template("{xmlHttpRequest}.onloadend = {OnDownloadStatusCompleted}")] // Note: we  register to the loadend event instead of the load event because the load event is only fired when the request is SUCCESSFULLY completed, while the loadend is triggered after errors and abortions as well. This allows us to handle the error cases in the callback of asynchronous calls.
 #endif
 
@@ -365,9 +357,7 @@ namespace System
 #endif
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.open($method, $address, $isAsync)")]
-#else
+#if BRIDGE
         [Template("{xmlHttpRequest}.open({method}, {address}, {isAsync})")]
 #endif
         private static void CreateRequest(object xmlHttpRequest, string address, string method, bool isAsync)
@@ -378,9 +368,7 @@ namespace System
         }
 
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.withCredentials = $value")]
-#else
+#if BRIDGE
         [Template("{xmlHttpRequest}.withCredentials = {value}")]
 #endif
         private static void EnableCookies(object xmlHttpRequest, bool value)
@@ -391,9 +379,7 @@ namespace System
         }
 
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.onerror = $OnError")]
-#else
+#if BRIDGE
         [Template("{xmlHttpRequest}.onerror = {OnError}")]
 #endif
         internal static void SetErrorCallback(object xmlHttpRequest, Action<object> OnError)
@@ -404,9 +390,7 @@ namespace System
         }
 
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("console.log($message);")]
-#else
+#if BRIDGE
         [Template("console.log({message});")]
 #endif
         internal static void ConsoleLog_JSOnly(string message)
@@ -416,9 +400,7 @@ namespace System
 #endif
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.send($body)")]
-#else
+#if BRIDGE
         [Template("{xmlHttpRequest}.send({body})")]
 #endif
         internal static void SendRequest(object xmlHttpRequest, string address, string method, bool isAsync, string body)
@@ -480,9 +462,7 @@ namespace System
             e.Result = GetResult((object)_xmlHttpRequest);
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.readyState")]
-#else
+#if BRIDGE
         [Template("{xmlHttpRequest}.readyState")]
 #endif
         private static int GetCurrentReadyState(object xmlHttpRequest)
@@ -494,9 +474,7 @@ namespace System
 #endif
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.status")]
-#else
+#if BRIDGE
         [Template("{xmlHttpRequest}.status")]
 #endif
 
@@ -509,9 +487,7 @@ namespace System
 #endif
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.statusText")]
-#else
+#if BRIDGE
         [Template("{xmlHttpRequest}.statusText")]
 #endif
         private static string GetCurrentStatusText(object xmlHttpRequest)
@@ -523,9 +499,7 @@ namespace System
 #endif
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.responseText")]
-#else
+#if BRIDGE
         [Template("{xmlHttpRequest}.responseText")]
 #endif
 

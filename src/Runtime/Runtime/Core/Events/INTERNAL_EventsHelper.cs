@@ -13,17 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-#if !BUILDINGDOCUMENTATION && !CSHTML5NETSTANDARD
-using DotNetBrowser;
-using DotNetBrowser.DOM;
-using DotNetBrowser.WPF;
-using DotNetBrowser.DOM.Events;
-using DotNetBrowser.Events;
-#endif
-
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 using CSHTML5;
@@ -47,9 +37,7 @@ namespace CSHTML5.Internal
         // Dictionary to remember which type overrides which event callback:
         static Dictionary<Type, Dictionary<string, bool>> _typesToOverridenCallbacks = new Dictionary<Type, Dictionary<string, bool>>();
 
-#if !BRIDGE
-        [JSReplacement("$domElementRef.addEventListener($eventName,$originalEventHandler)")]
-#else
+#if BRIDGE
         [Template("{domElementRef}.addEventListener({eventName}, {originalEventHandler})")]
 #endif
         static void AttachEvent(string eventName, object domElementRef, HtmlEventProxy newProxy, Action<object> originalEventHandler)
@@ -76,9 +64,7 @@ namespace CSHTML5.Internal
 #endif
         }
 
-#if !BRIDGE
-        [JSReplacement("$domElementRef.removeEventListener($eventName,$originalEventHandler)")]
-#else
+#if BRIDGE
         [Template("{domElementRef}.removeEventListener({eventName},{originalEventHandler})")]
 #endif
         internal static void DetachEvent(string eventName, object domElementRef, HtmlEventProxy proxy, Action<object> originalEventHandler)

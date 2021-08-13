@@ -16,9 +16,7 @@
 using CSHTML5;
 using System;
 using System.Collections.Generic;
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -149,9 +147,7 @@ namespace CSHTML5.Internal
         /// </summary>
         /// <param name="element">UI Element</param>
         /// <returns>True if the element is visible in the visual tree, false otherwise.</returns>
-#if !BRIDGE
-        [JSReplacement("(!(typeof $element.INTERNAL_OuterDomElement === 'undefined' || $element.INTERNAL_OuterDomElement === null) && !document.doesElementInheritDisplayNone($element.INTERNAL_OuterDomElement))")]
-#else
+#if BRIDGE
         [Template("(!(typeof {element}.INTERNAL_OuterDomElement === 'undefined' || {element}.INTERNAL_OuterDomElement === null) && !document.doesElementInheritDisplayNone({element}.INTERNAL_OuterDomElement))")]
 #endif
         public static bool IsElementVisible(UIElement element)

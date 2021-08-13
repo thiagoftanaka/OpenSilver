@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -92,9 +90,7 @@ namespace System.Windows.Browser
         /// </summary>
         /// <param name="code">Javascript code.</param>
         /// <returns>The results of the JavaScript engine's evaluation of the string in the code parameter.</returns>
-#if !BRIDGE
-        [JSReplacement("eval($code)")]
-#else
+#if BRIDGE
         [Bridge.Script("eval(code)")]
 #endif
         public object Eval(string code)

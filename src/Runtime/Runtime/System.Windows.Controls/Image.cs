@@ -14,9 +14,7 @@
 
 
 //TODOBRIDGE: usefull using bridge?
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 using CSHTML5.Internal;

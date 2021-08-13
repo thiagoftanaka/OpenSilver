@@ -20,12 +20,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
-#if !BRIDGE
-//BRIDGETODO:
-//Apparently, using below is useless
-using System.Runtime.Serialization.Formatters.Binary;
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 using System.Text;
@@ -64,9 +59,7 @@ namespace System.IO.IsolatedStorage
     {
         string _fullApplicationName = null;
 
-#if !BRIDGE
-        [JSReplacement("true")]
-#else
+#if BRIDGE
         [Template("true")]
 #endif
         static bool IsRunningInJavascript() //must be static to work properly
@@ -74,9 +67,7 @@ namespace System.IO.IsolatedStorage
             return false;
         }
 
-#if !BRIDGE
-        [JSReplacement("undefined")]
-#else
+#if BRIDGE
         [Template("undefined")]
 #endif
         static dynamic GetUndefined() { return null; } //must be static to work properly

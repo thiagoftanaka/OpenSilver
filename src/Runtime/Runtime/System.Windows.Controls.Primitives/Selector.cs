@@ -13,10 +13,6 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#endif
-
 using System;
 using System.Collections;
 using System.Collections.Generic;

@@ -25,9 +25,7 @@ using Windows.Foundation;
 using Windows.UI.Xaml.Media;
 #endif
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -391,9 +389,7 @@ $0.focus()
 
         #endregion
 
-#if !BRIDGE
-        [JSReplacement("window.IE_VERSION")]
-#else
+#if BRIDGE
         [Template("window.IE_VERSION")]
 #endif
         static bool IsRunningOnInternetExplorer()

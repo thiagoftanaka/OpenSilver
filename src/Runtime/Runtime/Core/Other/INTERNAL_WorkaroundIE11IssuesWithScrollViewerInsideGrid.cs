@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 using System;
@@ -58,9 +56,7 @@ if (window.IE_VERSION)
             }
         }
 
-#if !BRIDGE
-        [JSReplacement("true")]
-#else
+#if BRIDGE
         [Template("true")]
 #endif
         static bool IsRunningInJavaScript()

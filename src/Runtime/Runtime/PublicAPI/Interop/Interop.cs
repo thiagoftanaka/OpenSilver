@@ -13,10 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using CSHTML5.Types;
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 using CSHTML5.Internal;
@@ -98,9 +95,7 @@ namespace CSHTML5
         /// </summary>
         /// <param name="value">The value to unbox.</param>
         /// <returns>the unboxed value if the value was boxed, the value itself otherwise.</returns>
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$value")]
-#else
+#if BRIDGE
         [Bridge.Template("({value} == undefined ? {value} : ({value}.v != undefined ? {value}.v : {value}))")]
 #endif
         public static object Unbox(object value)
@@ -317,8 +312,6 @@ namespace CSHTML5
         /// </summary>
 #if BRIDGE
         [Template("(typeof({jsObject}) === 'undefined')")]
-#else
-        [JSReplacement("(typeof($jsObject) === 'undefined')")]
 #endif
         public static bool IsUndefined(object jsObject)
         {
@@ -330,8 +323,6 @@ namespace CSHTML5
         /// </summary>
 #if BRIDGE
         [Template("({jsObject} === null)")]
-#else
-        [JSReplacement("($jsObject === null)")]
 #endif
         public static bool IsNull(object jsObject)
         {

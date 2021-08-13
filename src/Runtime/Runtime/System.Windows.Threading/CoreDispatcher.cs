@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -123,9 +121,7 @@ namespace Windows.UI.Core
 #endif
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("setTimeout(function(){$method();},1);")]
-#else
+#if BRIDGE
         [Template("setTimeout(function(){ {method}(); },1)")]
 #endif
         static void BeginInvokeInternal(Action method)

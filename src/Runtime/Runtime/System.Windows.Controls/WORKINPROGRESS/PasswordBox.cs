@@ -26,9 +26,7 @@ using System.Windows.Media;
 using Windows.UI.Xaml.Media;
 #endif
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 

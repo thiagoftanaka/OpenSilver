@@ -13,9 +13,7 @@
 \*====================================================================================*/
 
 
-#if !BRIDGE
-using JSIL.Meta;
-#else
+#if BRIDGE
 using Bridge;
 #endif
 
@@ -37,9 +35,7 @@ namespace CSHTML5
         /// Allows measuring the cumulative time between the start and the end of the measure. It returns a number that you need to pass to the "StopMeasuringTime()" method.
         /// </summary>
         /// <returns>A number that you need to pass to the "StopMeasuringTime()" method.</returns>
-#if !BRIDGE
-        [JSReplacement("performance.now()")]
-#else
+#if BRIDGE
         [Template("performance.now()")]
 #endif
         public static double StartMeasuringTime()
@@ -52,37 +48,28 @@ namespace CSHTML5
         /// </summary>
         /// <param name="measureDescription">An arbitrary text to describe the measure.</param>
         /// <param name="numberReturnedByTheStartMeasuringTimeMethod">The number returned by the call to "StartMeasuringTime()". It is used to calculate the time elapsed between the start and the end of the measure.</param>  
-#if !BRIDGE
-        [JSReplacement(@"document.addToPerformanceCounters($measureDescription, $numberReturnedByTheStartMeasuringTimeMethod)")]
-
-#else
+#if BRIDGE
         [Template(@"document.addToPerformanceCounters({measureDescription}, {numberReturnedByTheStartMeasuringTimeMethod})")]
 #endif
         public static void StopMeasuringTime(string measureDescription, double numberReturnedByTheStartMeasuringTimeMethod)
         {
         }
 
-#if !BRIDGE
-        [JSReplacement("console.time($label)")]
-#else
+#if BRIDGE
         [Template("console.time({label})")]
 #endif
         public static void ConsoleTime(string label)
         {
         }
 
-#if !BRIDGE
-        [JSReplacement("console.timeEnd($label)")]
-#else
+#if BRIDGE
         [Template("console.timeEnd({label})")]
 #endif
         public static void ConsoleTimeEnd(string label)
         {
         }
 
-#if !BRIDGE
-        [JSReplacement("console.timeLog($label)")]
-#else
+#if BRIDGE
         [Template("console.timeLog({label})")]
 #endif
         public static void ConsoleTimeLog(string label)
