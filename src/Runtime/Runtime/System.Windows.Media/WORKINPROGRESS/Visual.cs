@@ -1,4 +1,5 @@
 ﻿
+
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -11,18 +12,14 @@
 *  
 \*====================================================================================*/
 
-namespace System.Windows.Browser
+
+#if MIGRATION
+namespace System.Windows.Media
+#else
+namespace Windows.UI.Xaml.Media
+#endif
 {
-	[OpenSilver.NotImplemented]
-    public sealed class HtmlPopupWindowOptions
+    public abstract partial class Visual : DependencyObject
     {
-		[OpenSilver.NotImplemented]
-        public bool Menubar { get; set; }
-		[OpenSilver.NotImplemented]
-        public bool Status { get; set; }
-        [OpenSilver.NotImplemented]
-        public bool Resizeable { get; set; }
-        [OpenSilver.NotImplemented]
-        public bool Toolbar { get; set; }
     }
 }
