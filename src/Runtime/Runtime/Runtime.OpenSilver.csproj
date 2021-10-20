@@ -160,6 +160,7 @@
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\ListBoxDragDropTarget.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\TreeViewDragDropTarget.cs" />
 		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\EasingPointKeyFrame.cs" />
+		<Compile Include="System.Windows.Controls\ListBoxDragDropTarget.cs" />
 		<Compile Include="System.Windows.Media\BrushConverter.cs" />
 		<Compile Include="System.Windows.Media\Color.cs" />
 		<Compile Include="System.Windows.Media\WORKINPROGRESS\CacheModeConverter.cs" />

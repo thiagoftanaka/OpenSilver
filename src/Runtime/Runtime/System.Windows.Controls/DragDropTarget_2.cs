@@ -657,7 +657,6 @@ namespace Windows.UI.Xaml.Controls
         /// <summary>
         /// Raises the ItemDroppedOnTarget event
         /// </summary>
-        [OpenSilver.NotImplemented]
         public event EventHandler<ItemDragEventArgs> ItemDroppedOnTarget;
 
 #endregion
