@@ -111,6 +111,10 @@ namespace Windows.UI.Xaml.Controls
                     container.IsSelected = true;
                 }
                 container.Click += listBoxItem_Click;
+
+                // Setting SelectedItems on mouse button down to cover drag and drop case,
+                // without this SelectedItems is not updated by the time items are dropped
+                container.ClickMode = ClickMode.Press;
             }
         }
 
@@ -162,6 +166,10 @@ namespace Windows.UI.Xaml.Controls
                 listBoxItem.IsSelected = true;
             }
             listBoxItem.Click += listBoxItem_Click;
+
+            // Setting SelectedItems on mouse button down to cover drag and drop case,
+            // without this SelectedItems is not updated by the time items are dropped
+            listBoxItem.ClickMode = ClickMode.Press;
             return listBoxItem;
         }
 
