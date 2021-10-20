@@ -628,6 +628,10 @@ namespace Windows.UI.Xaml.Controls
         /// Raises the ItemDroppedOnSource event
         /// </summary>
         public event MS.DragEventHandler ItemDroppedOnSource;
+        /// <summary>
+        /// Raises the ItemDroppedOnTarget event
+        /// </summary>
+        public event EventHandler<ItemDragEventArgs> ItemDroppedOnTarget;
 
 #endregion
 
