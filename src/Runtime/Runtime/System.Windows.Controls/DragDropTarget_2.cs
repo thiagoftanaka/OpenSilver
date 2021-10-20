@@ -235,8 +235,9 @@ namespace Windows.UI.Xaml.Controls
                         };
 
                         // Set the popup position:
-                        this._popup.HorizontalOffset = this._pointerX;
-                        this._popup.VerticalOffset = this._pointerY;
+                        // Offset by 1 pixel to not trigger mouse events on the popup when dropping
+                        this._popup.HorizontalOffset = this._pointerX + 1;
+                        this._popup.VerticalOffset = this._pointerY + 1;
 
                         // Show the popup:
                         this._popup.IsOpen = true;
