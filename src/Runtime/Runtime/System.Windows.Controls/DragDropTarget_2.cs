@@ -412,6 +412,12 @@ namespace Windows.UI.Xaml.Controls
 
             _popup.IsOpen = false;
 
+            // Clear item parent, since popup.Child is the intermediate StackPanel
+            if (_sourceItemContainer is FrameworkElement frameworkElement)
+            {
+                frameworkElement.ChangeLogicalParent(null);
+            }
+
             //We no longer have use for the popup
             _popup.Child = null;
             _popup = null;
