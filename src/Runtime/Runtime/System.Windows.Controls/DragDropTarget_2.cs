@@ -109,6 +109,10 @@ namespace Windows.UI.Xaml.Controls
             // DRAG OPERATION STARTS HERE
             //----------------------------------
 
+            // Add mouse events to the window to enable dropping on any other elements
+            this.INTERNAL_ParentWindow.MouseMove += DragDropTarget_MouseMove;
+            this.INTERNAL_ParentWindow.MouseLeftButtonUp += DragDropTarget_MouseLeftButtonUp;
+
             // Prevent the PointerPressed event from bubbling up so that if there are two nested DragDropTargets, only the inner one will be dragged:
             e.Handled = true;
 
@@ -348,6 +352,8 @@ namespace Windows.UI.Xaml.Controls
             //----------------------------------
             // POINTER RELEASED
             //----------------------------------
+            this.INTERNAL_ParentWindow.MouseMove -= DragDropTarget_MouseMove;
+            this.INTERNAL_ParentWindow.MouseLeftButtonUp -= DragDropTarget_MouseLeftButtonUp;
 
             // Remember the new pointer position:  
 #if MIGRATION
@@ -456,6 +462,9 @@ namespace Windows.UI.Xaml.Controls
                             // Raise the Drop event:
 #if !(BRIDGE && MIGRATION)
                             dragDropTargetUnderPointer.Drop(dragDropTargetUnderPointer, new MS.DragEventArgs(dataObject, e));
+
+                            // Raise the ItemDroppedOnTarget event
+                            ItemDroppedOnTarget(dragDropTargetUnderPointer, new ItemDragEventArgs(selectionCollection));
 #endif
                         }
 
@@ -470,11 +479,23 @@ namespace Windows.UI.Xaml.Controls
                     PutSourceBackToOriginalPlace();
                 }
             }
-            //not a DragDropTarget under the pointer so we put what was in the popup back in the content
             else
             {
-                // Put the dragged element back to where it was:
-                PutSourceBackToOriginalPlace();
+                // Remove the temporary placeholder (see the comment where the placeholder is defined):
+                this.RemoveItemAtIndex(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl);
+
+                // If an element with the DragDrop.AllowDrop attached property under the pointer, call event
+                UIElement uiElementUnderPointer = GetAllowDropElementUnderPointer();
+                if (uiElementUnderPointer != null)
+                {
+                    ItemDroppedOnTarget?.Invoke(uiElementUnderPointer, new ItemDragEventArgs(selectionCollection));
+                }
+                //not a DragDropTarget nor AllowDrop under the pointer so we put what was in the popup back in the content
+                else
+                {
+                    // Put the dragged element back to where it was:
+                    PutSourceBackToOriginalPlace();
+                }
             }
 
             // Raise the "ItemDragCompleted" event:
@@ -684,7 +705,14 @@ namespace Windows.UI.Xaml.Controls
                     return dragDropTargetUnder;
                 }
                 object elementToMove = ElementsBetweenClickedElementAndDragDropTarget.ElementAt(indexOfLastElementInList - amoutOfElementsBetweenItemsRootAndDragDropTarget);
-                itemContainerUnderPointer = (TItemContainerType)elementToMove;
+                if (elementToMove is TItemContainerType)
+                {
+                    itemContainerUnderPointer = (TItemContainerType)elementToMove;
+                }
+                else
+                {
+                    itemContainerUnderPointer = null;
+                }
                 return dragDropTargetUnder;
             }
             else
@@ -732,6 +760,23 @@ namespace Windows.UI.Xaml.Controls
             return stackPanelInPopUp;
         }
 
+        /// <summary>
+        /// Goes up the visual tree looking for an element with the DragDrop.AllowDrop attached property equals to true
+        /// </summary>
+        /// <returns>The element with DragDrop.AllowDrop set to true</returns>
+        UIElement GetAllowDropElementUnderPointer()
+        {
+            UIElement uiElementUnderPointer = VisualTreeHelper.FindElementInHostCoordinates(new Point(_pointerX, _pointerY));
+            while (uiElementUnderPointer != null)
+            {
+                if (DragDrop.GetAllowDrop(uiElementUnderPointer))
+                {
+                    return uiElementUnderPointer;
+                }
+                uiElementUnderPointer = uiElementUnderPointer.INTERNAL_VisualParent as FrameworkElement;
+            }
+            return null;
+        }
 #endregion
     }
 }
