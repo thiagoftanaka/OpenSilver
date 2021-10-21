@@ -495,13 +495,22 @@ namespace Windows.UI.Xaml.Controls
             }
             else
             {
+<<<<<<< HEAD
+=======
+                // Remove the temporary placeholder (see the comment where the placeholder is defined):
+                this.RemoveItemAtIndex(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl);
+
+>>>>>>> b79a1dc7 (feat: implement drag and drop from DragDropTarget to any other elements)
                 // If an element with the DragDrop.AllowDrop attached property under the pointer, call event
                 UIElement uiElementUnderPointer = GetAllowDropElementUnderPointer();
                 if (uiElementUnderPointer != null)
                 {
+<<<<<<< HEAD
                     // Remove the temporary placeholder (see the comment where the placeholder is defined):
                     this.RemoveItemAtIndex(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl);
 
+=======
+>>>>>>> b79a1dc7 (feat: implement drag and drop from DragDropTarget to any other elements)
                     ItemDroppedOnTarget?.Invoke(uiElementUnderPointer, new ItemDragEventArgs(selectionCollection));
                 }
                 //not a DragDropTarget nor AllowDrop under the pointer so we put what was in the popup back in the content
