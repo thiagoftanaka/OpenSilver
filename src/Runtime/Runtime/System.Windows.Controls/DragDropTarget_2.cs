@@ -329,8 +329,11 @@ namespace Windows.UI.Xaml.Controls
                     _isDragCancelled = true;
             }
 
+            UIElement allowDropElementUnderPointer = GetAllowDropElementUnderPointer();
+
             // Show the appropriate icon depending on whether it is possible to drop or not:
-            if (dragDropTargetUnderPointer != null && dragDropTargetUnderPointer.AllowDrop && !_isDragCancelled)
+            if ((dragDropTargetUnderPointer != null && dragDropTargetUnderPointer.AllowDrop || allowDropElementUnderPointer != null) &&
+                !_isDragCancelled)
             {
                 //---------------------------------
                 // SHOW ICON "DRAG ALLOWED"
