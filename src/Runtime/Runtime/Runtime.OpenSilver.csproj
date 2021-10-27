@@ -14,7 +14,7 @@
 		<OutputPath>bin\OpenSilver\$(Configuration)\</OutputPath>
 		<NoWarn>1591</NoWarn>
 		<DebugType>full</DebugType>
-		<Optimize>true</Optimize>
+		<Optimize>false</Optimize>
 		<NoCSHTML5Reference>true</NoCSHTML5Reference>
 		<EnableDefaultItems>false</EnableDefaultItems> <!-- This emluates the behavior of NET Framework, which excludes every files by default -->
 		<OpenSilverVersion>1.0.0</OpenSilverVersion>
@@ -81,7 +81,6 @@
 		<Compile Include="System.ComponentModel.Composition\WORKINPROGRESS\CompositionInitializer.cs" />
 		<Compile Include="System.Windows.Browser\EventSubscriber.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\DataGridRowGroupHeader.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\FloatableWindow.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\PopulatedEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\TransitioningContentControl.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\TreeViewConnectingLines.cs" />
@@ -99,8 +98,6 @@
 		<Compile Include="System.Windows.Navigation\NavigatingCancelEventArgs.cs" />
 		<Compile Include="System.Windows.Navigation\NavigatingCancelEventHandler.cs" />
 		<Compile Include="System.Windows.Navigation\NavigationMode.cs" />
-		<Compile Include="System.Windows.Navigation\INavigationContentLoader.cs" />
-		<Compile Include="System.Windows.Navigation\WORKINPROGRESS\LoadResult.cs" />
 		<Compile Include="System.Windows\CornerRadiusConverter.cs" />
 		<Compile Include="System.Windows.input\CursorConverter.cs" />
 		<Compile Include="System.Windows.Media\DoubleCollectionConverter.cs" />
@@ -121,7 +118,6 @@
 		<Compile Include="System.Windows\PropertyPathConverter.cs" />
 		<Compile Include="System.Windows\RectConverter.cs" />
 		<Compile Include="System.Windows.Media.Animation\RepeatBehaviorConverter.cs" />
-		<Compile Include="System.Windows\ResizeMode.cs" />
 		<Compile Include="System.Windows\SizeConverter.cs" />
 		<Compile Include="System.Windows\TextDecorationCollectionConverter.cs" />
 		<Compile Include="System.Windows\ThicknessConverter.cs" />
