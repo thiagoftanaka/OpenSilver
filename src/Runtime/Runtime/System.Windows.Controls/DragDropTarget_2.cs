@@ -550,6 +550,13 @@ namespace Windows.UI.Xaml.Controls
 
             // Put the dragged element back to where it was:
             this.InsertItem(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl, _sourceItemContainer);
+
+            // Setting focus to item otherwise its LostFocus will never be triggered since
+            // the drag & drop started
+            if (_sourceItemContainer is Control sourceControl)
+            {
+                sourceControl.Focus();
+            }
         }
 
         void RemoveSourceAndPutTransparentPlaceholderInPlace(double sourceHeight, double sourceWidth)
