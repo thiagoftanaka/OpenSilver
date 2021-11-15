@@ -136,6 +136,7 @@ namespace TestApplication
             Tests.Add(dragDropTargets);
 
             Tests.Add(new Test("TreeView", "TreeView"));
+            Tests.Add(new Test("OpenFileDialog", "OpenFileDialog"));
         }
     }
 }

@@ -53,11 +53,16 @@ namespace Windows.UI.Xaml.Controls
         private void AddFileChangeCallback(TaskCompletionSource<bool?> showDialogTaskCompletionSource)
         {
             // For each file selected in the dialog, this will be called back
-            Action<string, object> onFileChanged = (filename, content) =>
+            Action<string, object> onFileChanged = (filename, base64Content) =>
             {
-                Dictionary<string, byte> indexedBytes = JsonSerializer.Deserialize<Dictionary<string, byte>>(content.ToString());
-                byte[] values = indexedBytes.Values.ToArray();
-                Files.Add(new MemoryFileInfo(filename, values));
+                byte[] bytes = null;
+                if (base64Content != null)
+                {
+                    // Removing base64 data type prefix e.g. 'data:image/png;base64,<data>'
+                    string data = base64Content.ToString().Split(',')[1];
+                    bytes = Convert.FromBase64String(data);
+                }
+                Files.Add(new MemoryFileInfo(filename, bytes));
             };
 
             Action onFinishedReading = () =>
@@ -98,8 +103,7 @@ namespace Windows.UI.Xaml.Controls
                     function readNext(i) {
                         var file = input.files[i];
                         reader.onload = function() {
-                            var array = new Uint8Array(reader.result);
-                            callback(file.name, array);
+                            callback(file.name, reader.result);
 
                             if (input.files.length > i + 1) {
                                 readNext(i + 1);
@@ -109,7 +113,10 @@ namespace Windows.UI.Xaml.Controls
                             }
                         };
 
-                        reader.readAsArrayBuffer(file);
+                        // For performance improvements, readAsArrayBuffer could be used and Uint8Array sent to C#,
+                        // this has been optimized in .NET 6. However, this would require changes to the C# callback method,
+                        // the array cannot be received as object (must be byte[]).
+                        reader.readAsDataURL(file);
                     }
                     readNext(0);
                 });", _inputElement, onFileChanged, OpenSilver.Interop.IsRunningInTheSimulator,
