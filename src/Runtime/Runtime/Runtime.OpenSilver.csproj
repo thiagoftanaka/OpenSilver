@@ -90,7 +90,6 @@
 		<Compile Include="System.Windows.Controls\PasswordBoxView.cs" />
 		<Compile Include="System.Windows.Controls\RangeCollection.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\DataGridRowGroupHeader.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\ItemsControlDragDropTarget.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\PopulatedEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\ItemsControlDragDropTarget.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\TransitioningContentControl.cs" />
@@ -117,6 +116,17 @@
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\TreeViewDragDropTarget.cs" />
 		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\EasingPointKeyFrame.cs" />
 		<Compile Include="System.Windows.Controls\ListBoxDragDropTarget.cs" />
+		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\Int32Animation.cs" />
+		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\Int32AnimationBase.cs" />
+		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\Int32AnimationUsingKeyFrames.cs" />
+		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\Int32KeyFrame.cs" />
+		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\Int32KeyFrameCollection.cs" />
+		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\ThicknessAnimation.cs" />
+		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\ThicknessAnimationBase.cs" />
+		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\ThicknessAnimationUsingKeyFrames.cs" />
+		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\ThicknessKeyFrame.cs" />
+		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\ThicknessKeyFrameCollection.cs" />
+		<Compile Include="System.Windows.Media.Imaging\WORKINPROGRESS\RenderTargetBitmap.cs" />
 		<Compile Include="System.Windows.Media\BrushConverter.cs" />
 		<Compile Include="System.Windows.Media\Color.cs" />
 		<Compile Include="System.Windows.Media\WORKINPROGRESS\Brushes.cs" />

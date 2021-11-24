@@ -104,10 +104,7 @@ namespace Windows.UI.Xaml.Controls
         /// <returns>The number of elements.</returns>
         internal override int INTERNAL_GetNumberOfElementsBetweenItemsRootAndDragDropTarget()
         {
-<<<<<<< HEAD
             // Number of elements between this and the dragged ListBoxItem
-=======
->>>>>>> efad28bc (feat: implement ListBoxDragDropTarget)
             return 9;
         }
     }
