@@ -54,14 +54,6 @@ namespace Windows.UI.Xaml.Controls
                 throw new ArgumentNullException("control");
             }
 
-            // Get the first live container
-            DependencyObject container = control.ItemContainerGenerator.ContainerFromIndex(0);
-
-            if (container != null)
-            {
-                return VisualTreeHelper.GetParent(container) as Panel;
-            }
-
             FrameworkElement rootVisual = control.GetVisualChildren().FirstOrDefault() as FrameworkElement;
             if (rootVisual != null)
             {

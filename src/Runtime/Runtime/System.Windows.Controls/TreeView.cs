@@ -1106,10 +1106,10 @@ namespace Windows.UI.Xaml.Controls
         {
             if (Interaction.AllowMouseLeftButtonDown(e))
             {
-                if (!e.Handled && HandleMouseButtonDown())
-                {
-                    e.Handled = true;
-                }
+                //if (!e.Handled && HandleMouseButtonDown())
+                //{
+                //    //e.Handled = true;
+                //}
 
                 Interaction.OnMouseLeftButtonDownBase();
 #if MIGRATION
@@ -1263,7 +1263,7 @@ namespace Windows.UI.Xaml.Controls
                     // scroll the header into view, if possible, because an
                     // expanded TreeViewItem contains all of its child items
                     // as well.
-                    ItemsControlHelper.ScrollIntoView(container.HeaderElement ?? container);
+                    //ItemsControlHelper.ScrollIntoView(container.HeaderElement ?? container);
                 }
                 else if (!selected && container == SelectedContainer)
                 {

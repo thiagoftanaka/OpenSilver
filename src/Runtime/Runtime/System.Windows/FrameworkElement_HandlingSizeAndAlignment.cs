@@ -69,7 +69,8 @@ namespace Windows.UI.Xaml
                 // Height:
                 if (!double.IsNaN(element.Height))
                     style.height = element.Height.ToInvariantString() + "px";
-                else if (element.VerticalAlignment == VerticalAlignment.Stretch && !(element.INTERNAL_VisualParent is Canvas) && !(element is CheckBox))
+                else if ((element.VerticalAlignment == VerticalAlignment.Stretch && !(element.INTERNAL_VisualParent is Canvas) &&
+                    !(element is CheckBox)) || element.INTERNAL_VisualParent is Grid)
                     style.height = "100%";
                 else
                     style.height = "auto";
@@ -77,7 +78,8 @@ namespace Windows.UI.Xaml
                 // Width:
                 if (!double.IsNaN(element.Width))
                     style.width = element.Width.ToInvariantString() + "px";
-                else if (element.HorizontalAlignment == HorizontalAlignment.Stretch && !(element.INTERNAL_VisualParent is Canvas) && !(element is CheckBox))
+                else if ((element.HorizontalAlignment == HorizontalAlignment.Stretch && !(element.INTERNAL_VisualParent is Canvas) &&
+                    !(element is CheckBox)) || element.INTERNAL_VisualParent is Grid)
                     style.width = "100%";
                 else
                     style.width = "auto";
@@ -381,7 +383,7 @@ namespace Windows.UI.Xaml
                 }
                 else // Otherwise we handle both alignment and Width/Height:
                 {
-                    bool isParentAHorizontalStackPanel = fe.INTERNAL_VisualParent is StackPanel && ((StackPanel)fe.INTERNAL_VisualParent).Orientation == Orientation.Horizontal; // If the element is inside a horizontal StackPanel, we ignore the "HorizontalAlignment" property, to ensure that we don't have issues with setting the CSS "display" property of the parent of the "wrapper" element.
+                    bool isParentAHorizontalStackPanel = fe.INTERNAL_VisualParent is StackPanel; // If the element is inside a horizontal StackPanel, we ignore the "HorizontalAlignment" property, to ensure that we don't have issues with setting the CSS "display" property of the parent of the "wrapper" element.
                     bool isParentAWrapPanel = fe.INTERNAL_VisualParent is WrapPanel; // If the element is inside a WrapPanel, we ignore the "HorizontalAlignment" property, to ensure that we don't have issues with setting the CSS "display" property of the parent of the "wrapper" element.
                     bool isParentAWrapPanelOrAHorizontalStackPanel = isParentAHorizontalStackPanel || isParentAWrapPanel;
                     var margin = fe.Margin;
@@ -1249,18 +1251,11 @@ namespace Windows.UI.Xaml
                     // This is to "undo" the value that was previously set in case we are
                     // moving from positive margin to negative margin.
                     styleOfBoxSizingElement.paddingTop = "";
-                    // In case of CSS-based Grid, we cannot mess with the margin proprty
-                    // because it is used for vertical alignment (margin "auto").
-                    if (!isInsideACSSBasedGrid || 
-                        frameworkElement.VerticalAlignment == VerticalAlignment.Top || 
-                        frameworkElement.VerticalAlignment == VerticalAlignment.Stretch) 
-                    {
-                        // Note: vertically we apply negative margins to the "outer dom element"
-                        // instead of the "box sizing" element in order to not mess with the CSS
-                        // Grid Layout vertical alignment, which uses the margins of the "box sizing"
-                        // to apply vertical alignment.
-                        styleOfOuterDomElement.marginTop = newMargin.Top.ToInvariantString() + "px"; 
-                    }
+                    // Note: vertically we apply negative margins to the "outer dom element"
+                    // instead of the "box sizing" element in order to not mess with the CSS
+                    // Grid Layout vertical alignment, which uses the margins of the "box sizing"
+                    // to apply vertical alignment.
+                    styleOfOuterDomElement.marginTop = newMargin.Top.ToInvariantString() + "px"; 
                 }
 
                 // ------------- RIGHT ---------------

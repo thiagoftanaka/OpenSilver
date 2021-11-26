@@ -28,6 +28,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 #else
 using Windows.UI.Xaml.Controls.Primitives;
+using Windows.UI.Xaml.Data;
 using Windows.UI.Xaml.Input;
 using Windows.System;
 #endif
@@ -63,6 +64,7 @@ namespace Windows.UI.Xaml.Controls
                 this._timer.Stop();
                 this.UpdateItemsVisibilityOnTextChanged();
             };
+            this.SelectionChanged += OnSelectionChanged;
         }
 
         private void OnTextBoxTextChanged(object sender, TextChangedEventArgs e)
@@ -101,8 +103,9 @@ namespace Windows.UI.Xaml.Controls
                 for (int i = 0; i < this.Items.Count; i++)
                 {
                     ComboBoxItem container = this.ItemContainerGenerator.ContainerFromIndex(i) as ComboBoxItem;
-                    
-                    if (container == null)
+                    if (this._filter(this._textBox.Text, _valueBindingEvaluator != null ?
+                        _valueBindingEvaluator.GetDynamicValue(this.Items[i]) :
+                        container.Content))
                     {
                         continue;
                     }
@@ -162,7 +165,6 @@ namespace Windows.UI.Xaml.Controls
             this.ApplySelectedIndex(this.SelectedIndex);
         }
 
-
         void DropDownToggle_Checked(object sender, RoutedEventArgs e)
         {
             //Open the pop up
@@ -173,6 +175,18 @@ namespace Windows.UI.Xaml.Controls
         {
             //Close the pop up
             IsDropDownOpen = false;
+        }
+
+        private void OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateTextBoxText();
+        }
+
+        protected override void ApplySelectedIndex(int index)
+        {
+            base.ApplySelectedIndex(index);
+
+            UpdateTextBoxText();
         }
 
         /// <summary>
@@ -267,19 +281,7 @@ namespace Windows.UI.Xaml.Controls
                         autoCompleteBox._dropDownToggle.IsChecked = false;
                     }
 
-                    if (autoCompleteBox._textBox != null)
-                    {
-                        autoCompleteBox._updatingTextOnSelection = true;
-
-                        try
-                        {
-                            autoCompleteBox._textBox.Text = (autoCompleteBox.SelectedItem ?? string.Empty).ToString();
-                        }
-                        finally
-                        {
-                            autoCompleteBox._updatingTextOnSelection = false;
-                        }
-                    }
+                    autoCompleteBox.UpdateTextBoxText();
 
                     // Raise the Closed event:
 #if MIGRATION
@@ -287,6 +289,25 @@ namespace Windows.UI.Xaml.Controls
 #else
                     autoCompleteBox.OnDropDownClosed(new RoutedEventArgs());
 #endif
+                }
+            }
+        }
+
+        private void UpdateTextBoxText()
+        {
+            if (_textBox != null)
+            {
+                _updatingTextOnSelection = true;
+
+                try
+                {
+                    _textBox.Text = _valueBindingEvaluator != null ?
+                        _valueBindingEvaluator.GetDynamicValue(SelectedItem) :
+                        (SelectedItem ?? string.Empty).ToString();
+                }
+                finally
+                {
+                    _updatingTextOnSelection = false;
                 }
             }
         }
@@ -750,7 +771,9 @@ namespace Windows.UI.Xaml.Controls
             _updatingTextOnSelection = true;
             try
             {
-                this.Text = selectedContainer.ToString();
+                this.Text = _valueBindingEvaluator != null ?
+                    _valueBindingEvaluator.GetDynamicValue(selectedContainer) :
+                    selectedContainer.ToString();
             }
             finally
             {
@@ -871,7 +894,40 @@ namespace Windows.UI.Xaml.Controls
                                         typeof(AutoCompleteBox), 
                                         new PropertyMetadata(200d));
 
-#region event
+        /// <summary>
+        /// Gets or sets the property path that is used to get the value for display in the text box portion of the <see cref="T:System.Windows.Controls.AutoCompleteBox" /> control, and to filter items for display in the drop-down.
+        /// </summary>
+        /// <returns>
+        /// The property path that is used to get values for display in the text box portion of the <see cref="T:System.Windows.Controls.AutoCompleteBox" /> control, and to filter items for display in the drop-down.
+        /// </returns>
+        public string ValueMemberPath
+        {
+            get
+            {
+                return (ValueMemberBinding != null) ? ValueMemberBinding.Path.Path : null;
+            }
+            set
+            {
+                ValueMemberBinding = value == null ? null : new Binding(value);
+            }
+        }
+
+        /// <summary>Gets or sets the <see cref="T:System.Windows.Data.Binding" /> that is used to get the value for display in the text box portion of the <see cref="T:System.Windows.Controls.AutoCompleteBox" /> control, and to filter items for display in the drop-down.</summary>
+        /// <returns>The <see cref="T:System.Windows.Data.Binding" /> object used when binding to a collection property, and to filter items for display in the drop-down.</returns>
+        private BindingEvaluator<string> _valueBindingEvaluator;
+        public Binding ValueMemberBinding
+        {
+            get
+            {
+                return _valueBindingEvaluator != null ? _valueBindingEvaluator.ValueBinding : null;
+            }
+            set
+            {
+                _valueBindingEvaluator = new BindingEvaluator<string>(value);
+            }
+        }
+
+        #region event
 
         /// <summary>
         /// Occurs when the text in the text box portion of the AutoCompleteBox changes.
