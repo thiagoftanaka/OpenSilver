@@ -98,6 +98,7 @@
 		<Compile Include="System.Windows.Controls.Primitives\Selector.SelectionChanger.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\WORKINPROGRESS\Clipper.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\WORKINPROGRESS\LinearClipper.cs" />
+		<Compile Include="System.Windows.Controls\BindingEvaluator.cs" />
 		<Compile Include="System.Windows.Controls\CalendarDayButton.cs" />
 		<Compile Include="System.Windows.Controls\CleanUpVirtualizedItemEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\DataPager\DataPager.cs" />
@@ -157,7 +158,6 @@
 		<Compile Include="System.Windows.input\WORKINPROGRESS\StylusPointCollection.cs" />
 		<Compile Include="System.Windows.Interop\NavigationStateChangedEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\ItemsControlDragDropTarget.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\ListBoxDragDropTarget.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\TreeViewDragDropTarget.cs" />
 		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\EasingPointKeyFrame.cs" />
 		<Compile Include="System.Windows.Controls\ListBoxDragDropTarget.cs" />

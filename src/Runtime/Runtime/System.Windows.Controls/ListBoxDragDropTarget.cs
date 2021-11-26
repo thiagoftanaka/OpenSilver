@@ -27,7 +27,7 @@ namespace Windows.UI.Xaml.Controls
         /// <param name="data">The item to add.</param>
         protected override void AddItem(ListBox control, object data)
         {
-            control.ItemsHost.Children.Add((UIElement)data);
+            control.GetItemsHost().Children.Add(data);
         }
 
         /// <summary>
@@ -38,9 +38,9 @@ namespace Windows.UI.Xaml.Controls
         /// <returns>The item at the index, null otherwise.</returns>
         protected override UIElement ContainerFromIndex(ListBox itemsControl, int index)
         {
-            if (itemsControl.ItemsHost.Children.Count > index)
+            if (itemsControl.GetItemCount() > index)
             {
-                return itemsControl.ItemsHost.Children[index];
+                return itemsControl.ItemContainerGenerator.ContainerFromIndex(index) as UIElement;
             }
             return null;
         }
@@ -53,7 +53,7 @@ namespace Windows.UI.Xaml.Controls
         /// <returns>Index of the item, null otherwise.</returns>
         protected override int? IndexFromContainer(ListBox itemsControl, UIElement itemContainer)
         {
-            var index = itemsControl.ItemsHost.Children.IndexOf(itemContainer);
+            var index = itemsControl.ItemContainerGenerator.IndexFromContainer(itemContainer);
             return (index != -1) ? new int?(index) : null;
         }
 
@@ -65,7 +65,7 @@ namespace Windows.UI.Xaml.Controls
         /// <param name="data">The item.</param>
         protected override void InsertItem(ListBox itemsControl, int index, object data)
         {
-            itemsControl.ItemsHost.Children.Insert(index, data);
+            itemsControl.GetItemsHost().Children.Insert(index, data);
         }
 
         /// <summary>
@@ -84,7 +84,7 @@ namespace Windows.UI.Xaml.Controls
         /// <param name="data">The item to remove.</param>
         protected override void RemoveItem(ListBox itemsControl, object data)
         {
-            itemsControl.ItemsHost.Children.Remove(data);
+            itemsControl.GetItemsHost().Children.Remove(data);
         }
 
         /// <summary>
@@ -94,7 +94,7 @@ namespace Windows.UI.Xaml.Controls
         /// <param name="index">The index to remove an item.</param>
         protected override void RemoveItemAtIndex(ListBox itemsControl, int index)
         {
-            itemsControl.ItemsHost.Children.RemoveAt(index);
+            itemsControl.GetItemsHost().Children.RemoveAt(index);
         }
 
         /// <summary>
