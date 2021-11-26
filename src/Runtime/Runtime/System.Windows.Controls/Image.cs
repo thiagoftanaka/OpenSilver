@@ -63,6 +63,10 @@ namespace Windows.UI.Xaml.Controls
         double imgWidth = 0; //might be useless, might be useful.
         double imgHeight = 0;
 
+        public Image()
+        {
+            Stretch = Stretch;
+        }
 
         /*
         /// <summary>

@@ -21,51 +21,56 @@ namespace System.Windows.Controls
 namespace Windows.UI.Xaml.Controls
 #endif
 {
-    [OpenSilver.NotImplemented]
     public partial class TreeViewDragDropTarget : ItemsControlDragDropTarget<ItemsControl, TreeViewItem>
     {
-        [OpenSilver.NotImplemented]
+        /// <inheritdoc/>
         protected override void AddItem(ItemsControl control, object data)
         {
+            control.ItemsHost.Children.Add(data);
         }
 
-        [OpenSilver.NotImplemented]
+        /// <inheritdoc/>
         protected override UIElement ContainerFromIndex(ItemsControl itemsControl, int index)
         {
-            return default(UIElement);
+            return itemsControl.ItemsHost.Children[index] as UIElement;
         }
 
-        [OpenSilver.NotImplemented]
+        /// <inheritdoc/>
         protected override int? IndexFromContainer(ItemsControl itemsControl, UIElement itemContainer)
         {
-            return default(int?);
+            int index = itemsControl.ItemsHost.Children.IndexOf(itemContainer);
+            return (index == -1) ? null : new int?(index);
         }
 
-        [OpenSilver.NotImplemented]
+        /// <inheritdoc/>
         protected override void InsertItem(ItemsControl itemsControl, int index, object data)
         {
+            itemsControl.ItemsHost.Children.Insert(index, data);
         }
 
-        [OpenSilver.NotImplemented]
+        /// <inheritdoc/>
         protected override ItemsControl INTERNAL_ReturnNewTItemsControl()
         {
-            return default(ItemsControl);
+            return new TreeViewItem();
         }
 
-        [OpenSilver.NotImplemented]
+        /// <inheritdoc/>
         protected override void RemoveItem(ItemsControl itemsControl, object data)
         {
+            itemsControl.ItemsHost.Children.Remove(data);
         }
 
-        [OpenSilver.NotImplemented]
+        /// <inheritdoc/>
         protected override void RemoveItemAtIndex(ItemsControl itemsControl, int index)
         {
+            itemsControl.ItemsHost.Children.RemoveAt(index);
         }
 
-        [OpenSilver.NotImplemented]
+        /// <inheritdoc/>
         internal override int INTERNAL_GetNumberOfElementsBetweenItemsRootAndDragDropTarget()
         {
-            return default(int);
+            // Number of elements between this and the TreeViewItem being dragged
+            return 14;
         }
     }
 }

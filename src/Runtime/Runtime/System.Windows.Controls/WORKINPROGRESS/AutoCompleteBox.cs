@@ -74,26 +74,6 @@ namespace Windows.UI.Xaml.Controls
         [OpenSilver.NotImplemented]
         public event PopulatingEventHandler Populating;
 
-        /// <summary>
-        /// Gets or sets the property path that is used to get the value for display in the text box portion of the <see cref="T:System.Windows.Controls.AutoCompleteBox" /> control, and to filter items for display in the drop-down.
-        /// </summary>
-        /// <returns>
-        /// The property path that is used to get values for display in the text box portion of the <see cref="T:System.Windows.Controls.AutoCompleteBox" /> control, and to filter items for display in the drop-down.
-        /// </returns>
-        [OpenSilver.NotImplemented]
-        public string ValueMemberPath
-        {
-            get; set;
-        }
-
-        /// <summary>Gets or sets the <see cref="T:System.Windows.Data.Binding" /> that is used to get the value for display in the text box portion of the <see cref="T:System.Windows.Controls.AutoCompleteBox" /> control, and to filter items for display in the drop-down.</summary>
-        /// <returns>The <see cref="T:System.Windows.Data.Binding" /> object used when binding to a collection property, and to filter items for display in the drop-down.</returns>
-        [OpenSilver.NotImplemented]
-        public Binding ValueMemberBinding
-        {
-            get; set;
-        }
-
         /// <summary>Identifies the <see cref="P:System.Windows.Controls.AutoCompleteBox.SearchText" /> dependency property.</summary>
         /// <returns>The identifier for the <see cref="P:System.Windows.Controls.AutoCompleteBox.SearchText" /> dependency property.</returns>
         [OpenSilver.NotImplemented]

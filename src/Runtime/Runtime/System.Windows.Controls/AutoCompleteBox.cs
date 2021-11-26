@@ -102,7 +102,9 @@ namespace Windows.UI.Xaml.Controls
                 for (int i = 0; i < this.ItemsHost.Children.Count; ++i)
                 {
                     ComboBoxItem child = this.ItemsHost.Children[i] as ComboBoxItem;
-                    if (this._filter(this._textBox.Text, child.Content))
+                    if (this._filter(this._textBox.Text, _valueBindingEvaluator != null ?
+                        _valueBindingEvaluator.GetDynamicValue(this.Items[i]) :
+                        child.Content))
                     {
                         child.Visibility = Visibility.Visible;
                     }
@@ -260,7 +262,9 @@ namespace Windows.UI.Xaml.Controls
 
                         try
                         {
-                            autoCompleteBox._textBox.Text = (autoCompleteBox.SelectedItem ?? string.Empty).ToString();
+                            autoCompleteBox._textBox.Text = autoCompleteBox._valueBindingEvaluator != null ?
+                                autoCompleteBox._valueBindingEvaluator.GetDynamicValue(autoCompleteBox.SelectedItem) :
+                                (autoCompleteBox.SelectedItem ?? string.Empty).ToString();
                         }
                         finally
                         {
@@ -724,7 +728,9 @@ namespace Windows.UI.Xaml.Controls
             _updatingTextOnSelection = true;
             try
             {
-                this.Text = selectedContainer.ToString();
+                this.Text = _valueBindingEvaluator != null ?
+                    _valueBindingEvaluator.GetDynamicValue(selectedContainer) :
+                    selectedContainer.ToString();
             }
             finally
             {
@@ -840,6 +846,39 @@ namespace Windows.UI.Xaml.Controls
                                         typeof(double), 
                                         typeof(AutoCompleteBox), 
                                         new PropertyMetadata(200d));
+
+        /// <summary>
+        /// Gets or sets the property path that is used to get the value for display in the text box portion of the <see cref="T:System.Windows.Controls.AutoCompleteBox" /> control, and to filter items for display in the drop-down.
+        /// </summary>
+        /// <returns>
+        /// The property path that is used to get values for display in the text box portion of the <see cref="T:System.Windows.Controls.AutoCompleteBox" /> control, and to filter items for display in the drop-down.
+        /// </returns>
+        public string ValueMemberPath
+        {
+            get
+            {
+                return (ValueMemberBinding != null) ? ValueMemberBinding.Path.Path : null;
+            }
+            set
+            {
+                ValueMemberBinding = value == null ? null : new Binding(value);
+            }
+        }
+
+        /// <summary>Gets or sets the <see cref="T:System.Windows.Data.Binding" /> that is used to get the value for display in the text box portion of the <see cref="T:System.Windows.Controls.AutoCompleteBox" /> control, and to filter items for display in the drop-down.</summary>
+        /// <returns>The <see cref="T:System.Windows.Data.Binding" /> object used when binding to a collection property, and to filter items for display in the drop-down.</returns>
+        private BindingEvaluator<string> _valueBindingEvaluator;
+        public Binding ValueMemberBinding
+        {
+            get
+            {
+                return _valueBindingEvaluator != null ? _valueBindingEvaluator.ValueBinding : null;
+            }
+            set
+            {
+                _valueBindingEvaluator = new BindingEvaluator<string>(value);
+            }
+        }
 
         #region event
 

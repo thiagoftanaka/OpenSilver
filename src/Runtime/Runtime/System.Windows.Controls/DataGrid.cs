@@ -464,9 +464,35 @@ namespace Windows.UI.Xaml.Controls
         /// </summary>
         public ObservableCollection<DataGridColumn> Columns
         {
-            get;
-            private set;
+            get => _columns;
+            private set
+            {
+                _columns = value;
+                if (_columns != null)
+                {
+                    _columns.CollectionChanged += Columns_CollectionChanged;
+                }
+            }
         }
+
+        private void Columns_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            //if (e.NewItems != null)
+            //{
+            //    foreach (DataGridColumn column in e.NewItems)
+            //    {
+            //        column._parent = this;
+
+            //        DataGridTemplateColumn templateColumn = column as DataGridTemplateColumn;
+            //        if (templateColumn != null && Items.Count > 0)
+            //        {
+            //            UpdateChildrenInVisualTree(Items, Items, true);
+            //        }
+            //    }
+            //}
+        }
+
+        private ObservableCollection<DataGridColumn> _columns;
 
         public static readonly DependencyProperty PageSizeProperty =
             DependencyProperty.Register(
@@ -699,7 +725,7 @@ namespace Windows.UI.Xaml.Controls
                             }
                         }
 
-                        //todo-performance: uncomment the following if/else code:
+                        //todo-performance: uncomment the following if else code:
                         //if (e.NewStartingIndex == Items.Count - e.NewItems.Count)
                         //{
                         //    foreach (object item in e.NewItems)
@@ -1347,7 +1373,7 @@ namespace Windows.UI.Xaml.Controls
                     {
                         editableVersionOfCellContainer.Style = column.CellStyle;
                     }
-                    else if (column._parent.CellStyle != null)
+                    else if (column._parent?.CellStyle != null)
                     {
                         editableVersionOfCellContainer.Style = column._parent.CellStyle;
                     }

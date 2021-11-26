@@ -84,6 +84,7 @@
 		<Compile Include="System.IO\MemoryFileInfo.cs" />
 		<Compile Include="System.Windows.Automation.Peers\CalendarDayButtonAutomationPeer.cs" />
 		<Compile Include="System.Windows.Browser\EventSubscriber.cs" />
+		<Compile Include="System.Windows.Controls\BindingEvaluator.cs" />
 		<Compile Include="System.Windows.Controls\CalendarDayButton.cs" />
 		<Compile Include="System.Windows.Controls\CleanUpVirtualizedItemEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\GenerationState.cs" />

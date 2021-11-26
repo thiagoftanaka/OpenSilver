@@ -69,7 +69,8 @@ namespace Windows.UI.Xaml
                 // Height:
                 if (!double.IsNaN(element.Height))
                     style.height = element.Height.ToInvariantString() + "px";
-                else if (element.VerticalAlignment == VerticalAlignment.Stretch && !(element.INTERNAL_VisualParent is Canvas) && !(element is CheckBox))
+                else if ((element.VerticalAlignment == VerticalAlignment.Stretch && !(element.INTERNAL_VisualParent is Canvas) &&
+                    !(element is CheckBox)) || element.INTERNAL_VisualParent is Grid)
                     style.height = "100%";
                 else
                     style.height = "auto";
@@ -77,7 +78,8 @@ namespace Windows.UI.Xaml
                 // Width:
                 if (!double.IsNaN(element.Width))
                     style.width = element.Width.ToInvariantString() + "px";
-                else if (element.HorizontalAlignment == HorizontalAlignment.Stretch && !(element.INTERNAL_VisualParent is Canvas) && !(element is CheckBox))
+                else if ((element.HorizontalAlignment == HorizontalAlignment.Stretch && !(element.INTERNAL_VisualParent is Canvas) &&
+                    !(element is CheckBox)) || element.INTERNAL_VisualParent is Grid)
                     style.width = "100%";
                 else
                     style.width = "auto";

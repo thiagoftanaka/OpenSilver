@@ -145,7 +145,15 @@ namespace Windows.UI.Xaml.Controls
                 if (_sourceItemContainer != null)
                 {
                     // Get a reference to the ItemsControl:
-                    _sourceItemsControl = (TItemsControlType)this.Content; // Note: there is no risk of InvalidCastException because the type has been tested before, and the derived class (PanelDragDropTarget) also verifies the type in the "OnContentChanged" method.
+                    if (_sourceItemContainer is TreeViewItem treeViewItem)
+                    {
+                        _sourceItemsControl = (TItemsControlType)(treeViewItem.ParentTreeViewItem as object) ??
+                            (TItemsControlType)(treeViewItem.ParentTreeView as object);
+                    }
+                    else
+                    {
+                        _sourceItemsControl = (TItemsControlType)this.Content; // Note: there is no risk of InvalidCastException because the type has been tested before, and the derived class (PanelDragDropTarget) also verifies the type in the "OnContentChanged" method.
+                    }
 
                     // Capture the pointer so that when dragged outside the DragDropPanel, we can still get its position:
 #if MIGRATION
@@ -228,6 +236,8 @@ namespace Windows.UI.Xaml.Controls
 
                         // Show the popup:
                         this._popup.IsOpen = true;
+
+                        (_sourceItemContainer as Control)?.Focus();
                     }
                 }
             }
@@ -406,7 +416,7 @@ namespace Windows.UI.Xaml.Controls
             _popup.IsOpen = false;
 
             // Clear item parent, since popup.Child is the intermediate StackPanel
-            if (_sourceItemContainer is FrameworkElement frameworkElement)
+            if (_sourceItemContainer is FrameworkElement frameworkElement && frameworkElement.Parent != null)
             {
                 frameworkElement.ChangeLogicalParent(null);
             }
@@ -475,10 +485,10 @@ namespace Windows.UI.Xaml.Controls
 
                             // Raise the Drop event:
 #if !(BRIDGE && MIGRATION)
-                            dragDropTargetUnderPointer.Drop(dragDropTargetUnderPointer, new MS.DragEventArgs(dataObject, e));
+                            dragDropTargetUnderPointer.Drop(this, new MS.DragEventArgs(dataObject, e));
 
                             // Raise the ItemDroppedOnTarget event
-                            ItemDroppedOnTarget(dragDropTargetUnderPointer, new ItemDragEventArgs(selectionCollection));
+                            ItemDroppedOnTarget(this, new ItemDragEventArgs(selectionCollection));
 #endif
                         }
 
@@ -501,8 +511,6 @@ namespace Windows.UI.Xaml.Controls
                 {
                     // Remove the temporary placeholder (see the comment where the placeholder is defined):
                     this.RemoveItemAtIndex(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl);
-
-                    ItemDroppedOnTarget?.Invoke(uiElementUnderPointer, new ItemDragEventArgs(selectionCollection));
                 }
                 //not a DragDropTarget nor AllowDrop under the pointer so we put what was in the popup back in the content
                 else
@@ -510,6 +518,9 @@ namespace Windows.UI.Xaml.Controls
                     // Put the dragged element back to where it was:
                     PutSourceBackToOriginalPlace();
                 }
+
+                // The event is triggered in Silverlight regardless of whether the target has AllowDrop=true
+                ItemDroppedOnTarget?.Invoke(this, new ItemDragEventArgs(selectionCollection));
             }
 
             // Raise the "ItemDragCompleted" event:
@@ -775,6 +786,11 @@ namespace Windows.UI.Xaml.Controls
             };
             iconArrow.Visibility = Visibility.Collapsed;
             stackPanelInPopUp.Orientation = Orientation.Horizontal;
+
+            if (sourceItemContainer is FrameworkElement frameworkElement && frameworkElement.Parent != null)
+            {
+                frameworkElement.ChangeLogicalParent(null);
+            }
             stackPanelInPopUp.Children.Add(sourceItemContainer);
             stackPanelInPopUp.Children.Add(iconStop);
             stackPanelInPopUp.Children.Add(iconArrow);
