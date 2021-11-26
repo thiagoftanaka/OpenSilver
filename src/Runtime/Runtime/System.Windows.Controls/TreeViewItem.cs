@@ -528,6 +528,13 @@ namespace Windows.UI.Xaml.Controls
         private bool CancelGotFocusBubble { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the TreeViewItem should
+        /// ignore the next MouseLeftButtonDown event it receives because it has already
+        /// been handled by one of its children.
+        /// </summary>
+        private bool CancelMouseLeftButtonDownBubble { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether checking ContainsSelection
         /// should actually perform the update notifications because the item
         /// was selected before it was in the visual tree.
@@ -1216,20 +1223,23 @@ namespace Windows.UI.Xaml.Controls
                 // clicked)
                 if (!e.Handled && IsEnabled)
                 {
-                    if (Focus())
-                    {
-                        e.Handled = true;
-                    }
+                    //if (!CancelMouseLeftButtonDownBubble)
+                    //{
+                        if (Focus())
+                        {
+                            //e.Handled = true;
+                        }
 
-                    // Expand the item when double clicked
-                    if (Interaction.ClickCount % 2 == 0)
-                    {
-                        bool opened = !IsExpanded;
-                        UserInitiatedExpansion |= opened;
-                        IsExpanded = opened;
+                        // Expand the item when double clicked
+                        if (Interaction.ClickCount % 2 == 0)
+                        {
+                            bool opened = !IsExpanded;
+                            UserInitiatedExpansion |= opened;
+                            IsExpanded = opened;
 
-                        e.Handled = true;
-                    }
+                            //e.Handled = true;
+                        }
+                    //}
                 }
 
                 Interaction.OnMouseLeftButtonDownBase();
@@ -1272,17 +1282,39 @@ namespace Windows.UI.Xaml.Controls
                 throw new ArgumentNullException("e");
             }
 
-            TreeView parent;
-            if (!e.Handled && (parent = ParentTreeView) != null && parent.HandleMouseButtonDown())
+            //TreeView parent;
+            //if (!e.Handled && (parent = ParentTreeView) != null && parent.HandleMouseButtonDown())
+            //{
+                //e.Handled = true;
+            //}
+
+            // Since the MouseLeftButtonDown event will bubble up to the parent
+            // TreeViewItem (which will make it think it's also been clicked), it
+            // needs to ignore that event when it's first been handled by one of
+            // its nested children.  We use the CancelMouseLeftButtonDownBubble flag to
+            // notify our parent that MouseLeftButtonDown has already been handled.
+            // This event has to bubble up even if ignored to eventually hit other types
+            // that do not ignore it (e.g. TreeViewDragDropTarget, etc.)
+            if (ParentTreeViewItem != null)
             {
-                e.Handled = true;
+                ParentTreeViewItem.CancelMouseLeftButtonDownBubble = true;
             }
 
+            try
+            {
+                if (!CancelMouseLeftButtonDownBubble)
+                {
 #if MIGRATION
-            base.OnMouseLeftButtonDown(e);
+                    base.OnMouseLeftButtonDown(e);
 #else
-            base.OnPointerPressed(e);
+                    base.OnPointerPressed(e);
 #endif
+                }
+            }
+            finally
+            {
+                CancelMouseLeftButtonDownBubble = false;
+            }
         }
 
         /// <summary>

@@ -168,11 +168,6 @@ namespace Windows.UI.Xaml.Controls
                 _popup.StayOpen = false;
                 _popup.ClosedDueToOutsideClick += Popup_ClosedDueToOutsideClick;
             }
-
-            if (!IsDropDownOpen)
-            {
-                UpdateContentPresenter();
-            }
         }
 
         /// <inheritdoc />
