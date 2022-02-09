@@ -22,6 +22,8 @@
     <file src="../../src/Runtime/Runtime/bin/CSHTML5/$Configuration$/$AssembliesPrefix$.pdb" target="lib/net40/$AssembliesPrefix$.pdb" />
     <file src="../../src/Runtime/Bridge.TypesThatWillBeForwarded/bin/CSHTML5/$Configuration$/CSHTML5.Stubs.dll" target="lib/net40/CSHTML5.Stubs.dll" />
 	<file src="../../src/Runtime/Controls.Data.Input/bin/CSHTML5/$Configuration$/CSHTML5.Controls.Data.Input.dll" target="lib/net40/CSHTML5.Controls.Data.Input.dll" />
+	<file src="../../src/Runtime/Controls.Data/bin/CSHTML5/$Configuration$/CSHTML5.Controls.Data.dll" target="lib/net40/CSHTML5.Controls.Data.dll" />
+
 	<file src="../../src/Runtime/Controls.Input/.CSHTML5/bin/CSHTML5/$Configuration$/CSHTML5.Controls.Input.dll" target="lib/net40/CSHTML5.Controls.Input.dll" />
 	
     <!-- CSHTML5 targets -->

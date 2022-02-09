@@ -126,7 +126,7 @@ class SimpleHTTPServer
         else
             l = new TcpListener(new IPAddress(ipAddessifNotLocalhost), 0);
         l.Start();
-        int port = ((IPEndPoint)l.LocalEndpoint).Port;
+        int port = 55591;// ((IPEndPoint)l.LocalEndpoint).Port;
         l.Stop();
         this.Initialize(path, port);
     }

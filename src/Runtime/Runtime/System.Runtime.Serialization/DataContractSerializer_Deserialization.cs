@@ -434,7 +434,15 @@ namespace System.Runtime.Serialization
                 string resultTypeFullName = resultType.FullName; // For debugging only, can be removed.
 
                 // Create the resulting class:
-                object resultInstance = Activator.CreateInstance(resultType); //todo: replace with "System.Runtime.Serialization.FormatterServices.GetUninitializedObject(type)" so that the type does not require a parameterless constructor.
+                object resultInstance;
+                if (resultType == typeof(Uri))
+                {
+                    resultInstance = new Uri("http://localhost");
+                }
+                else
+                {
+                    resultInstance = Activator.CreateInstance(resultType); //todo: replace with "System.Runtime.Serialization.FormatterServices.GetUninitializedObject(type)" so that the type does not require a parameterless constructor.
+                }
 
                 // Call the "OnDeserializing" method if any:
                 CallOnDeserializingMethod(resultInstance, resultType);

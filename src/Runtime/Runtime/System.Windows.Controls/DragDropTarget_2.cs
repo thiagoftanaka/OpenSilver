@@ -748,7 +748,7 @@ namespace Windows.UI.Xaml.Controls
             return
                 dependencyObject
                     .GetVisualAncestors()
-                    .Prepend(dependencyObject)
+                    //.Prepend(dependencyObject)
                     .OfType<TItemContainerType>()
                     .Where(ancestor => IsItemContainerOfItemsControl(itemsControl, ancestor))
                     .FirstOrDefault();

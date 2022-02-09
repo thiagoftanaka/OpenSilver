@@ -225,8 +225,10 @@ namespace Windows.UI.Xaml.Controls
                 double.TryParse(imgWidthAsString, global::System.Globalization.NumberStyles.Any, global::System.Globalization.CultureInfo.InvariantCulture, out imgWidth); //todo: verify that the locale is OK. I think that JS by default always produces numbers in invariant culture (with "." separator).
                 double.TryParse(imgHeightAsString, global::System.Globalization.NumberStyles.Any, global::System.Globalization.CultureInfo.InvariantCulture, out imgHeight); //todo: read note above
 #elif BRIDGE
-                double.TryParse(imgWidthAsString, global::System.Globalization.CultureInfo.InvariantCulture, out imgWidth); //todo: verify that the locale is OK. I think that JS by default always produces numbers in invariant culture (with "." separator).
-                double.TryParse(imgHeightAsString, global::System.Globalization.CultureInfo.InvariantCulture, out imgHeight); //todo: read note above
+                //double.TryParse(imgWidthAsString, global::System.Globalization.CultureInfo.InvariantCulture, out imgWidth); //todo: verify that the locale is OK. I think that JS by default always produces numbers in invariant culture (with "." separator).
+                //double.TryParse(imgHeightAsString, global::System.Globalization.CultureInfo.InvariantCulture, out imgHeight); //todo: read note above
+                double.TryParse(imgWidthAsString, out imgWidth); //todo: verify that the locale is OK. I think that JS by default always produces numbers in invariant culture (with "." separator).
+                double.TryParse(imgHeightAsString, out imgHeight); //todo: read note above
 #endif
             }
             else

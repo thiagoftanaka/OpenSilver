@@ -16,7 +16,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+#if OPENSILVER
 using System.Text.Json;
+#endif
 using System.Threading.Tasks;
 
 #if MIGRATION
@@ -55,9 +57,13 @@ namespace Windows.UI.Xaml.Controls
             // For each file selected in the dialog, this will be called back
             Action<string, object> onFileChanged = (filename, content) =>
             {
+#if OPENSILVER
                 Dictionary<string, byte> indexedBytes = JsonSerializer.Deserialize<Dictionary<string, byte>>(content.ToString());
                 byte[] values = indexedBytes.Values.ToArray();
                 Files.Add(new MemoryFileInfo(filename, values));
+#else
+                throw new NotImplementedException("JSON serializer");
+#endif
             };
 
             Action onFinishedReading = () =>

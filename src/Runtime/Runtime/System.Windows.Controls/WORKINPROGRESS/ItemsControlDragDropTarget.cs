@@ -18,9 +18,14 @@
 // All other rights reserved.
 
 
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Windows.Controls.Primitives;
+
+#if MIGRATION
 using System.Windows.Shapes;
+#else
+#endif
 
 #if MIGRATION
 namespace System.Windows.Controls
@@ -40,7 +45,7 @@ namespace Windows.UI.Xaml.Controls
         where TItemsControl : ItemsControl
         where TItemContainerType : FrameworkElement
     {
-        #region public Duration ScrollItemAnimationDuration
+#region public Duration ScrollItemAnimationDuration
         /// <summary>
         /// Gets or sets the duration to use to animate an item into view.
         /// </summary>
@@ -60,7 +65,7 @@ namespace Windows.UI.Xaml.Controls
                 typeof(Duration),
                 typeof(ItemsControlDragDropTarget<TItemsControl, TItemContainerType>),
                 new PropertyMetadata(new Duration(TimeSpan.FromSeconds(0.15))));
-        #endregion public Duration ScrollItemAnimationDuration
+#endregion public Duration ScrollItemAnimationDuration
 
         /// <summary>
         /// Returns a value indicating whether an item can be added to the

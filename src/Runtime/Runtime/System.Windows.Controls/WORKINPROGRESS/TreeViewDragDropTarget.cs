@@ -15,7 +15,12 @@
 
 using System;
 using System.Collections.Generic;
+
+#if MIGRATION
 using System.Windows.Controls.Primitives;
+#else
+using Windows.UI.Xaml.Controls.Primitives;
+#endif
 
 #if MIGRATION
 namespace System.Windows.Controls

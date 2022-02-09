@@ -103,12 +103,12 @@ namespace Windows.UI.Xaml.Controls
                 for (int i = 0; i < this.Items.Count; i++)
                 {
                     ComboBoxItem container = this.ItemContainerGenerator.ContainerFromIndex(i) as ComboBoxItem;
-                    if (this._filter(this._textBox.Text, _valueBindingEvaluator != null ?
-                        _valueBindingEvaluator.GetDynamicValue(this.Items[i]) :
-                        container.Content))
-                    {
-                        continue;
-                    }
+                    //if (this._filter(this._textBox.Text, _valueBindingEvaluator != null ?
+                    //    _valueBindingEvaluator.GetDynamicValue(this.Items[i]) :
+                    //    container.Content))
+                    //{
+                    //    continue;
+                    //}
 
                     if (this._filter(this._textBox.Text, container.Content))
                     {
@@ -301,9 +301,9 @@ namespace Windows.UI.Xaml.Controls
 
                 try
                 {
-                    _textBox.Text = _valueBindingEvaluator != null ?
-                        _valueBindingEvaluator.GetDynamicValue(SelectedItem) :
-                        (SelectedItem ?? string.Empty).ToString();
+                    //_textBox.Text = _valueBindingEvaluator != null ?
+                    //    _valueBindingEvaluator.GetDynamicValue(SelectedItem) :
+                    //    (SelectedItem ?? string.Empty).ToString();
                 }
                 finally
                 {
@@ -771,9 +771,9 @@ namespace Windows.UI.Xaml.Controls
             _updatingTextOnSelection = true;
             try
             {
-                this.Text = _valueBindingEvaluator != null ?
-                    _valueBindingEvaluator.GetDynamicValue(selectedContainer) :
-                    selectedContainer.ToString();
+                //this.Text = _valueBindingEvaluator != null ?
+                //    _valueBindingEvaluator.GetDynamicValue(selectedContainer) :
+                //    selectedContainer.ToString();
             }
             finally
             {
