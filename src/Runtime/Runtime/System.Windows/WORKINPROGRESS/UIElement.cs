@@ -3,6 +3,7 @@ using CSHTML5.Internal;
 
 #if MIGRATION
 using System.Windows.Media;
+using Microsoft.Windows;
 #else
 using Windows.UI.Xaml.Media;
 using Windows.Foundation;

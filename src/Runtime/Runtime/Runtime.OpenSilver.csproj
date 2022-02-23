@@ -34,7 +34,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-		<PackageReference Include="Microsoft.JSInterop" Version="3.1.3" />
+		<PackageReference Include="Microsoft.JSInterop" Version="3.1.22" />
+		<PackageReference Include="ReactiveUI.Blazor" Version="17.1.50" />
 		<PackageReference Include="System.ComponentModel.Annotations" Version="4.7.0" />
 		<PackageReference Include="System.ComponentModel.Composition" Version="4.7.0" />
 		<PackageReference Include="System.ServiceModel.Primitives" Version="4.6.0" />
@@ -80,6 +81,7 @@
 		<Compile Include="System.ComponentModel.Composition.Hosting\WORKINPROGRESS\CompositionHost.cs" />
 		<Compile Include="System.ComponentModel.Composition.Hosting\WORKINPROGRESS\DeploymentCatalog.cs" />
 		<Compile Include="System.ComponentModel.Composition\WORKINPROGRESS\CompositionInitializer.cs" />
+		<Compile Include="System.Linq\ObservableExtensions.cs" />
 		<Compile Include="System.ServiceModel.Channels\WORKINPROGRESS\PollingDuplexMode.cs" />
 		<Compile Include="System.ServiceModel.Channels\WORKINPROGRESS\PollingDuplexHttpBinding.cs" />
 		<Compile Include="System.ServiceModel\WORKINPROGRESS\PollingDuplexHttpSecurity.cs" />
@@ -95,15 +97,25 @@
 		<Compile Include="System.Windows.Controls.Primitives\WORKINPROGRESS\LinearClipper.cs" />
 		<Compile Include="System.Windows.Controls\BindingEvaluator.cs" />
 		<Compile Include="System.Windows.Controls\CalendarDayButton.cs" />
+		<Compile Include="System.Windows.Controls\CardPanel.cs" />
 		<Compile Include="System.Windows.Controls\CleanUpVirtualizedItemEventArgs.cs" />
+		<Compile Include="System.Windows.Controls\DragDecorator.cs" />
+		<Compile Include="System.Windows.Controls\DragDropTarget.cs" />
+		<Compile Include="System.Windows.Controls\EnumerableExtensions.cs" />
+		<Compile Include="System.Windows.Controls\IndicatingInsertionLocationEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\ISelectionAdapter.cs" />
 		<Compile Include="System.Windows.Controls\ItemsControl.ItemInfo.cs" />
+		<Compile Include="System.Windows.Controls\ItemsControlDragDropTarget.cs" />
+		<Compile Include="System.Windows.Controls\ItemsControlExtensions.cs" />
 		<Compile Include="System.Windows.Controls\LayoutTransformer.cs" />
 		<Compile Include="System.Windows.Controls\PasswordBoxView.cs" />
 		<Compile Include="System.Windows.Controls\PopulatedEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\RoutedPropertyChangingEventHandler.cs" />
 		<Compile Include="System.Windows.Controls\SelectedItemCollection.cs" />
 		<Compile Include="System.Windows.Controls\SelectorSelectionAdapter.cs" />
+		<Compile Include="System.Windows.Controls\Toolkit\Internals\Event.cs" />
+		<Compile Include="System.Windows.Controls\Toolkit\Internals\IEvent.cs" />
+		<Compile Include="System.Windows.Controls\TreeViewDragDropTarget.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\CalendarButton.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\DatePickerDateValidationErrorEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\DomainUpDown.cs" />
@@ -126,11 +138,10 @@
 		<Compile Include="System.Windows.Documents\WORKINPROGRESS\FontSource.cs" />
 		<Compile Include="System.Windows.Ink\WORKINPROGRESS\Stroke.cs" />
 		<Compile Include="System.Windows.Ink\WORKINPROGRESS\StrokeCollection.cs" />
+		<Compile Include="System.Windows.input\MouseEventArgsExtensions.cs" />
 		<Compile Include="System.Windows.input\WORKINPROGRESS\StylusPoint.cs" />
 		<Compile Include="System.Windows.input\WORKINPROGRESS\StylusPointCollection.cs" />
 		<Compile Include="System.Windows.Interop\NavigationStateChangedEventArgs.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\ItemsControlDragDropTarget.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\TreeViewDragDropTarget.cs" />
 		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\EasingPointKeyFrame.cs" />
 		<Compile Include="System.Windows.Controls\ListBoxDragDropTarget.cs" />
 		<Compile Include="System.Windows.Media\BrushConverter.cs" />
@@ -146,23 +157,38 @@
 		<Compile Include="System.Windows.Media\DoubleCollectionConverter.cs" />
 		<Compile Include="System.Windows\DataObject.SL.cs" />
 		<Compile Include="System.Windows\DataTemplateKey.cs" />
+		<Compile Include="System.Windows\DependencyObjectExtensions.cs" />
+		<Compile Include="System.Windows\DragAction.cs" />
+		<Compile Include="System.Windows\DragDropCompletedEventArgs.cs" />
+		<Compile Include="System.Windows\DragEventArgs.cs" />
+		<Compile Include="System.Windows\DragEventHandler.cs" />
+		<Compile Include="System.Windows\DragOperation.cs" />
 		<Compile Include="System.Windows\DurationConverter.cs" />
 		<Compile Include="System.Windows.Media\FontFamilyConverter.cs" />
+		<Compile Include="System.Windows\ExtendedRoutedEvent.cs" />
+		<Compile Include="System.Windows\ExtendedRoutedEventHandlersCollection.cs" />
 		<Compile Include="System.Windows\FontStretchConverter.cs" />
 		<Compile Include="System.Windows\FontStyleConverter.cs" />
 		<Compile Include="System.Windows\FontWeightConverter.cs" />
 		<Compile Include="System.Windows.Media\GeometryConverter.cs" />
+		<Compile Include="System.Windows\GiveFeedbackEventArgs.cs" />
+		<Compile Include="System.Windows\GiveFeedbackEventHandler.cs" />
 		<Compile Include="System.Windows\GridLengthConverter.cs" />
 		<Compile Include="System.ComponentModel\IItemProperties.cs" />
 		<Compile Include="System.Windows.Media\ImageSourceConverter.cs" />
 		<Compile Include="System.Windows.Media.Animation\KeyTimeConverter.cs" />
 		<Compile Include="System.Windows.Media\MatrixConverter.cs" />
 		<Compile Include="System.Windows.Media\PointCollectionConverter.cs" />
+		<Compile Include="System.Windows\IAcceptDrop.cs" />
+		<Compile Include="System.Windows\IDataObjectExtensions.cs" />
 		<Compile Include="System.Windows\PointConverter.cs" />
 		<Compile Include="System.Windows\PropertyPathConverter.cs" />
+		<Compile Include="System.Windows\QueryContinueDragEventArgs.cs" />
+		<Compile Include="System.Windows\QueryContinueDragEventHandler.cs" />
 		<Compile Include="System.Windows\RectConverter.cs" />
 		<Compile Include="System.Windows.Media.Animation\RepeatBehaviorConverter.cs" />
 		<Compile Include="System.Windows\SizeConverter.cs" />
+		<Compile Include="System.Windows\SystemParameters.cs" />
 		<Compile Include="System.Windows\TextDecorationCollectionConverter.cs" />
 		<Compile Include="System.Windows\ThicknessConverter.cs" />
 		<Compile Include="System.Windows.Media\TransformConverter.cs" />
@@ -196,6 +222,8 @@
 		<Compile Include="System.Windows\InstallState.cs" />
 		<Compile Include="System.Windows\RoutedPropertyChangingEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\CleanUpVirtualizedItemEventHandler.cs" />
+		<Compile Include="System.Windows\UIElementExtendedRoutedEventExtensions.cs" />
+		<Compile Include="System.Windows\UIElementExtensions.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\Analytics.cs" />
 		<Compile Include="System.Windows.Automation.Peers\WORKINPROGRESS\ExpanderAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Peers\WORKINPROGRESS\TreeViewAutomationPeer.cs" />
@@ -340,7 +368,6 @@
 		<Compile Include="System.Windows\ResourcesChangeInfo.cs" />
 		<Compile Include="System.Windows\TreeWalkHelper.cs" />
 		<Compile Include="OpenSilver\Internal\ApplicationLifetimeObjectsCollection.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\DragEventHandler.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\FontEastAsianLanguage.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\FontEastAsianWidths.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\FontFraction.cs" />
@@ -724,9 +751,6 @@
 		<Compile Include="System.Windows.Controls\DockPanel.cs" />
 		<Compile Include="System.Windows.Controls\DragDropEffects.cs" />
 		<Compile Include="System.Windows.Controls\DragDropKeyStates.cs" />
-		<Compile Include="System.Windows.Controls\DragDropTarget_2.cs" />
-		<Compile Include="System.Windows.Controls\DragEventArgs.cs" />
-		<Compile Include="System.Windows.Controls\DragEventHandler.cs" />
 		<Compile Include="System.Windows.Controls\Expander.cs" />
 		<Compile Include="System.Windows.Controls\ExtendedRoutedEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\Grid.cs" />
@@ -787,8 +811,6 @@
 		<Compile Include="System.Windows.Controls\TextChangedEventHandler.cs" />
 		<Compile Include="System.Windows.Controls\TimePicker.cs" />
 		<Compile Include="System.Windows.Controls\Toolkit\CollectionHelpers.cs" />
-		<Compile Include="System.Windows.Controls\Toolkit\EnumerableExtensions.cs" />
-		<Compile Include="System.Windows.Controls\Toolkit\ItemsControlExtensions.cs" />
 		<Compile Include="System.Windows.Controls\ToolTip.cs" />
 		<Compile Include="System.Windows.Controls\ToolTipService.cs" />
 		<Compile Include="System.Windows.Controls\UIElementCollection.cs" />
@@ -1052,7 +1074,6 @@
 		<Compile Include="System.Windows\WORKINPROGRESS\OutOfBrowserSettings.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\WindowSettings.cs" />
 		<Compile Include="System.Windows\TemplateBindingExpression.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\DragEventArgs.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\IDataObject.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\WindowState.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\WindowResizeEdge.cs" />

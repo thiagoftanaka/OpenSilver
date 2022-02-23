@@ -1,40 +1,24 @@
-﻿
-/*===================================================================================
-* 
-*   Copyright (c) Userware/OpenSilver.net
-*      
-*   This file is part of the OpenSilver Runtime (https://opensilver.net), which is
-*   licensed under the MIT license: https://opensource.org/licenses/MIT
-*   
-*   As stated in the MIT license, "the above copyright notice and this permission
-*   notice shall be included in all copies or substantial portions of the Software."
-*  
-\*====================================================================================*/
+﻿// (c) Copyright Microsoft Corporation.
+// This source is subject to the Microsoft Public License (Ms-PL).
+// Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
+// All other rights reserved.
 
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-
-#if MIGRATION
-using System.Windows.Media;
 using System.Windows.Controls.Primitives;
-#else
-using Windows.UI.Xaml.Media;
-using Windows.UI.Xaml.Controls.Primitives;
-#endif
+using System.Windows.Media;
 
-#if MIGRATION
 namespace System.Windows.Controls
-#else
-namespace Windows.UI.Xaml.Controls
-#endif
 {
     /// <summary>
     /// Provides useful extensions to ItemsControl instances.
     /// </summary>
     /// <QualityBand>Experimental</QualityBand>
-    public static partial class ItemsControlExtensions
+    public static class ItemsControlExtensions
     {
         /// <summary>
         /// Gets the Panel that contains the containers of an ItemsControl.
@@ -44,7 +28,7 @@ namespace Windows.UI.Xaml.Controls
         /// The Panel that contains the containers of an ItemsControl, or null
         /// if the Panel could not be found.
         /// </returns>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="T:System.ArgumentNullException">
         /// <paramref name="control" /> is null.
         /// </exception>
         public static Panel GetItemsHost(this ItemsControl control)
@@ -52,6 +36,14 @@ namespace Windows.UI.Xaml.Controls
             if (control == null)
             {
                 throw new ArgumentNullException("control");
+            }
+
+            // Get the first live container
+            DependencyObject container = control.ItemContainerGenerator.ContainerFromIndex(0);
+
+            if (container != null)
+            {
+                return VisualTreeHelper.GetParent(container) as Panel;
             }
 
             FrameworkElement rootVisual = control.GetVisualChildren().FirstOrDefault() as FrameworkElement;
@@ -75,7 +67,7 @@ namespace Windows.UI.Xaml.Controls
         /// The ScrollViewer that contains the containers of an ItemsControl, or
         /// null if a ScrollViewer could not be found.
         /// </returns>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="T:System.ArgumentNullException">
         /// <paramref name="control" /> is null.
         /// </exception>
         public static ScrollViewer GetScrollHost(this ItemsControl control)
@@ -131,7 +123,7 @@ namespace Windows.UI.Xaml.Controls
         /// <exception cref="T:System.ArgumentNullException">
         /// <paramref name="control" /> is null.
         /// </exception>
-        //[SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter", Justification = "Common pattern for extensions that cast.")]
+        [SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter", Justification = "Common pattern for extensions that cast.")]
         public static IEnumerable<TContainer> GetContainers<TContainer>(this ItemsControl control)
             where TContainer : DependencyObject
         {
@@ -154,7 +146,7 @@ namespace Windows.UI.Xaml.Controls
         private static IEnumerable<TContainer> GetContainersIterator<TContainer>(ItemsControl control)
             where TContainer : DependencyObject
         {
-            //Debug.Assert(control != null, "control should not be null!");
+            Debug.Assert(control != null, "control should not be null!");
             return control.GetItemsAndContainers<TContainer>().Select(p => p.Value);
         }
         #endregion GetContainers
@@ -168,7 +160,7 @@ namespace Windows.UI.Xaml.Controls
         /// <exception cref="T:System.ArgumentNullException">
         /// <paramref name="control" /> is null.
         /// </exception>
-        //[SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures", Justification = "Using a sequence of pairs.")]
+        [SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures", Justification = "Using a sequence of pairs.")]
         public static IEnumerable<KeyValuePair<object, DependencyObject>> GetItemsAndContainers(this ItemsControl control)
         {
             if (control == null)
@@ -190,8 +182,8 @@ namespace Windows.UI.Xaml.Controls
         /// <exception cref="T:System.ArgumentNullException">
         /// <paramref name="control" /> is null.
         /// </exception>
-        //[SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter", Justification = "Returns a generic type.")]
-        //[SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures", Justification = "Using a sequence of pairs.")]
+        [SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter", Justification = "Returns a generic type.")]
+        [SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures", Justification = "Using a sequence of pairs.")]
         public static IEnumerable<KeyValuePair<object, TContainer>> GetItemsAndContainers<TContainer>(this ItemsControl control)
             where TContainer : DependencyObject
         {
@@ -217,12 +209,12 @@ namespace Windows.UI.Xaml.Controls
         private static IEnumerable<KeyValuePair<object, TContainer>> GetItemsAndContainersIterator<TContainer>(ItemsControl control)
             where TContainer : DependencyObject
         {
-            //Debug.Assert(control != null, "control should not be null!");
+            Debug.Assert(control != null, "control should not be null!");
 
             int count = control.Items.Count;
             for (int i = 0; i < count; i++)
             {
-                DependencyObject container = (DependencyObject)control.ItemContainerGenerator.ContainerFromIndex(i);
+                DependencyObject container = control.ItemContainerGenerator.ContainerFromIndex(i);
                 if (container == null)
                 {
                     continue;

@@ -36,14 +36,18 @@ namespace System.Windows
         {
         }
 
-        /*spublic DataObject(object data) : this()
+        /// <summary>
+        /// Initializes a new instance of the DataObject class.
+        /// </summary>
+        /// <param name="data">An object that represents the data to store in this data object.</param>
+        public DataObject(object data) : this()
         {
             if (data == null)
             {
                 throw new ArgumentNullException("data");
             }
-            _data.Add(data.GetType().ToString(),data);
-        }*/
+            SetData(data);
+        }
 
         /// <summary>
         /// Retrieves a data object in a specified format; the data format is specified 

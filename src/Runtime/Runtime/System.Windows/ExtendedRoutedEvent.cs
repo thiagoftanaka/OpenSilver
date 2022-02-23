@@ -13,7 +13,14 @@
 \*====================================================================================*/
 
 
-using System;
+// (c) Copyright Microsoft Corporation.
+// This source is subject to the Microsoft Public License (Ms-PL).
+// Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
+// All other rights reserved.
+
+#if MIGRATION
+using System.Windows;
+#endif
 
 #if MIGRATION
 namespace Microsoft.Windows
@@ -22,11 +29,16 @@ namespace System.Windows
 #endif
 {
     /// <summary>
-    /// Represents the method that will handle the UIElement.DragEnter,
-    /// UIElement.DragLeave, UIElement.DragOver, and
-    /// UIElement.Drop events of a UIElement.
+    /// Represents and identifies a routed event and declares its characteristics.
     /// </summary>
-    /// <param name="sender">The object where the event handler is attached.</param>
-    /// <param name="e">The event data.</param>
-    public delegate void DragEventHandler(object sender, DragEventArgs e);
+    /// <QualityBand>Experimental</QualityBand>
+    public sealed class ExtendedRoutedEvent
+    {
+        /// <summary>
+        /// Creates a new instance of the ExtendedRoutedEvent class.
+        /// </summary>
+        internal ExtendedRoutedEvent()
+        {
+        }
+    }
 }

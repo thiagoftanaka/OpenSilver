@@ -1,111 +1,134 @@
-﻿
-/*===================================================================================
-* 
-*   Copyright (c) Userware/OpenSilver.net
-*      
-*   This file is part of the OpenSilver Runtime (https://opensilver.net), which is
-*   licensed under the MIT license: https://opensource.org/licenses/MIT
-*   
-*   As stated in the MIT license, "the above copyright notice and this permission
-*   notice shall be included in all copies or substantial portions of the Software."
-*  
-\*====================================================================================*/
+﻿// (c) Copyright Microsoft Corporation.
+// This source is subject to the Microsoft Public License (Ms-PL).
+// Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
+// All other rights reserved.
 
-
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 #if MIGRATION
-namespace System.Windows.Controls
+using SW = Microsoft.Windows;
 #else
-namespace Windows.UI.Xaml.Controls
+using SW = System.Windows;
 #endif
+
+namespace System.Windows.Controls
 {
-    public sealed partial class ListBoxDragDropTarget : ItemsControlDragDropTarget<ListBox, ListBoxItem>
+    /// <summary>
+    /// A control that enables drag and drop operations on ListBox.
+    /// </summary>
+    /// <QualityBand>Experimental</QualityBand>
+    [TemplatePart(Name = DragContainerName, Type = typeof(Canvas))]
+    [TemplatePart(Name = DragDecoratorName, Type = typeof(DragDecorator))]
+    [TemplatePart(Name = InsertionIndicatorName, Type = typeof(Path))]
+    [TemplatePart(Name = InsertionIndicatorContainerName, Type = typeof(Canvas))]
+    [TemplatePart(Name = DragPopupName, Type = typeof(Popup))]
+    [SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "Use of Rx makes code appear more complex than it is to static analyzer.")]
+    public class ListBoxDragDropTarget : ItemsControlDragDropTarget<ListBox, ListBoxItem>
     {
         /// <summary>
-        /// Adds an item at the last position of the item control.
+        /// Gets the ListBox that is the drag drop target.
         /// </summary>
-        /// <param name="control">The item control.</param>
-        /// <param name="data">The item to add.</param>
-        protected override void AddItem(ListBox control, object data)
+        protected ListBox ListBox
         {
-            control.GetItemsHost().Children.Add(data);
+            get { return Content as ListBox; }
         }
 
         /// <summary>
-        /// Gets the item at an index of the item control.
+        /// Initializes a new instance of the ListBoxDragDropTarget class.
         /// </summary>
-        /// <param name="itemsControl">The item control.</param>
-        /// <param name="index">The item index.</param>
-        /// <returns>The item at the index, null otherwise.</returns>
-        protected override UIElement ContainerFromIndex(ListBox itemsControl, int index)
+        public ListBoxDragDropTarget()
         {
-            if (itemsControl.GetItemCount() > index)
+            this.DefaultStyleKey = typeof(ListBoxDragDropTarget);
+        }
+
+        /// <summary>
+        /// Adds all selected items when drag operation begins.
+        /// </summary>
+        /// <param name="eventArgs">Information about the event.</param>
+        protected override void OnItemDragStarting(ItemDragEventArgs eventArgs)
+        {
+            SelectionCollection selectionCollection = new SelectionCollection();
+
+            // If panel is virtualized there is no way of knowing the precise
+            // index of each selected item.
+            Panel itemsHost = this.ListBox.GetItemsHost();
+            if (itemsHost is VirtualizingPanel)
             {
-                return itemsControl.ItemContainerGenerator.ContainerFromIndex(index) as UIElement;
+                foreach (object item in this.ListBox.SelectedItems)
+                {
+                    selectionCollection.Add(new Selection(item));
+                }
+
+                // Adding the item dragged even if it isn't selected
+                SelectionCollection defaultSelectionCollection = SelectionCollection.ToSelectionCollection(eventArgs.Data);
+
+                if (defaultSelectionCollection.Count == 1 && !selectionCollection.Any(selection => object.Equals(selection.Item, defaultSelectionCollection[0].Item)))
+                {
+                    selectionCollection.Add(defaultSelectionCollection[0]);
+                }
             }
-            return null;
+            else
+            {
+                for (int cnt = 0; cnt < this.ListBox.Items.Count; cnt++)
+                {
+                    ListBoxItem listBoxItem = this.ListBox.ItemContainerGenerator.ContainerFromIndex(cnt) as ListBoxItem;
+                    if (listBoxItem.IsSelected)
+                    {
+                        selectionCollection.Add(new Selection(cnt, this.ListBox.Items[cnt]));
+                    }
+                }
+
+                // Adding the item dragged even if it isn't selected
+                SelectionCollection defaultSelectionCollection = GetSelectionCollection(eventArgs.Data);
+                if (defaultSelectionCollection.Count == 1)
+                {
+                    if (selectionCollection.All(selection => selection.Index != defaultSelectionCollection[0].Index))
+                    {
+                        selectionCollection.Add(defaultSelectionCollection[0]);
+                    }
+                }
+            }
+
+            eventArgs.Data = selectionCollection;
+
+            CardPanel cardPanel = new CardPanel();
+            IEnumerable<UIElement> itemContainers =
+                selectionCollection.SelectedItems
+                    .Select(item => this.ListBox.ItemContainerGenerator.ContainerFromItem(item))
+                    .Where(item => item != null)
+                    .OfType<UIElement>();
+
+            foreach (ListBoxItem row in itemContainers)
+            {
+                cardPanel.Children.Add(new Image { Source = new WriteableBitmap(row, new TranslateTransform()) });
+            }
+
+            eventArgs.DragDecoratorContent = cardPanel;
+
+            eventArgs.Handled = true;
+            base.OnItemDragStarting(eventArgs);
         }
 
         /// <summary>
-        /// Gets the index of an item on the item control.
+        /// Ensures the content of control is a ListBox.
         /// </summary>
-        /// <param name="itemsControl">The item control.</param>
-        /// <param name="itemContainer">The item.</param>
-        /// <returns>Index of the item, null otherwise.</returns>
-        protected override int? IndexFromContainer(ListBox itemsControl, UIElement itemContainer)
+        /// <param name="oldContent">The old content.</param>
+        /// <param name="newContent">The new content.</param>
+        protected override void OnContentChanged(object oldContent, object newContent)
         {
-            var index = itemsControl.ItemContainerGenerator.IndexFromContainer(itemContainer);
-            return (index != -1) ? new int?(index) : null;
-        }
-
-        /// <summary>
-        /// Inserts an item at an specific index.
-        /// </summary>
-        /// <param name="itemsControl">The item control.</param>
-        /// <param name="index">The index to insert the item.</param>
-        /// <param name="data">The item.</param>
-        protected override void InsertItem(ListBox itemsControl, int index, object data)
-        {
-            itemsControl.GetItemsHost().Children.Insert(index, data);
-        }
-
-        /// <summary>
-        /// Gets a new instance of the item control.
-        /// </summary>
-        /// <returns>The item control.</returns>
-        protected override ListBox INTERNAL_ReturnNewTItemsControl()
-        {
-            return new ListBox();
-        }
-
-        /// <summary>
-        /// Removes an item from the item control.
-        /// </summary>
-        /// <param name="itemsControl">The item control.</param>
-        /// <param name="data">The item to remove.</param>
-        protected override void RemoveItem(ListBox itemsControl, object data)
-        {
-            itemsControl.GetItemsHost().Children.Remove(data);
-        }
-
-        /// <summary>
-        /// Removes an item at a specific index from the item control.
-        /// </summary>
-        /// <param name="itemsControl"> The item control.</param>
-        /// <param name="index">The index to remove an item.</param>
-        protected override void RemoveItemAtIndex(ListBox itemsControl, int index)
-        {
-            itemsControl.GetItemsHost().Children.RemoveAt(index);
-        }
-
-        /// <summary>
-        /// Gets the number of nested elements between a DragDropTarget and its root element
-        /// (root inclusive, DragDropTarget exclusive).
-        /// </summary>
-        /// <returns>The number of elements.</returns>
-        internal override int INTERNAL_GetNumberOfElementsBetweenItemsRootAndDragDropTarget()
-        {
-            // Number of elements between this and the dragged ListBoxItem
-            return 9;
+            if (newContent != null && !(newContent is ListBox))
+            {
+                throw new ArgumentException("The content property must be a ListBox.");
+            }
+            base.OnContentChanged(oldContent, newContent);
         }
     }
 }

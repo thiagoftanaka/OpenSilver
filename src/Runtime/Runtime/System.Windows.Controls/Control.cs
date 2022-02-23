@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using Microsoft.Windows;
 
 #if MIGRATION
 using System.Windows.Media;
@@ -362,7 +363,7 @@ namespace Windows.UI.Xaml.Controls
                             if (value is Binding binding)
                             {
                                 value = binding.Source;
-                                binding.Path.Path.Split('.')
+                                binding.Path.Path.Split('.').ToList()
                                     .ForEach(p =>
                                         value = value.GetType().GetProperty(p).GetValue(value)
                                     );

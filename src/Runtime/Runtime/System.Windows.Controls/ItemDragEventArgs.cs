@@ -45,6 +45,13 @@ namespace Windows.UI.Xaml.Controls
         /// <summary>
         /// Initializes a new instance of the ItemDragEventArgs class.
         /// </summary>
+        internal ItemDragEventArgs()
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the ItemDragEventArgs class.
+        /// </summary>
         internal ItemDragEventArgs(SelectionCollection data)
         {
             this.Data = data;
@@ -71,7 +78,6 @@ namespace Windows.UI.Xaml.Controls
         /// </summary>
         public bool Cancel { get; set; }
 
-#if unsupported
         /// <summary>
         /// Gets a value indicating whether removing data
         /// from the source is handled by the target.
@@ -147,6 +153,5 @@ namespace Windows.UI.Xaml.Controls
             this.RemoveDataFromDragSourceAction = args.RemoveDataFromDragSourceAction;
             this.DataRemovedFromDragSource = args.DataRemovedFromDragSource;
         }
-#endif
     }
 }

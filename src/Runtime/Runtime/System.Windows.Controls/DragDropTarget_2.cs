@@ -130,7 +130,7 @@ namespace Windows.UI.Xaml.Controls
 #else
         private void DragDropTarget_PointerPressed(object sender, PointerRoutedEventArgs e)
 #endif
-        {
+      a   {
             //----------------------------------
             // DRAG OPERATION STARTS HERE
             //----------------------------------
