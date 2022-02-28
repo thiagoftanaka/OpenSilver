@@ -2566,6 +2566,15 @@ namespace Windows.UI.Xaml.Controls
                     e.Handled = true;
                     break;
 
+#if MIGRATION
+                case Key.Tab:
+#else
+                case VirtualKey.Tab:
+#endif
+                    OnAdapterSelectionComplete(this, new RoutedEventArgs());
+                    e.Handled = false;
+                    break;
+
                 default:
                     break;
             }

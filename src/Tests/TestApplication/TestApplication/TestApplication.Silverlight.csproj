@@ -165,6 +165,15 @@
     <Compile Include="Tests\Double ClickTest.xaml.cs">
       <DependentUpon>Double ClickTest.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Tests\DragDropTarget\ListBoxDragDropTargetTest.xaml.cs">
+      <DependentUpon>ListBoxDragDropTargetTest.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Tests\DragDropTarget\PanelDragDropTargetTest.xaml.cs">
+      <DependentUpon>PanelDragDropTargetTest.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Tests\DragDropTarget\TreeViewDragDropTargetTest.xaml.cs">
+      <DependentUpon>TreeViewDragDropTargetTest.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Tests\Encoding_GetDecoderTest.xaml.cs">
       <DependentUpon>Encoding_GetDecoderTest.xaml</DependentUpon>
     </Compile>
@@ -313,6 +322,9 @@
     <Compile Include="Tests\TransformTest.xaml.cs">
       <DependentUpon>TransformTest.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Tests\TreeViewTest.xaml.cs">
+      <DependentUpon>TreeViewTest.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Tests\TwoTextBoxesHorizontallyTest.xaml.cs">
       <DependentUpon>TwoTextBoxesHorizontallyTest.xaml</DependentUpon>
     </Compile>
@@ -445,6 +457,18 @@
     <Page Include="Tests\Double ClickTest.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Tests\DragDropTarget\ListBoxDragDropTargetTest.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Tests\DragDropTarget\PanelDragDropTargetTest.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Tests\DragDropTarget\TreeViewDragDropTargetTest.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Tests\Encoding_GetDecoderTest.xaml">
       <SubType>Designer</SubType>
@@ -641,6 +665,10 @@
     <Page Include="Tests\TransformTest.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Tests\TreeViewTest.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Tests\TwoTextBoxesHorizontallyTest.xaml">
       <SubType>Designer</SubType>

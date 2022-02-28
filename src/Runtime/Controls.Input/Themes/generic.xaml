@@ -227,7 +227,14 @@
                                                  Background="{TemplateBinding Background}"
                                                  Foreground="{TemplateBinding Foreground}"
                                                  BorderThickness="0"
-                                                 ItemTemplate="{TemplateBinding ItemTemplate}" />
+                                                 ItemTemplate="{TemplateBinding ItemTemplate}"
+                                                 CustomLayout="True" IsAutoHeightOnCustomLayout="True">
+                                            <ListBox.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <VirtualizingStackPanel/>
+                                                </ItemsPanelTemplate>
+                                            </ListBox.ItemsPanel>
+                                        </ListBox>
                                     </Border>
                                 </Border>
                             </Grid>
