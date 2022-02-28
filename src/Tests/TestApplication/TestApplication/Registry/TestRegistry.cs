@@ -125,6 +125,14 @@ namespace TestApplication
 			TestCategory shapes = new TestCategory("Shapes");
 			shapes.Add(new Test("Polygon", "Shapes/Polygon"));
 			Tests.Add(shapes);
-		}
+
+            TestCategory dragDropTargets = new TestCategory("DragDropTargets");
+            dragDropTargets.Add(new Test("PanelDragDropTarget", "DragDropTarget/PanelDragDropTarget"));
+            dragDropTargets.Add(new Test("ListBoxDragDropTarget", "DragDropTarget/ListBoxDragDropTarget"));
+            dragDropTargets.Add(new Test("TreeViewDragDropTarget", "DragDropTarget/TreeViewDragDropTarget"));
+            Tests.Add(dragDropTargets);
+
+            Tests.Add(new Test("TreeView", "TreeView"));
+        }
     }
 }
