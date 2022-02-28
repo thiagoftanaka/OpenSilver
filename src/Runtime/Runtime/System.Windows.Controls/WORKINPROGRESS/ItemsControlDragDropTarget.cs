@@ -27,6 +27,11 @@ using System.Windows.Shapes;
 #else
 #endif
 
+
+using System.Diagnostics.CodeAnalysis;
+using System.Windows.Controls.Primitives;
+using System.Windows.Shapes;
+
 #if MIGRATION
 namespace System.Windows.Controls
 #else

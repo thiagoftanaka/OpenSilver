@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Windows.Controls.Primitives;
 
 #if MIGRATION
 using System.Windows.Controls.Primitives;

@@ -115,12 +115,8 @@ namespace Windows.UI.Xaml.Controls
         {
 #if MIGRATION
             this.MouseLeftButtonDown += DragDropTarget_MouseLeftButtonDown;
-            this.MouseMove += DragDropTarget_MouseMove;
-            this.MouseLeftButtonUp += DragDropTarget_MouseLeftButtonUp;
 #else
             this.PointerPressed += DragDropTarget_PointerPressed;
-            this.PointerMoved += DragDropTarget_PointerMoved;
-            this.PointerReleased += DragDropTarget_PointerReleased;
 #endif
         }
 
@@ -137,7 +133,9 @@ namespace Windows.UI.Xaml.Controls
 
 #if MIGRATION
             // Add mouse events to the window to enable dropping on any other elements
+            this.INTERNAL_ParentWindow.MouseMove -= DragDropTarget_MouseMove;
             this.INTERNAL_ParentWindow.MouseMove += DragDropTarget_MouseMove;
+            this.INTERNAL_ParentWindow.MouseLeftButtonUp -= DragDropTarget_MouseLeftButtonUp;
             this.INTERNAL_ParentWindow.MouseLeftButtonUp += DragDropTarget_MouseLeftButtonUp;
 #else
             this.INTERNAL_ParentWindow.PointerMoved += DragDropTarget_PointerMoved;
@@ -181,24 +179,16 @@ namespace Windows.UI.Xaml.Controls
                         _sourceItemsControl = (TItemsControlType)this.Content; // Note: there is no risk of InvalidCastException because the type has been tested before, and the derived class (PanelDragDropTarget) also verifies the type in the "OnContentChanged" method.
                     }
 
+
+#if MIGRATION
+                    this.ReleaseMouseCapture();
+#else
+                    this.ReleasePointerCapture();
+#endif
+
                     // Remember that the pointer is currently captured:
                     _isPointerCaptured = true;
                     _capturedPointer = e.Pointer;
-
-                    //Size of the content
-                    double height;
-                    double width;
-                    if (_sourceItemContainer is FrameworkElement)
-                    {
-                        Size actualSize = (_sourceItemContainer as FrameworkElement).INTERNAL_GetActualWidthAndHeight();
-                        height = actualSize.Height;
-                        width = actualSize.Width;
-                    }
-                    else
-                    {
-                        height = double.NaN;
-                        width = double.NaN;
-                    }
 
                     // Prepare the arguments of the "ItemDragStarting" event:
                     Selection selection = new Selection(_sourceItemContainer);
@@ -229,10 +219,9 @@ namespace Windows.UI.Xaml.Controls
                         //----------------------------------
 
                         // Put a placeholder in place of the source that will occupy the same space. This is useful to: 1) let the user drop over the source itself (cf. "ItemDroppedOnSource" event), and 2) prevent the other elements from being displaced during the drag operation.
-                        //RemoveSourceAndPutTransparentPlaceholderInPlace(height, width);
 
                         // Put the source into a popup:
-                        StackPanel stackPanelInPopUp = GeneratePopupContent(_sourceItemContainer, out _iconStop, out _iconArrow);
+                        StackPanel stackPanelInPopUp = GeneratePopupContent(out _iconStop, out _iconArrow);
                         this._popup = new Popup()
                         {
                             Child = stackPanelInPopUp,
@@ -313,8 +302,7 @@ namespace Windows.UI.Xaml.Controls
             MS.DragEventArgs dragOverEventArgs = new MS.DragEventArgs(dataObject);
 
             // Get the DragDropTarget element that is under the pointer, if any:
-            TItemContainerType targetItemContainer;
-            DragDropTarget<TItemsControlType, TItemContainerType> dragDropTargetUnderPointer = GetDragDropTargetUnderPointer(_pointerX, _pointerY, out targetItemContainer);
+            DragDropTarget<TItemsControlType, TItemContainerType> dragDropTargetUnderPointer = GetDragDropTargetUnderPointer(_pointerX, _pointerY, out _);
 
             // Check if the element under the pointer has changed since the last PointerMoved:
             if (_previousdragDropTargetUnderPointer != dragDropTargetUnderPointer)
@@ -353,11 +341,8 @@ namespace Windows.UI.Xaml.Controls
                     _isDragCancelled = true;
             }
 
-            UIElement allowDropElementUnderPointer = GetAllowDropElementUnderPointer();
-
             // Show the appropriate icon depending on whether it is possible to drop or not:
-            if ((dragDropTargetUnderPointer != null && dragDropTargetUnderPointer.AllowDrop || allowDropElementUnderPointer != null) &&
-                !_isDragCancelled)
+            if (dragDropTargetUnderPointer != null && dragDropTargetUnderPointer.AllowDrop && !_isDragCancelled)
             {
                 //---------------------------------
                 // SHOW ICON "DRAG ALLOWED"
@@ -440,9 +425,9 @@ namespace Windows.UI.Xaml.Controls
             SelectionCollection selectionCollection = SelectionCollection.ToSelectionCollection(selection);
 
             // Get the DragDropTarget element that is under the pointer, if any:
-            TItemContainerType targetItemContainer;
-            DragDropTarget<TItemsControlType, TItemContainerType> dragDropTargetUnderPointer = GetDragDropTargetUnderPointer(_pointerX, _pointerY, out targetItemContainer);
+            DragDropTarget<TItemsControlType, TItemContainerType> dragDropTargetUnderPointer = GetDragDropTargetUnderPointer(_pointerX, _pointerY, out _);
 
+            bool removeItemFromSource = false;
             if (dragDropTargetUnderPointer != null)
             {
                 //---------------------------------
@@ -460,9 +445,6 @@ namespace Windows.UI.Xaml.Controls
                         //---------------------------------
                         // IF WE ARE DROPPING THE SOURCE ON ITSELF
                         //---------------------------------
-
-                        // Put the dragged element back to where it was:
-                        //PutSourceBackToOriginalPlace();
 
                         //Raise the "ItemDroppedOnSource" Event
                         if (dragDropTargetUnderPointer.ItemDroppedOnSource != null)
@@ -483,11 +465,6 @@ namespace Windows.UI.Xaml.Controls
                         // IF WE ARE DROPPING ON ANOTHER DRAGDROPTARGET
                         //---------------------------------
 
-                        // Remove the temporary placeholder (see the comment where the placeholder is defined):
-                        //this.RemoveItemAtIndex(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl);
-                        //RemoveContainer(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl);
-                        //ReplaceContainer(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl, _sourceItemContainer);
-
                         // Raise the Drop event:
                         if (dragDropTargetUnderPointer.Drop != null)
                         {
@@ -498,95 +475,28 @@ namespace Windows.UI.Xaml.Controls
                             // Raise the Drop event:
 #if !(BRIDGE && MIGRATION)
                             dragDropTargetUnderPointer.Drop(this, new MS.DragEventArgs(dataObject, e));
-
-                            // Raise the ItemDroppedOnTarget event
-                            ItemDroppedOnTarget(this, new ItemDragEventArgs(selectionCollection));
 #endif
                         }
 
                         // Put the source into the target:
-                        RemoveItem(_sourceItemsControl, _sourceItemContainer.GetValue(ItemContainerGenerator.ItemForItemContainerProperty));
-                        dragDropTargetUnderPointer.AddItem((TItemsControlType)dragDropTargetUnderPointer.Content, _sourceItemContainer);
+                        removeItemFromSource = true;
+                        dragDropTargetUnderPointer.AddItem((TItemsControlType)dragDropTargetUnderPointer.Content,
+                             _sourceItemContainer.GetValue(ItemContainerGenerator.ItemForItemContainerProperty));
                     }
                 }
-                //Can't drop so we put what was in the popup back in the content
-                else
-                {
-                    // Put the dragged element back to where it was:
-                    //PutSourceBackToOriginalPlace();
-                }
             }
-            else
+
+            // The event is triggered in Silverlight regardless of whether the target has AllowDrop=true
+            ItemDroppedOnTarget?.Invoke(this, new ItemDragEventArgs(selectionCollection));
+
+            if (removeItemFromSource)
             {
-                // If an element with the DragDrop.AllowDrop attached property under the pointer, call event
-                UIElement uiElementUnderPointer = GetAllowDropElementUnderPointer();
-
-                // The event is triggered in Silverlight regardless of whether the target has AllowDrop=true
-                ItemDroppedOnTarget?.Invoke(this, new ItemDragEventArgs(selectionCollection));
-
-                if (uiElementUnderPointer != null)
-                {
-                    // Remove the temporary placeholder (see the comment where the placeholder is defined):
-                    //this.RemoveItemAtIndex(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl);
-                    //RemoveContainer(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl);
-                    RemoveItem(_sourceItemsControl, _sourceItemContainer.GetValue(ItemContainerGenerator.ItemForItemContainerProperty));
-                }
-                //not a DragDropTarget nor AllowDrop under the pointer so we put what was in the popup back in the content
-                else
-                {
-                    // Put the dragged element back to where it was:
-                    //PutSourceBackToOriginalPlace();
-                }
+                RemoveItem(_sourceItemsControl, _sourceItemContainer.GetValue(ItemContainerGenerator.ItemForItemContainerProperty));
             }
 
             // Raise the "ItemDragCompleted" event:
             if (ItemDragCompleted != null)
                 ItemDragCompleted(this, new ItemDragEventArgs(selectionCollection));
-        }
-
-        void PutSourceBackToOriginalPlace()
-        {
-            // Remove the temporary placeholder (see the comment where the placeholder is defined):
-            //this.RemoveItemAtIndex(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl);
-            //RemoveContainer(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl);
-
-            // Put the dragged element back to where it was:
-            //this.InsertItem(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl, _sourceItemContainer);
-            ReplaceContainer(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl, _sourceItemContainer);
-
-            // Setting focus to item otherwise its LostFocus will never be triggered since
-            // the drag & drop started
-            if (_sourceItemContainer is Control sourceControl)
-            {
-                sourceControl.Focus();
-            }
-        }
-
-        void RemoveSourceAndPutTransparentPlaceholderInPlace(double sourceHeight, double sourceWidth)
-        {
-            // Find at which index the source is located in its ItemsControl:
-            _indexOfSourceContainerWithinItemsControl = (int)this.IndexFromContainer(_sourceItemsControl, _sourceItemContainer);
-
-            // Remove the source from its original location (we will put it back at the end of the drag operation):
-            //this.RemoveItem(_sourceItemsControl, _sourceItemContainer.GetValue(ItemContainerGenerator.ItemForItemContainerProperty));
-
-            // We use a border as a placeholder for the source while the source is being dragged in the popup:
-            _sourcePlaceholder = new Border()
-            {
-                Background = new SolidColorBrush(Colors.Transparent) // Note: we set the background to "Transparent" in order to catch the pointer events (this is useful for example when dragging the source on itself, cf. "ItemDroppedOnSource" event
-            };
-
-            // Set the palceholder size to be the same as the space previously occupied by the source:
-            if (!double.IsNaN(sourceHeight) && !double.IsNaN(sourceWidth))
-            {
-                _sourcePlaceholder.Height = sourceHeight;
-                _sourcePlaceholder.Width = sourceWidth;
-            }
-
-            // Put the placeholder where the source was originally located:
-            //this.InsertItem(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl, _sourcePlaceholder);
-            ReplaceContainer(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl, _sourcePlaceholder);
-            //InsertContainer(_sourceItemsControl, _indexOfSourceContainerWithinItemsControl, _sourcePlaceholder);
         }
 
         /// <summary>
@@ -905,7 +815,7 @@ namespace Windows.UI.Xaml.Controls
             return null;
         }
 
-        static StackPanel GeneratePopupContent(UIElement sourceItemContainer, out UIElement iconStop, out UIElement iconArrow)
+        static StackPanel GeneratePopupContent(out UIElement iconStop, out UIElement iconArrow)
         {
             StackPanel stackPanelInPopUp = new StackPanel();
             iconStop = new Path()
@@ -946,24 +856,6 @@ namespace Windows.UI.Xaml.Controls
             stackPanelInPopUp.Children.Add(iconStop);
             stackPanelInPopUp.Children.Add(iconArrow);
             return stackPanelInPopUp;
-        }
-
-        /// <summary>
-        /// Goes up the visual tree looking for an element with the DragDrop.AllowDrop attached property equals to true
-        /// </summary>
-        /// <returns>The element with DragDrop.AllowDrop set to true</returns>
-        UIElement GetAllowDropElementUnderPointer()
-        {
-            UIElement uiElementUnderPointer = VisualTreeHelper.FindElementInHostCoordinates(new Point(_pointerX, _pointerY));
-            while (uiElementUnderPointer != null)
-            {
-                if (DragDrop.GetAllowDrop(uiElementUnderPointer))
-                {
-                    return uiElementUnderPointer;
-                }
-                uiElementUnderPointer = uiElementUnderPointer.INTERNAL_VisualParent as FrameworkElement;
-            }
-            return null;
         }
 
         private void InsertContainer(TItemsControlType itemsControl, int index, UIElement container)
