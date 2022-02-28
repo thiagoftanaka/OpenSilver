@@ -14,6 +14,8 @@
 
 
 using System;
+using System.Collections.Generic;
+using System.Windows.Controls.Primitives;
 
 #if MIGRATION
 namespace System.Windows.Controls
@@ -24,53 +26,34 @@ namespace Windows.UI.Xaml.Controls
     public partial class TreeViewDragDropTarget : ItemsControlDragDropTarget<ItemsControl, TreeViewItem>
     {
         /// <inheritdoc/>
-        protected override void AddItem(ItemsControl control, object data)
-        {
-            control.GetItemsHost().Children.Add(data);
-        }
-
-        /// <inheritdoc/>
-        protected override UIElement ContainerFromIndex(ItemsControl itemsControl, int index)
-        {
-            return itemsControl.GetItemsHost().Children[index] as UIElement;
-        }
-
-        /// <inheritdoc/>
-        protected override int? IndexFromContainer(ItemsControl itemsControl, UIElement itemContainer)
-        {
-            int index = itemsControl.GetItemsHost().Children.IndexOf(itemContainer);
-            return (index == -1) ? null : new int?(index);
-        }
-
-        /// <inheritdoc/>
-        protected override void InsertItem(ItemsControl itemsControl, int index, object data)
-        {
-            itemsControl.GetItemsHost().Children.Insert(index, data);
-        }
-
-        /// <inheritdoc/>
         protected override ItemsControl INTERNAL_ReturnNewTItemsControl()
         {
             return new TreeViewItem();
         }
 
         /// <inheritdoc/>
-        protected override void RemoveItem(ItemsControl itemsControl, object data)
+        internal override TreeViewItem INTERNAL_GetDeepestItemContainer(ItemsControl itemsControl,
+            List<object> elementsFromDeepestToRoot)
         {
-            itemsControl.GetItemsHost().Children.Remove(data);
-        }
+            TreeViewItem deepestItemContainer = null;
+            foreach (object element in elementsFromDeepestToRoot)
+            {
+                if (element is ToggleButton)
+                {
+                    // Do not start drag & drop when trying to expand a TreeViewItem with the ToggleButton
+                    return null;
+                }
 
-        /// <inheritdoc/>
-        protected override void RemoveItemAtIndex(ItemsControl itemsControl, int index)
-        {
-            itemsControl.GetItemsHost().Children.RemoveAt(index);
-        }
-
-        /// <inheritdoc/>
-        internal override int INTERNAL_GetNumberOfElementsBetweenItemsRootAndDragDropTarget()
-        {
-            // Number of elements between this and the TreeViewItem being dragged
-            return 14;
+                if (deepestItemContainer == null && element is TreeViewItem deepestTreeViewItem)
+                {
+                    deepestItemContainer = deepestTreeViewItem;
+                }
+            }
+            // Not possible to use the base method because items deeper than on the first level
+            // fail the test of whether they have an index on the TreeView (similar to a contains test).
+            // Instead, these deeper items belong to their TreeViewItem parents, instead to the TreeView.
+            // So the contains test is skipped and the deepest item is just returned.
+            return deepestItemContainer;
         }
     }
 }

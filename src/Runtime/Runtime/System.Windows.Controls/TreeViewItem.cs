@@ -1225,10 +1225,10 @@ namespace Windows.UI.Xaml.Controls
                 {
                     //if (!CancelMouseLeftButtonDownBubble)
                     //{
-                        if (Focus())
-                        {
+                        //if (Focus())
+                        //{
                             //e.Handled = true;
-                        }
+                        //}
 
                         // Expand the item when double clicked
                         if (Interaction.ClickCount % 2 == 0)
@@ -1243,11 +1243,11 @@ namespace Windows.UI.Xaml.Controls
                 }
 
                 Interaction.OnMouseLeftButtonDownBase();
-#if MIGRATION
-                OnMouseLeftButtonDown(e);
-#else
-                OnPointerPressed(e);
-#endif
+//#if MIGRATION
+//                OnMouseLeftButtonDown(e);
+//#else
+//                OnPointerPressed(e);
+//#endif
             }
         }
 
@@ -1304,6 +1304,7 @@ namespace Windows.UI.Xaml.Controls
             {
                 if (!CancelMouseLeftButtonDownBubble)
                 {
+                    //Select(true);
 #if MIGRATION
                     base.OnMouseLeftButtonDown(e);
 #else
@@ -1711,6 +1712,14 @@ namespace Windows.UI.Xaml.Controls
                 object item = (parent != null) ?
                     parent.ItemContainerGenerator.ItemFromContainer(this) :
                     view.ItemContainerGenerator.ItemFromContainer(this);
+
+                //if (item == DependencyProperty.UnsetValue)
+                //{
+                //    // Item could be in the process and drag & drop, container is detached
+                //    // Thus, trying to get item from property that is always set before drag & drop
+                //    item = GetValue(ItemContainerGenerator.ItemForItemContainerProperty);
+                //}
+
                 view.ChangeSelection(item, this, selected);
             }
         }
