@@ -7,10 +7,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="OpenSilver" Version="1.0.0" />
-	</ItemGroup>
-
-	<ItemGroup>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
@@ -109,6 +105,9 @@
     <Compile Include="Tests\Double ClickTest.xaml.cs">
       <DependentUpon>Double ClickTest.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Tests\DragDropTarget\ListBoxDragDropTargetTest.xaml.cs" />
+    <Compile Include="Tests\DragDropTarget\PanelDragDropTargetTest.xaml.cs" />
+    <Compile Include="Tests\DragDropTarget\TreeViewDragDropTargetTest.xaml.cs" />
     <Compile Include="Tests\Encoding_GetDecoderTest.xaml.cs">
       <DependentUpon>Encoding_GetDecoderTest.xaml</DependentUpon>
     </Compile>
@@ -251,6 +250,7 @@
     <Compile Include="Tests\TransformTest.xaml.cs">
       <DependentUpon>TransformTest.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Tests\TreeViewTest.xaml.cs" />
     <Compile Include="Tests\TwoTextBoxesHorizontallyTest.xaml.cs">
       <DependentUpon>TwoTextBoxesHorizontallyTest.xaml</DependentUpon>
     </Compile>
@@ -613,7 +613,19 @@
     <Page Include="Tests\PrintDocumentTest.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Tests\DragDropTarget\ListBoxDragDropTargetTest.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Tests\DragDropTarget\PanelDragDropTargetTest.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Tests\DragDropTarget\TreeViewDragDropTargetTest.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Tests\PopupZIndexTest.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Tests\TreeViewTest.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Tests\ValidationSummaryTest.xaml">

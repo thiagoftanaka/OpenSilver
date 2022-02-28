@@ -46,47 +46,5 @@ namespace System.Windows
                 return (Pointer.INTERNAL_captured != null);
             }
         }
-
-        /// <summary>
-        /// Attached property to allow for dropping other elements into it.
-        /// </summary>
-        public static readonly DependencyProperty AllowDropProperty =
-            DependencyProperty.RegisterAttached(
-            "AllowDrop",
-            typeof(bool),
-            typeof(DragDrop),
-            new PropertyMetadata(false, AllowDropPropertyChanged));
-
-        private static void AllowDropPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            if (d is UIElement uiElement && e?.NewValue is bool value)
-            {
-                SetAllowDrop(uiElement, value);
-            }
-        }
-
-        /// <summary>
-        /// Gets whether an UI element can be dropped on.
-        /// </summary>
-        /// <param name="element">The UI element.</param>
-        /// <returns>Whether it can be dropped on.</returns>
-        public static bool GetAllowDrop(UIElement element)
-        {
-            if (!_allowDrop.ContainsKey(element))
-            {
-                return false;
-            }
-            return _allowDrop[element];
-        }
-
-        /// <summary>
-        /// Sets whether an UI element can be dropped on.
-        /// </summary>
-        /// <param name="element">The UI element.</param>
-        /// <param name="value">Whether it can be dropped on.</param>
-        public static void SetAllowDrop(UIElement element, bool value)
-        {
-            _allowDrop[element] = value;
-        }
     }
 }
