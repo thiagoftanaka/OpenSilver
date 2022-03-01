@@ -3,6 +3,7 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
+using ReactiveUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -100,7 +101,7 @@ namespace System.Windows.Controls
                     Observable
                         .Return(new Unit())
                         .Delay(TimeSpan.FromMilliseconds(ExpandNodeDelay))
-                        .ObserveOn(DefaultScheduler.Instance)
+                        .ObserveOn(RxApp.MainThreadScheduler)
                         .TakeUntil(
                             Observable.Merge(
                                 _dragLeave

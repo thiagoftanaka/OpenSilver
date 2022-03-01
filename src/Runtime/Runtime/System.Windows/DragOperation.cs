@@ -3,6 +3,7 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
+using ReactiveUI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -207,12 +208,12 @@ namespace Microsoft.Windows
 
             sourceQueryContinue
                 .Where(queryContinueDragEvent => queryContinueDragEvent.EventArgs.Action == SW.DragAction.Drop)
-                .ObserveOn(DefaultScheduler.Instance)
+                .ObserveOn(RxApp.MainThreadScheduler)
                 .Subscribe(queryContinueDragEvent => OnTargetDrop());
 
             sourceQueryContinue
                 .Where(queryContinueDragEvent => queryContinueDragEvent.EventArgs.Action == SW.DragAction.Cancel)
-                .ObserveOn(DefaultScheduler.Instance)
+                .ObserveOn(RxApp.MainThreadScheduler)
                 .Subscribe(queryContinueDragEvent => OnCancel());
 
             _dragCompleted.Subscribe(_ => IsDragging = false);
@@ -237,7 +238,7 @@ namespace Microsoft.Windows
 
             // Always execute a QueryContinueDrag first.
             _dragStarting.Take(1)
-                .ObserveOn(DefaultScheduler.Instance)
+                .ObserveOn(RxApp.MainThreadScheduler)
                 .Subscribe(
                     dragEventArgs =>
                     {
@@ -276,7 +277,7 @@ namespace Microsoft.Windows
                     keyStatesChanged.IgnoreAll(),
                     escapePressedChanged.IgnoreAll())
                 .TakeUntil(_dragCompleted)
-                .ObserveOn(DefaultScheduler.Instance)
+                .ObserveOn(RxApp.MainThreadScheduler)
                 .Subscribe(_ => RaiseDragSourceEvents(_lastDragEventArgs));
 
             IObservable<IEvent<SW.DragEventArgs>> dragOver =
@@ -288,7 +289,7 @@ namespace Microsoft.Windows
                         Observable.Return(dragMouseOverEvent),
                         Observable
                             .Interval(TimeSpan.FromMilliseconds(MouseOverPulseIntervalInMilliseconds))
-                .ObserveOn(DefaultScheduler.Instance)
+                .ObserveOn(RxApp.MainThreadScheduler)
                             .Select(_ =>
                             {
                                 UIElement originalSource = dragMouseOverEvent.EventArgs.OriginalSource as UIElement;
@@ -315,12 +316,12 @@ namespace Microsoft.Windows
                 select pulseDragMouseOverEvent;
 
             dragOver
-                .ObserveOn(DefaultScheduler.Instance)
+                .ObserveOn(RxApp.MainThreadScheduler)
                 .Subscribe(dragOverEvent => OnDragOver(dragOverEvent.Sender, dragOverEvent.EventArgs));
             
             _dragStarting.OnNext(Event.Create(_dragSource, _dragStartEventArgs));
             _dragCompleted
-                .ObserveOn(DefaultScheduler.Instance)
+                .ObserveOn(RxApp.MainThreadScheduler)
                 .Subscribe(observer);
 
             return new Disposable(() => { Debug.Assert(false, "Should never detach from DragOperation."); });

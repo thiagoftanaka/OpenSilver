@@ -3,6 +3,7 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
+using ReactiveUI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -68,7 +69,7 @@ namespace System.Windows
                     that.MouseMove += handler;
                     return new Disposable(() => that.MouseMove -= handler);
                 })
-                .SubscribeOn(DefaultScheduler.Instance);
+                .SubscribeOn(RxApp.MainThreadScheduler);
         }
 
         /// <summary>
@@ -121,7 +122,7 @@ namespace System.Windows
 
                     return new Disposable(() => that.RemoveHandler(UIElement.MouseLeftButtonDownEvent, handler));
                 })
-                .SubscribeOn(DefaultScheduler.Instance);
+                .SubscribeOn(RxApp.MainThreadScheduler);
         }
 
         /// <summary>
@@ -163,7 +164,7 @@ namespace System.Windows
 
                     return new Disposable(() => that.RemoveHandler(UIElement.MouseLeftButtonUpEvent, handler));
                 })
-                .SubscribeOn(DefaultScheduler.Instance);
+                .SubscribeOn(RxApp.MainThreadScheduler);
         }
 
         /// <summary>
@@ -183,7 +184,7 @@ namespace System.Windows
 
                     return new Disposable(() => that.RemoveHandler(UIElement.KeyDownEvent, handler));
                 })
-                .SubscribeOn(DefaultScheduler.Instance);
+                .SubscribeOn(RxApp.MainThreadScheduler);
         }
 
         /// <summary>
@@ -203,7 +204,7 @@ namespace System.Windows
 
                     return new Disposable(() => that.RemoveHandler(UIElement.KeyUpEvent, handler));
                 })
-                .SubscribeOn(DefaultScheduler.Instance);
+                .SubscribeOn(RxApp.MainThreadScheduler);
         }
 
         /// <summary>

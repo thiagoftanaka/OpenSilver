@@ -14,7 +14,7 @@
 		<OutputPath>bin\OpenSilver\$(Configuration)\</OutputPath>
 		<NoWarn>1591</NoWarn>
 		<DebugType>full</DebugType>
-		<Optimize>true</Optimize>
+		<Optimize>false</Optimize>
 		<NoCSHTML5Reference>true</NoCSHTML5Reference>
 		<EnableDefaultItems>false</EnableDefaultItems> <!-- This emluates the behavior of NET Framework, which excludes every files by default -->
 		<OpenSilverVersion>1.0.0</OpenSilverVersion>
@@ -35,7 +35,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
 		<PackageReference Include="Microsoft.JSInterop" Version="3.1.22" />
-		<PackageReference Include="ReactiveUI.Blazor" Version="17.1.50" />
+		<PackageReference Include="ReactiveUI.Blazor" Version="16.4.15" />
 		<PackageReference Include="System.ComponentModel.Annotations" Version="4.7.0" />
 		<PackageReference Include="System.ComponentModel.Composition" Version="4.7.0" />
 		<PackageReference Include="System.ServiceModel.Primitives" Version="4.6.0" />

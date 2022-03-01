@@ -600,9 +600,6 @@
     <PackageReference Include="OpenSilver" Version="1.0.0-private-2022-02-28" />
   </ItemGroup>
   <ItemGroup>
-    <Page Include="Tests\PrintDocumentTest.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Tests\DragDropTarget\ListBoxDragDropTargetTest.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -18,6 +18,7 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
+using ReactiveUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -992,7 +993,7 @@ namespace System.Windows.Controls
                     from keyStates in
                         Observable
                             .Return(Application.Current)
-                            .ObserveOn(DefaultScheduler.Instance)
+                            .ObserveOn(RxApp.MainThreadScheduler)
                             .SelectMany(app => app.RootVisual.GetKeyStateChangedAlways(_keyStates))
                             .TakeUntil(_itemDragStarted)
                     select keyStates,
@@ -1001,7 +1002,7 @@ namespace System.Windows.Controls
                     from keyStates in
                         Observable
                             .Return(Application.Current)
-                            .ObserveOn(DefaultScheduler.Instance)
+                            .ObserveOn(RxApp.MainThreadScheduler)
                             .SelectMany(app => app.RootVisual.GetKeyStateChangedOnSelfAndSiblingsAlways(_keyStates))
                             .TakeUntil(_itemDragCompleted)
                     select keyStates);
@@ -1029,7 +1030,7 @@ namespace System.Windows.Controls
         private IObservable<IEvent<ItemDragEventArgs>> GetItemDragStarting()
         {
             return
-                from mouseLeftButtonDown in this.GetMouseLeftButtonDownAlways().ObserveOn(DefaultScheduler.Instance)
+                from mouseLeftButtonDown in this.GetMouseLeftButtonDownAlways().ObserveOn(RxApp.MainThreadScheduler)
                 let originalSource = (UIElement)mouseLeftButtonDown.EventArgs.OriginalSource
                 let offset = GetOffset(mouseLeftButtonDown.EventArgs, originalSource)
                 from dragStarted in
