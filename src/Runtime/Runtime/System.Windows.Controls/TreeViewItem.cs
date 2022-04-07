@@ -528,13 +528,6 @@ namespace Windows.UI.Xaml.Controls
         private bool CancelGotFocusBubble { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether the TreeViewItem should
-        /// ignore the next MouseLeftButtonDown event it receives because it has already
-        /// been handled by one of its children.
-        /// </summary>
-        private bool CancelMouseLeftButtonDownBubble { get; set; }
-
-        /// <summary>
         /// Gets or sets a value indicating whether checking ContainsSelection
         /// should actually perform the update notifications because the item
         /// was selected before it was in the visual tree.
@@ -1223,31 +1216,28 @@ namespace Windows.UI.Xaml.Controls
                 // clicked)
                 if (!e.Handled && IsEnabled)
                 {
-                    //if (!CancelMouseLeftButtonDownBubble)
-                    //{
-                        //if (Focus())
-                        //{
-                            //e.Handled = true;
-                        //}
+                    if (Focus())
+                    {
+                        //e.Handled = true;
+                    }
 
-                        // Expand the item when double clicked
-                        if (Interaction.ClickCount % 2 == 0)
-                        {
-                            bool opened = !IsExpanded;
-                            UserInitiatedExpansion |= opened;
-                            IsExpanded = opened;
+                    // Expand the item when double clicked
+                    if (Interaction.ClickCount % 2 == 0)
+                    {
+                        bool opened = !IsExpanded;
+                        UserInitiatedExpansion |= opened;
+                        IsExpanded = opened;
 
-                            //e.Handled = true;
-                        }
-                    //}
+                        //e.Handled = true;
+                    }
                 }
 
                 Interaction.OnMouseLeftButtonDownBase();
-//#if MIGRATION
-//                OnMouseLeftButtonDown(e);
-//#else
-//                OnPointerPressed(e);
-//#endif
+#if MIGRATION
+                OnMouseLeftButtonDown(e);
+#else
+                OnPointerPressed(e);
+#endif
             }
         }
 
@@ -1285,37 +1275,17 @@ namespace Windows.UI.Xaml.Controls
             //TreeView parent;
             //if (!e.Handled && (parent = ParentTreeView) != null && parent.HandleMouseButtonDown())
             //{
-                //e.Handled = true;
+            //e.Handled = true;
             //}
 
-            // Since the MouseLeftButtonDown event will bubble up to the parent
-            // TreeViewItem (which will make it think it's also been clicked), it
-            // needs to ignore that event when it's first been handled by one of
-            // its nested children.  We use the CancelMouseLeftButtonDownBubble flag to
-            // notify our parent that MouseLeftButtonDown has already been handled.
-            // This event has to bubble up even if ignored to eventually hit other types
-            // that do not ignore it (e.g. TreeViewDragDropTarget, etc.)
-            if (ParentTreeViewItem != null)
-            {
-                ParentTreeViewItem.CancelMouseLeftButtonDownBubble = true;
-            }
+            //ReleaseMouseCapture();
+            //CaptureMouse();
 
-            try
-            {
-                if (!CancelMouseLeftButtonDownBubble)
-                {
-                    //Select(true);
 #if MIGRATION
-                    base.OnMouseLeftButtonDown(e);
+            base.OnMouseLeftButtonDown(e);
 #else
-                    base.OnPointerPressed(e);
+            base.OnPointerPressed(e);
 #endif
-                }
-            }
-            finally
-            {
-                CancelMouseLeftButtonDownBubble = false;
-            }
         }
 
         /// <summary>
@@ -1712,14 +1682,6 @@ namespace Windows.UI.Xaml.Controls
                 object item = (parent != null) ?
                     parent.ItemContainerGenerator.ItemFromContainer(this) :
                     view.ItemContainerGenerator.ItemFromContainer(this);
-
-                //if (item == DependencyProperty.UnsetValue)
-                //{
-                //    // Item could be in the process and drag & drop, container is detached
-                //    // Thus, trying to get item from property that is always set before drag & drop
-                //    item = GetValue(ItemContainerGenerator.ItemForItemContainerProperty);
-                //}
-
                 view.ChangeSelection(item, this, selected);
             }
         }
