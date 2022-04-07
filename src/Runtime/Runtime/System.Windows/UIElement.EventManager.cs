@@ -212,7 +212,10 @@ namespace Windows.UI.Xaml
                     e.RefreshClickCount(this);
                 }
 
-                if (e.CheckIfEventShouldBeTreated(this, jsEventArg))
+                // Letting 'mouseup' trigger because mouse can be in captured state by other elements
+                // (e.g. mousedown on one button and mouseup elsewhere, mouseup should be triggered on that other element)
+                if (eventType == "mouseup" ||
+                    e.CheckIfEventShouldBeTreated(this, jsEventArg))
                 {
                     // Fill the position of the pointer and the key modifiers:
                     e.FillEventArgs(this, jsEventArg);
