@@ -933,6 +933,7 @@ void Control_PointerExited(object sender, Input.PointerRoutedEventArgs e)
 #endif
         {
             _isPointerOver = false;
+            _isPressed = false;
             UpdateVisualStates();
         }
 
