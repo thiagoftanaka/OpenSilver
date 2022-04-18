@@ -185,7 +185,24 @@ namespace Windows.UI.Xaml.Controls
                     // Remember that the pointer is currently captured:
                     _isPointerCaptured = true;
                     _capturedPointer = e.Pointer;
+                }
+            }
+        }
 
+
+#if MIGRATION
+        void DragDropTarget_MouseMove(object sender, Input.MouseEventArgs e)
+#else
+        private void DragDropTarget_PointerMoved(object sender, Input.PointerRoutedEventArgs e)
+#endif
+        {
+            //----------------------------------
+            // POINTER MOVE
+            //----------------------------------
+            if (_isPointerCaptured)
+            {
+                if (_popup?.IsOpen != true)
+                {
                     // Prepare the arguments of the "ItemDragStarting" event:
                     Selection selection = new Selection(_sourceItemContainer);
                     SelectionCollection selectionCollection = SelectionCollection.ToSelectionCollection(selection);
@@ -213,10 +230,6 @@ namespace Windows.UI.Xaml.Controls
                         //----------------------------------
                         // SHOW POPUP
                         //----------------------------------
-
-                        // Put a placeholder in place of the source that will occupy the same space. This is useful to: 1) let the user drop over the source itself (cf. "ItemDroppedOnSource" event), and 2) prevent the other elements from being displaced during the drag operation.
-
-                        // Put the source into a popup:
                         StackPanel stackPanelInPopUp = GeneratePopupContent(out _iconStop, out _iconArrow);
                         this._popup = new Popup()
                         {
@@ -235,47 +248,31 @@ namespace Windows.UI.Xaml.Controls
 
                         // Show the popup:
                         this._popup.IsOpen = true;
-
-                        //(_sourceItemContainer as Control)?.Focus();
                     }
                 }
-            }
-        }
-
-
+                else
+                {
+                    // Calculate the delta of the movement:
 #if MIGRATION
-        void DragDropTarget_MouseMove(object sender, Input.MouseEventArgs e)
+                    double horizontalChange = e.GetPosition(null).X - _pointerX;
+                    double verticalChange = e.GetPosition(null).Y - _pointerY;
 #else
-        private void DragDropTarget_PointerMoved(object sender, Input.PointerRoutedEventArgs e)
-#endif
-        {
-            //----------------------------------
-            // POINTER MOVE
-            //----------------------------------
-
-            if (_isPointerCaptured)
-            {
-
-                // Calculate the delta of the movement:
-#if MIGRATION
-                double horizontalChange = e.GetPosition(null).X - _pointerX;
-                double verticalChange = e.GetPosition(null).Y - _pointerY;
-#else
-                double horizontalChange = e.GetCurrentPoint(null).Position.X - _pointerX;
-                double verticalChange = e.GetCurrentPoint(null).Position.Y - _pointerY;
+                    double horizontalChange = e.GetCurrentPoint(null).Position.X - _pointerX;
+                    double verticalChange = e.GetCurrentPoint(null).Position.Y - _pointerY;
 #endif
 
-                // Remember the new pointer position:  
+                    // Remember the new pointer position:  
 #if MIGRATION
-                _pointerX = e.GetPosition(null).X;
-                _pointerY = e.GetPosition(null).Y;
+                    _pointerX = e.GetPosition(null).X;
+                    _pointerY = e.GetPosition(null).Y;
 #else
-                _pointerX = e.GetCurrentPoint(null).Position.X;
-                _pointerY = e.GetCurrentPoint(null).Position.Y;
+                    _pointerX = e.GetCurrentPoint(null).Position.X;
+                    _pointerY = e.GetCurrentPoint(null).Position.Y;
 #endif
 
-                // Move the popup and may raise the events DragEnter, DragOver and DragLeave:
-                MovePopupAndRaiseEvents(horizontalChange, verticalChange);
+                    // Move the popup and may raise the events DragEnter, DragOver and DragLeave:
+                    MovePopupAndRaiseEvents(horizontalChange, verticalChange);
+                }
             }
         }
 
@@ -383,7 +380,7 @@ namespace Windows.UI.Xaml.Controls
             _pointerY = e.GetCurrentPoint(null).Position.Y;
 #endif
 
-            if (_isPointerCaptured && e.Pointer == _capturedPointer)
+            if (_isPointerCaptured && e.Pointer == _capturedPointer && _popup?.IsOpen == true)
             {
                 // We call MovePopupAndRaiseEvents(0,0) to prevent fast click, move and release of the mouse doing unwanted behavior (bug in case that the buttonup event was triggered before mousemove event)
                 MovePopupAndRaiseEvents(0, 0);
@@ -423,7 +420,7 @@ namespace Windows.UI.Xaml.Controls
             // Get the DragDropTarget element that is under the pointer, if any:
             DragDropTarget<TItemsControlType, TItemContainerType> dragDropTargetUnderPointer = GetDragDropTargetUnderPointer(_pointerX, _pointerY, out _);
 
-            bool removeItemFromSource = false;
+            bool moveItem = false;
             if (dragDropTargetUnderPointer != null)
             {
                 //---------------------------------
@@ -474,10 +471,7 @@ namespace Windows.UI.Xaml.Controls
 #endif
                         }
 
-                        // Put the source into the target:
-                        removeItemFromSource = true;
-                        dragDropTargetUnderPointer.AddItem((TItemsControlType)dragDropTargetUnderPointer.Content,
-                             _sourceItemContainer.GetValue(ItemContainerGenerator.ItemForItemContainerProperty));
+                        moveItem = true;
                     }
                 }
             }
@@ -485,9 +479,12 @@ namespace Windows.UI.Xaml.Controls
             // The event is triggered in Silverlight regardless of whether the target has AllowDrop=true
             ItemDroppedOnTarget?.Invoke(this, new ItemDragEventArgs(selectionCollection));
 
-            if (removeItemFromSource)
+            if (moveItem)
             {
-                RemoveItem(_sourceItemsControl, _sourceItemContainer.GetValue(ItemContainerGenerator.ItemForItemContainerProperty));
+                object item = _sourceItemContainer.GetValue(ItemContainerGenerator.ItemForItemContainerProperty);
+                RemoveItem(_sourceItemsControl, item);
+                // Put the source into the target:
+                dragDropTargetUnderPointer.AddItem((TItemsControlType)dragDropTargetUnderPointer.Content, item);
             }
 
             // Raise the "ItemDragCompleted" event:
