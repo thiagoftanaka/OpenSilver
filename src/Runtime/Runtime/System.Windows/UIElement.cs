@@ -1770,7 +1770,7 @@ document.ondblclick = null;
                 }
                 if (fe.IsAutoHeightOnCustomLayout)
                 {
-                    layoutMeasuredSize.Height = Math.Min(Window.Current.ActualHeight - offsetLeft, fe.MaxHeight);
+                    layoutMeasuredSize.Height = Math.Min(Window.Current.ActualHeight - offsetTop, fe.MaxHeight);
                 }
             }
 
