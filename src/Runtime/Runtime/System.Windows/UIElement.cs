@@ -1745,10 +1745,29 @@ document.ondblclick = null;
             FrameworkElement fe = this as FrameworkElement;
             if (fe != null)
             {
+                double offsetLeft;
+                double offsetTop;
+                if (CSharpXamlForHtml5.Environment.IsRunningInJavaScript)
+                {
+                    // Browser
+                    var boundingClientRect = ((dynamic)INTERNAL_OuterDomElement).getBoundingClientRect();
+                    offsetLeft = boundingClientRect.left - boundingClientRect.left;
+                    offsetTop = boundingClientRect.top - boundingClientRect.top;
+                }
+                else
+                {
+                    // Simulator
+                    string boundingClientRect = Convert.ToString(OpenSilver.Interop.ExecuteJavaScript(
+                        "$0.getBoundingClientRect().left + '|' + $0.getBoundingClientRect().top",
+                        INTERNAL_OuterDomElement));
+                    offsetLeft = Convert.ToDouble(boundingClientRect.Split('|')[0], CultureInfo.InvariantCulture);
+                    offsetTop = Convert.ToDouble(boundingClientRect.Split('|')[1], CultureInfo.InvariantCulture);
+                }
+
                 if (fe.IsAutoWidthOnCustomLayout)
-                    layoutMeasuredSize.Width = double.PositiveInfinity;
+                    layoutMeasuredSize.Width = Window.Current.ActualWidth - offsetLeft;
                 if (fe.IsAutoHeightOnCustomLayout)
-                    layoutMeasuredSize.Height = double.PositiveInfinity;
+                    layoutMeasuredSize.Height = Window.Current.ActualHeight - offsetTop;
             }
 
             Measure(layoutMeasuredSize);
