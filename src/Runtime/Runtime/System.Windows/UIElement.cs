@@ -1589,7 +1589,7 @@ document.ondblclick = null;
                 return;
             }
 
-            if (this as Window == null && this as PopupRoot == null)
+            if (this as Window == null && this as PopupRoot == null && !IsCustomLayoutRoot)
             {
                 INTERNAL_HtmlDomStyleReference uiStyle = INTERNAL_HtmlDomManager.GetDomElementStyleForModification((INTERNAL_HtmlDomElementReference)this.INTERNAL_OuterDomElement);
                 if (RenderedVisualBounds.Equals(VisualBounds) == false)
