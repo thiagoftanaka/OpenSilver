@@ -9,10 +9,17 @@ namespace System.Windows.Controls
 namespace Windows.UI.Xaml.Controls
 #endif
 {
-    [OpenSilver.NotImplemented]
+	[OpenSilver.NotImplemented]
 	public sealed partial class OpenFileDialog
 	{
-        [OpenSilver.NotImplemented]
+		[OpenSilver.NotImplemented]
+		public string InitialDirectory
+		{ 
+			get; 
+			set; 
+		}
+
+		[OpenSilver.NotImplemented]
 		public bool Multiselect
 		{
 			get;
