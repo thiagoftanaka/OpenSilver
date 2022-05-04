@@ -105,6 +105,16 @@ namespace Windows.UI.Xaml.Controls.Primitives
             //----------------------------
             // Register the events:
             //----------------------------
+
+            // Setting MouseLeftUp event as handled to not have it bubbled up and trigger selection on host
+            if (_horizontalRoot != null)
+            {
+                _horizontalRoot.MouseLeftButtonUp += (o, e) => { e.Handled = true; };
+            }
+            if (_verticalRoot != null)
+            {
+                _verticalRoot.MouseLeftButtonUp += (o, e) => { e.Handled = true; };
+            }
             if (_horizontalThumb != null)
             {
                 _horizontalThumb.DragStarted += HorizontalThumb_DragStarted;
