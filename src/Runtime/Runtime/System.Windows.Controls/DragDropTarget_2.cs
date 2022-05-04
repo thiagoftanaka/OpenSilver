@@ -157,7 +157,7 @@ namespace Windows.UI.Xaml.Controls
                 _pointerY = e.GetCurrentPoint(null).Position.Y;
 #endif
                 // Get the source DragDropTarget element that is under the pointer, if any:
-                DragDropTarget<TItemsControlType, TItemContainerType> sourceDragDropTarget = GetDragDropTargetUnderPointer(_pointerX, _pointerY, out _sourceItemContainer);
+                DragDropTarget<TItemsControlType, TItemContainerType> sourceDragDropTarget = GetDragDropTargetUnderPointer(_pointerX, _pointerY, out _sourceItemContainer, out _);
                 if (sourceDragDropTarget is DragDropTarget<TItemsControlType, TItemContainerType> && sourceDragDropTarget != this)
                     throw new Exception("The DragDropTarget is not supposed to support dragging an outer DragDropTarget in case of nested DragDropTargets.");
 
@@ -294,8 +294,9 @@ namespace Windows.UI.Xaml.Controls
             dataObject.SetData("ItemDragEventArgs", new ItemDragEventArgs(selectionCollection));
             MS.DragEventArgs dragOverEventArgs = new MS.DragEventArgs(dataObject);
 
+            UIElement allowDropElementUnderPointer;
             // Get the DragDropTarget element that is under the pointer, if any:
-            DragDropTarget<TItemsControlType, TItemContainerType> dragDropTargetUnderPointer = GetDragDropTargetUnderPointer(_pointerX, _pointerY, out _);
+            DragDropTarget<TItemsControlType, TItemContainerType> dragDropTargetUnderPointer = GetDragDropTargetUnderPointer(_pointerX, _pointerY, out _, out allowDropElementUnderPointer);
 
             // Check if the element under the pointer has changed since the last PointerMoved:
             if (_previousdragDropTargetUnderPointer != dragDropTargetUnderPointer)
@@ -335,7 +336,9 @@ namespace Windows.UI.Xaml.Controls
             }
 
             // Show the appropriate icon depending on whether it is possible to drop or not:
-            if (dragDropTargetUnderPointer != null && dragDropTargetUnderPointer.AllowDrop && !_isDragCancelled)
+            if ((dragDropTargetUnderPointer != null && dragDropTargetUnderPointer.AllowDrop ||
+                allowDropElementUnderPointer != null)
+                && !_isDragCancelled)
             {
                 //---------------------------------
                 // SHOW ICON "DRAG ALLOWED"
@@ -402,13 +405,6 @@ namespace Windows.UI.Xaml.Controls
 
             _popup.IsOpen = false;
 
-            // Clear item parent, since popup.Child is the intermediate StackPanel and will remove that instead
-            //if (_sourceItemContainer is FrameworkElement frameworkElement && frameworkElement.INTERNAL_VisualParent != null)
-            //{
-            //    (frameworkElement.INTERNAL_VisualParent as FrameworkElement).RemoveLogicalChild(frameworkElement);
-            //    (frameworkElement.INTERNAL_VisualParent as FrameworkElement).RemoveVisualChild(frameworkElement);
-            //}
-
             //We no longer have use for the popup
             _popup.Child = null;
             _popup = null;
@@ -417,8 +413,9 @@ namespace Windows.UI.Xaml.Controls
             Selection selection = new Selection(_sourceItemContainer);
             SelectionCollection selectionCollection = SelectionCollection.ToSelectionCollection(selection);
 
+            UIElement allowDropElementUnderPointer;
             // Get the DragDropTarget element that is under the pointer, if any:
-            DragDropTarget<TItemsControlType, TItemContainerType> dragDropTargetUnderPointer = GetDragDropTargetUnderPointer(_pointerX, _pointerY, out _);
+            DragDropTarget<TItemsControlType, TItemContainerType> dragDropTargetUnderPointer = GetDragDropTargetUnderPointer(_pointerX, _pointerY, out _, out allowDropElementUnderPointer);
 
             bool moveItem = false;
             if (dragDropTargetUnderPointer != null)
@@ -485,6 +482,11 @@ namespace Windows.UI.Xaml.Controls
                 RemoveItem(_sourceItemsControl, item);
                 // Put the source into the target:
                 dragDropTargetUnderPointer.AddItem((TItemsControlType)dragDropTargetUnderPointer.Content, item);
+            }
+            else if (allowDropElementUnderPointer != null)
+            {
+                RemoveItem(_sourceItemsControl,
+                    _sourceItemContainer.GetValue(ItemContainerGenerator.ItemForItemContainerProperty));
             }
 
             // Raise the "ItemDragCompleted" event:
@@ -746,12 +748,13 @@ namespace Windows.UI.Xaml.Controls
         /// <param name="y"></param>
         /// <param name="itemContainerUnderPointer">The ListBoxItem or other container that is being moved. If there is no container, it is the item directly.</param>
         /// <returns>Null if no DragDropTarget is under the pointer, else it returns the DragDropTarget under it (the first Parent found)</returns>
-        static DragDropTarget<TItemsControlType, TItemContainerType> GetDragDropTargetUnderPointer(double x, double y, out TItemContainerType itemContainerUnderPointer)
+        static DragDropTarget<TItemsControlType, TItemContainerType> GetDragDropTargetUnderPointer(double x, double y, out TItemContainerType itemContainerUnderPointer, out UIElement allowDropElementUnderPointer)
         {
             UIElement element = VisualTreeHelper.FindElementInHostCoordinates(new Point(x, y));
             List<object> ElementsBetweenClickedElementAndDragDropTarget = new List<object>(); //This list will contain all the elements we go through when going from the clicked element to the DragDropTarget (both included)
             DragDropTarget<TItemsControlType, TItemContainerType> dragDropTargetUnder = null;
             TItemsControlType itemsControl = null;
+            allowDropElementUnderPointer = null;
             // 1) Walk up the visual tree from the clicked element until we find the DragDropTarget:
             while (element != null)
             {
@@ -759,6 +762,10 @@ namespace Windows.UI.Xaml.Controls
                 if (element is TItemsControlType ic)
                 {
                     itemsControl = ic;
+                }
+                if (allowDropElementUnderPointer == null && element.AllowDrop)
+                {
+                    allowDropElementUnderPointer = element;
                 }
                 if (element is DragDropTarget<TItemsControlType, TItemContainerType>)
                 {
