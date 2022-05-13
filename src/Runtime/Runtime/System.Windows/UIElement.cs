@@ -1765,9 +1765,13 @@ document.ondblclick = null;
                 }
 
                 if (fe.IsAutoWidthOnCustomLayout)
-                    layoutMeasuredSize.Width = Window.Current.ActualWidth - offsetLeft;
+                {
+                    layoutMeasuredSize.Width = Math.Min(Window.Current.ActualWidth - offsetLeft, fe.MaxWidth);
+                }
                 if (fe.IsAutoHeightOnCustomLayout)
-                    layoutMeasuredSize.Height = Window.Current.ActualHeight - offsetTop;
+                {
+                    layoutMeasuredSize.Height = Math.Min(Window.Current.ActualHeight - offsetLeft, fe.MaxHeight);
+                }
             }
 
             Measure(layoutMeasuredSize);
