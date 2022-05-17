@@ -39,6 +39,20 @@ namespace Windows.UI.Xaml.Controls
             throw new NotImplementedException();
         }
 
+        [OpenSilver.NotImplemented]
+        public static readonly DependencyProperty AccordionButtonStyleProperty;
+
+        [OpenSilver.NotImplemented]
+        public Style AccordionButtonStyle 
+        {
+            get { return (Style)GetValue(AccordionButtonStyleProperty); }
+            set { SetValue(AccordionButtonStyleProperty, value); }
+        }
+
+
+        [OpenSilver.NotImplemented]
+        public bool IsSelected { get; set; }
+
         /// <summary>
         /// Occurs when the accordionItem is selected.
         /// </summary>

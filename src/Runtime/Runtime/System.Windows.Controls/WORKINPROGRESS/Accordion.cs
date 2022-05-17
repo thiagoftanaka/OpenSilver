@@ -178,6 +178,9 @@ namespace Windows.UI.Xaml.Controls
         }
         #endregion public SelectionSequence SelectionSequence
 
+        [OpenSilver.NotImplemented]
+        public event SelectionChangedEventHandler SelectionChanged;
+
         #region public Style AccordionButtonStyle
         /// <summary>
         /// Gets or sets the Style that is applied to AccordionButton elements
