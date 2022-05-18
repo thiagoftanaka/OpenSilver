@@ -1278,14 +1278,33 @@ namespace Windows.UI.Xaml.Controls
             //e.Handled = true;
             //}
 
-            //ReleaseMouseCapture();
-            //CaptureMouse();
+            if (Pointer.INTERNAL_captured?.GetType() != typeof(ToggleButton))
+            {
+                ReleaseMouseCapture();
+            }
 
 #if MIGRATION
             base.OnMouseLeftButtonDown(e);
 #else
             base.OnPointerPressed(e);
 #endif
+        }
+
+
+        protected internal override void INTERNAL_OnAttachedToVisualTree()
+        {
+            base.INTERNAL_OnAttachedToVisualTree();
+
+#if OPENSILVER
+            if (true)
+#elif BRIDGE
+            if (!CSHTML5.Interop.IsRunningInTheSimulator)
+#endif
+            {
+                // Prevent the selection of text while dragging
+                OpenSilver.Interop.ExecuteJavaScriptAsync("$0.onselectstart = function() { return false; }",
+                    INTERNAL_OuterDomElement);
+            }
         }
 
         /// <summary>
