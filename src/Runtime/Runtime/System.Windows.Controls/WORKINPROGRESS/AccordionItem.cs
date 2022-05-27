@@ -40,7 +40,8 @@ namespace Windows.UI.Xaml.Controls
         }
 
         [OpenSilver.NotImplemented]
-        public static readonly DependencyProperty AccordionButtonStyleProperty;
+        public static readonly DependencyProperty AccordionButtonStyleProperty =
+            DependencyProperty.Register("AccordionButtonStyle", typeof(Style), typeof(AccordionItem), new PropertyMetadata());
 
         [OpenSilver.NotImplemented]
         public Style AccordionButtonStyle 
