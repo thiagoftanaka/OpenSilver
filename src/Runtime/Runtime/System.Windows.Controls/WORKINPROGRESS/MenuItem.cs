@@ -10,7 +10,12 @@ namespace Windows.UI.Xaml.Controls
     {
 
         //DependencyProperty defined in HeaderedItemsControl from which MenuItem inherits in Silverlight
-        public static readonly DependencyProperty HeaderTemplateProperty;
+        public static readonly DependencyProperty HeaderTemplateProperty =
+            DependencyProperty.Register(
+                "HeaderTemplate",
+                typeof(DataTemplate),
+                typeof(MenuItem),
+                new PropertyMetadata());
 
         public DataTemplate HeaderTemplate
         {
