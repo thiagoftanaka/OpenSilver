@@ -248,6 +248,9 @@ namespace Windows.UI.Xaml.Controls
             this.UpdateCountProperty();
 
             this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+
+            Threading.DispatcherOperation operation = _modelParent.Dispatcher.BeginInvoke(
+                () => _modelParent.INTERNAL_RaiseLoadedEvent(true));
         }
 
         internal void ClearItemsSource()

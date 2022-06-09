@@ -1782,10 +1782,32 @@ namespace Windows.UI.Xaml
         /// </summary>
         public event RoutedEventHandler Loaded;
 
-        internal void INTERNAL_RaiseLoadedEvent()
+        private List<Delegate> _previouslyRunDelegates = new List<Delegate>();
+
+        internal void INTERNAL_RaiseLoadedEvent(bool notPreviouslyRunOnly = false)
         {
             if (Loaded != null)
-                Loaded(this, new RoutedEventArgs());
+            {
+                // Keeping copy because Loaded can become null during this
+                List<Delegate> invocationList = new List<Delegate>(Loaded.GetInvocationList());
+
+                if (!notPreviouslyRunOnly)
+                {
+                    Loaded(this, new RoutedEventArgs());
+                }
+                else
+                {
+                    IEnumerable<Delegate> notPreviouslyRunDelegates = _previouslyRunDelegates
+                        .Aggregate(invocationList, (l, p) => { l.Remove(p); return l; });
+                    foreach (Delegate d in notPreviouslyRunDelegates)
+                    {
+                        d.DynamicInvoke(this, new RoutedEventArgs());
+                    }
+                }
+
+                _previouslyRunDelegates.Clear();
+                _previouslyRunDelegates.AddRange(invocationList);
+            }
 
             InvalidateMeasure();
         }
