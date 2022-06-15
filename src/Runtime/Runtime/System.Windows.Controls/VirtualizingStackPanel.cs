@@ -50,6 +50,15 @@ namespace Windows.UI.Xaml.Controls
                 new PropertyMetadata(VirtualizationMode.Recycling));
 
         /// <summary>
+        /// Gets or sets how a panel in an <see cref="ItemsControl"/> virtualizes its child items.
+        /// </summary>
+        public VirtualizationMode VirtualizationMode
+        {
+            get { return (VirtualizationMode)this.GetValue(VirtualizationModeProperty); }
+            set { this.SetValue(VirtualizationModeProperty, value); }
+        }
+
+        /// <summary>
         /// A value that indicates whether the <see cref="VirtualizingStackPanel"/>
         /// is using virtualization.
         /// </summary>
