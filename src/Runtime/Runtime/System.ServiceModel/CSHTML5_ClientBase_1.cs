@@ -102,7 +102,13 @@ namespace System.ServiceModel
     {
 #if OPENSILVER
         //Note: Adding this because they are in the file generated when adding a Service Reference through the "Add Connected Service" for OpenSilver.
-        public System.ServiceModel.Description.ServiceEndpoint Endpoint { get; } = new Description.ServiceEndpoint(new Description.ContractDescription("none"));
+        public System.ServiceModel.Description.ServiceEndpoint Endpoint
+        {
+            get
+            {
+                return ChannelFactory?.Endpoint;
+            }
+        }
         public System.ServiceModel.Description.ClientCredentials ClientCredentials { get; } = new Description.ClientCredentials();
 #endif
         string _remoteAddressAsString;
@@ -112,7 +118,20 @@ namespace System.ServiceModel
         {
             get
             {
+                if (channel == null)
+                {
+                    channel = CreateChannel();
+                }
                 return channel;
+            }
+        }
+
+        private ChannelFactory<TChannel> _channelFactory;
+        public ChannelFactory<TChannel> ChannelFactory
+        {
+            get
+            {
+                return _channelFactory;
             }
         }
 
@@ -413,6 +432,7 @@ namespace System.ServiceModel
             _remoteAddressAsString = remoteAddress.Uri.OriginalString;
 
             //todo: finish the implementation.
+            _channelFactory = new ChannelFactory<TChannel>(binding, remoteAddress);
         }
 
         /// <summary>
@@ -1041,7 +1061,7 @@ namespace System.ServiceModel
             }
 #endif
 
-            private static MethodInfo ResolveMethod(Type interfaceType, string webMethodName, params string[] methodNames)
+            public static MethodInfo ResolveMethod(Type interfaceType, string webMethodName, params string[] methodNames)
             {
                 MethodInfo method = null;
                 if (methodNames != null)
@@ -1216,6 +1236,9 @@ namespace System.ServiceModel
                     new XElement(XNamespace.Get(interfaceTypeNamespace)
                                            .GetName(webMethodName));
 
+                request = null;
+                bool isMessage = false;
+
                 // Note: now we want to add the parameters of the method
                 // to do that, we basically get the serialized version of the objects, 
                 // and replace their tag that should have the type with the parameter name.
@@ -1242,7 +1265,27 @@ namespace System.ServiceModel
                                     types,
                                     isXmlSerializer);
 
-                            XDocument xdoc = dataContractSerializer.SerializeToXDocument(requestBody);
+                            XDocument xdoc;
+                            if (requestBody is Message message)
+                            {
+                                isMessage = true;
+
+                                using (MemoryStream memoryStream = new MemoryStream())
+                                using (XmlDictionaryWriter xmlDictionaryWriter =
+                                    XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
+                                {
+                                    message.WriteMessage(xmlDictionaryWriter);
+                                    xmlDictionaryWriter.Flush();
+                                    memoryStream.Position = 0;
+                                    xdoc = XDocument.Load(memoryStream);
+
+                                    request = xdoc.ToString(SaveOptions.DisableFormatting);
+                                }
+                            }
+                            else
+                            {
+                                xdoc = dataContractSerializer.SerializeToXDocument(requestBody);
+                            }
 
                             XElement paramNameElement =
                                 new XElement(XNamespace.Get(interfaceTypeNamespace)
@@ -1309,8 +1352,11 @@ namespace System.ServiceModel
                 }
 
 #if OPENSILVER
-                request = string.Format(requestFormat,
-                                        methodNameElement.ToString(SaveOptions.DisableFormatting));
+                if (!isMessage)
+                {
+                    request = string.Format(requestFormat,
+                                            methodNameElement.ToString(SaveOptions.DisableFormatting));
+                }
 #else
                 request = string.Format(requestFormat, 
                                         methodNameElement.ToString(false));
@@ -1727,7 +1773,18 @@ namespace System.ServiceModel
                         xElement = xElement.Elements().FirstOrDefault() ?? xElement; //move inside of the <Body> tag
                     }
 
-                    if (!isXmlSerializer)
+                    if (requestResponseType == typeof(Message))
+                    {
+                        using (MemoryStream memoryStream = new MemoryStream())
+                        {
+                            XmlDictionaryReader xmlDictionaryReader = XmlDictionaryReader.CreateTextReader(
+                                Text.Encoding.UTF8.GetBytes(responseAsString),
+                                new XmlDictionaryReaderQuotas());
+                            Message message = Message.CreateMessage(xmlDictionaryReader, 4096, MessageVersion.Default);
+                            requestResponse = message;
+                        }
+                    }
+                    else if (!isXmlSerializer)
                     {
                         xElement = xElement.Elements().FirstOrDefault() ?? xElement;
                         requestResponse = deSerializer.DeserializeFromXElement(xElement);
@@ -1829,28 +1886,16 @@ namespace System.ServiceModel
 
         #region Not Supported Stuff
 
-        //    /// <summary>
-        //    /// Gets the underlying System.ServiceModel.ChannelFactory<TChannel> object.
-        //    /// </summary>
-        //    public ChannelFactory<TChannel> ChannelFactory { get; }
-
-        //    /// <summary>
-        //    /// Gets the client credentials used to call an operation.
-        //    /// </summary>
-        //    public ClientCredentials ClientCredentials { get; }
-
-        //    /// <summary>
-        //    /// Gets the target endpoint for the service to which the WCF client can connect.
-        //    /// </summary>
-        //    public ServiceEndpoint Endpoint { get; }
-
         /// <summary>
         /// Gets the underlying System.ServiceModel.IClientChannel implementation.
         /// </summary>
 		[OpenSilver.NotImplemented]
         public IClientChannel InnerChannel
         {
-            get { return null; }
+            get
+            {
+                return (IClientChannel)Channel;
+            }
         }
 
         [OpenSilver.NotImplemented]
@@ -1893,8 +1938,10 @@ namespace System.ServiceModel
         /// <typeparam name="T"></typeparam>
         //protected class ChannelBase<T> : IOutputChannel, IRequestChannel, IClientChannel, IDisposable, IContextChannel, IChannel, ICommunicationObject, IExtensibleObject<IContextChannel> where T : class
         [OpenSilver.NotImplemented]
-        protected class ChannelBase<T> where T : class
+        protected class ChannelBase<T> : IOutputChannel, IRequestChannel, IClientChannel, IDisposable, IContextChannel, IChannel, ICommunicationObject, IExtensibleObject<IContextChannel> where T : class
         {
+            private CSHTML5_ClientBase<T> _client;
+
             /// <summary>
             /// Initializes a new instance of the <see cref="System.ServiceModel.ClientBase{TChannel}.ChannelBase{T}"/>
             /// class from an existing instance of the class.
@@ -1903,7 +1950,7 @@ namespace System.ServiceModel
 		    [OpenSilver.NotImplemented]
             protected ChannelBase(CSHTML5_ClientBase<T> client)
             {
-
+                _client = client;
             }
 
             /// <summary>
@@ -1918,7 +1965,28 @@ namespace System.ServiceModel
             [OpenSilver.NotImplemented]
             protected IAsyncResult BeginInvoke(string methodName, object[] args, AsyncCallback callback, object state)
             {
-                return null;
+                MethodInfo methodInfo = CSHTML5_ClientBase<T>.WebMethodsCaller.ResolveMethod(typeof(T), methodName,
+                    "Begin" + methodName);
+                ParameterInfo[] parameterInfos = methodInfo.GetParameters()
+                    .Where(p => p.Name != CallbackParameterName && p.Name != AsyncStateParameterName)
+                    .ToArray();
+                if (parameterInfos.Length != args.Length)
+                {
+                    throw new ArgumentException("Arg count does not match method parameter count");
+                }
+
+                Dictionary<string, object> parameters = new Dictionary<string, object>();
+                for (int i = 0; i < parameterInfos.Length; ++i)
+                {
+                    parameters[parameterInfos[i].Name] = args[i];
+                }
+                parameters[CallbackParameterName] = callback;
+                parameters[AsyncStateParameterName] = state;
+
+                return BeginCallWebMethod<IAsyncResult, T>(_client.Endpoint.Address.ToString(),
+                    methodName,
+                    parameters,
+                    "1.2");
             }
 
             /// <summary>
@@ -1932,7 +2000,178 @@ namespace System.ServiceModel
             [OpenSilver.NotImplemented]
             protected object EndInvoke(string methodName, object[] args, IAsyncResult result)
             {
-                return null;
+                MethodInfo methodInfo = CSHTML5_ClientBase<T>.WebMethodsCaller.ResolveMethod(typeof(T), methodName,
+                    "End" + methodName);
+
+                return EndCallWebMethod<T>(_client.Endpoint.Address.ToString(),
+                    methodName,
+                    methodInfo.ReturnType,
+                    new Dictionary<string, object>()
+                    {
+                        { "result", result },
+                    },
+                    "1.2");
+            }
+
+            public bool AllowInitializationUI { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+            public bool DidInteractiveInitialization => throw new NotImplementedException();
+
+            public Uri Via => _client?.Endpoint?.Address?.Uri;
+
+            public bool AllowOutputBatching { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+            public IInputSession InputSession => throw new NotImplementedException();
+
+            public EndpointAddress LocalAddress => throw new NotImplementedException();
+
+            public TimeSpan OperationTimeout { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+            public IOutputSession OutputSession => throw new NotImplementedException();
+
+            public EndpointAddress RemoteAddress => throw new NotImplementedException();
+
+            public string SessionId => throw new NotImplementedException();
+
+            public CommunicationState State => throw new NotImplementedException();
+
+            public IExtensionCollection<IContextChannel> Extensions => throw new NotImplementedException();
+
+            public event EventHandler<UnknownMessageReceivedEventArgs> UnknownMessageReceived;
+            public event EventHandler Closed;
+            public event EventHandler Closing;
+            public event EventHandler Faulted;
+            public event EventHandler Opened;
+            public event EventHandler Opening;
+
+            public void Abort()
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginClose(AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginClose(TimeSpan timeout, AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginDisplayInitializationUI(AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginOpen(AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginOpen(TimeSpan timeout, AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Close()
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Close(TimeSpan timeout)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void DisplayInitializationUI()
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Dispose()
+            {
+                throw new NotImplementedException();
+            }
+
+            public void EndClose(IAsyncResult result)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void EndDisplayInitializationUI(IAsyncResult result)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void EndOpen(IAsyncResult result)
+            {
+                throw new NotImplementedException();
+            }
+
+            public T1 GetProperty<T1>() where T1 : class
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Open()
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Open(TimeSpan timeout)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginSend(Message message, AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginSend(Message message, TimeSpan timeout, AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void EndSend(IAsyncResult result)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Send(Message message)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Send(Message message, TimeSpan timeout)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginRequest(Message message, AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginRequest(Message message, TimeSpan timeout, AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Message EndRequest(IAsyncResult result)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Message Request(Message message)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Message Request(Message message, TimeSpan timeout)
+            {
+                throw new NotImplementedException();
             }
         }
 
