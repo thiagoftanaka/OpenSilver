@@ -741,8 +741,8 @@ namespace Microsoft.Expression.Interactivity.Core
                     }
                 }
 
-                double baseOpacity = (double)stateGroupsRoot.GetAnimationBaseValue(UIElement.OpacityProperty);
-                return (baseOpacity == 0);
+                //double baseOpacity = (double)stateGroupsRoot.GetAnimationBaseValue(UIElement.OpacityProperty);
+                return false;// (baseOpacity == 0);
             }
 
             // if it's not mentioned in either state, then let's just check the current opacity

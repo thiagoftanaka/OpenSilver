@@ -42,6 +42,7 @@ using static System.ServiceModel.INTERNAL_WebMethodsCaller;
 
 #if MIGRATION
 using System.Windows;
+using System.Text;
 #else
 using Windows.UI.Xaml;
 #endif
@@ -271,6 +272,27 @@ namespace System.ServiceModel
             }
         }
 
+        public virtual string INTERNAL_SoapVersion
+        {
+            get
+            {
+                MessageVersion messageVersion = _channelFactory?.Endpoint?.Binding?.MessageVersion;
+                if (messageVersion == MessageVersion.Soap11 ||
+                    messageVersion == MessageVersion.Soap11WSAddressingAugust2004)
+                {
+                    return "1.1";
+                }
+                else if (messageVersion == MessageVersion.Soap12WSAddressing10 ||
+                    messageVersion == MessageVersion.Soap12WSAddressing10)
+                {
+                    return "1.2";
+                }
+                return null;
+            }
+        }
+
+        public IList<MessageHeader> MessageHeaders => (Channel as ChannelBase<TChannel>)?.MessageHeaders;
+
         //#if !FOR_DESIGN_TIME && CORE
         //        [JSIgnore]
         //        INTERNAL_RealClientBaseImplementation<TChannel> _realClientBase;
@@ -483,6 +505,9 @@ namespace System.ServiceModel
         /// </summary>
         public partial class WebMethodsCaller
         {
+            protected const string SoapVersion11 = "1.1";
+            protected const string SoapVersion12 = "1.2";
+
             string _addressOfService;
 
             INTERNAL_WebRequestHelper_JSOnly _webRequestHelper_JSVersion = new INTERNAL_WebRequestHelper_JSOnly();
@@ -1105,7 +1130,7 @@ namespace System.ServiceModel
             }
 
 #if OPENSILVER
-            private static string GetEnvelopeHeaders(ICollection<MessageHeader> messageHeaders, string soapVersion)
+            public static string GetEnvelopeHeaders(ICollection<MessageHeader> messageHeaders, string soapVersion)
             {
                 if (messageHeaders == null || !messageHeaders.Any())
                 {
@@ -1183,46 +1208,38 @@ namespace System.ServiceModel
                         interfaceTypeName = serviceContractAttr.Name;
                     }
                 }
+                
+                // Look for the soapAction.
+                OperationContractAttribute operationContractAttr =
+                    (OperationContractAttribute)method.GetCustomAttributes(typeof(OperationContractAttribute), false)
+                                                        .FirstOrDefault(); // note: there should never be more than one.
+
+                if (operationContractAttr != null)
+                {
+                    soapAction = operationContractAttr.Action;
+                }
+
+                if (string.IsNullOrEmpty(soapAction))
+                {
+                    soapAction = string.Format("{0}/{1}/{2}",
+                                                interfaceTypeNamespace.Trim('/'),
+                                                interfaceTypeName.Trim('/'),
+                                                webMethodName);
+                }
 
                 switch (soapVersion)
                 {
-                    case "1.1":
-                        // Look for the soapAction.
-                        OperationContractAttribute operationContractAttr =
-                            (OperationContractAttribute)method.GetCustomAttributes(typeof(OperationContractAttribute), false)
-                                                              .FirstOrDefault(); // note: there should never be more than one.
-
-                        if (operationContractAttr != null)
-                        {
-                            soapAction = operationContractAttr.Action;
-                        }
-
-                        if (string.IsNullOrEmpty(soapAction))
-                        {
-                            soapAction = string.Format("{0}/{1}/{2}",
-                                                       interfaceTypeNamespace.Trim('/'),
-                                                       interfaceTypeName.Trim('/'),
-                                                       webMethodName);
-                        }
-
+                    case SoapVersion11:
                         headers.Add("Content-Type", @"text/xml; charset=utf-8");
                         headers.Add("SOAPAction", soapAction);
 
-                        if (!string.IsNullOrEmpty(envelopeHeaders))
-                        {
-                            envelopeHeaders = "<s:Header>" + envelopeHeaders + "</s:Header>";
-                        }
-                        requestFormat = string.Format("<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">{0}<s:Body>{{0}}</s:Body></s:Envelope>",
-                            envelopeHeaders ?? "");
+                        requestFormat = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">{0}{1}</s:Envelope>";
                         break;
 
-                    case "1.2":
+                    case SoapVersion12:
                         headers.Add("Content-Type", @"application/soap+xml; charset=utf-8");
 
-                        soapAction = string.Format("http://tempuri.org/ServiceHost/{0}",
-                                                   webMethodName);
-                        requestFormat = string.Format("<s:Envelope xmlns:a=\"http://www.w3.org/2005/08/addressing\" xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Header><a:Action>{0}</a:Action>{1}</s:Header><s:Body>{{0}}</s:Body></s:Envelope>",
-                            soapAction, envelopeHeaders ?? "");
+                        requestFormat = "<s:Envelope xmlns:a=\"http://www.w3.org/2005/08/addressing\" xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\">{0}{1}</s:Envelope>";
                         break;
 
                     default:
@@ -1237,12 +1254,13 @@ namespace System.ServiceModel
                                            .GetName(webMethodName));
 
                 request = null;
-                bool isMessage = false;
+
+                Message message = requestParameters?.Values.OfType<Message>().FirstOrDefault();
 
                 // Note: now we want to add the parameters of the method
                 // to do that, we basically get the serialized version of the objects, 
                 // and replace their tag that should have the type with the parameter name.
-                if (requestParameters != null)
+                if (message == null && requestParameters != null)
                 {
                     ParameterInfo[] parameterInfos = method.GetParameters();
                     int parametersCount = requestParameters != null ?
@@ -1265,27 +1283,7 @@ namespace System.ServiceModel
                                     types,
                                     isXmlSerializer);
 
-                            XDocument xdoc;
-                            if (requestBody is Message message)
-                            {
-                                isMessage = true;
-
-                                using (MemoryStream memoryStream = new MemoryStream())
-                                using (XmlDictionaryWriter xmlDictionaryWriter =
-                                    XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
-                                {
-                                    message.WriteMessage(xmlDictionaryWriter);
-                                    xmlDictionaryWriter.Flush();
-                                    memoryStream.Position = 0;
-                                    xdoc = XDocument.Load(memoryStream);
-
-                                    request = xdoc.ToString(SaveOptions.DisableFormatting);
-                                }
-                            }
-                            else
-                            {
-                                xdoc = dataContractSerializer.SerializeToXDocument(requestBody);
-                            }
+                            XDocument xdoc = dataContractSerializer.SerializeToXDocument(requestBody);
 
                             XElement paramNameElement =
                                 new XElement(XNamespace.Get(interfaceTypeNamespace)
@@ -1352,10 +1350,51 @@ namespace System.ServiceModel
                 }
 
 #if OPENSILVER
-                if (!isMessage)
+                if (message == null)
                 {
+                    if (soapVersion == SoapVersion12)
+                    {
+                        envelopeHeaders = string.Format("<a:Action>{0}</a:Action>", soapAction) + (envelopeHeaders ?? "");
+                    }
                     request = string.Format(requestFormat,
-                                            methodNameElement.ToString(SaveOptions.DisableFormatting));
+                                            !string.IsNullOrEmpty(envelopeHeaders) ?
+                                                string.Format("<s:Header>{0}</s:Header>", envelopeHeaders) :
+                                                "",
+                                            string.Format("<s:Body>{0}</s:Body>", methodNameElement.ToString(SaveOptions.DisableFormatting)));
+                }
+                else
+                {
+                    string body;
+                    using (MemoryStream memoryStream = new MemoryStream())
+                    using (XmlDictionaryWriter xmlDictionaryWriter =
+                        XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
+                    using (StreamReader streamReader = new StreamReader(memoryStream))
+                    {
+                        message.WriteBody(xmlDictionaryWriter);
+                        xmlDictionaryWriter.Flush();
+                        memoryStream.Position = 0;
+                        body = streamReader.ReadToEnd();
+                    }
+
+                    StringBuilder messageHeaders = new StringBuilder();
+                    foreach (MessageHeader header in message.Headers)
+                    {
+                        using (MemoryStream memoryStream = new MemoryStream())
+                        using (XmlDictionaryWriter xmlDictionaryWriter =
+                            XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
+                        using (StreamReader streamReader = new StreamReader(memoryStream))
+                        {
+                            //memoryStream.Position = 0;
+                            header.WriteHeader(xmlDictionaryWriter, MessageVersion.Default);
+                            xmlDictionaryWriter.Flush();
+                            memoryStream.Position = 0;
+                            messageHeaders.Append(streamReader.ReadToEnd());
+                        }
+                    }
+
+                    request = string.Format(requestFormat,
+                                    string.Format("<s:Header>{0}</s:Header>", messageHeaders.ToString() + envelopeHeaders),
+                                    body);
                 }
 #else
                 request = string.Format(requestFormat, 
@@ -1942,6 +1981,11 @@ namespace System.ServiceModel
         {
             private CSHTML5_ClientBase<T> _client;
 
+            public IList<MessageHeader> MessageHeaders
+            {
+                get;
+            } = new List<MessageHeader>();
+
             /// <summary>
             /// Initializes a new instance of the <see cref="System.ServiceModel.ClientBase{TChannel}.ChannelBase{T}"/>
             /// class from an existing instance of the class.
@@ -1983,10 +2027,22 @@ namespace System.ServiceModel
                 parameters[CallbackParameterName] = callback;
                 parameters[AsyncStateParameterName] = state;
 
-                return BeginCallWebMethod<IAsyncResult, T>(_client.Endpoint.Address.ToString(),
+                //return BeginCallWebMethod<IAsyncResult, T>(_client.Endpoint.Address.ToString(),
+                //    methodName,
+                //    parameters,
+                //    _client.INTERNAL_SoapVersion);
+                //return CallWebMethod<IAsyncResult, T>(_client.Endpoint.Address.ToString(),
+                //    methodName,
+                //    MessageHeaders,
+                //    parameters,
+                //    _client.INTERNAL_SoapVersion).Item1;
+                return BeginCallWebMethod<T>(_client.Endpoint.Address.ToString(),
                     methodName,
+                    typeof(IAsyncResult),
+                    null,
+                    CSHTML5_ClientBase<T>.WebMethodsCaller.GetEnvelopeHeaders(MessageHeaders, _client.INTERNAL_SoapVersion),
                     parameters,
-                    "1.2");
+                    _client.INTERNAL_SoapVersion);
             }
 
             /// <summary>
@@ -2010,7 +2066,7 @@ namespace System.ServiceModel
                     {
                         { "result", result },
                     },
-                    "1.2");
+                    _client.INTERNAL_SoapVersion);
             }
 
             public bool AllowInitializationUI { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
