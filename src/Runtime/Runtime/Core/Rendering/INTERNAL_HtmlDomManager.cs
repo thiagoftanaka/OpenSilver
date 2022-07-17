@@ -1150,6 +1150,12 @@ parentElement.appendChild(child);";
             {
                 return formattable.ToInvariantString();
             }
+            else if (obj is byte[] bytes)
+            {
+                Task<string> task = new System.Net.Http.ByteArrayContent(bytes).ReadAsStringAsync();
+                task.Wait();
+                return @"""" + EscapeStringForUseInJavaScript(task.Result) + @"""";
+            }
             else
             {
                 return @"""" + EscapeStringForUseInJavaScript(obj.ToString()) + @"""";

@@ -570,13 +570,14 @@ namespace System.ServiceModel
                 string messageHeaders,
                 IDictionary<string, object> originalRequestObject,
                 Action<string> callback,
-                string soapVersion)
+                string soapVersion,
+                CSHTML5_ClientBase<TChannel> client = null)
             {
                 MethodInfo method = ResolveMethod(interfaceType, webMethodName, "Begin" + webMethodName);
                 bool isXmlSerializer = IsXmlSerializer(webMethodName, methodReturnType, method);
 
                 Dictionary<string, string> headers;
-                string request;
+                object request;
                 PrepareRequest(
                     webMethodName,
                     method,
@@ -588,7 +589,8 @@ namespace System.ServiceModel
                     soapVersion,
                     isXmlSerializer,
                     out headers,
-                    out request);
+                    out request,
+                    client);
 
                 Uri address = INTERNAL_UriHelper.EnsureAbsoluteUri(_addressOfService);
 
@@ -791,7 +793,7 @@ namespace System.ServiceModel
                 string outgoingMessageHeadersString = GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), soapVersion);
 
                 Dictionary<string, string> headers;
-                string request;
+                object request;
                 PrepareRequest(
                     webMethodName,
                     method,
@@ -854,7 +856,7 @@ namespace System.ServiceModel
                 bool isXmlSerializer = IsXmlSerializer(webMethodName, methodReturnType, method);
 
                 Dictionary<string, string> headers;
-                string request;
+                object request;
                 PrepareRequest(
                     webMethodName,
                     method,
@@ -948,7 +950,7 @@ namespace System.ServiceModel
                 bool isXmlSerializer = IsXmlSerializer(webMethodName, methodReturnType, method);
 
                 Dictionary<string, string> headers;
-                string request;
+                object request;
                 PrepareRequest(
                     webMethodName,
                     method,
@@ -1044,7 +1046,7 @@ namespace System.ServiceModel
                 var outgoingMessageHeadersString = GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), soapVersion);
 
                 Dictionary<string, string> headers;
-                string request;
+                object request;
                 PrepareRequest(
                     webMethodName,
                     method,
@@ -1182,7 +1184,8 @@ namespace System.ServiceModel
                 string soapVersion,
                 bool isXmlSerializer,
                 out Dictionary<string, string> headers,
-                out string request)
+                out object request,
+                CSHTML5_ClientBase<TChannel> client = null)
             {
                 headers = new Dictionary<string, string>();
                 string requestFormat = null;
@@ -1227,6 +1230,10 @@ namespace System.ServiceModel
                                                 webMethodName);
                 }
 
+                BinaryMessageEncodingBindingElement binaryBindingElement = client?.ChannelFactory?.Endpoint?.EndpointBehaviors?
+                    .OfType<BinaryMessageEncodingBindingElement>().FirstOrDefault();
+                bool isBinaryBinding = binaryBindingElement != null;
+
                 switch (soapVersion)
                 {
                     case SoapVersion11:
@@ -1237,7 +1244,14 @@ namespace System.ServiceModel
                         break;
 
                     case SoapVersion12:
-                        headers.Add("Content-Type", @"application/soap+xml; charset=utf-8");
+                        if (isBinaryBinding)
+                        {
+                            headers.Add("Content-Type", @"application/soap+msbin1");
+                        }
+                        else
+                        {
+                            headers.Add("Content-Type", @"application/soap+xml; charset=utf-8");
+                        }
 
                         requestFormat = "<s:Envelope xmlns:a=\"http://www.w3.org/2005/08/addressing\" xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\">{0}{1}</s:Envelope>";
                         break;
@@ -1360,7 +1374,8 @@ namespace System.ServiceModel
                                             !string.IsNullOrEmpty(envelopeHeaders) ?
                                                 string.Format("<s:Header>{0}</s:Header>", envelopeHeaders) :
                                                 "",
-                                            string.Format("<s:Body>{0}</s:Body>", methodNameElement.ToString(SaveOptions.DisableFormatting)));
+                                            string.Format("<s:Body>{0}</s:Body>",
+                                            methodNameElement.ToString(SaveOptions.DisableFormatting)));
                 }
                 else
                 {
@@ -1384,7 +1399,6 @@ namespace System.ServiceModel
                             XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
                         using (StreamReader streamReader = new StreamReader(memoryStream))
                         {
-                            //memoryStream.Position = 0;
                             header.WriteHeader(xmlDictionaryWriter, MessageVersion.Default);
                             xmlDictionaryWriter.Flush();
                             memoryStream.Position = 0;
@@ -1395,6 +1409,70 @@ namespace System.ServiceModel
                     request = string.Format(requestFormat,
                                     string.Format("<s:Header>{0}</s:Header>", messageHeaders.ToString() + envelopeHeaders),
                                     body);
+                }
+
+                if (isBinaryBinding)
+                {
+                    Message binaryMessage;
+                    if (message != null)
+                    {
+                        binaryMessage = message;
+                    }
+                    else
+                    {
+                        binaryMessage = Message.CreateMessage(client.ChannelFactory.Endpoint.Binding.MessageVersion,
+                            soapAction, methodNameElement);
+
+                        string xmlMessage = string.Format(requestFormat,
+                                        !string.IsNullOrEmpty(envelopeHeaders) ?
+                                            string.Format("<s:Header>{0}</s:Header>", envelopeHeaders) :
+                                            "",
+                                        string.Format("<s:Body>{0}</s:Body>",
+                                        methodNameElement.ToString(SaveOptions.DisableFormatting)));
+                        MessageHeaders messageHeaders = GetEnvelopeHeaders(xmlMessage, soapVersion);
+
+                        binaryMessage.Headers.Clear();
+                        foreach (MessageHeader messageHeader in messageHeaders)
+                        {
+                            binaryMessage.Headers.Add(messageHeader);
+                        }
+                    }
+                    MessageEncoder messageEncoder = binaryBindingElement.CreateMessageEncoderFactory().Encoder;
+
+                    request = messageEncoder.WriteMessage(binaryMessage, int.MaxValue,
+                        BufferManager.CreateBufferManager(2147483647, 2147483647)).ToArray();
+
+                    using (MemoryStream ms = new MemoryStream((byte[])request))
+                    {
+                        Message message1 = messageEncoder.ReadMessage(ms, int.MaxValue);
+
+                        string body;
+                        using (MemoryStream memoryStream = new MemoryStream())
+                        using (XmlDictionaryWriter xmlDictionaryWriter =
+                            XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
+                        using (StreamReader streamReader = new StreamReader(memoryStream))
+                        {
+                            message1.WriteBody(xmlDictionaryWriter);
+                            xmlDictionaryWriter.Flush();
+                            memoryStream.Position = 0;
+                            body = streamReader.ReadToEnd();
+                        }
+
+                        StringBuilder messageHeaders = new StringBuilder();
+                        foreach (MessageHeader header in message1.Headers)
+                        {
+                            using (MemoryStream memoryStream = new MemoryStream())
+                            using (XmlDictionaryWriter xmlDictionaryWriter =
+                                XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
+                            using (StreamReader streamReader = new StreamReader(memoryStream))
+                            {
+                                header.WriteHeader(xmlDictionaryWriter, MessageVersion.Default);
+                                xmlDictionaryWriter.Flush();
+                                memoryStream.Position = 0;
+                                messageHeaders.Append(streamReader.ReadToEnd());
+                            }
+                        }
+                    }
                 }
 #else
                 request = string.Format(requestFormat, 
@@ -2042,7 +2120,8 @@ namespace System.ServiceModel
                     null,
                     CSHTML5_ClientBase<T>.WebMethodsCaller.GetEnvelopeHeaders(MessageHeaders, _client.INTERNAL_SoapVersion),
                     parameters,
-                    _client.INTERNAL_SoapVersion);
+                    _client.INTERNAL_SoapVersion,
+                    _client);
             }
 
             /// <summary>

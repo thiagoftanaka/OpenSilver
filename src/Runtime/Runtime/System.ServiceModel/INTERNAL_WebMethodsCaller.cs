@@ -160,7 +160,8 @@ namespace System.ServiceModel
             IReadOnlyList<Type> knownTypes,
             string messageHeaders,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client = null) where INTERFACE_TYPE : class
         {
             // Read the parameters
             AsyncCallback callback = (AsyncCallback)requestParameters[CallbackParameterName];
@@ -202,7 +203,8 @@ namespace System.ServiceModel
                     // This causes a call to "EndCallWebMethod" which will deserialize the response.
                     webMethodAsyncResult.Completed();
                 },
-                soapVersion);
+                soapVersion,
+                client);
 
             return webMethodAsyncResult;
         }

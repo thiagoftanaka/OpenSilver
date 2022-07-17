@@ -63,6 +63,18 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
             return _webControl.Browser.ExecuteJavaScriptAndReturnValue(javaScriptToExecute);
         }
 
+        public void SendJavaScriptBinaryXmlHttpRequest(string id, string base64Body)
+        {
+            string javaScriptToExecute =
+                $@"document.jsObjRef[""{id}""].send(atob(""{base64Body}""));";
+
+            // This prevents interop calls from throwing an exception if they are called after the simulator started closing
+            if (_webControlDisposed)
+                return;
+            _lastExecutedJavaScriptCode = javaScriptToExecute;
+            _fullLogOfExecutedJavaScriptCode.Add(javaScriptToExecute);
+            _webControl.Browser.ExecuteJavaScript(javaScriptToExecute);
+        }
 
         internal string GetLastExecutedJavaScriptCode()
         {
