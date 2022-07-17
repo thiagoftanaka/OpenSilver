@@ -156,3 +156,12 @@ window.callJSUnmarshalled = function (javaScriptToExecute) {
             return BINDING.js_to_mono_obj(result + " [NOT USABLE DIRECTLY IN C#] (" + resultType + ")");
     }
 };
+
+window.sendBinaryXmlHttpRequest = function (id, body) {
+	const unboxedId = BINDING.unbox_mono_obj(id)
+
+	const unboxedBody = BINDING.unbox_mono_obj(body);
+	const byteBodyCharacters = atob(unboxedBody);
+
+	document.jsObjRef[unboxedId].send(byteBodyCharacters);
+};
