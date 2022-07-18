@@ -98,7 +98,6 @@ namespace Windows.UI.Xaml.Controls
         /// <param name="e">Event arguments.</param>
         private static void OnSelectionModePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            throw new NotImplementedException();
         }
 
         #endregion public AccordionSelectionMode SelectionMode

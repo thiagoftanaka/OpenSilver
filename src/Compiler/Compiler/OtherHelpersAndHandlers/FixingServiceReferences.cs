@@ -355,13 +355,13 @@ namespace DotNetForHtml5.Compiler
                 finalText = finalText.Replace($"{pair.Key}<", $"{pair.Value}<");
             }
 
-            finalText = FixBasicHttpBinding(finalText);
+            finalText = FixBasicHttpBinding(finalText, soapVersion);
 
             return finalText;
 
         }
 
-        private static string FixBasicHttpBinding(string text)
+        private static string FixBasicHttpBinding(string text, string soapVersion)
         {
             return string.Join(Environment.NewLine,
                 //\r\n for non-Unix platforms, or \n for Unix platforms
@@ -376,6 +376,11 @@ namespace DotNetForHtml5.Compiler
                     }
 
                     res.Add(l);
+
+                    //if (l.Contains(": System.ServiceModel.CSHTML5_ClientBase<"))
+                    //{
+                    //    res.Add(string.Format(@"public virtual string INTERNAL_SoapVersion => ""{0}"";", soapVersion));
+                    //}
 
                     return res;
                 }));
@@ -453,6 +458,7 @@ namespace DotNetForHtml5.Compiler
                 //todo-perf: this and the "check the amount of parameters and adapt the body replacement:" part may be a bit redundant since they're both about the parameters of the method so we might be able to make the compilation slightly faster by changing this (probably unnoticeable).
                 Dictionary<string, string> parameterNamesToTheirDefinitions = new Dictionary<string, string>();
                 Dictionary<string, string> outParamDefinitions = new Dictionary<string, string>();
+                List<string> parameters = new List<string>();
                 if (!string.IsNullOrWhiteSpace(methodParametersDefinitions))
                 {
                     string[] splittedMethodParametersDefinition = SplitStringTakingAccountOfBrackets(methodParametersDefinitions, ',');
@@ -490,10 +496,12 @@ namespace DotNetForHtml5.Compiler
                         if (isOutParam)
                         {
                             outParamDefinitions.Add(parameterName, parameterTypeAsString);
+                            parameters.Add(parameterTypeAsString);
                         }
                         else
                         {
                             parameterNamesToTheirDefinitions.Add(parameterName, string.Format(@"{0}", parameterName));
+                            parameters.Add(string.Format(@"{0}", parameterName));
                         }
                     }
                 }
@@ -528,47 +536,68 @@ namespace DotNetForHtml5.Compiler
                     }
                     parametersDictionaryDefinition += "}";
 
-                    newBody = string.Format(
+//                    newBody = string.Format(
 
+//    @"
+//            {11}
+//            {6}System.ServiceModel.INTERNAL_WebMethodsCaller.{8}CallWebMethod{0}{7}
+//                <{1}{2}>({9}, ""{3}"", {4}, ""{10}"");
+//",
+//     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
+//     ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
+//     interfaceType,
+//     GetMethodName(methodName, methodType),
+//     parametersDictionaryDefinition,
+//     originalCode,
+//     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
+//     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.NotAsyncWithoutReturnType || methodType == MethodType.AsyncEndWithoutReturnType) ? "_WithoutReturnValue" : ""),
+//     ((methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")),
+//     endpointCode,
+//     soapVersion,
+//     string.Join(" ", outParamDefinitions.Select(def => $"{def.Key} = default({def.Value});"))
+//     );
+                    newBody = string.Format(
     @"
-            {11}
-            {6}System.ServiceModel.INTERNAL_WebMethodsCaller.{8}CallWebMethod{0}{7}
-                <{1}{2}>({9}, ""{3}"", {4}, ""{10}"");
+            {3}
+            {2}base.Channel.{4}{0}({1});
 ",
-     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
-     ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
-     interfaceType,
      GetMethodName(methodName, methodType),
-     parametersDictionaryDefinition,
-     originalCode,
+     string.Join(",", parameters),
      ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
-     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.NotAsyncWithoutReturnType || methodType == MethodType.AsyncEndWithoutReturnType) ? "_WithoutReturnValue" : ""),
-     ((methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")),
-     endpointCode,
-     soapVersion,
-     string.Join(" ", outParamDefinitions.Select(def => $"{def.Key} = default({def.Value});"))
+     string.Join(" ", outParamDefinitions.Select(def => $"{def.Key} = default({def.Value});")),
+     (methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")
      );
                 }
                 else //case where there are no parameters
                 {
 
                     // Generate the body replacement:
+//                    newBody = string.Format(
+//    @"
+//            {6}System.ServiceModel.INTERNAL_WebMethodsCaller.{8}CallWebMethod{0}{7}
+//                <{1}{2}>({9}, ""{3}"", {4}, ""{10}"");
+//",
+//     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
+//     ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
+//     interfaceType,
+//     GetMethodName(methodName, methodType),
+//     requestParameterName,
+//     originalCode,
+//     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
+//     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.NotAsyncWithoutReturnType || methodType == MethodType.AsyncEndWithoutReturnType) ? "_WithoutReturnValue" : ""),
+//     ((methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")),
+//     endpointCode,
+//     soapVersion
+//     );
                     newBody = string.Format(
     @"
-            {6}System.ServiceModel.INTERNAL_WebMethodsCaller.{8}CallWebMethod{0}{7}
-                <{1}{2}>({9}, ""{3}"", {4}, ""{10}"");
+            {2}
+            {1}base.Channel.{3}{0}();
 ",
-     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
-     ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
-     interfaceType,
      GetMethodName(methodName, methodType),
-     requestParameterName,
-     originalCode,
      ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
-     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.NotAsyncWithoutReturnType || methodType == MethodType.AsyncEndWithoutReturnType) ? "_WithoutReturnValue" : ""),
-     ((methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")),
-     endpointCode,
-     soapVersion
+     string.Join(" ", outParamDefinitions.Select(def => $"{def.Key} = default({def.Value});")),
+     (methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")
      );
                 }
                 block = block.Replace(methodBodyToReplace, newBody);

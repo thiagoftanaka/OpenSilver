@@ -53,7 +53,7 @@ namespace System
         string _Method;
         static object _sender;
         Dictionary<string, string> _headers;
-        string _body;
+        object _body;
         bool _isAsync;
         INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventHandler _callback;
         static INTERNAL_WebRequestHelper_JSOnly _requester;
@@ -78,7 +78,7 @@ namespace System
             string Method, 
             object sender, 
             Dictionary<string, string> headers, 
-            string body, 
+            object body, 
             INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventHandler callbackMethod, 
             bool isAsync, 
             CredentialsMode mode = CredentialsMode.Disabled)
@@ -90,7 +90,7 @@ namespace System
                 Debug.WriteLine(string.Format("CSHTML5.Internal.WebRequestsHelper.MakeRequest({0}, {1}, {2}, {3}, {4});",
                     EscapeStringAndSurroundWithQuotes(address.ToString()),
                     EscapeStringAndSurroundWithQuotes(Method),
-                    EscapeStringAndSurroundWithQuotes(body),
+                    body is string bodyString ? EscapeStringAndSurroundWithQuotes(bodyString) : "<binary message>",
                     headersCode,
                     "false"
                     ));
@@ -143,7 +143,11 @@ namespace System
                 }
             }
 
-            if (askForUnsafeRequest) // if the settings of the request are still unsafe
+            if (body is byte[] bytes)
+            {
+                SendJavaScriptBinaryXmlHttpRequest(_xmlHttpRequest, bytes);
+            }
+            else if (askForUnsafeRequest) // if the settings of the request are still unsafe
             {
                 // handle special errors especially crash in pre flight, that GetHasError doesn't catch
                 SetErrorCallback((object)_xmlHttpRequest, OnError);
@@ -204,7 +208,7 @@ namespace System
 
         // special version of sendRequest, it handles some errors and modifies the credentials mode if needed
         // return directly the result of the right response
-        private string SendUnsafeRequest(object xmlHttpRequest, string address, string method, bool isAsync, string body)
+        private string SendUnsafeRequest(object xmlHttpRequest, string address, string method, bool isAsync, object body)
         {
             ConsoleLog_JSOnly("CredentialsMode is set to Auto: if a preflight error appears below, please ignore it.");
 
@@ -299,7 +303,7 @@ namespace System
             object sender, 
             Dictionary<string, string> headers, 
             INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventHandler callback, 
-            string body, 
+            object body, 
             bool isAsync)
         {
             _address = address;
@@ -421,10 +425,28 @@ namespace System
 #else
         [Template("{xmlHttpRequest}.send({body})")]
 #endif
-        internal static void SendRequest(object xmlHttpRequest, string address, string method, bool isAsync, string body)
+        internal static void SendRequest(object xmlHttpRequest, string address, string method, bool isAsync, object body)
         {
 #if BRIDGE || CSHTML5BLAZOR
             Interop.ExecuteJavaScript("$0.send($1)", xmlHttpRequest, body);
+#endif
+        }
+
+#if !BRIDGE
+        [JSIL.Meta.JSReplacement("$xmlHttpRequest.send($body)")]
+#else
+        [Template("{xmlHttpRequest}.send({body})")]
+#endif
+        internal static void SendJavaScriptBinaryXmlHttpRequest(CSHTML5.Types.INTERNAL_JSObjectReference xmlHttpRequest,
+            byte[] body)
+        {
+#if BRIDGE || CSHTML5BLAZOR
+            if (OpenSilver.Interop.IsRunningInTheSimulator_WorkAround) 
+                DotNetForHtml5.Core.INTERNAL_Simulator.DynamicJavaScriptExecutionHandler
+                    .SendJavaScriptBinaryXmlHttpRequest(xmlHttpRequest.ReferenceId, Convert.ToBase64String(body));
+            else
+                DotNetForHtml5.Core.INTERNAL_Simulator.JavaScriptExecutionHandler
+                    .SendJavaScriptBinaryXmlHttpRequest(xmlHttpRequest.ReferenceId, Convert.ToBase64String(body));
 #endif
         }
 
