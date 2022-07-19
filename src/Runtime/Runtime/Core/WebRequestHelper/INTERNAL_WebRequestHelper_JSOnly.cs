@@ -17,11 +17,15 @@ using CSHTML5;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.ServiceModel;
+using System.ServiceModel.Channels;
 
 #if MIGRATION
 using System.Windows;
+using System.Xml;
 #else
 using Windows.UI.Xaml;
 #endif
@@ -35,6 +39,8 @@ namespace System
     internal class INTERNAL_WebRequestHelper_JSOnly
     {
         dynamic _xmlHttpRequest;
+
+        private const string ArrayBufferResponseType = "arraybuffer";
 
         /// <summary>
         /// Occurs when the string download is completed.
@@ -108,6 +114,12 @@ namespace System
             }
             SetCallbackMethod((object)_xmlHttpRequest, OnDownloadStringCompleted);
 
+            bool isBinary = body is byte[] bytes;
+            if (isBinary)
+            {
+                SetResponseType((object)_xmlHttpRequest, ArrayBufferResponseType);
+            }
+
             //create the request:
             CreateRequest((object)_xmlHttpRequest, address.OriginalString, Method, isAsync);
 
@@ -143,9 +155,9 @@ namespace System
                 }
             }
 
-            if (body is byte[] bytes)
+            if (isBinary)
             {
-                SendJavaScriptBinaryXmlHttpRequest(_xmlHttpRequest, bytes);
+                SendJavaScriptBinaryXmlHttpRequest(_xmlHttpRequest, (byte[])body);
             }
             else if (askForUnsafeRequest) // if the settings of the request are still unsafe
             {
@@ -369,6 +381,20 @@ namespace System
 #endif
         }
 
+        internal static void SetResponseType(object xmlHttpRequest, string responseType)
+        {
+#if BRIDGE || CSHTML5BLAZOR
+            OpenSilver.Interop.ExecuteJavaScript("$0.responseType = $1", xmlHttpRequest, responseType);
+#endif
+        }
+
+        internal static string GetResponseType(object xmlHttpRequest)
+        {
+#if BRIDGE || CSHTML5BLAZOR
+            return Convert.ToString(OpenSilver.Interop.ExecuteJavaScript("$0.responseType", xmlHttpRequest));
+#endif
+        }
+
 #if !BRIDGE
         [JSIL.Meta.JSReplacement("$xmlHttpRequest.open($method, $address, $isAsync)")]
 #else
@@ -433,20 +459,19 @@ namespace System
         }
 
 #if !BRIDGE
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.send($body)")]
+        [JSIL.Meta.JSReplacement("$xmlHttpRequest.send(atob($body))")]
 #else
-        [Template("{xmlHttpRequest}.send({body})")]
+        [Template("{xmlHttpRequest}.send(atob({body}))")]
 #endif
         internal static void SendJavaScriptBinaryXmlHttpRequest(CSHTML5.Types.INTERNAL_JSObjectReference xmlHttpRequest,
             byte[] body)
         {
 #if BRIDGE || CSHTML5BLAZOR
-            if (OpenSilver.Interop.IsRunningInTheSimulator_WorkAround) 
-                DotNetForHtml5.Core.INTERNAL_Simulator.DynamicJavaScriptExecutionHandler
-                    .SendJavaScriptBinaryXmlHttpRequest(xmlHttpRequest.ReferenceId, Convert.ToBase64String(body));
-            else
-                DotNetForHtml5.Core.INTERNAL_Simulator.JavaScriptExecutionHandler
-                    .SendJavaScriptBinaryXmlHttpRequest(xmlHttpRequest.ReferenceId, Convert.ToBase64String(body));
+            // Converting base64 string to ArrayBuffer to send
+            OpenSilver.Interop.ExecuteJavaScript(@"const binaryString = atob($1);
+                var bufView = new Uint8Array(binaryString.length);
+                for (var i = 0; i < binaryString.length; i++) bufView[i] = binaryString.charCodeAt(i);
+                $0.send(bufView.buffer);", xmlHttpRequest, Convert.ToBase64String(body));
 #endif
         }
 
@@ -499,7 +524,15 @@ namespace System
 #endif
                 e.Error = exception;
             }
-            e.Result = GetResult((object)_xmlHttpRequest);
+
+            if (GetResponseType((object)_xmlHttpRequest) != ArrayBufferResponseType)
+            {
+                e.Result = GetResult((object)_xmlHttpRequest);
+            }
+            else
+            {
+                e.Result = GetBinaryResult((object)_xmlHttpRequest);
+            }
         }
 
 #if !BRIDGE
@@ -555,6 +588,24 @@ namespace System
         {
 #if BRIDGE || CSHTML5BLAZOR
             return Convert.ToString(Interop.ExecuteJavaScript("$0.responseText", xmlHttpRequest));
+#else
+            throw new InvalidOperationException(); //We should never arrive here.
+#endif
+        }
+
+#if !BRIDGE
+        [JSIL.Meta.JSReplacement("$xmlHttpRequest.response")]
+#else
+        [Template("{xmlHttpRequest}.response")]
+#endif
+
+        private static string GetBinaryResult(object xmlHttpRequest)
+        {
+#if BRIDGE || CSHTML5BLAZOR
+            return Convert.ToString(OpenSilver.Interop.ExecuteJavaScript(@"const bufView = new Uint8Array($0.response);
+                var binaryString = '';
+                for (let i = 0; i < bufView.byteLength; i++) binaryString += String.fromCharCode(bufView[i]);
+                btoa(binaryString);", xmlHttpRequest));
 #else
             throw new InvalidOperationException(); //We should never arrive here.
 #endif
