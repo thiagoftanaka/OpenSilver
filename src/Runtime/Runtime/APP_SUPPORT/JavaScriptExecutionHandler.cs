@@ -33,10 +33,5 @@ namespace DotNetForHtml5
             object result = ((JSInProcessRuntime)JSRuntime).Invoke<object>("callJS", javaScriptToExecute);
             return result;
         }
-
-        public void SendJavaScriptBinaryXmlHttpRequest(string id, string base64Body)
-        {
-            JSRuntime.InvokeVoidAsync("sendBinaryXmlHttpRequest", id, base64Body);
-        }
     }
 }

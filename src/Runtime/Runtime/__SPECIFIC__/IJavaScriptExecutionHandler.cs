@@ -25,8 +25,6 @@ namespace DotNetForHtml5
         void ExecuteJavaScript(string javaScriptToExecute);
 
         object ExecuteJavaScriptWithResult(string javaScriptToExecute);
-
-        void SendJavaScriptBinaryXmlHttpRequest(string id, string base64Body);
     }
 }
 
