@@ -23,10 +23,5 @@ namespace TestApplication.OpenSilver.Browser.Interop
         {
             return _runtime.InvokeUnmarshalled<string, object>(MethodName, javaScriptToExecute);
         }
-
-        public void SendJavaScriptBinaryXmlHttpRequest(string id, string base64Body)
-        {
-            _runtime.InvokeUnmarshalled<string, string, object>("sendBinaryXmlHttpRequest", id, base64Body);
-        }
     }
 }

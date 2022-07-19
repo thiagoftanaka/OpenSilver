@@ -615,14 +615,16 @@ namespace System.ServiceModel
                Type interfaceType,
                Type methodReturnType,
                string xmlReturnedFromTheServer,
-               string soapVersion)
+               string soapVersion,
+               CSHTML5_ClientBase<TChannel> client = null)
             {
                 return EndCallWebMethod(webMethodName,
                      interfaceType,
                      methodReturnType,
                      null,
                      xmlReturnedFromTheServer,
-                     soapVersion);
+                     soapVersion,
+                     client);
             }
 
             public object EndCallWebMethod(
@@ -631,7 +633,8 @@ namespace System.ServiceModel
                      Type methodReturnType,
                      IReadOnlyList<Type> knownTypes,
                      string xmlReturnedFromTheServer,
-                     string soapVersion)
+                     string soapVersion,
+                     CSHTML5_ClientBase<TChannel> client = null)
             {
                 MethodInfo beginMethod = ResolveMethod(interfaceType, webMethodName, "Begin" + webMethodName);
                 bool isXmlSerializer = IsXmlSerializer(webMethodName,
@@ -648,7 +651,8 @@ namespace System.ServiceModel
                         throw faultException;
                     },
                     isXmlSerializer,
-                    soapVersion);
+                    soapVersion,
+                    client);
 
                 return requestResponse;
             }
@@ -1230,8 +1234,8 @@ namespace System.ServiceModel
                                                 webMethodName);
                 }
 
-                BinaryMessageEncodingBindingElement binaryBindingElement = client?.ChannelFactory?.Endpoint?.EndpointBehaviors?
-                    .OfType<BinaryMessageEncodingBindingElement>().FirstOrDefault();
+                BinaryMessageEncodingBindingElement binaryBindingElement = client?.ChannelFactory?.Endpoint?.Binding?
+                    .CreateBindingElements().Find<BinaryMessageEncodingBindingElement>();
                 bool isBinaryBinding = binaryBindingElement != null;
 
                 switch (soapVersion)
@@ -1441,38 +1445,6 @@ namespace System.ServiceModel
 
                     request = messageEncoder.WriteMessage(binaryMessage, int.MaxValue,
                         BufferManager.CreateBufferManager(2147483647, 2147483647)).ToArray();
-
-                    using (MemoryStream ms = new MemoryStream((byte[])request))
-                    {
-                        Message message1 = messageEncoder.ReadMessage(ms, int.MaxValue);
-
-                        string body;
-                        using (MemoryStream memoryStream = new MemoryStream())
-                        using (XmlDictionaryWriter xmlDictionaryWriter =
-                            XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
-                        using (StreamReader streamReader = new StreamReader(memoryStream))
-                        {
-                            message1.WriteBody(xmlDictionaryWriter);
-                            xmlDictionaryWriter.Flush();
-                            memoryStream.Position = 0;
-                            body = streamReader.ReadToEnd();
-                        }
-
-                        StringBuilder messageHeaders = new StringBuilder();
-                        foreach (MessageHeader header in message1.Headers)
-                        {
-                            using (MemoryStream memoryStream = new MemoryStream())
-                            using (XmlDictionaryWriter xmlDictionaryWriter =
-                                XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
-                            using (StreamReader streamReader = new StreamReader(memoryStream))
-                            {
-                                header.WriteHeader(xmlDictionaryWriter, MessageVersion.Default);
-                                xmlDictionaryWriter.Flush();
-                                memoryStream.Position = 0;
-                                messageHeaders.Append(streamReader.ReadToEnd());
-                            }
-                        }
-                    }
                 }
 #else
                 request = string.Format(requestFormat, 
@@ -1640,7 +1612,8 @@ namespace System.ServiceModel
                 IReadOnlyList<Type> knownTypes,
                 Action<FaultException> raiseFaultException,
                 bool isXmlSerializer,
-                string soapVersion)
+                string soapVersion,
+                CSHTML5_ClientBase<TChannel> client = null)
             {
                 //**************************************
                 // What the response should look like in case of classes or strings:
@@ -1690,6 +1663,32 @@ namespace System.ServiceModel
                     Debug.Assert(soapVersion == "1.2",
                                     string.Format("Unexpected soap version ({0}) !", soapVersion));
                     NS = "http://www.w3.org/2003/05/soap-envelope";
+                }
+
+                BinaryMessageEncodingBindingElement binaryBindingElement = client?.ChannelFactory?.Endpoint?.Binding?
+                    .CreateBindingElements().Find<BinaryMessageEncodingBindingElement>();
+                bool isBinary = binaryBindingElement != null;
+
+                if (isBinary)
+                {
+                    string base64response = responseAsString;
+                    byte[] response = Convert.FromBase64String(base64response);
+                    MessageEncoder messageEncoder = binaryBindingElement.CreateMessageEncoderFactory().Encoder;
+
+                    Message message;
+                    using (MemoryStream readingMemoryStream = new MemoryStream(response))
+                    using (MemoryStream writingMemoryStream = new MemoryStream())
+                    using (XmlDictionaryWriter xmlDictionaryWriter =
+                        XmlDictionaryWriter.CreateTextWriter(writingMemoryStream, Text.Encoding.UTF8, false))
+                    using (StreamReader streamReader = new StreamReader(writingMemoryStream))
+                    {
+                        message = messageEncoder.ReadMessage(readingMemoryStream, int.MaxValue);
+
+                        message.WriteMessage(xmlDictionaryWriter);
+                        xmlDictionaryWriter.Flush();
+                        writingMemoryStream.Position = 0;
+                        responseAsString = streamReader.ReadToEnd();
+                    }
                 }
 
                 XElement envelopeElement = XDocument.Parse(responseAsString).Root;
@@ -2054,7 +2053,6 @@ namespace System.ServiceModel
         /// </summary>
         /// <typeparam name="T"></typeparam>
         //protected class ChannelBase<T> : IOutputChannel, IRequestChannel, IClientChannel, IDisposable, IContextChannel, IChannel, ICommunicationObject, IExtensibleObject<IContextChannel> where T : class
-        [OpenSilver.NotImplemented]
         protected class ChannelBase<T> : IOutputChannel, IRequestChannel, IClientChannel, IDisposable, IContextChannel, IChannel, ICommunicationObject, IExtensibleObject<IContextChannel> where T : class
         {
             private CSHTML5_ClientBase<T> _client;
@@ -2069,7 +2067,6 @@ namespace System.ServiceModel
             /// class from an existing instance of the class.
             /// </summary>
             /// <param name="client">The object used to initialize the new instance of the class.</param>
-		    [OpenSilver.NotImplemented]
             protected ChannelBase(CSHTML5_ClientBase<T> client)
             {
                 _client = client;
@@ -2084,7 +2081,6 @@ namespace System.ServiceModel
             /// <param name="state">The state object.</param>
             /// <returns>The System.IAsyncResult that references the asynchronous method invoked.</returns>
             //[SecuritySafeCritical]
-            [OpenSilver.NotImplemented]
             protected IAsyncResult BeginInvoke(string methodName, object[] args, AsyncCallback callback, object state)
             {
                 MethodInfo methodInfo = CSHTML5_ClientBase<T>.WebMethodsCaller.ResolveMethod(typeof(T), methodName,
@@ -2105,15 +2101,6 @@ namespace System.ServiceModel
                 parameters[CallbackParameterName] = callback;
                 parameters[AsyncStateParameterName] = state;
 
-                //return BeginCallWebMethod<IAsyncResult, T>(_client.Endpoint.Address.ToString(),
-                //    methodName,
-                //    parameters,
-                //    _client.INTERNAL_SoapVersion);
-                //return CallWebMethod<IAsyncResult, T>(_client.Endpoint.Address.ToString(),
-                //    methodName,
-                //    MessageHeaders,
-                //    parameters,
-                //    _client.INTERNAL_SoapVersion).Item1;
                 return BeginCallWebMethod<T>(_client.Endpoint.Address.ToString(),
                     methodName,
                     typeof(IAsyncResult),
@@ -2132,20 +2119,20 @@ namespace System.ServiceModel
             /// <param name="result">The result returned by a call.</param>
             /// <returns>The System.Object output by the method invoked.</returns>
             //[SecuritySafeCritical]
-            [OpenSilver.NotImplemented]
             protected object EndInvoke(string methodName, object[] args, IAsyncResult result)
             {
                 MethodInfo methodInfo = CSHTML5_ClientBase<T>.WebMethodsCaller.ResolveMethod(typeof(T), methodName,
                     "End" + methodName);
 
-                return EndCallWebMethod<T>(_client.Endpoint.Address.ToString(),
+                return EndCallWebMethod(_client.Endpoint.Address.ToString(),
                     methodName,
                     methodInfo.ReturnType,
                     new Dictionary<string, object>()
                     {
                         { "result", result },
                     },
-                    _client.INTERNAL_SoapVersion);
+                    _client.INTERNAL_SoapVersion,
+                    _client);
             }
 
             public bool AllowInitializationUI { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
