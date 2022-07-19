@@ -1667,9 +1667,9 @@ namespace System.ServiceModel
 
                 BinaryMessageEncodingBindingElement binaryBindingElement = client?.ChannelFactory?.Endpoint?.Binding?
                     .CreateBindingElements().Find<BinaryMessageEncodingBindingElement>();
-                bool isBinary = binaryBindingElement != null;
+                bool isBinaryBinding = binaryBindingElement != null;
 
-                if (isBinary)
+                if (isBinaryBinding)
                 {
                     string base64response = responseAsString;
                     byte[] response = Convert.FromBase64String(base64response);
