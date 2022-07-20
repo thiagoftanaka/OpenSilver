@@ -114,8 +114,8 @@ namespace System
             }
             SetCallbackMethod((object)_xmlHttpRequest, OnDownloadStringCompleted);
 
-            bool isBinary = body is byte[] bytes;
-            if (isBinary)
+            bool isBinaryRequest = body is byte[] bytes;
+            if (isBinaryRequest)
             {
                 SetResponseType((object)_xmlHttpRequest, ArrayBufferResponseType);
             }
@@ -155,7 +155,7 @@ namespace System
                 }
             }
 
-            if (isBinary)
+            if (isBinaryRequest)
             {
                 SendJavaScriptBinaryXmlHttpRequest(_xmlHttpRequest, (byte[])body);
             }
@@ -168,14 +168,22 @@ namespace System
                 SaveParameters(address, Method, sender, headers, callbackMethod, body, isAsync);
 
                 // safe request, will resend the request with different settings if it crashes.
-                return SendUnsafeRequest((object)_xmlHttpRequest, address.OriginalString, Method, isAsync, body);
+                return SendUnsafeRequest(address.OriginalString, Method, isAsync, body, isBinaryRequest);
             }
             else
             {
                 SendRequest((object)_xmlHttpRequest, address.OriginalString, Method, isAsync, body);
             }
 
-            string result = GetResult((object)_xmlHttpRequest);
+            string result;
+            if (!isBinaryRequest)
+            {
+                result = GetResult((object)_xmlHttpRequest);
+            }
+            else
+            {
+                result = GetBinaryResult((object)_xmlHttpRequest);
+            }
 
             if (GetHasError((object)_xmlHttpRequest))
             {
@@ -220,7 +228,7 @@ namespace System
 
         // special version of sendRequest, it handles some errors and modifies the credentials mode if needed
         // return directly the result of the right response
-        private string SendUnsafeRequest(object xmlHttpRequest, string address, string method, bool isAsync, object body)
+        private string SendUnsafeRequest(string address, string method, bool isAsync, object body, bool isBinaryRequest)
         {
             ConsoleLog_JSOnly("CredentialsMode is set to Auto: if a preflight error appears below, please ignore it.");
 
@@ -231,7 +239,6 @@ namespace System
                     SendRequest((object)_xmlHttpRequest, address, method, isAsync, body);
 
                     ResendRequestInCaseOfPreflightError(false);
-                    return GetResult((object)_xmlHttpRequest);
                 }
                 catch
                 {
@@ -243,7 +250,7 @@ namespace System
                     else
                     {
                         ResendRequestInCaseOfPreflightError(false);
-                        return GetResult((object)_xmlHttpRequest); // normally, in this method, crash are due to preflight errors, we are not suppose to arrive here
+                        // normally, in this method, crash are due to preflight errors, we are not suppose to arrive here
                     }
                 }
             }
@@ -252,8 +259,8 @@ namespace System
                 // in asynchronous mode, the error callback will directly arrive in OnError, and it will resend this request
                 _isFirstTryAtSendingUnsafeRequest = true;
                 SendRequest((object)_xmlHttpRequest, address, method, isAsync, body);
-                return GetResult((object)_xmlHttpRequest);
             }
+            return !isBinaryRequest ? GetResult((object)_xmlHttpRequest) : GetBinaryResult((object)_xmlHttpRequest);
         }
 
         bool _isFirstTryAtSendingUnsafeRequest = false;
@@ -583,7 +590,6 @@ namespace System
 #else
         [Template("{xmlHttpRequest}.responseText")]
 #endif
-
         private static string GetResult(object xmlHttpRequest)
         {
 #if BRIDGE || CSHTML5BLAZOR
@@ -594,11 +600,16 @@ namespace System
         }
 
 #if !BRIDGE
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.response")]
+        [JSIL.Meta.JSReplacement(@"const bufView = new Uint8Array($xmlHttpRequest.response);
+                var binaryString = '';
+                for (let i = 0; i < bufView.byteLength; i++) binaryString += String.fromCharCode(bufView[i]);
+                btoa(binaryString)")]
 #else
-        [Template("{xmlHttpRequest}.response")]
+        [Template(@"const bufView = new Uint8Array({$xmlHttpRequest}.response);
+                var binaryString = '';
+                for (let i = 0; i < bufView.byteLength; i++) binaryString += String.fromCharCode(bufView[i]);
+                btoa(binaryString)")]
 #endif
-
         private static string GetBinaryResult(object xmlHttpRequest)
         {
 #if BRIDGE || CSHTML5BLAZOR
