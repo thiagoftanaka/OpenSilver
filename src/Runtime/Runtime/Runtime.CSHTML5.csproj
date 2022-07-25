@@ -97,12 +97,16 @@
     <Compile Include="OpenSilver\Internal\Data\SourcePropertyNode.cs" />
     <Compile Include="OpenSilver\Internal\Data\StandardPropertyPathNode.cs" />
     <Compile Include="OpenSilver\Internal\NativeEventsManager.cs" />
+    <Compile Include="OpenSilver\Internal\DebounceDispatcher.cs" />
     <Compile Include="OpenSilver\Internal\InheritedPropertyChangedEventArgs.cs" />
     <Compile Include="OpenSilver\Internal\NameScope.cs" />
     <Compile Include="OpenSilver\Internal\ObjectExtensions.cs" />
     <Compile Include="OpenSilver\Internal\Parsers.cs" />
+    <Compile Include="OpenSilver\Internal\ReferenceIDGenerator.cs" />
     <Compile Include="OpenSilver\Internal\ResizeObserver.cs" />
     <Compile Include="OpenSilver\Internal\TokenizerHelper.cs" />
+    <Compile Include="OpenSilver\Internal\VisualStateGroupCollection.cs" />
+    <Compile Include="OpenSilver\Internal\VisualStatesCollection.cs" />
     <Compile Include="OpenSilver\Internal\Xaml\Context\XamlContext.cs" />
     <Compile Include="OpenSilver\Internal\Xaml\Context\XamlContextStack.cs" />
     <Compile Include="OpenSilver\Internal\Xaml\Context\XamlObjectFrame.cs" />
@@ -185,8 +189,14 @@
       <DependentUpon>Resource.resx</DependentUpon>
     </Compile>
     <Compile Include="System.Windows.Controls\DataPager\WeakEventListener.cs" />
+    <Compile Include="System.Windows.Controls\InkPresenter.cs" />
     <Compile Include="System.Windows.Controls\ItemsControl.ItemInfo.cs" />
-    <Compile Include="System.Windows.Controls\LayoutTransformer.cs" />
+    <Compile Include="..\Controls.Layout.Toolkit\LayoutTransformer\LayoutTransformer.cs">
+      <Link>System.Windows.Controls\LayoutTransformer.cs</Link>
+    </Compile>
+    <Compile Include="..\Controls.Layout.Toolkit\TransitioningContentControl\TransitioningContentControl.cs">
+      <Link>System.Windows.Controls\TransitioningContentControl.cs</Link>
+    </Compile>
     <Compile Include="System.Windows.Controls\PasswordBoxView.cs" />
     <Compile Include="System.Windows.Controls\RoutedPropertyChangingEventHandler.cs" />
     <Compile Include="System.Windows.Controls\ScrollContentPresenter.cs" />
@@ -205,7 +215,6 @@
     <Compile Include="System.Windows.Controls\VirtualizingStackPanel.cs" />
     <Compile Include="System.Windows.Controls\WORKINPROGRESS\DataGridRowGroupHeader.cs" />
     <Compile Include="System.Windows.Controls\WORKINPROGRESS\ScrollViewerExtensions.cs" />
-    <Compile Include="System.Windows.Controls\WORKINPROGRESS\TransitioningContentControl.cs" />
     <Compile Include="System.Windows.Controls\WORKINPROGRESS\TreeViewConnectingLines.cs" />
     <Compile Include="System.Windows.Controls\WORKINPROGRESS\TreeViewExtensions.cs" />
     <Compile Include="System.Windows.Controls\WORKINPROGRESS\CalendarDateChangedEventArgs.cs" />
@@ -213,13 +222,16 @@
     <Compile Include="System.Windows.Controls\WORKINPROGRESS\CalendarModeChangedEventArgs.cs" />
     <Compile Include="System.Windows.Controls\WORKINPROGRESS\CalendarSelectionMode.cs" />
     <Compile Include="System.Windows.Documents\WORKINPROGRESS\FontSource.cs" />
+    <Compile Include="System.Windows.Ink\DrawingAttributes.cs" />
+    <Compile Include="System.Windows.Ink\Stroke.cs" />
+    <Compile Include="System.Windows.Ink\StrokeCollection.cs" />
     <Compile Include="System.Windows.Input\MouseWheelEventArgs.cs" />
     <Compile Include="System.Windows.Input\MouseWheelEventHandler.cs" />
+    <Compile Include="System.Windows.Input\StylusPoint.cs" />
+    <Compile Include="System.Windows.Input\StylusPointCollection.cs" />
     <Compile Include="System.Windows.Input\TextComposition.cs" />
     <Compile Include="System.Windows.Input\TextCompositionEventArgs.cs" />
     <Compile Include="System.Windows.Input\TextCompositionEventHandler.cs" />
-    <Compile Include="System.Windows.Input\WORKINPROGRESS\StylusPoint.cs" />
-    <Compile Include="System.Windows.Input\WORKINPROGRESS\StylusPointCollection.cs" />
     <Compile Include="System.Windows.Interactivity\EventTrigger.cs" />
     <Compile Include="System.Windows.Interactivity\InvokeCommandAction.cs" />
     <Compile Include="System.Windows.Interactivity\TriggerAction.cs" />
@@ -364,7 +376,6 @@
     <Compile Include="ToBeReviewed\GroupedEnumerable_4.cs" />
     <Compile Include="ToBeReviewed\Grouping_2.cs" />
     <Compile Include="ToBeReviewed\OrderedEnumerable.cs" />
-    <Compile Include="Core\Main\DelegateUtility.cs" />
     <Compile Include="Core\Main\INameScope.cs" />
     <Compile Include="Core\Main\INTERNAL_ListsHelper.cs" />
     <Compile Include="Core\Main\INTERNAL_PropertyStorage.cs" />
@@ -468,12 +479,8 @@
     <Compile Include="Core\Rendering\INTERNAL_HtmlDomElementReference.cs" />
     <Compile Include="Core\Rendering\INTERNAL_HtmlDomManager.cs" />
     <Compile Include="Core\Rendering\INTERNAL_HtmlDomStyleReference.cs" />
-    <Compile Include="Core\Rendering\INTERNAL_HtmlDomUniqueIdentifiers.cs" />
-    <Compile Include="Core\Rendering\INTERNAL_ObjectTreeHelper.cs" />
     <Compile Include="Core\Rendering\INTERNAL_PopupsManager.cs" />
-    <Compile Include="Core\Rendering\INTERNAL_SimulatorJSExpression.cs" />
     <Compile Include="Core\Rendering\INTERNAL_SimulatorPerformanceOptimizer.cs" />
-    <Compile Include="Core\Rendering\INTERNAL_VisibilityChangedNotifier.cs" />
     <Compile Include="Core\Rendering\INTERNAL_VisualChildInformation.cs" />
     <Compile Include="Core\Rendering\INTERNAL_VisualTreeManager.cs" />
     <Compile Include="Core\Other\SilverlightAndWpfNamespaces.cs" />
@@ -890,8 +897,8 @@
     <Compile Include="System.Windows.Media.Animation\AnimationTimeline.cs" />
     <Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\BackEase.cs" />
     <Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\ClockState.cs" />
-    <Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\ColorKeyFrame.cs" />
-    <Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\ColorKeyFrameCollection.cs" />
+    <Compile Include="System.Windows.Media.Animation\ColorKeyFrame.cs" />
+    <Compile Include="System.Windows.Media.Animation\ColorKeyFrameCollection.cs" />
     <Compile Include="System.Windows.Media.Animation\DoubleAnimationUsingKeyFrames.cs" />
     <Compile Include="System.Windows.Media.Animation\DoubleKeyFrame.cs" />
     <Compile Include="System.Windows.Media.Animation\DoubleKeyFrameCollection.cs" />
@@ -1223,6 +1230,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="DefaultStyles\INTERNAL_DefaultTransitioningContentControlStyle.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="DefaultStyles\INTERNAL_DefaultTreeViewItemStyle.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -1244,6 +1255,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="DefaultStyles\INTERNAL_DefaultCalendarDayButtonStyle.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="DefaultStyles\INTERNAL_DefaultLayoutTransformerStyle.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -53,7 +53,7 @@ namespace DotNetForHtml5.Core // Important: do not rename this class without upd
             // In other words, the parents of a popup that has StayOpen=True will always stay open
             // regardless of the value of their "StayOpen" property.
 
-            HashSet2<Popup> listOfPopupThatMustBeClosed = new HashSet2<Popup>();
+            HashSet<Popup> listOfPopupThatMustBeClosed = new HashSet<Popup>();
             List<PopupRoot> popupRootList = new List<PopupRoot>();
 
             foreach (object obj in GetAllRootUIElements())
@@ -355,7 +355,7 @@ $1.removeChild(popupRoot);
                 return false;
 
             // Then, check whether the element is visible in the DOM tree, regardless of elements that may cover it. This can be false if at least one of the parents has "Visibility=Collapsed".
-            if (!INTERNAL_VisibilityChangedNotifier.IsElementVisible(element))
+            if (!element.IsVisible)
                 return false;
 
             // Verify that the size of the element can be read:

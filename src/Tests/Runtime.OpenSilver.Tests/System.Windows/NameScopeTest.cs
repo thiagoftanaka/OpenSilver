@@ -36,15 +36,10 @@ namespace System.Windows.Tests
 namespace Windows.UI.Xaml.Tests
 #endif
 {
+    [TestClass]
     public class NameScopeTest
     {
-        private UserControl1 _uc1;
-
-        [TestInitialize]
-        public void Init()
-        {
-            _uc1 = new UserControl1();
-        }
+        private readonly UserControl1 _uc1 = new UserControl1();
 
         [TestMethod]
         public void FindName_When_Target_Has_NameScope()
@@ -82,7 +77,7 @@ namespace Windows.UI.Xaml.Tests
         }
 
         [TestMethod]
-        public void FindName_Should_Use_ItemsControl()
+        public void FindName_Should_Use_VisualTree_1()
         {
             ItemsControl ic = _uc1.name2.Children[2] as ItemsControl;
             ic.Should().NotBeNull();
@@ -95,6 +90,22 @@ namespace Windows.UI.Xaml.Tests
             container.FindName("name3").Should().Be(_uc1.name3);
             container.FindName("name6").Should().Be(_uc1.name6);
             container.FindName("name7").Should().Be(_uc1.name7);
+        }
+
+        [TestMethod]
+        public void FindName_Should_Use_VisualTree_2()
+        {
+            ContentPresenter cp = _uc1.name2.Children[5] as ContentPresenter;
+            cp.Should().NotBeNull();
+
+            ContentControl cc = cp.Content as ContentControl;
+            cc.Should().NotBeNull();
+
+            cc.FindName("name1").Should().Be(_uc1.name1);
+            cc.FindName("name2").Should().Be(_uc1.name2);
+            cc.FindName("name3").Should().Be(_uc1.name3);
+            cc.FindName("name6").Should().Be(_uc1.name6);
+            cc.FindName("name7").Should().Be(_uc1.name7);
         }
 
         [TestMethod]
@@ -236,6 +247,9 @@ namespace Windows.UI.Xaml.Tests
          *             </local:Control2.Template>
          *             <ContentControl />
          *         </local:Control2>
+         *         <ContentPresenter>
+         *             <ContentControl />
+         *         </ContentPresenter>
          *     </StackPanel>
          * </UserControl>
          */
@@ -288,9 +302,8 @@ namespace Windows.UI.Xaml.Tests
                                     TemplatedParent = owner,
                                 };
                                 name4.Child = name5;
-                                RuntimeHelpers.InitializeNameScope(name4);
-                                RuntimeHelpers.RegisterName(name4, "name4", name4);
-                                RuntimeHelpers.RegisterName(name4, "name5", name5);
+                                RuntimeHelpers.XamlContext_RegisterName(context, "name4", name4);
+                                RuntimeHelpers.XamlContext_RegisterName(context, "name5", name5);
                                 return name4;
                             }),
                     }
@@ -338,10 +351,9 @@ namespace Windows.UI.Xaml.Tests
                                 name9.Children.Add(name10);
                                 name8.Child = name9;
 
-                                RuntimeHelpers.InitializeNameScope(name8);
-                                RuntimeHelpers.RegisterName(name8, "name8", name8);
-                                RuntimeHelpers.RegisterName(name8, "name9", name9);
-                                RuntimeHelpers.RegisterName(name8, "name10", name10);
+                                RuntimeHelpers.XamlContext_RegisterName(context, "name8", name8);
+                                RuntimeHelpers.XamlContext_RegisterName(context, "name9", name9);
+                                RuntimeHelpers.XamlContext_RegisterName(context, "name10", name10);
 
                                 return name8;
                             })
@@ -363,8 +375,7 @@ namespace Windows.UI.Xaml.Tests
                                 TemplatedParent = owner,
                             };
 
-                            RuntimeHelpers.InitializeNameScope(border);
-                            RuntimeHelpers.RegisterName(border, "border", border);
+                            RuntimeHelpers.XamlContext_RegisterName(context, "border", border);
 
                             return border;
                         })
@@ -373,6 +384,13 @@ namespace Windows.UI.Xaml.Tests
                 };
 
                 name2.Children.Add(control2);
+
+                ContentPresenter presenter = new ContentPresenter
+                {
+                    Content = new ContentControl(),
+                };
+
+                name2.Children.Add(presenter);
 
                 Content = name2;                
 
@@ -388,6 +406,7 @@ namespace Windows.UI.Xaml.Tests
                 itemsControl.TemplateChild.ApplyTemplate();
                 control1.ApplyTemplate();
                 control2.ApplyTemplate();
+                presenter.ApplyTemplate();
 
                 this.name1 = this;
                 this.name2 = name2;
