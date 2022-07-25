@@ -14,17 +14,17 @@
 using System;
 
 #if MIGRATION
-namespace System.Windows.Data
+using System.Windows;
 #else
-namespace Windows.UI.Xaml.Data
+using Windows.UI.Xaml;
 #endif
-{
-    internal partial interface IPropertyChangedListener
-    {
-        DependencyProperty Property { get; set; }
 
-        void OnPropertyChanged(DependencyObject sender, IDependencyPropertyChangedEventArgs args);
-        
-        void Detach();
+namespace OpenSilver.Internal.Data
+{
+    internal interface IDependencyPropertyChangedEventArgs
+    {
+        DependencyProperty Property { get; }
+        object OldValue { get; }
+        object NewValue { get; }
     }
 }

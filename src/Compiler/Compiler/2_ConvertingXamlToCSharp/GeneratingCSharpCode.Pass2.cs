@@ -332,7 +332,12 @@ namespace DotNetForHtml5.Compiler
                 );
                 bool isInitializeTypeFromString =
                     element.Attribute(InsertingImplicitNodes.InitializedFromStringAttribute) != null;
-                bool isResourceDictionary = IsResourceDictionary(element);
+
+                string rdNamespaceName, rdLocalTypeName, rdAssemblyNameIfAny;
+                GettingInformationAboutXamlTypes.GetClrNamespaceAndLocalName("ResourceDictionary", out rdNamespaceName,
+                    out rdLocalTypeName, out rdAssemblyNameIfAny);
+                bool isResourceDictionary = _reflectionOnSeparateAppDomain.IsTypeAssignableFrom(namespaceName,
+                    localTypeName, assemblyNameIfAny, rdNamespaceName, rdLocalTypeName, rdAssemblyNameIfAny);
                 bool isResourceDictionaryReferencedBySourceURI =
                     isResourceDictionary && element.Attribute("Source") != null;
 
@@ -1118,13 +1123,15 @@ namespace DotNetForHtml5.Compiler
                                         //todo: make this more readable by cutting it into parts ?
                                         parameters.StringBuilder.AppendLine(
                                             string.Format(@"var {0} = {1}.ProvideValue(new global::System.ServiceProvider({2}, {3}));
-if({0} is {4})
+#pragma warning disable CS0184
+if ({0} is {4})
+#pragma warning restore CS0184
 {{
-    global::{9}.BindingOperations.SetBinding({7}, {8}, ({4}){0});
+    global::{9}.BindingOperations.SetBinding({7}, {8}, ({4})(object){0});
 }}
 else
 {{
-    {2}.{5} = ({6}){0};
+    {2}.{5} = ({6})(object){0};
 }}",
                                                           customMarkupValueName, //0
                                                           childUniqueName,//1

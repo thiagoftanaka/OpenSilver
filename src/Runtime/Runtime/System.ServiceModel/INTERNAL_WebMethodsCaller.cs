@@ -160,7 +160,8 @@ namespace System.ServiceModel
             IReadOnlyList<Type> knownTypes,
             string messageHeaders,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client = null) where INTERFACE_TYPE : class
         {
             // Read the parameters
             AsyncCallback callback = (AsyncCallback)requestParameters[CallbackParameterName];
@@ -202,7 +203,8 @@ namespace System.ServiceModel
                     // This causes a call to "EndCallWebMethod" which will deserialize the response.
                     webMethodAsyncResult.Completed();
                 },
-                soapVersion);
+                soapVersion,
+                client);
 
             return webMethodAsyncResult;
         }
@@ -263,7 +265,8 @@ namespace System.ServiceModel
             Type methodReturnType,
             IReadOnlyList<Type> knownTypes,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client = null) where INTERFACE_TYPE : class
         {
             // Read the XML result from the parameters
             IAsyncResult asyncResult = (IAsyncResult)requestParameters[ResultParameterName];
@@ -279,7 +282,8 @@ namespace System.ServiceModel
                 methodReturnType,
                 knownTypes,
                 xmlReturnedFromTheServer,
-                soapVersion);
+                soapVersion,
+                client);
 
             // Return the deserialized result
             return result;
@@ -290,14 +294,16 @@ namespace System.ServiceModel
             string webMethodName,
             Type methodReturnType,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client = null) where INTERFACE_TYPE : class
         {
-            return EndCallWebMethod<INTERFACE_TYPE>(endpointAddress,
+            return EndCallWebMethod(endpointAddress,
                webMethodName,
                methodReturnType,
                null,
                requestParameters,
-               soapVersion);
+               soapVersion,
+               client);
         }
 
         public static RETURN_TYPE EndCallWebMethod<RETURN_TYPE, INTERFACE_TYPE>(

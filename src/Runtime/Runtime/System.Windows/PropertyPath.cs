@@ -16,12 +16,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using CSHTML5.Internal;
-
-#if MIGRATION
-using CSHTML5.Internal.System.Windows.Data;
-#else
-using CSHTML5.Internal.Windows.UI.Xaml.Data;
-#endif
+using OpenSilver.Internal.Data;
 
 #if MIGRATION
 namespace System.Windows
@@ -186,12 +181,13 @@ namespace Windows.UI.Xaml
                         break;
 
                     case PropertyNodeType.Indexed:
-                        if (!(currentTarget is IList list))
-                        {
+                        IList list = currentTarget as IList;
+                        if (!(currentTarget is IList))
+                            {
                             throw new InvalidOperationException($"'{currentTarget}' must implement IList.");
                         }
-
-                        if (!int.TryParse(svi.param, out int index))
+                        int index = -1;
+                        if (!int.TryParse(svi.param, out index))
                         {
                             throw new InvalidOperationException($"'{svi.param}' can't be converted to an integer value.");
                         }

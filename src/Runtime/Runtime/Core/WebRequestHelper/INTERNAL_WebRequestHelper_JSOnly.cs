@@ -17,11 +17,15 @@ using CSHTML5;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.ServiceModel;
+using System.ServiceModel.Channels;
 
 #if MIGRATION
 using System.Windows;
+using System.Xml;
 #else
 using Windows.UI.Xaml;
 #endif
@@ -35,6 +39,8 @@ namespace System
     internal class INTERNAL_WebRequestHelper_JSOnly
     {
         dynamic _xmlHttpRequest;
+
+        private const string ArrayBufferResponseType = "arraybuffer";
 
         /// <summary>
         /// Occurs when the string download is completed.
@@ -53,7 +59,7 @@ namespace System
         string _Method;
         static object _sender;
         Dictionary<string, string> _headers;
-        string _body;
+        object _body;
         bool _isAsync;
         INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventHandler _callback;
         static INTERNAL_WebRequestHelper_JSOnly _requester;
@@ -78,7 +84,7 @@ namespace System
             string Method, 
             object sender, 
             Dictionary<string, string> headers, 
-            string body, 
+            object body, 
             INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventHandler callbackMethod, 
             bool isAsync, 
             CredentialsMode mode = CredentialsMode.Disabled)
@@ -90,7 +96,7 @@ namespace System
                 Debug.WriteLine(string.Format("CSHTML5.Internal.WebRequestsHelper.MakeRequest({0}, {1}, {2}, {3}, {4});",
                     EscapeStringAndSurroundWithQuotes(address.ToString()),
                     EscapeStringAndSurroundWithQuotes(Method),
-                    EscapeStringAndSurroundWithQuotes(body),
+                    body is string bodyString ? EscapeStringAndSurroundWithQuotes(bodyString) : "<binary message>",
                     headersCode,
                     "false"
                     ));
@@ -107,6 +113,12 @@ namespace System
                 DownloadStringCompleted += callbackMethod;
             }
             SetCallbackMethod((object)_xmlHttpRequest, OnDownloadStringCompleted);
+
+            bool isBinaryRequest = body is byte[] bytes;
+            if (isBinaryRequest)
+            {
+                SetResponseType((object)_xmlHttpRequest, ArrayBufferResponseType);
+            }
 
             //create the request:
             CreateRequest((object)_xmlHttpRequest, address.OriginalString, Method, isAsync);
@@ -143,7 +155,11 @@ namespace System
                 }
             }
 
-            if (askForUnsafeRequest) // if the settings of the request are still unsafe
+            if (isBinaryRequest)
+            {
+                SendJavaScriptBinaryXmlHttpRequest(_xmlHttpRequest, (byte[])body);
+            }
+            else if (askForUnsafeRequest) // if the settings of the request are still unsafe
             {
                 // handle special errors especially crash in pre flight, that GetHasError doesn't catch
                 SetErrorCallback((object)_xmlHttpRequest, OnError);
@@ -152,14 +168,22 @@ namespace System
                 SaveParameters(address, Method, sender, headers, callbackMethod, body, isAsync);
 
                 // safe request, will resend the request with different settings if it crashes.
-                return SendUnsafeRequest((object)_xmlHttpRequest, address.OriginalString, Method, isAsync, body);
+                return SendUnsafeRequest(address.OriginalString, Method, isAsync, body, isBinaryRequest);
             }
             else
             {
                 SendRequest((object)_xmlHttpRequest, address.OriginalString, Method, isAsync, body);
             }
 
-            string result = GetResult((object)_xmlHttpRequest);
+            string result;
+            if (!isBinaryRequest)
+            {
+                result = GetResult((object)_xmlHttpRequest);
+            }
+            else
+            {
+                result = GetBinaryResult((object)_xmlHttpRequest);
+            }
 
             if (GetHasError((object)_xmlHttpRequest))
             {
@@ -204,7 +228,7 @@ namespace System
 
         // special version of sendRequest, it handles some errors and modifies the credentials mode if needed
         // return directly the result of the right response
-        private string SendUnsafeRequest(object xmlHttpRequest, string address, string method, bool isAsync, string body)
+        private string SendUnsafeRequest(string address, string method, bool isAsync, object body, bool isBinaryRequest)
         {
             ConsoleLog_JSOnly("CredentialsMode is set to Auto: if a preflight error appears below, please ignore it.");
 
@@ -215,7 +239,6 @@ namespace System
                     SendRequest((object)_xmlHttpRequest, address, method, isAsync, body);
 
                     ResendRequestInCaseOfPreflightError(false);
-                    return GetResult((object)_xmlHttpRequest);
                 }
                 catch
                 {
@@ -227,7 +250,7 @@ namespace System
                     else
                     {
                         ResendRequestInCaseOfPreflightError(false);
-                        return GetResult((object)_xmlHttpRequest); // normally, in this method, crash are due to preflight errors, we are not suppose to arrive here
+                        // normally, in this method, crash are due to preflight errors, we are not suppose to arrive here
                     }
                 }
             }
@@ -236,8 +259,8 @@ namespace System
                 // in asynchronous mode, the error callback will directly arrive in OnError, and it will resend this request
                 _isFirstTryAtSendingUnsafeRequest = true;
                 SendRequest((object)_xmlHttpRequest, address, method, isAsync, body);
-                return GetResult((object)_xmlHttpRequest);
             }
+            return !isBinaryRequest ? GetResult((object)_xmlHttpRequest) : GetBinaryResult((object)_xmlHttpRequest);
         }
 
         bool _isFirstTryAtSendingUnsafeRequest = false;
@@ -299,7 +322,7 @@ namespace System
             object sender, 
             Dictionary<string, string> headers, 
             INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventHandler callback, 
-            string body, 
+            object body, 
             bool isAsync)
         {
             _address = address;
@@ -365,6 +388,20 @@ namespace System
 #endif
         }
 
+        internal static void SetResponseType(object xmlHttpRequest, string responseType)
+        {
+#if BRIDGE || CSHTML5BLAZOR
+            OpenSilver.Interop.ExecuteJavaScript("$0.responseType = $1", xmlHttpRequest, responseType);
+#endif
+        }
+
+        internal static string GetResponseType(object xmlHttpRequest)
+        {
+#if BRIDGE || CSHTML5BLAZOR
+            return Convert.ToString(OpenSilver.Interop.ExecuteJavaScript("$0.responseType", xmlHttpRequest));
+#endif
+        }
+
 #if !BRIDGE
         [JSIL.Meta.JSReplacement("$xmlHttpRequest.open($method, $address, $isAsync)")]
 #else
@@ -421,10 +458,27 @@ namespace System
 #else
         [Template("{xmlHttpRequest}.send({body})")]
 #endif
-        internal static void SendRequest(object xmlHttpRequest, string address, string method, bool isAsync, string body)
+        internal static void SendRequest(object xmlHttpRequest, string address, string method, bool isAsync, object body)
         {
 #if BRIDGE || CSHTML5BLAZOR
             Interop.ExecuteJavaScript("$0.send($1)", xmlHttpRequest, body);
+#endif
+        }
+
+#if !BRIDGE
+        [JSIL.Meta.JSReplacement("$xmlHttpRequest.send(atob($body))")]
+#else
+        [Template("{xmlHttpRequest}.send(atob({body}))")]
+#endif
+        internal static void SendJavaScriptBinaryXmlHttpRequest(CSHTML5.Types.INTERNAL_JSObjectReference xmlHttpRequest,
+            byte[] body)
+        {
+#if BRIDGE || CSHTML5BLAZOR
+            // Converting base64 string to ArrayBuffer to send
+            OpenSilver.Interop.ExecuteJavaScript(@"const binaryString = atob($1);
+                var bufView = new Uint8Array(binaryString.length);
+                for (var i = 0; i < binaryString.length; i++) bufView[i] = binaryString.charCodeAt(i);
+                $0.send(bufView.buffer);", xmlHttpRequest, Convert.ToBase64String(body));
 #endif
         }
 
@@ -477,7 +531,15 @@ namespace System
 #endif
                 e.Error = exception;
             }
-            e.Result = GetResult((object)_xmlHttpRequest);
+
+            if (GetResponseType((object)_xmlHttpRequest) != ArrayBufferResponseType)
+            {
+                e.Result = GetResult((object)_xmlHttpRequest);
+            }
+            else
+            {
+                e.Result = GetBinaryResult((object)_xmlHttpRequest);
+            }
         }
 
 #if !BRIDGE
@@ -528,11 +590,33 @@ namespace System
 #else
         [Template("{xmlHttpRequest}.responseText")]
 #endif
-
         private static string GetResult(object xmlHttpRequest)
         {
 #if BRIDGE || CSHTML5BLAZOR
             return Convert.ToString(Interop.ExecuteJavaScript("$0.responseText", xmlHttpRequest));
+#else
+            throw new InvalidOperationException(); //We should never arrive here.
+#endif
+        }
+
+#if !BRIDGE
+        [JSIL.Meta.JSReplacement(@"const bufView = new Uint8Array($xmlHttpRequest.response);
+                var binaryString = '';
+                for (let i = 0; i < bufView.byteLength; i++) binaryString += String.fromCharCode(bufView[i]);
+                btoa(binaryString)")]
+#else
+        [Template(@"const bufView = new Uint8Array({$xmlHttpRequest}.response);
+                var binaryString = '';
+                for (let i = 0; i < bufView.byteLength; i++) binaryString += String.fromCharCode(bufView[i]);
+                btoa(binaryString)")]
+#endif
+        private static string GetBinaryResult(object xmlHttpRequest)
+        {
+#if BRIDGE || CSHTML5BLAZOR
+            return Convert.ToString(OpenSilver.Interop.ExecuteJavaScript(@"const bufView = new Uint8Array($0.response);
+                var binaryString = '';
+                for (let i = 0; i < bufView.byteLength; i++) binaryString += String.fromCharCode(bufView[i]);
+                btoa(binaryString);", xmlHttpRequest));
 #else
             throw new InvalidOperationException(); //We should never arrive here.
 #endif

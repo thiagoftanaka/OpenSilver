@@ -63,7 +63,6 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
             return _webControl.Browser.ExecuteJavaScriptAndReturnValue(javaScriptToExecute);
         }
 
-
         internal string GetLastExecutedJavaScriptCode()
         {
             return _lastExecutedJavaScriptCode;

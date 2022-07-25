@@ -72,7 +72,7 @@ namespace DotNetForHtml5.Compiler
                     {
                         ComponentConnectorEntry eventEntry = _entries[componentId];
                         builder.Append(' ', 4 * 4).AppendLine($"case {componentId}:");
-                        builder.Append(' ', 4 * 5).AppendLine($"(({eventEntry.componentType})({targetParam})).{eventEntry.eventName} += new {eventEntry.handlerType}(this.{eventEntry.handlerName});");
+                        builder.Append(' ', 4 * 5).AppendLine($"(({eventEntry.componentType})({targetParam})).{eventEntry.eventName} += this.{eventEntry.handlerName};");
                         builder.Append(' ', 4 * 5).AppendLine("return;");
                     }
 
@@ -409,8 +409,6 @@ public sealed class {factoryName} : {IXamlComponentFactoryClass}<{componentTypeF
         public static bool IsItemsPanelTemplate(XElement element) => IsXElementOfType(element, "ItemsPanelTemplate");
 
         public static bool IsControlTemplate(XElement element) => IsXElementOfType(element, "ControlTemplate");
-
-        public static bool IsResourceDictionary(XElement element) => IsXElementOfType(element, "ResourceDictionary");
 
         public static bool IsBinding(XElement element) => IsXElementOfType(element, "Binding");
 

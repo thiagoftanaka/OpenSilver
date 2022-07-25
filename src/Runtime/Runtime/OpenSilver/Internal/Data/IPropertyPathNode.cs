@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,22 +11,22 @@
 *  
 \*====================================================================================*/
 
-
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
-#if MIGRATION
-namespace System.Windows.Data
-#else
-namespace Windows.UI.Xaml.Data
-#endif
+namespace OpenSilver.Internal.Data
 {
-    internal partial interface IDependencyPropertyChangedEventArgs
+    internal interface IPropertyPathNode
     {
-        DependencyProperty Property {get; }
-        object OldValue { get; }
-        object NewValue { get; }
+        object Value { get; }
+
+        object Source { get; set; }
+
+        bool IsBroken { get; }
+
+        Type Type { get; }
+
+        IPropertyPathNode Next { get; set; }
+
+        void SetValue(object value);
     }
 }

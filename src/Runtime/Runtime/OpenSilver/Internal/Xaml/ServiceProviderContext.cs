@@ -26,8 +26,8 @@ namespace OpenSilver.Internal.Xaml
     }
 
     internal class ServiceProviderContext :
-        IServiceProvider,
         IProvideValueTarget,
+        IServiceProvider,
         IRootObjectProvider,
         IAmbientResourcesProvider
     {
@@ -44,17 +44,19 @@ namespace OpenSilver.Internal.Xaml
             {
                 return this;
             }
+            
             if (serviceType == typeof(IRootObjectProvider))
             {
                 return this;
             }
+
             if (serviceType == typeof(IAmbientResourcesProvider))
             {
                 return this;
             }
 
             return null;
-        }
+        } 
 
         object IProvideValueTarget.TargetObject => _xamlContext.ParentInstance;
 

@@ -19,16 +19,17 @@ using System.Windows.Markup;
 using CSHTML5.Internal;
 
 #if MIGRATION
-namespace System.Windows.Data
+using System.Windows;
 #else
-namespace Windows.UI.Xaml.Data
+using Windows.UI.Xaml;
 #endif
+
+namespace OpenSilver.Internal.Data
 {
     internal class StandardPropertyPathNode : PropertyPathNode
     {
         private readonly Type _resolvedType;
         private readonly string _propertyName;
-        private readonly bool _bindsDirectlyToSource;
 
         private IPropertyChangedListener _dpListener;
         private DependencyProperty _dp;
@@ -40,16 +41,6 @@ namespace Windows.UI.Xaml.Data
         {
             _resolvedType = typeName != null ? Type.GetType(typeName) : null;
             _propertyName = propertyName;
-        }
-
-        /// <summary>
-        /// This constructor is called only when there is no path, which means 
-        /// that the binding's source is directly the value we are looking for.
-        /// </summary>
-        internal StandardPropertyPathNode(PropertyPathWalker listener)
-            : base(listener)
-        {
-            _bindsDirectlyToSource = true;
         }
 
         public override Type Type
@@ -139,10 +130,6 @@ namespace Windows.UI.Xaml.Data
                     UpdateValueAndIsBroken(null, CheckIsBroken());
                 }
             }
-            else if (_bindsDirectlyToSource)
-            {
-                UpdateValueAndIsBroken(Source, CheckIsBroken());
-            }
             else
             {
                 UpdateValueAndIsBroken(null, CheckIsBroken());
@@ -151,7 +138,7 @@ namespace Windows.UI.Xaml.Data
 
         internal override void OnSourceChanged(object oldValue, object newValue)
         {
-            if (oldValue is INotifyPropertyChanged inpc)
+            if (Listener.ListenForChanges && oldValue is INotifyPropertyChanged inpc)
             {
                 inpc.PropertyChanged -= new PropertyChangedEventHandler(OnSourcePropertyChanged);
             }
@@ -170,13 +157,13 @@ namespace Windows.UI.Xaml.Data
             if (Source == null)
                 return;
 
-            if (_bindsDirectlyToSource)
-                return;
-
-            inpc = newValue as INotifyPropertyChanged;
-            if (inpc != null)
+            if (Listener.ListenForChanges)
             {
-                inpc.PropertyChanged += new PropertyChangedEventHandler(OnSourcePropertyChanged);
+                inpc = newValue as INotifyPropertyChanged;
+                if (inpc != null)
+                {
+                    inpc.PropertyChanged += new PropertyChangedEventHandler(OnSourcePropertyChanged);
+                }
             }
 
             if (newValue is DependencyObject sourceDO)
@@ -188,7 +175,10 @@ namespace Windows.UI.Xaml.Data
                 if (dependencyProperty != null)
                 {
                     _dp = dependencyProperty;
-                    _dpListener = listener = INTERNAL_PropertyStore.ListenToChanged(sourceDO, dependencyProperty, OnPropertyChanged);
+                    if (Listener.ListenForChanges)
+                    {
+                        _dpListener = INTERNAL_PropertyStore.ListenToChanged(sourceDO, dependencyProperty, OnPropertyChanged);
+                    }
                 }
             }
 
@@ -218,36 +208,26 @@ namespace Windows.UI.Xaml.Data
 
         private void OnSourcePropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            if (!Listener.ListenForChanges)
-            {
-                return;
-            }
-
             if ((e.PropertyName == _propertyName || string.IsNullOrEmpty(e.PropertyName)) && (_prop != null || _field != null))
             {
                 UpdateValue();
 
-                PropertyPathNode next = Next;
+                IPropertyPathNode next = Next;
                 if (next != null)
                 {
-                    next.SetSource(Value);
+                    next.Source = Value;
                 }
             }
         }
 
         private void OnPropertyChanged(object sender, IDependencyPropertyChangedEventArgs args)
         {
-            if (!Listener.ListenForChanges)
-            {
-                return;
-            }
-
             try
             {
                 UpdateValue();
                 if (Next != null)
                 {
-                    Next.SetSource(Value);
+                    Next.Source = Value;
                 }
             }
             catch (XamlParseException ex)
@@ -266,7 +246,7 @@ namespace Windows.UI.Xaml.Data
 
         private bool CheckIsBroken()
         {
-            return Source == null || (!_bindsDirectlyToSource && (_prop == null && _field == null && _dp == null));
+            return Source == null || (_prop == null && _field == null && _dp == null);
         }
     }
 }
