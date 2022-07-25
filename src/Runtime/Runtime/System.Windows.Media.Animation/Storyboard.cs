@@ -15,12 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows.Markup;
-
-#if MIGRATION
-using System.Windows.Threading;
-#else
-using Windows.UI.Core;
-#endif
+using OpenSilver.Internal;
 
 #if MIGRATION
 namespace System.Windows.Media.Animation
@@ -35,6 +30,7 @@ namespace Windows.UI.Xaml.Media.Animation
     [ContentProperty("Children")]
     public sealed partial class Storyboard : Timeline
     {
+        private TimelineCollection _children;
         private Dictionary<Tuple<string, string>, Timeline> INTERNAL_propertiesChanged; //todo: change this into a Hashset.
 
         private bool _isUnApplied = false; // Note: we set this variable because the animation start is done inside a Dispatcher, so if the user Starts then Stops the animation immediately (in the same thread), we want to cancel the start of the animation.
@@ -44,7 +40,7 @@ namespace Windows.UI.Xaml.Media.Animation
             set
             {
                 _isUnApplied = value;
-                foreach (Timeline tl in _children)
+                foreach (Timeline tl in Children)
                 {
                     if (tl is AnimationTimeline)
                     {
@@ -54,12 +50,11 @@ namespace Windows.UI.Xaml.Media.Animation
             }
         }
 
-
-        private TimelineCollection _children = new TimelineCollection();
         /// <summary>
         /// Gets the collection of child Timeline objects.
         /// </summary>
-        public TimelineCollection Children { get { return _children; } }
+        public TimelineCollection Children
+            => _children ?? (_children = new TimelineCollection(this));
 
         /// <summary>
         /// Gets the value of the Storyboard.TargetName XAML attached property from a
@@ -141,7 +136,7 @@ namespace Windows.UI.Xaml.Media.Animation
             if (INTERNAL_propertiesChanged == null)
             {
                 INTERNAL_propertiesChanged = new Dictionary<Tuple<string, string>, Timeline>();
-                foreach (Timeline timeLine in _children)
+                foreach (Timeline timeLine in Children)
                 {
                     if (timeLine is Storyboard)
                     {
@@ -369,7 +364,7 @@ namespace Windows.UI.Xaml.Media.Animation
         public void Stop()
         {
             Stop(null, revertToFormerValue: true);
-            foreach (Timeline timeLine in _children)
+            foreach (Timeline timeLine in Children)
             {
                 timeLine.Stop(null, revertToFormerValue: true);
             }
@@ -440,9 +435,10 @@ namespace Windows.UI.Xaml.Media.Animation
                     //  containing object.
                     if (currentObjectName != null)
                     {
-                        FrameworkElement mentor = FrameworkElement.FindMentor(containingObject);
-
-                        targetObject = ResolveTargetName(currentObjectName, mentor);
+                        targetObject = ResolveTargetName(
+                            currentObjectName,
+                            FrameworkElement.FindMentor(containingObject),
+                            currentTimeline.NameResolver);
                     }
                     else
                     {
@@ -483,12 +479,16 @@ namespace Windows.UI.Xaml.Media.Animation
             }
         }
 
-        private static DependencyObject ResolveTargetName(string targetName, FrameworkElement fe)
+        private static DependencyObject ResolveTargetName(string targetName, FrameworkElement fe, INameResolver nameResolver)
         {
             object namedObject;
             DependencyObject targetObject;
 
-            if (fe != null)
+            if (nameResolver != null)
+            {
+                namedObject = nameResolver.Resolve(targetName);
+            }
+            else if (fe != null)
             {
                 namedObject = fe.FindName(targetName);
             }
@@ -500,8 +500,8 @@ namespace Windows.UI.Xaml.Media.Animation
             if (namedObject == null)
             {
                 throw new InvalidOperationException(
-                    string.Format("'{0}' name cannot be found in the name scope of '{1}'.", 
-                        targetName, 
+                    string.Format("'{0}' name cannot be found in the name scope of '{1}'.",
+                        targetName,
                         fe.GetType().ToString()));
             }
 
@@ -525,20 +525,20 @@ namespace Windows.UI.Xaml.Media.Animation
 
             GetPropertiesChanged(); //we make sure INTERNAL_propertiesChanged is filled.
 
-            _expectedAmountOfTimelineEnds = _children.Count;
+            _expectedAmountOfTimelineEnds = Children.Count;
             if (!_expectedAmountOfTimelineEndsDict.ContainsKey(parameters.Guid))
             {
-                _expectedAmountOfTimelineEndsDict.Add(parameters.Guid, _children.Count);
+                _expectedAmountOfTimelineEndsDict.Add(parameters.Guid, Children.Count);
                 _guidToIterationParametersDict.Add(parameters.Guid, parameters);
             }
             else
             {
                 //I'm not sure this is useful but we never know.
-                _expectedAmountOfTimelineEndsDict[parameters.Guid] = _children.Count;
+                _expectedAmountOfTimelineEndsDict[parameters.Guid] = Children.Count;
                 _guidToIterationParametersDict[parameters.Guid] = parameters;
             }            
             
-            foreach (Timeline timeLine in _children)
+            foreach (Timeline timeLine in Children)
             {
                 timeLine.Completed -= timeLine_Completed;
                 timeLine.Completed += timeLine_Completed;

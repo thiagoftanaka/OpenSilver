@@ -326,6 +326,7 @@ ends with "".Browser"" in your solution.";
                 case "OpenSilver.Controls.DataVisualization.Toolkit":
                 case "OpenSilver.Controls.Navigation":
                 case "OpenSilver.Controls.Input":
+                case "OpenSilver.Controls.Layout.Toolkit":
                 case "OpenSilver.Interactivity":
                 case "OpenSilver.Expression.Interactions":
                 case "OpenSilver.Expression.Effects":
@@ -617,7 +618,18 @@ ends with "".Browser"" in your solution.";
                 baseURL = "file:///" + Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).Replace('\\', '/');
             }
 
-
+#if OPENSILVER
+            if (_simulatorLaunchParameters?.InitParams != null)
+            {
+                simulatorRootHtml = simulatorRootHtml.Replace(
+                    "[PARAM_INITPARAMS_GOES_HERE]",
+                    $"<param name=\"InitParams\" value=\"{_simulatorLaunchParameters.InitParams}\"");
+            }
+            else
+            {
+                simulatorRootHtml = simulatorRootHtml.Replace("[PARAM_INITPARAMS_GOES_HERE]", string.Empty);
+            }
+#endif
 
             // Load the page:
             MainWebBrowser.Browser.LoadHTML(new LoadHTMLParams(simulatorRootHtml, "UTF-8", "http://cshtml5-simulator/" + ARBITRARY_FILE_NAME_WHEN_RUNNING_FROM_SIMULATOR + urlFragment)); // Note: we set the URL so that the simulator browser can find the JS files.
