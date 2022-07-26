@@ -1114,10 +1114,17 @@ namespace System.ServiceModel
             {
                 if (methodReturnType != null)
                 {
-                    if (methodReturnType.Name == webMethodName + "Response" &&
-                        methodReturnType.GetField("Body") != null)
+                    if (methodReturnType.Name == webMethodName + "Response")
                     {
-                        return true;
+                        if (methodReturnType.GetField("Body") != null)
+                        {
+                            return true;
+                        }
+
+                        if (methodReturnType.GetCustomAttribute<MessageContractAttribute>(true) != null)
+                        {
+                            return true;
+                        }
                     }
                 }
 
@@ -1128,7 +1135,11 @@ namespace System.ServiceModel
                        (parameterInfos != null && parameterInfos.Length > 0) &&
                         parameterInfos[0].ParameterType.Name == webMethodName + "Request")
                     {
-                        return true;
+                        if (parameterInfos[0].ParameterType
+                            .GetCustomAttribute<MessageContractAttribute>(true) == null)
+                        {
+                            return true;
+                        }
                     }
                 }
 
@@ -1308,13 +1319,43 @@ namespace System.ServiceModel
                                                        .GetName(parameterInfos[i].Name));
                             if (!isXmlSerializer)
                             {
+                                bool isBodyMemberSerialization = false;
+                                if (requestBody.GetType().GetCustomAttribute<MessageContractAttribute>(true) != null)
+                                {
+                                    FieldInfo fieldInfo = requestBody.GetType()
+                                        .GetFields()
+                                        .FirstOrDefault(p => Attribute.IsDefined(p, typeof(MessageBodyMemberAttribute)));
+                                    if (fieldInfo == null)
+                                    {
+                                        throw new ArgumentException(
+                                            "Unable to find MessageBodyMemberAttribute of MessageContractAttribute contract");
+                                    }
+
+                                    isBodyMemberSerialization = true;
+                                }
+
                                 // we don't want to add this in the case of an XmlSerializer 
                                 // because it would be <request> which is not what we want. 
                                 // The correct parameter name is alread in the Request body.
-                                methodNameElement.Add(paramNameElement);
+                                if (!isBodyMemberSerialization)
+                                {
+                                    methodNameElement.Add(paramNameElement);
+                                }
+
                                 foreach (XNode currentNode in xdoc.Root.Nodes())
                                 {
-                                    paramNameElement.Add(currentNode);
+                                    if (!isBodyMemberSerialization)
+                                    {
+                                        paramNameElement.Add(currentNode);
+                                    }
+                                    else if (currentNode is XElement currentElement)
+                                    {
+                                        // we don't want to keep the "xmlns="http://schemas.microsoft.com/2003/10/Serialization/" 
+                                        // because it breaks the request.
+                                        currentElement.Name = methodNameElement.Name.Namespace +
+                                            currentElement.Name.LocalName;
+                                        methodNameElement.Add(currentElement);
+                                    }
                                 }
                                 foreach (XAttribute currentAttribute in xdoc.Root.Attributes())
                                 {
@@ -1322,7 +1363,14 @@ namespace System.ServiceModel
                                     // because it breaks the request.
                                     if (currentAttribute.Name.LocalName != "xmlns")
                                     {
-                                        paramNameElement.Add(currentAttribute);
+                                        if (!isBodyMemberSerialization)
+                                        {
+                                            paramNameElement.Add(currentAttribute);
+                                        }
+                                        else
+                                        {
+                                            methodNameElement.Add(currentAttribute);
+                                        }
                                     }
                                 }
                             }
@@ -1337,6 +1385,7 @@ namespace System.ServiceModel
                                 foreach (XNode currentNode in xdoc.Root.Nodes())
                                 {
                                     XElement xElement = currentNode as XElement;
+
                                     if (xElement != null)
                                     {
                                         foreach (XElement node in xElement.Elements())
@@ -1841,11 +1890,31 @@ namespace System.ServiceModel
                         }
                     }
 
+                    bool isBodyMemberSerialization = false;
                     Type typeToDeserialize = requestResponseType;
                     if (isXmlSerializer)
                     {
                         bodyFieldInfo = requestResponseType.GetField("Body");
-                        typeToDeserialize = bodyFieldInfo.FieldType;
+                        if (bodyFieldInfo != null)
+                        {
+                            typeToDeserialize = bodyFieldInfo.FieldType;
+                        }
+                        else if (requestResponseType.GetCustomAttribute<MessageContractAttribute>(true) != null)
+                        {
+                            isBodyMemberSerialization = true;
+
+                            FieldInfo fieldInfo = requestResponseType
+                                .GetFields()
+                                .FirstOrDefault(p => Attribute.IsDefined(p, typeof(MessageBodyMemberAttribute)));
+                            if (fieldInfo == null)
+                            {
+                                throw new ArgumentException(
+                                    "Unable to find MessageBodyMemberAttribute of MessageContractAttribute contract");
+                            }
+
+                            typeToDeserialize = fieldInfo.FieldType;
+                            bodyFieldInfo = fieldInfo;
+                        }
                     }
 
                     // get the known types from the interface type
@@ -1907,6 +1976,11 @@ namespace System.ServiceModel
                     }
                     else
                     {
+                        if (isBodyMemberSerialization)
+                        {
+                            xElement = xElement.Elements().FirstOrDefault() ?? xElement;
+                        }
+
                         requestResponse = Activator.CreateInstance(requestResponseType);
                         object requestResponseBody = deSerializer.DeserializeFromXElement(xElement);
                         bodyFieldInfo.SetValue(requestResponse, requestResponseBody);
