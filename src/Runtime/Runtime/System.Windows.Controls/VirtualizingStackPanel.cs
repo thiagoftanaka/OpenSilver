@@ -299,15 +299,27 @@ namespace Windows.UI.Xaml.Controls
 
                         if (Orientation == Orientation.Vertical)
                         {
-                            measured.Width = Math.Max(measured.Width, size.Width);
+                            if (measured.Height < constraint.Height -
+                                (ScrollOwner.ComputedHorizontalScrollBarVisibility == Visibility.Collapsed ?
+                                    ScrollOwner.ElementHorizontalScrollBar.Height : 0))
+                            {
+                                measured.Width = Math.Max(measured.Width, size.Width);
+                            }
                             measured.Height += size.Height;
 
                             if (measured.Height > constraint.Height)
+                            {
                                 beyond++;
+                            }
                         }
                         else
                         {
-                            measured.Height = Math.Max(measured.Height, size.Height);
+                            if (measured.Width < constraint.Width -
+                                (ScrollOwner.ComputedVerticalScrollBarVisibility == Visibility.Collapsed ?
+                                    ScrollOwner.ElementVerticalScrollBar.Width : 0))
+                            {
+                                measured.Height = Math.Max(measured.Height, size.Height);
+                            }
                             measured.Width += size.Width;
 
                             if (measured.Width > constraint.Width)
