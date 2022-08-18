@@ -472,8 +472,8 @@ namespace Windows.UI.Xaml
                                 styleOfOuterDomElement.marginRight = "auto";
                                 if (!(fe is ScrollViewer) && !(fe is WrapPanel)) // Note: we don't know how to handle horizontal alignment properly for the ScrollViewer and the WrapPanel
                                 {
-
-                                    if (!isCSSGrid || !(fe is Grid))
+                                    // Also check for ContentControls due to ControlTemplates having the same cases
+                                    if (!isCSSGrid || !(fe is Grid || fe is ContentControl contentControl && contentControl.Content is Grid))
                                     {
                                         styleOfOuterDomElement.display = "table";
                                         if (INTERNAL_HtmlDomManager.IsNotUndefinedOrNull(styleOfChildOfOuterDomElement))
