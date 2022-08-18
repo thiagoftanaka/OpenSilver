@@ -683,6 +683,11 @@ if(nextSibling != undefined) {
             // SET "ISLOADED" PROPERTY AND CALL "ONATTACHED" EVENT:
             //--------------------------------------------------------
 
+            if (child is FrameworkElement)
+            {
+                ((FrameworkElement)child).RaiseLoadedEventOnResources();
+            }
+
             // Tell the control that it is now present into the visual tree:
             child._isLoaded = true;
 
@@ -779,7 +784,9 @@ if(nextSibling != undefined) {
             // Raise the "Loaded" event: (note: in XAML, the "loaded" event of the children is called before the "loaded" event of the parent)
             if (child is FrameworkElement)
             {
-                ((FrameworkElement)child).INTERNAL_RaiseLoadedEvent();
+                var fe = (FrameworkElement)child;
+                fe.RaiseLoadedEvent();
+                fe.InvalidateMeasure();
             }
 
 #if PERFSTAT

@@ -896,7 +896,7 @@ namespace Windows.UI.Xaml
                     return nameScope;
                 }
 
-                fe = (fe.TemplatedParent ?? fe.Parent ?? VisualTreeHelper.GetParent(fe)) as FrameworkElement;
+                fe = (fe.TemplatedParent ?? fe.Parent ?? VisualTreeHelper.GetParent(fe) ?? fe.InheritanceContext) as FrameworkElement;
             }
 
             return null;
@@ -1805,12 +1805,19 @@ namespace Windows.UI.Xaml
         /// </summary>
         public event RoutedEventHandler Loaded;
 
-        internal void INTERNAL_RaiseLoadedEvent()
-        {
-            if (Loaded != null)
-                Loaded(this, new RoutedEventArgs());
+        internal void RaiseLoadedEvent() => Loaded?.Invoke(this, new RoutedEventArgs());
 
-            InvalidateMeasure();
+        internal void RaiseLoadedEventOnResources()
+        {
+            if (!HasResources)
+            {
+                return;
+            }
+
+            foreach (FrameworkElement fe in Resources.Values.OfType<FrameworkElement>())
+            {
+                fe.RaiseLoadedEvent();
+            }
         }
 
         /// <summary>
