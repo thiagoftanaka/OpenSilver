@@ -372,7 +372,9 @@ namespace Windows.UI.Xaml.Controls
                 noWrapSize = noWrapSize.Add(BorderThicknessSize);
             }
 
-            if (TextWrapping == TextWrapping.NoWrap || noWrapSize.Width <= availableSize.Width)
+            if ((TextWrapping == TextWrapping.NoWrap || noWrapSize.Width <= availableSize.Width) &&
+                TextTrimming != TextTrimming.CharacterEllipsis &&
+                TextTrimming != TextTrimming.WordEllipsis)
             {
                 _measuredSize = noWrapSize;
                 return noWrapSize;
