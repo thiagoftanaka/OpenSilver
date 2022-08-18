@@ -448,7 +448,6 @@ namespace Windows.UI.Xaml
                     //If the element is an Image and it has Stretch = Uniform and no size, the behavior is similar to "Stretch":
                     if (fe is Image
                         && double.IsNaN(fe.Width)
-                        && double.IsNaN(fe.Height)
                         && ((Image)fe).Stretch != Media.Stretch.None)
                     {
                         newHorizontalAlignment = HorizontalAlignment.Stretch;
@@ -845,7 +844,6 @@ namespace Windows.UI.Xaml
 
                     //If the element is an Image and it has Stretch = Uniform and no size, the behavior is similar to "Stretch":
                     if (fe is Image
-                        && double.IsNaN(fe.Width)
                         && double.IsNaN(fe.Height)
                         && ((Image)fe).Stretch != Media.Stretch.None)
                     {

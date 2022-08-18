@@ -545,5 +545,21 @@ $0.addEventListener('error', function(e) {
                 return _imageDiv;
             }
         }
+
+        protected override Size MeasureOverride(Size availableSize)
+        {
+            double w = Math.Max(imgWidth, availableSize.Width);
+            double h = Math.Max(imgHeight, availableSize.Height);
+
+            return new Size(w, h);
+        }
+
+        protected override Size ArrangeOverride(Size finalSize)
+        {
+            double w = Math.Max(imgWidth, finalSize.Width);
+            double h = Math.Max(imgHeight, finalSize.Height);
+
+            return new Size(w, h);
+        }
     }
 }
