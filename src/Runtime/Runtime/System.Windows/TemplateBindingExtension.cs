@@ -14,6 +14,7 @@
 using CSHTML5.Internal;
 using System;
 using System.Windows.Markup;
+using OpenSilver.Internal.Data;
 
 #if MIGRATION
 using System.Windows.Controls;
@@ -37,8 +38,36 @@ namespace Windows.UI.Xaml
             var provider = (ServiceProvider)serviceProvider.GetService(typeof(ServiceProvider));
             if (provider != null)
             {
+                Type type = null;
+                string propertyName = null;
+                if (Path.Contains("."))
+                {
+                    string typeName = Path.Split('.')[0];
+                    if (typeName.Contains(":"))
+                    {
+                        typeName = typeName.Split(':')[1];
+                        foreach (Type availableType in
+                            INTERNAL_TypeToStringsToDependencyProperties.TypeToStringsToDependencyProperties.Keys)
+                        {
+                            if (availableType.Name == typeName)
+                            {
+                                type = availableType;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        type = Type.GetType(typeName);
+                    }
+
+                    propertyName = Path.Split('.')[1];
+                }
+
+
                 var dp = INTERNAL_TypeToStringsToDependencyProperties.GetPropertyInTypeOrItsBaseTypes(
-                    provider.TargetObject?.GetType(), Path);
+                    type ?? provider.TargetObject?.GetType(),
+                    !string.IsNullOrEmpty(propertyName) ? propertyName : Path);
                 var source = provider.TargetObject as Control;
 
                 if (dp != null && source != null)
