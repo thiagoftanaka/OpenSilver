@@ -19,6 +19,7 @@ using Bridge;
 using CSHTML5;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -295,6 +296,22 @@ namespace Windows.UI.Xaml.Controls
                 CSHTML5.Interop.ExecuteJavaScript(@"$0.jumpToDate($1)", this._flatpickrInstance, GetJsDate(nonNullDate));
             }
         }
+
+        /// <summary>
+        /// Gets or sets the day that is considered the beginning of the week.
+        /// </summary>
+        public DayOfWeek FirstDayOfWeek
+        {
+            get => (DayOfWeek)GetValue(FirstDayOfWeekProperty);
+            set => SetValue(FirstDayOfWeekProperty, value);
+        }
+
+        /// <summary>
+        /// Identifies the <see cref="T:System.Globalization.FirstDayOfWeek"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty FirstDayOfWeekProperty = DependencyProperty.Register(
+            nameof(FirstDayOfWeek), typeof(DayOfWeek), typeof(Calendar), new PropertyMetadata(
+                DateTimeFormatInfo.CurrentInfo.FirstDayOfWeek, null));
 
         //todo: could be nice to have the same as the Bridge.Template for JSIL
 #if BRIDGE
