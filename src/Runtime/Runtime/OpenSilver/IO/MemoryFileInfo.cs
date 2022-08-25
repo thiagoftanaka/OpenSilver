@@ -34,6 +34,10 @@ namespace OpenSilver.IO
 
         public string Name { get; }
 
+        public long Length => _content.Length;
+
+        public string Extension => Path.GetExtension(Name);
+
         public Stream OpenRead()
         {
             MemoryStream memoryStream = new MemoryStream();
