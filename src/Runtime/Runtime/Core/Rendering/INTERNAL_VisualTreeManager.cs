@@ -785,6 +785,7 @@ if(nextSibling != undefined) {
             if (child is FrameworkElement)
             {
                 var fe = (FrameworkElement)child;
+                fe.ApplyTemplate();
                 fe.RaiseLoadedEvent();
                 fe.InvalidateMeasure();
             }
