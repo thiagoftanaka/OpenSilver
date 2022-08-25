@@ -42,7 +42,7 @@ namespace System.Windows.Controls
 namespace Windows.UI.Xaml.Controls
 #endif
 {
-    public abstract partial class INTERNAL_CalendarOrClockBase : FrameworkElement
+    public abstract partial class INTERNAL_CalendarOrClockBase : Control
     {
         //Note: if we want to allow customization of the day cells: see event "onDayCreate" at https://flatpickr.js.org/events/
 
