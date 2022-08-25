@@ -252,8 +252,6 @@ namespace Windows.UI.Xaml.Media.Animation
 
         internal override void InitializeCore()
         {
-            this.Completed -= ApplyLastKeyFrame;
-            this.Completed += ApplyLastKeyFrame;
             InitializeKeyFramesSet();
         }
 
