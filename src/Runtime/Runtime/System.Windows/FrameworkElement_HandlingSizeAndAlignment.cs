@@ -494,7 +494,8 @@ namespace Windows.UI.Xaml
                                 if (!(fe is ScrollViewer) && !(fe is WrapPanel)) // Note: we don't know how to handle horizontal alignment properly for the ScrollViewer and the WrapPanel
                                 {
                                     // Also check for ContentControls due to ControlTemplates having the same cases
-                                    if (!isCSSGrid || !(fe is Grid || fe is ContentControl contentControl && contentControl.Content is Grid))
+                                    if (!isCSSGrid || !(fe is Grid || fe is ContentControl contentControl &&
+                                        (contentControl.Content is Grid || contentControl.Content is StackPanel)))
                                     {
                                         styleOfOuterDomElement.display = "table";
                                         if (INTERNAL_HtmlDomManager.IsNotUndefinedOrNull(styleOfChildOfOuterDomElement))
