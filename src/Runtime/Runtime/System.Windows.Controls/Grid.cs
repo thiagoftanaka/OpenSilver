@@ -233,6 +233,7 @@ namespace Windows.UI.Xaml.Controls
             if (isCSSGrid)
             {
                 Grid_InternalHelpers.RefreshAllColumnsVisibility_CSSVersion(this);
+                Grid_InternalHelpers.RefreshAllRowsHeight_CSSVersion(this);
             }
             else
             {

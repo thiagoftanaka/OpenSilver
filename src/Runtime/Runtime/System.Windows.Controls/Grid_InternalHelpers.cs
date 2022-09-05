@@ -118,8 +118,11 @@ namespace Windows.UI.Xaml.Controls
             }
         }
 
-        public static string ConvertGridLengthToCssString(GridLength gridLength, double minSize, string signUsedForPercentage = "%")
+        private static string ConvertGridLengthToCssString(Grid grid, IDefinitionBase definition,
+            string signUsedForPercentage = "%")
         {
+            GridLength gridLength = definition.Length;
+            double minSize = definition.GetUserMinSize();
             if (gridLength.IsAuto && !double.IsNaN(minSize) && !double.IsInfinity(minSize) && minSize > 0)
             {
                 string minWidthString = minSize.ToInvariantString() + "px";
@@ -131,6 +134,23 @@ namespace Windows.UI.Xaml.Controls
             }
             else if (gridLength.IsStar)
             {
+                if (definition is RowDefinition &&
+                    double.IsNaN(grid.Height))
+                {
+                    if (grid.RowDefinitions.All(r => r.Height.IsStar && r.Height.Value == 1))
+                    {
+                        return "auto";
+                    }
+                }
+                else if (definition is ColumnDefinition &&
+                    double.IsNaN(grid.Width))
+                {
+                    if (grid.ColumnDefinitions.All(c => c.Width.IsStar && c.Width.Value == 1))
+                    {
+                        return "auto";
+                    }
+                }
+
                 bool isCSSGrid = Grid_InternalHelpers.isCSSGridSupported();
                 if (isCSSGrid)
                 {
@@ -461,7 +481,8 @@ namespace Windows.UI.Xaml.Controls
                     if (!hadStarRow && rowDefinition.Height.IsStar)
                         hadStarRow = true;
 
-                    rowsAsString = rowsAsString + (!isFirstRow ? " " : "") + Grid_InternalHelpers.ConvertGridLengthToCssString(rowDefinition.Height, rowDefinition.MinHeight, signUsedForPercentage: "fr");
+                    rowsAsString = rowsAsString + (!isFirstRow ? " " : "") + ConvertGridLengthToCssString(grid,
+                        rowDefinition, signUsedForPercentage: "fr");
                     isFirstRow = false;
                 }
                 if (!hadStarRow) //We add a "star" row if there was none explicitely defined, since absolutely sized rows and columns are exactly their size.
@@ -498,7 +519,7 @@ namespace Windows.UI.Xaml.Controls
             {
                 rowDefinition = grid._rowDefinitionsOrNull[rowIndex];
             }
-            string rowHeight = ConvertGridLengthToCssString(rowDefinition.Height, rowDefinition.MinHeight);
+            string rowHeight = ConvertGridLengthToCssString(grid, rowDefinition);
             string internalElementForRowHeight = "100%";
             if (rowHeight.EndsWith("px"))
             {
@@ -613,7 +634,7 @@ namespace Windows.UI.Xaml.Controls
             //todo: factorize the common parts ([getting rowHeight and internalElementForRowHeight] and [setting the cell's dom element's style]).
             bool clipToBounds = grid.ClipToBounds;
 
-            string rowHeight = ConvertGridLengthToCssString(normalizedRowDefinition.Height, normalizedRowDefinition.MinHeight);
+            string rowHeight = ConvertGridLengthToCssString(grid, normalizedRowDefinition);
             string internalElementForRowHeight = "100%";
             if (rowHeight.EndsWith("px"))
             {
@@ -679,7 +700,7 @@ namespace Windows.UI.Xaml.Controls
             if (!cell.IsOverlapped)
             {
                 var tdStyle = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(cell.ColumnDomElement);
-                string columnWidth = ConvertGridLengthToCssString(normalizedColumnDefinition.Width, normalizedColumnDefinition.MinWidth);
+                string columnWidth = ConvertGridLengthToCssString(grid, normalizedColumnDefinition);
                 string internalElementForColumnWidth = "100%";
                 if (columnWidth.EndsWith("px"))
                 {
@@ -765,7 +786,8 @@ namespace Windows.UI.Xaml.Controls
 
                     if (columnDefinition.Visibility == Visibility.Visible)
                     {
-                        columnsAsString = columnsAsString + (!isFirstColumn ? " " : "") + Grid_InternalHelpers.ConvertGridLengthToCssString(columnDefinition.Width, columnDefinition.MinWidth, signUsedForPercentage: "fr");
+                        columnsAsString = columnsAsString + (!isFirstColumn ? " " : "") +
+                            ConvertGridLengthToCssString(grid, columnDefinition, signUsedForPercentage: "fr");
                     }
                     else
                     {
@@ -878,7 +900,7 @@ namespace Windows.UI.Xaml.Controls
                 if (!cell.IsOverlapped)
                 {
                     var tdStyle = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(cell.ColumnDomElement);
-                    string columnWidth = ConvertGridLengthToCssString(columnDefinition.Width, columnDefinition.MinWidth);
+                    string columnWidth = ConvertGridLengthToCssString(grid, columnDefinition);
                     string internalElementForColumnWidth = "100%";
                     if (columnWidth.EndsWith("px"))
                     {
