@@ -394,6 +394,27 @@ namespace Windows.UI.Xaml
                     && ((currentParent = currentParent.INTERNAL_VisualParent as UIElement) != null)
                     && currentParent.INTERNAL_VisualParent as Viewbox != null; //todo: this test is unlikely to work with a custom Template on the ViewBox, use frameworkElement.LogicalParent (or something like that) once the logical tree branch will be integrated)
 
+                if (fe.INTERNAL_VisualParent is Grid grid)
+                {
+                    int startColumn = Grid.GetColumn(fe);
+                    int endColumn = startColumn + Grid.GetColumnSpan(fe) - 1;
+                    if (endColumn <= grid.ColumnDefinitions.Count - 1)
+                    {
+                        double pixelWidthSum = 0;
+                        for (int i = startColumn; i <= endColumn; i++)
+                        {
+                            if (grid.ColumnDefinitions[i].Width.GridUnitType == GridUnitType.Pixel)
+                            {
+                                pixelWidthSum += grid.ColumnDefinitions[i].Width.Value;
+                            }
+                        }
+                        if (pixelWidthSum < fe?.Width)
+                        {
+                            fe.Width = pixelWidthSum;
+                        }
+                    }
+                }
+
                 // If the element is inside a Canvas, we ignore alignment and only apply the Width/Height:
                 if (fe.INTERNAL_VisualParent is Canvas || isParentAViewBox) //todo: replace the second part of this test with something meaning "logical parent is ViewBox" instead once we will have the logical tree (we cannot do that yet since we cannot access the ViewBox from frameworkElement).
                 {
