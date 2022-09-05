@@ -11,10 +11,10 @@
 *  
 \*====================================================================================*/
 
-using CSHTML5.Internal;
 using System;
 using System.Windows.Markup;
-using OpenSilver.Internal.Data;
+using System.ComponentModel;
+using CSHTML5.Internal;
 
 #if MIGRATION
 using System.Windows.Controls;
@@ -31,48 +31,28 @@ namespace Windows.UI.Xaml
     [ContentProperty(nameof(Path))]
     public class TemplateBindingExtension : MarkupExtension
     {
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public string Path { get; set; }
+
+        public string DependencyPropertyName { get; set; }
+
+        public Type DependencyPropertyOwnerType { get; set; }
 
         public override object ProvideValue(IServiceProvider serviceProvider)
         {
-            var provider = (ServiceProvider)serviceProvider.GetService(typeof(ServiceProvider));
-            if (provider != null)
+            if (serviceProvider.GetService(typeof(IProvideValueTarget)) is IProvideValueTarget provider)
             {
-                Type type = null;
-                string propertyName = null;
-                if (Path.Contains("."))
+                if (provider.TargetObject is Control source)
                 {
-                    string typeName = Path.Split('.')[0];
-                    if (typeName.Contains(":"))
+                    string propertyName = DependencyPropertyName ?? Path;
+                    Type type = DependencyPropertyOwnerType ?? source.GetType();
+                    DependencyProperty dp = INTERNAL_TypeToStringsToDependencyProperties.GetPropertyInTypeOrItsBaseTypes(
+                        type, propertyName);
+
+                    if (dp != null)
                     {
-                        typeName = typeName.Split(':')[1];
-                        foreach (Type availableType in
-                            INTERNAL_TypeToStringsToDependencyProperties.TypeToStringsToDependencyProperties.Keys)
-                        {
-                            if (availableType.Name == typeName)
-                            {
-                                type = availableType;
-                                break;
-                            }
-                        }
+                        return new TemplateBindingExpression(source, dp);
                     }
-                    else
-                    {
-                        type = Type.GetType(typeName);
-                    }
-
-                    propertyName = Path.Split('.')[1];
-                }
-
-
-                var dp = INTERNAL_TypeToStringsToDependencyProperties.GetPropertyInTypeOrItsBaseTypes(
-                    type ?? provider.TargetObject?.GetType(),
-                    !string.IsNullOrEmpty(propertyName) ? propertyName : Path);
-                var source = provider.TargetObject as Control;
-
-                if (dp != null && source != null)
-                {
-                    return new TemplateBindingExpression(source, dp);
                 }
             }
 
