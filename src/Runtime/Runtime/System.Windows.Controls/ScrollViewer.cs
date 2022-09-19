@@ -636,7 +636,7 @@ namespace Windows.UI.Xaml.Controls
                         break;
                     case ScrollBarVisibility.Auto:
                         //there is a scrollbar when the content is wider, there is no scrollbar when the content fits
-                        outerDivStyle.overflowX = "auto"; //todo: check if the overflowX actually sets overflow-x and not overflow (I think it sets overflow).
+                        outerDivStyle.overflowX = TemplatedParent is TextBox ? "hidden" : "auto"; //todo: check if the overflowX actually sets overflow-x and not overflow (I think it sets overflow).
 
                         break;
                     case ScrollBarVisibility.Hidden:
@@ -644,7 +644,7 @@ namespace Windows.UI.Xaml.Controls
                         outerDivStyle.overflowX = "hidden";
                         break;
                     case ScrollBarVisibility.Visible:
-                        outerDivStyle.overflowX = "scroll";
+                        outerDivStyle.overflowX = TemplatedParent is TextBox ? "hidden" : "scroll";
 
                         try // Prevents crash in the simulator that uses IE.
                         {
@@ -716,7 +716,7 @@ namespace Windows.UI.Xaml.Controls
                         break;
                     case ScrollBarVisibility.Auto:
                         //there is a scrollbar when the content is wider, there is no scrollbar when the content fits
-                        outerDivStyle.overflowY = "auto"; //todo: check if the overflowX actually sets overflow-x and not overflow (I think it sets overflow).
+                        outerDivStyle.overflowY = TemplatedParent is TextBox ? "hidden" : "auto"; //todo: check if the overflowX actually sets overflow-x and not overflow (I think it sets overflow).
 
                         break;
                     case ScrollBarVisibility.Hidden:
@@ -724,7 +724,8 @@ namespace Windows.UI.Xaml.Controls
                         outerDivStyle.overflowY = "hidden";
                         break;
                     case ScrollBarVisibility.Visible:
-                        outerDivStyle.overflowY = "scroll";
+                        if (Name == "ContentElement") { }
+                        outerDivStyle.overflowY = TemplatedParent is TextBox ? "hidden" : "scroll";
 
                         try // Prevents crash in the simulator that uses IE.
                         {
@@ -1483,7 +1484,7 @@ namespace Windows.UI.Xaml.Controls
             switch (HorizontalScrollBarVisibility)
             {
                 case ScrollBarVisibility.Visible:
-                    horizontalVisibility = Visibility.Visible;
+                    horizontalVisibility = TemplatedParent is TextBox ? Visibility.Collapsed : Visibility.Visible;
                     break;
                 case ScrollBarVisibility.Disabled:
                 case ScrollBarVisibility.Hidden:
@@ -1491,7 +1492,8 @@ namespace Windows.UI.Xaml.Controls
                     break;
                 default:  // Avoids compiler warning about uninitialized variable
                 case ScrollBarVisibility.Auto:
-                    horizontalVisibility = ScrollInfo == null || ScrollInfo.ExtentWidth <= ScrollInfo.ViewportWidth ? Visibility.Collapsed : Visibility.Visible;
+                    horizontalVisibility = ScrollInfo == null || ScrollInfo.ExtentWidth <= ScrollInfo.ViewportWidth ||
+                        TemplatedParent is TextBox ? Visibility.Collapsed : Visibility.Visible;
                     break;
             }
 
@@ -1505,7 +1507,7 @@ namespace Windows.UI.Xaml.Controls
             switch (VerticalScrollBarVisibility)
             {
                 case ScrollBarVisibility.Visible:
-                    verticalVisibility = Visibility.Visible;
+                    verticalVisibility = TemplatedParent is TextBox ? Visibility.Collapsed : Visibility.Visible;
                     break;
                 case ScrollBarVisibility.Disabled:
                 case ScrollBarVisibility.Hidden:
@@ -1513,7 +1515,8 @@ namespace Windows.UI.Xaml.Controls
                     break;
                 default:  // Avoids compiler warning about uninitialized variable
                 case ScrollBarVisibility.Auto:
-                    verticalVisibility = ScrollInfo == null || ScrollInfo.ExtentHeight <= ScrollInfo.ViewportHeight ? Visibility.Collapsed : Visibility.Visible;
+                    verticalVisibility = ScrollInfo == null || ScrollInfo.ExtentHeight <= ScrollInfo.ViewportHeight ||
+                        TemplatedParent is TextBox ? Visibility.Collapsed : Visibility.Visible;
                     break;
             }
 
