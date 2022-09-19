@@ -427,12 +427,15 @@ namespace Windows.UI.Xaml.Controls.Primitives
                         //--------------------------------
                         // Update the size of the UI elements:
                         //--------------------------------
-                        _verticalThumb.Width
-                            = _verticalSmallDecrease.Width
-                            = _verticalSmallIncrease.Width
-                            = _verticalLargeDecrease.Width
-                            = _verticalLargeIncrease.Width
-                            = totalControlSize.Width;
+                        if (!IsUnderCustomLayout)
+                        {
+                            _verticalThumb.Width
+                                = _verticalSmallDecrease.Width
+                                = _verticalSmallIncrease.Width
+                                = _verticalLargeDecrease.Width
+                                = _verticalLargeIncrease.Width
+                                = totalControlSize.Width;
+                        }
 
                         double buttonsHeight = totalControlSize.Width; // Deliberately square.
 
@@ -545,10 +548,18 @@ namespace Windows.UI.Xaml.Controls.Primitives
                 if (this.Orientation == Orientation.Vertical)
                 {
                     actualSize = _verticalRoot.INTERNAL_GetActualWidthAndHeight();
+                    if (IsUnderCustomLayout)
+                    {
+                        actualSize = _verticalRoot.DesiredSize;
+                    }
                 }
                 else
                 {
                     actualSize = _horizontalRoot.INTERNAL_GetActualWidthAndHeight();
+                    if (IsUnderCustomLayout)
+                    {
+                        actualSize = _horizontalRoot.DesiredSize;
+                    }
                 }
                 double width = !double.IsNaN(actualSize.Width) ? actualSize.Width : this.Width;
                 double height = !double.IsNaN(actualSize.Height) ? actualSize.Height : this.Height;
