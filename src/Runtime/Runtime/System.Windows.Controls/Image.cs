@@ -27,12 +27,16 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Globalization;
 #if MIGRATION
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Automation.Peers;
 #else
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
+using Windows.UI.Xaml.Automation.Peers;
+using Windows.Foundation;
 #endif
 
 #if MIGRATION
@@ -194,7 +198,12 @@ namespace Windows.UI.Xaml.Controls
 
         void Image_Loaded(object sender, RoutedEventArgs e)
         {
-            Loaded -= Image_Loaded;
+            if (!IsLoaded)
+            {
+                return;
+            }
+
+            Loaded -= Image_Loaded;            
             //once the image is loaded, we get the size of the parent of this element and fit the size of the image to it.
             //This will allow us to PARTIALLY fix the problems that come with the fact that display:table is unable to limit the size of its content.
 
@@ -512,27 +521,7 @@ $0.style.objectPosition = $2", image._imageDiv, objectFitvalue, objectPosition);
             var intermediaryDomStyle = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(div);
             intermediaryDomStyle.lineHeight = "0px"; //this one is to fix in Firefox the few pixels gap that appears below the image whith certain displays (table, table-cell and possibly some others)
 
-            var img = INTERNAL_HtmlDomManager.CreateDomElementAndAppendIt("img", div, this);
-            INTERNAL_HtmlDomManager.SetDomElementAttribute(img, "src", TransparentGifOnePixel);
-            INTERNAL_HtmlDomManager.SetDomElementAttribute(img, "alt", " "); //the text displayed when the image cannot be found. We set it as an empty string since there is nothing in Xaml
-
-            var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(img);
-            style.display = "block"; //this is to avoid a random few pixels wide gap below the image.
-            style.width = "0"; // Defaulting to 0 because if there is no source set, we want the 1x1 transparent placeholder image to be sure to take no space. If the source is set, it will then be set to "inherit"
-            style.height = "0"; // Same as above.
-            style.objectPosition = "center top";
-
-            CSHTML5.Interop.ExecuteJavaScriptAsync(@"
-$0.addEventListener('mousedown', function(e) {
-    e.preventDefault();
-}, false);
-$0.addEventListener('error', function(e) {
-    this.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-    this.style.width = 0;
-    this.style.height = 0;
-});
-", img);
-
+            var img = INTERNAL_HtmlDomManager.CreateImageDomElementAndAppendIt(div, this);
             _imageDiv = img;
             domElementWhereToPlaceChildren = null;
             return div;
@@ -544,6 +533,60 @@ $0.addEventListener('error', function(e) {
             {
                 return _imageDiv;
             }
+        }        
+
+        protected override AutomationPeer OnCreateAutomationPeer()
+            => new ImageAutomationPeer(this);
+
+        protected override Size MeasureOverride(Size availableSize)
+            => MeasureArrangeHelper(availableSize);
+
+        protected override Size ArrangeOverride(Size finalSize)
+            => MeasureArrangeHelper(finalSize);
+
+        /// <summary>
+        /// Contains the code common for MeasureOverride and ArrangeOverride.
+        /// </summary>
+        /// <param name="inputSize">
+        /// input size is the parent-provided space that Image should use to "fit in", 
+        /// according to other properties.
+        /// </param>
+        /// <returns>Image's desired size.</returns>
+        private Size MeasureArrangeHelper(Size inputSize)
+        {
+            if (Source == null)
+            {
+                return new Size();
+            }
+
+            Size naturalSize = GetNaturalSize();
+
+            //get computed scale factor
+            Size scaleFactor = Viewbox.ComputeScaleFactor(inputSize,
+                naturalSize,
+                Stretch,
+                StretchDirection.Both);
+
+            // Returns our minimum size & sets DesiredSize.
+            return new Size(naturalSize.Width * scaleFactor.Width, naturalSize.Height * scaleFactor.Height);
+        }
+
+        private Size GetNaturalSize()
+        {
+            var size = Convert.ToString(OpenSilver.Interop.ExecuteJavaScript(
+                "(function(img) { return img.naturalWidth + '|' + img.naturalHeight; })($0);",
+                _imageDiv));
+
+            int sepIndex = size.IndexOf('|');
+            if (sepIndex > -1)
+            {
+                double actualWidth = double.Parse(size.Substring(0, sepIndex), CultureInfo.InvariantCulture);
+                double actualHeight = double.Parse(size.Substring(sepIndex + 1), CultureInfo.InvariantCulture);
+                
+                return new Size(actualWidth, actualHeight);
+            }
+
+            return new Size(0, 0);
         }
 
         protected override Size MeasureOverride(Size availableSize)

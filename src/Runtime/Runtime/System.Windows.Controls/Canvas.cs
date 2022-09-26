@@ -196,11 +196,7 @@ namespace Windows.UI.Xaml.Controls
 
         public override object CreateDomElement(object parentRef, out object domElementWhereToPlaceChildren)
         {
-            var div = INTERNAL_HtmlDomManager.CreateDomElementAndAppendIt("div", parentRef, this);
-            var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(div);
-            style.overflow = "display";
-            style.position = "relative";
-
+            var div = INTERNAL_HtmlDomManager.CreateCanvasDomElementAndAppendIt(parentRef, this);
             domElementWhereToPlaceChildren = div;
             return div;
 
@@ -241,6 +237,16 @@ namespace Windows.UI.Xaml.Controls
             return new Size();
         }
 
+        internal override bool CheckIsAutoWidth(FrameworkElement child)
+        {
+            return double.IsNaN(child.Width);
+        }
+
+        internal override bool CheckIsAutoHeight(FrameworkElement child)
+        {
+            return double.IsNaN(child.Height);
+        }
+
         protected override Size ArrangeOverride(Size finalSize)
         {
             UIElement[] childrens = Children.ToArray();
@@ -254,6 +260,5 @@ namespace Windows.UI.Xaml.Controls
 
             return finalSize;
         }
-
     }
 }

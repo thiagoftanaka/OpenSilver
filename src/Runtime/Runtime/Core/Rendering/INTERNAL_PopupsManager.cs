@@ -97,7 +97,12 @@ namespace DotNetForHtml5.Core // Important: do not rename this class without upd
 
             foreach (Popup popup in listOfPopupThatMustBeClosed)
             {
-                popup.CloseFromAnOutsideClick();
+                var args = new OutsideClickEventArgs();
+                popup.OnOutsideClick(args);
+                if (!args.Handled)
+                {
+                    popup.CloseFromAnOutsideClick();
+                }
             }
 
         }
@@ -112,7 +117,7 @@ namespace DotNetForHtml5.Core // Important: do not rename this class without upd
             // Create a DIV for the PopupRoot in the DOM tree:
             //--------------------------------------
 
-            CSHTML5.Interop.ExecuteJavaScriptAsync(
+            OpenSilver.Interop.ExecuteJavaScriptAsync(
 @"
 var popupRoot = document.createElement('div');
 popupRoot.setAttribute('id', $0);
@@ -121,7 +126,6 @@ popupRoot.style.width = '100%';
 popupRoot.style.height = '100%';
 popupRoot.style.overflowX = 'hidden';
 popupRoot.style.overflowY = 'hidden';
-popupRoot.style.pointerEvents = 'none';
 $1.appendChild(popupRoot);
 ", uniquePopupRootIdentifier, parentWindow.INTERNAL_RootDomElement);
 
@@ -148,6 +152,8 @@ $1.appendChild(popupRoot);
             popupRoot.INTERNAL_OuterDomElement
                 = popupRoot.INTERNAL_InnerDomElement
                 = popupRootDiv;
+            popupRoot.IsConnectedToLiveTree = true;
+            UIElement.SetPointerEvents(popupRoot);
 
             //--------------------------------------
             // Listen to clicks anywhere in the popup (this is used to close other popups that are not supposed to stay open):
@@ -194,6 +200,9 @@ $1.appendChild(popupRoot);
 var popupRoot = document.getElementByIdSafe($0);
 $1.removeChild(popupRoot);
 ", uniquePopupRootIdentifier, parentWindow.INTERNAL_RootDomElement);
+
+                popupRoot.INTERNAL_OuterDomElement = popupRoot.INTERNAL_InnerDomElement = null;
+                popupRoot.IsConnectedToLiveTree = false;
 
                 //--------------------------------------
                 // Remove from the list of popups:

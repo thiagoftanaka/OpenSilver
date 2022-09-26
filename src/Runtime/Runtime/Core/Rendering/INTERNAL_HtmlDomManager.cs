@@ -53,14 +53,14 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
         //------
         // All JavaScript functions (called through dynamic objects) for manipulating the DOM should go here.
         //------
-        private static readonly Dictionary<string, UIElement> _store;
+        private static readonly Dictionary<string, WeakReference<UIElement>> _store;
         private static readonly ReferenceIDGenerator _idGenerator = new ReferenceIDGenerator();
 
         static INTERNAL_HtmlDomManager()
         {
             if (!IsRunningInJavaScript())
             {
-                _store = new Dictionary<string, UIElement>(2048);
+                _store = new Dictionary<string, WeakReference<UIElement>>(2048);
             }
         }
 
@@ -98,19 +98,24 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
         {
             if (IsRunningInJavaScript())
             {
+#if BRIDGE
                 ((dynamic)domNode).parentNode.removeChild(domNode);
+#endif
             }
 
             else
             {
-                string javaScriptCodeToExecute = $@"
-                    var element = document.getElementById(""{((INTERNAL_HtmlDomElementReference)domNode).UniqueIdentifier}"");
+                var htmlDomElRef = (INTERNAL_HtmlDomElementReference)domNode;
+                var javaScriptCodeToExecute = $@"
+                    var element = document.getElementById(""{htmlDomElRef.UniqueIdentifier}"");
                     if (element) element.parentNode.removeChild(element);";
                 ExecuteJavaScript(javaScriptCodeToExecute, commentForDebugging); // IMPORTANT: This cannot be replaced by "INTERNAL_SimulatorPerformanceOptimizer.QueueJavaScriptCode" because the element may no longer be in the tree when we try to remove it (cf. issues we had with the Grid on 2015.08.26)
-                if (((INTERNAL_HtmlDomElementReference)domNode).Parent != null)
+                if (htmlDomElRef.Parent != null)
                 {
-                    ((INTERNAL_HtmlDomElementReference)domNode).Parent.FirstChild = null;
+                    htmlDomElRef.Parent.FirstChild = null;
                 }
+
+                _store.Remove(htmlDomElRef.UniqueIdentifier);
             }
         }
 
@@ -124,7 +129,7 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
         //[JSReplacement("$domElementRef.parentNode")] // Commented because of a JSIL bug: the attribute is not taken into account: the method is ignored.
 #if BRIDGE
         [Template("{domElementRef}.parentNode")]
-#endif  
+#endif
         public static dynamic GetParentDomElement(dynamic domElementRef)
         {
             if (IsRunningInJavaScript())
@@ -155,7 +160,7 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
         //[JSReplacement("$domElementRef.parentNode")] // Commented because of a JSIL bug: the attribute is not taken into account: the method is ignored.
 #if BRIDGE
         [Template("{domElementRef}.firstChild")]
-#endif  
+#endif
         public static dynamic GetFirstChildDomElement(dynamic domElementRef)
         {
             if (IsRunningInJavaScript())
@@ -856,6 +861,222 @@ function(){
             }
         }
 
+        internal static object CreateTextBlockDomElementAndAppendIt(
+            object parentRef,
+            UIElement associatedUIElement,
+            string whiteSpace)
+        {
+#if PERFSTAT
+            Performance.Counter("CreateTextBlockDomElementAndAppendIt", t0);
+#endif
+            string uniqueIdentifier = NewId();
+
+            var parent = parentRef as INTERNAL_HtmlDomElementReference;
+            if (parent != null)
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createTextBlockElement($0, $1, $2)",
+                    uniqueIdentifier,
+                    parent.UniqueIdentifier,
+                    whiteSpace);
+            }
+            else
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createTextBlockElement($0, $1, $2)",
+                    uniqueIdentifier,
+                    parentRef,
+                    whiteSpace);
+            }
+
+            _store.Add(uniqueIdentifier, new WeakReference<UIElement>(associatedUIElement));
+
+            return new INTERNAL_HtmlDomElementReference(uniqueIdentifier, parent);
+        }
+
+        internal static object CreateCanvasDomElementAndAppendIt(
+            object parentRef,
+            UIElement associatedUIElement)
+        {
+#if PERFSTAT
+            Performance.Counter("CreateCanvasDomElementAndAppendIt", t0);
+#endif
+            string uniqueIdentifier = NewId();
+
+            var parent = parentRef as INTERNAL_HtmlDomElementReference;
+            if (parent != null)
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createCanvasElement($0, $1)",
+                    uniqueIdentifier,
+                    parent.UniqueIdentifier);
+            }
+            else
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createCanvasElement($0, $1)",
+                    uniqueIdentifier,
+                    parentRef);
+            }
+
+            _store.Add(uniqueIdentifier, new WeakReference<UIElement>(associatedUIElement));
+
+            return new INTERNAL_HtmlDomElementReference(uniqueIdentifier, parent);
+        }
+
+        internal static object CreateImageDomElementAndAppendIt(
+            object parentRef,
+            UIElement associatedUIElement)
+        {
+#if PERFSTAT
+            Performance.Counter("CreateImageDomElementAndAppendIt", t0);
+#endif
+            string uniqueIdentifier = NewId();
+
+            var parent = parentRef as INTERNAL_HtmlDomElementReference;
+            if (parent != null)
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createImageElement($0, $1)",
+                    uniqueIdentifier,
+                    parent.UniqueIdentifier);
+            }
+            else
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createImageElement($0, $1)",
+                    uniqueIdentifier,
+                    parentRef);
+            }
+
+            _store.Add(uniqueIdentifier, new WeakReference<UIElement>(associatedUIElement));
+
+            return new INTERNAL_HtmlDomElementReference(uniqueIdentifier, parent);
+        }
+
+        internal static object CreateFrameworkDomElementAndAppendIt(
+            object parentRef,
+            UIElement associatedUIElement,
+            bool enablePointerEvents)
+        {
+#if PERFSTAT
+            Performance.Counter("CreateFrameworkDomElementAndAppendIt", t0);
+#endif
+            string uniqueIdentifier = NewId();
+
+            var parent = parentRef as INTERNAL_HtmlDomElementReference;
+            if (parent != null)
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createFrameworkElement($0, $1, $2)",
+                    uniqueIdentifier,
+                    parent.UniqueIdentifier,
+                    enablePointerEvents);
+            }
+            else
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createFrameworkElement($0, $1, $2)",
+                    uniqueIdentifier,
+                    parentRef,
+                    enablePointerEvents);
+            }
+
+            _store.Add(uniqueIdentifier, new WeakReference<UIElement>(associatedUIElement));
+
+            return new INTERNAL_HtmlDomElementReference(uniqueIdentifier, parent);
+        }
+
+        internal static object CreateRunDomElementAndAppendIt(
+            object parentRef,
+            UIElement associatedUIElement)
+        {
+#if PERFSTAT
+            Performance.Counter("CreateRunDomElementAndAppendIt", t0);
+#endif
+            string uniqueIdentifier = NewId();
+
+            var parent = parentRef as INTERNAL_HtmlDomElementReference;
+            if (parent != null)
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createRunElement($0, $1)",
+                    uniqueIdentifier,
+                    parent.UniqueIdentifier);
+            }
+            else
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createRunElement($0, $1)",
+                    uniqueIdentifier,
+                    parentRef);
+            }
+
+            _store.Add(uniqueIdentifier, new WeakReference<UIElement>(associatedUIElement));
+
+            return new INTERNAL_HtmlDomElementReference(uniqueIdentifier, parent);
+        }
+
+        internal static object CreateShapeOuterDomElementAndAppendIt(
+            object parentRef,
+            UIElement associatedUIElement)
+        {
+#if PERFSTAT
+            Performance.Counter("CreateShapeOuterDomElementAndAppendIt", t0);
+#endif
+            string uniqueIdentifier = NewId();
+
+            var parent = parentRef as INTERNAL_HtmlDomElementReference;
+            if (parent != null)
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createShapeOuterElement($0, $1)",
+                    uniqueIdentifier,
+                    parent.UniqueIdentifier);
+            }
+            else
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createShapeOuterElement($0, $1)",
+                    uniqueIdentifier,
+                    parentRef);
+            }
+
+            _store.Add(uniqueIdentifier, new WeakReference<UIElement>(associatedUIElement));
+
+            return new INTERNAL_HtmlDomElementReference(uniqueIdentifier, parent);
+        }
+
+        internal static object CreateShapeInnerDomElementAndAppendIt(
+            object parentRef,
+            UIElement associatedUIElement)
+        {
+#if PERFSTAT
+            Performance.Counter("CreateShapeInnerDomElementAndAppendIt", t0);
+#endif
+            string uniqueIdentifier = NewId();
+
+            var parent = parentRef as INTERNAL_HtmlDomElementReference;
+            if (parent != null)
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createShapeInnerElement($0, $1)",
+                    uniqueIdentifier,
+                    parent.UniqueIdentifier);
+            }
+            else
+            {
+                OpenSilver.Interop.ExecuteJavaScriptAsync(
+                    @"document.createShapeInnerElement($0, $1)",
+                    uniqueIdentifier,
+                    parentRef);
+            }
+
+            _store.Add(uniqueIdentifier, new WeakReference<UIElement>(associatedUIElement));
+
+            return new INTERNAL_HtmlDomElementReference(uniqueIdentifier, parent);
+        }
+
         public static object CreateDomElementAndInsertIt(string domElementTag, object parentRef, UIElement associatedUIElement, int insertionIndex, string relativePosition) //associatedUIElement is the UIElement of which the current dom element is a part.
         {
 #if PERFSTAT
@@ -927,7 +1148,7 @@ function(){
                 Interop.ExecuteJavaScriptAsync(@"document.createElementSafe($0, $1, $2, $3)", domElementTag, uniqueIdentifier, parentRef, index);
             }
             
-            _store.Add(uniqueIdentifier, associatedUIElement);
+            _store.Add(uniqueIdentifier, new WeakReference<UIElement>(associatedUIElement));
 
             return new INTERNAL_HtmlDomElementReference(uniqueIdentifier, parent); //todo: when parent is null this breaks for the root control, but the whole logic will be replaced with simple "ExecuteJavaScript" calls in the future, so it will not be a problem.
         }
@@ -955,7 +1176,7 @@ var parentElement = document.getElementByIdSafe(""{parentUniqueIdentifier}"");
     parentElement.children[{insertionIndex}].insertAdjacentElement(""{relativePosition}"", newElement);";
 
             ExecuteJavaScript(javaScriptToExecute);
-            _store.Add(uniqueIdentifier, associatedUIElement);
+            _store.Add(uniqueIdentifier, new WeakReference<UIElement>(associatedUIElement));
             return new INTERNAL_HtmlDomElementReference(uniqueIdentifier, (INTERNAL_HtmlDomElementReference)parentRef);
         }
 
@@ -989,7 +1210,7 @@ var parentElement = document.getElementByIdSafe(""{parentUniqueIdentifier}"");
 parentElement.appendChild(newElement);";
 
                 ExecuteJavaScript(javaScriptToExecute);
-                _store.Add(uniqueIdentifier, associatedUIElement);
+                _store.Add(uniqueIdentifier, new WeakReference<UIElement>(associatedUIElement));
                 return new INTERNAL_HtmlDomElementReference(uniqueIdentifier, ((INTERNAL_HtmlDomElementReference)parentRef).Parent);
                 //todo-perfs: check if there is a better solution in terms of performance (while still remaining compatible with all browsers).
 #if !CSHTML5NETSTANDARD
@@ -1009,9 +1230,9 @@ var parentElement = document.getElementByIdSafe(""{parentUniqueIdentifier}"");
 parentElement.appendChild(child);";
 
             ExecuteJavaScript(javaScriptToExecute);
-            if (_store.TryGetValue(parentUniqueIdentifier, out UIElement parent))
+            if (_store.TryGetValue(parentUniqueIdentifier, out var parentWeakRef))
             {
-                _store[childUniqueIdentifier] = parent;
+                _store[childUniqueIdentifier] = parentWeakRef;
             }
         }
 
@@ -1233,9 +1454,16 @@ parentElement.appendChild(child);";
 
             for (int i = elements.Length - 1; i >= 0; i--)
             {
-                if (_store.TryGetValue(elements[i], out UIElement uie))
+                if (_store.TryGetValue(elements[i], out var elemWeakRef))
                 {
-                    yield return uie;
+                    if (elemWeakRef.TryGetTarget(out var uie))
+                    {
+                        yield return uie;
+                    }
+                    else
+                    {
+                        _store.Remove(elements[i]);
+                    }
                 }
             }
         }
@@ -1264,9 +1492,16 @@ parentElement.appendChild(child);";
                     if (!IsNullOrUndefined(jsId))
                     {
                         string id = Convert.ToString(jsId);
-                        if (_store.TryGetValue(id, out UIElement uie))
+                        if (_store.TryGetValue(id, out var elemWeakRef))
                         {
-                            result = uie;
+                            if (elemWeakRef.TryGetTarget(out var uie))
+                            {
+                                result = uie;
+                            }
+                            else
+                            {
+                                _store.Remove(id);
+                            }
                             break;
                         }
                     }

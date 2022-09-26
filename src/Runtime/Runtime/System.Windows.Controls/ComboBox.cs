@@ -18,9 +18,11 @@ using System;
 using System.Threading.Tasks;
 
 #if MIGRATION
+using System.Windows.Automation.Peers;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 #else
+using Windows.UI.Xaml.Automation.Peers;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Input;
 #endif
@@ -55,6 +57,7 @@ namespace Windows.UI.Xaml.Controls
         private ToggleButton _dropDownToggle;
         private ContentPresenter _contentPresenter;
         private FrameworkElement _emptyContent;
+        private bool _suppressCloseOnOutsideClick;
 
         [Obsolete("ComboBox does not support Native ComboBox. Use 'CSHTML5.Native.Html.Controls.NativeComboBox' instead.")]
         public bool UseNativeComboBox
@@ -151,7 +154,11 @@ namespace Windows.UI.Xaml.Controls
             base.OnApplyTemplate();
 
             if (_popup != null)
+            {
+                _popup.PlacementTarget = null;
+                _popup.OutsideClick -= OnOutsideClick;
                 _popup.ClosedDueToOutsideClick -= Popup_ClosedDueToOutsideClick; // Note: we do this here rather than at "OnDetached" because it may happen that the popup is closed after the ComboBox has been removed from the visual tree (in which case, when putting it back into the visual tree, we want the drop down to be in its initial closed state).
+            }
 
             _popup = GetTemplateChild("Popup") as Popup;
           
@@ -165,9 +172,18 @@ namespace Windows.UI.Xaml.Controls
                     _popup.CustomLayout = true;
                 }
                 _popup.MaxHeight = this.MaxDropDownHeight;
+                
+                //todo: once we will have made the following properties (PlacementTarget and Placement) Dependencyproperties, unset it here and set it in the default style.
+                _popup.PlacementTarget = this;
+                _popup.Placement = PlacementMode.Bottom;
+                _popup.INTERNAL_PopupMoved += _popup_INTERNAL_PopupMoved;
+
+                // Make sure the popup gets closed when the user clicks outside the combo box, and listen to the Closed event in order to update the drop-down toggle:
+                _popup.StayOpen = false;
+                _popup.OutsideClick += OnOutsideClick;
+                _popup.ClosedDueToOutsideClick += Popup_ClosedDueToOutsideClick;
             }
 
-            _dropDownToggle = GetTemplateChild("DropDownToggle") as ToggleButton;
             _contentPresenter = GetTemplateChild("ContentPresenter") as ContentPresenter;
             if (_contentPresenter != null)
             {
@@ -179,33 +195,67 @@ namespace Windows.UI.Xaml.Controls
                 _emptyContent = _contentPresenter.Content as FrameworkElement;
             }
 
-            //todo: once we will have made the following properties (PlacementTarget and Placement) Dependencyproperties, unset it here and set it in the default style.
-            _popup.PlacementTarget = _dropDownToggle;
-            _popup.Placement = PlacementMode.Bottom;
-            _popup.INTERNAL_PopupMoved += _popup_INTERNAL_PopupMoved;
-
+            _dropDownToggle = GetTemplateChild("DropDownToggle") as ToggleButton;
             if (_dropDownToggle != null)
             {
                 _dropDownToggle.Checked += DropDownToggle_Checked;
                 _dropDownToggle.Unchecked += DropDownToggle_Unchecked;
             }
 
-            // Make sure the popup gets closed when the user clicks outside the combo box, and listen to the Closed event in order to update the drop-down toggle:
-            if (_popup != null)
-            {
-                _popup.StayOpen = false;
-                _popup.ClosedDueToOutsideClick += Popup_ClosedDueToOutsideClick;
-            }
-            
             UpdatePresenter();
+        }
+
+        /// <summary>
+        /// Provides handling for the <see cref="UIElement.MouseLeftButtonDown"/> event
+        /// that occurs when the left mouse button is pressed while the mouse pointer is
+        /// over the combo box.
+        /// </summary>
+        /// <param name="e">
+        /// The event data.
+        /// </param>
+#if MIGRATION
+        protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+#else
+        protected override void OnPointerPressed(PointerRoutedEventArgs e)
+#endif
+        {
+#if MIGRATION
+            base.OnMouseLeftButtonDown(e);
+#else
+            base.OnPointerPressed(e);
+#endif
+
+            if (e.Handled)
+            {
+                return;
+            }
+
+            e.Handled = true;
+
+            _suppressCloseOnOutsideClick = true;
+            IsDropDownOpen = true;
         }
 
         /// <inheritdoc />
         protected override void OnSelectionChanged(SelectionChangedEventArgs e)
         {
             base.OnSelectionChanged(e);
-            UpdatePresenter();
+
+            if (!IsDropDownOpen)
+            {
+                UpdatePresenter();
+            }
         }
+
+        /// <summary>
+        /// Returns a <see cref="ComboBoxAutomationPeer"/> for use by the Silverlight automation 
+        /// infrastructure.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="ComboBoxAutomationPeer"/> for the <see cref="ComboBox"/> object.
+        /// </returns>
+        protected override AutomationPeer OnCreateAutomationPeer()
+            => new ComboBoxAutomationPeer(this);
 
         internal void NotifyComboBoxItemMouseUp(ComboBoxItem comboBoxItem)
         {
@@ -334,7 +384,7 @@ namespace Windows.UI.Xaml.Controls
                     // Show the popup:
                     if (comboBox._popup != null)
                     {
-                        // add removed 
+                        // add removed
 
                         comboBox._popup.IsOpen = true;
 
@@ -411,6 +461,15 @@ namespace Windows.UI.Xaml.Controls
         /// </summary>
         public static readonly DependencyProperty MaxDropDownHeightProperty =
             DependencyProperty.Register("MaxDropDownHeight", typeof(double), typeof(ComboBox), new PropertyMetadata(200d));
+
+        private void OnOutsideClick(object sender, OutsideClickEventArgs e)
+        {
+            if (_suppressCloseOnOutsideClick)
+            {
+                e.Handled = true;
+                _suppressCloseOnOutsideClick = false;
+            }
+        }
 
         void Popup_ClosedDueToOutsideClick(object sender, EventArgs e)
         {

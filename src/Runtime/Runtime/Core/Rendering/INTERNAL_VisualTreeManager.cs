@@ -210,15 +210,16 @@ namespace CSHTML5.Internal
 
             // Call the "Unloaded" event: (note: in XAML, the "unloaded" event of the parent is called before the "unloaded" event of the children)
             element._isLoaded = false;
-            if (element is FrameworkElement)
+            if (element is FrameworkElement fe)
             {
                 // Detach resizeSensor
-                ((FrameworkElement)element).DetachResizeSensorFromDomElement();
+                fe.DetachResizeSensorFromDomElement();
 
                 // Initialize measure & arrange status
-                ((FrameworkElement)element).ClearMeasureAndArrangeValidation();
+                fe.ClearMeasureAndArrangeValidation();
 
-                ((FrameworkElement)element).INTERNAL_RaiseUnloadedEvent();
+                fe.RaiseUnloadedEvent();
+                fe.UnloadResources();
             }
 
             // Reset all visual-tree related information:
@@ -718,20 +719,6 @@ if(nextSibling != undefined) {
             }
 
             //--------------------------------------------------------
-            // HANDLE BINDING:
-            //--------------------------------------------------------
-
-#if PERFSTAT
-            var t9 = Performance.now();
-#endif
-
-            child.INTERNAL_UpdateBindingsSource();
-
-#if PERFSTAT
-            Performance.Counter("VisualTreeManager: Handle binding", t9);
-#endif
-
-            //--------------------------------------------------------
             // HANDLE TABINDEX:
             //--------------------------------------------------------
 
@@ -782,7 +769,7 @@ if(nextSibling != undefined) {
 #endif
 
             // Raise the "Loaded" event: (note: in XAML, the "loaded" event of the children is called before the "loaded" event of the parent)
-            if (child is FrameworkElement)
+            if (child is FrameworkElement fe)
             {
                 var fe = (FrameworkElement)child;
                 fe.ApplyTemplate();
@@ -795,10 +782,7 @@ if(nextSibling != undefined) {
 #endif
         }
 
-        public static bool IsElementInVisualTree(UIElement child)
-        {
-            return (child.IsConnectedToLiveTree || child is Window || child is PopupRoot); //todo: replace "INTERNAL_VisualParent" with a check of the "_isLoaded" property? (it may work better with bindings, see for example the issue on March 22, where a "Binding" on ListBox.ItemsSource caused the selection to not work properly: it was fixed with a workaround to avoid possible regressions)
-        }
+        public static bool IsElementInVisualTree(UIElement child) => child.IsConnectedToLiveTree;
 
         static void RenderElementsAndRaiseChangedEventOnAllDependencyProperties(DependencyObject dependencyObject)
         {

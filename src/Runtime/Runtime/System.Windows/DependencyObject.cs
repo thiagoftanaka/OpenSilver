@@ -421,15 +421,6 @@ namespace Windows.UI.Xaml
             }
         }
 
-        internal void SetImplicitReferenceValue(DependencyProperty dp, object value)
-        {
-            INTERNAL_PropertyStorage storage;
-            if (INTERNAL_PropertyStore.TryGetStorage(this, dp, value != DependencyProperty.UnsetValue/*create*/, out storage))
-            {
-                INTERNAL_PropertyStore.SetImplicitReferenceValue(storage, value);
-            }
-        }
-
         internal void SetThemeStyleValue(DependencyProperty dp, object value)
         {
             INTERNAL_PropertyStorage storage;
@@ -537,23 +528,6 @@ namespace Windows.UI.Xaml
             INTERNAL_PropertyStorage storage;
             INTERNAL_PropertyStore.TryGetStorage(this, dp, true/*create*/, out storage);
             INTERNAL_PropertyStore.RefreshExpressionCommon(storage, expression, isInStyle); // Set LocalStyle if Binding is from style.
-        }
-
-        internal void INTERNAL_UpdateBindingsSource()
-        {
-            // Note: we make a copy to avoid any errors related to the collection being modified during the "foreach" below.
-            INTERNAL_PropertyStorage[] copyOfCollection = this.INTERNAL_PropertyStorageDictionary.Select(kp => kp.Value).ToArray();
-            foreach (INTERNAL_PropertyStorage storage in copyOfCollection)
-            {
-                if (storage.Entry.IsExpression)
-                {
-                    (storage.LocalValue as BindingExpression)?.OnSourceAvailable(false);
-                }
-                else if (storage.Entry.IsExpressionFromStyle)
-                {
-                    (storage.Entry.ModifiedValue.BaseValue as BindingExpression)?.OnSourceAvailable(false);
-                }
-            }
         }
 
         /// <exclude/>
