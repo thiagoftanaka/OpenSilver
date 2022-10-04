@@ -2273,7 +2273,9 @@ namespace Windows.UI.Xaml.Controls
             for (int i = 0; i < definitions.Count(); ++i)
             {
                 var def = (IDefinitionBase)(definitions.ElementAt(i));
-                desiredSize += def.GetEffectiveMinSize();
+                desiredSize += (def.GetEffectiveUnitType() == GridUnitType.Auto || IsUnderCustomLayout)
+                    ? def.GetEffectiveMinSize()
+                    : def.GetMeasureArrangeSize();
             }
 
             return desiredSize;
