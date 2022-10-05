@@ -328,7 +328,8 @@ namespace Windows.UI.Xaml.Controls
             if (newValue > 0 && source._delayTimer == null)
             {
                 source._delayTimer = new DispatcherTimer();
-                source._delayTimer.Tick += source.PopulateDropDown;
+                source._delayTimer.Tick += (sender, args) =>
+                    Application.Current.RootVisual.Dispatcher.BeginInvoke(() => source.PopulateDropDown(sender, args));
             }
 
             // Set the new tick interval

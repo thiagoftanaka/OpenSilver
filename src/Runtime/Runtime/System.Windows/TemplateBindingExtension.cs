@@ -49,6 +49,13 @@ namespace Windows.UI.Xaml
                     DependencyProperty dp = INTERNAL_TypeToStringsToDependencyProperties.GetPropertyInTypeOrItsBaseTypes(
                         type, propertyName);
 
+                    if (dp == null && DependencyPropertyOwnerType != null)
+                    {
+                        // Trying on TargetObject type in case it was registered there
+                        dp = INTERNAL_TypeToStringsToDependencyProperties.GetPropertyInTypeOrItsBaseTypes(source.GetType(),
+                            propertyName);
+                    }
+
                     if (dp != null)
                     {
                         return new TemplateBindingExpression(source, dp);
