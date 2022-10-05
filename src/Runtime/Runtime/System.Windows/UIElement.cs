@@ -1275,6 +1275,7 @@ namespace Windows.UI.Xaml
                 {
                     //todo: remove "string.Format" on the next line when JSIL will be able to compile without it (there is currently an issue with JSIL).
                     string javaScriptCodeToExecute = @"
+document.onselectstart = null;
 document.onmousedown = null;
 document.onmouseup = null;
 document.onmouseover = null;
@@ -1600,18 +1601,23 @@ document.ondblclick = null;
 
         private void Render()
         {
+            if (this.INTERNAL_VisualParent != null && this.INTERNAL_VisualParent as Canvas != null)
+                return;
+
             if (IsCustomLayoutRoot)
             {
                 IsRendered = true;
                 if (RenderedVisualBounds.Equals(VisualBounds) == false)
                 {
-                    if (RenderedVisualBounds.Width.Equals(VisualBounds.Width) == false)
-                        INTERNAL_HtmlDomManager.GetDomElementStyleForModification(this.INTERNAL_OuterDomElement).width = VisualBounds.Width.ToInvariantString() + "px";
-
-                    if (RenderedVisualBounds.Height.Equals(VisualBounds.Height) == false)
-                        INTERNAL_HtmlDomManager.GetDomElementStyleForModification(this.INTERNAL_OuterDomElement).height = VisualBounds.Height.ToInvariantString() + "px";
+                    FrameworkElement fe = this as FrameworkElement;
 
                     RenderedVisualBounds = VisualBounds;
+
+                    if (fe.IsAutoWidthOnCustomLayoutInternal)
+                        INTERNAL_HtmlDomManager.GetDomElementStyleForModification(this.INTERNAL_OuterDomElement).width = VisualBounds.Width.ToInvariantString() + "px";
+
+                    if (fe.IsAutoHeightOnCustomLayoutInternal)
+                        INTERNAL_HtmlDomManager.GetDomElementStyleForModification(this.INTERNAL_OuterDomElement).height = VisualBounds.Height.ToInvariantString() + "px";
                 }
                 return;
             }
@@ -1768,31 +1774,17 @@ document.ondblclick = null;
         private void BeginUpdateCustomLayout()
         {
             Size savedLastSize = layoutLastSize;
-            Size availableSize = layoutLastSize;
+            layoutMeasuredSize = layoutLastSize;
             FrameworkElement fe = this as FrameworkElement;
             if (fe != null)
             {
-                if (VisualTreeHelper.GetParent(fe) is FrameworkElement parent)
-                {
-                    if (fe.IsAutoWidthOnCustomLayout == null)
-                        fe.IsAutoWidthOnCustomLayout = parent.CheckIsAutoWidth(fe);
-                    if (fe.IsAutoHeightOnCustomLayout == null)
-                        fe.IsAutoHeightOnCustomLayout = parent.CheckIsAutoHeight(fe);
-                }
+                if (fe.IsAutoWidthOnCustomLayoutInternal)
+                    layoutMeasuredSize.Width = double.PositiveInfinity;
+                if (fe.IsAutoHeightOnCustomLayoutInternal)
+                    layoutMeasuredSize.Height = double.PositiveInfinity;
+            }
 
-                if (fe.IsAutoWidthOnCustomLayout.GetValueOrDefault())
-                    availableSize.Width = double.PositiveInfinity;
-                if (fe.IsAutoHeightOnCustomLayout.GetValueOrDefault())
-                    availableSize.Height = double.PositiveInfinity;
-            }
-            if (layoutMeasuredSize == availableSize)
-            {
-                layoutProcessing = false;
-                return;
-            }
-            
-            Measure(availableSize);
-            layoutMeasuredSize = availableSize;
+            Measure(layoutMeasuredSize);
 
             if (savedLastSize != layoutLastSize)
             {
@@ -1801,14 +1793,14 @@ document.ondblclick = null;
             }
             if (fe != null)
             {
-                if (fe.IsAutoWidthOnCustomLayout.GetValueOrDefault())
-                    availableSize.Width = Math.Max(this.DesiredSize.Width, savedLastSize.Width);
+                if (fe.IsAutoWidthOnCustomLayoutInternal)
+                    layoutMeasuredSize.Width = this.DesiredSize.Width;
 
-                if (fe.IsAutoHeightOnCustomLayout.GetValueOrDefault())
-                    availableSize.Height = Math.Max(this.DesiredSize.Height, savedLastSize.Height);
+                if (fe.IsAutoHeightOnCustomLayoutInternal)
+                    layoutMeasuredSize.Height = this.DesiredSize.Height;
             }
 
-            Arrange(new Rect(availableSize));
+            Arrange(new Rect(layoutMeasuredSize));
             if (savedLastSize != layoutLastSize)
             {
                 BeginUpdateCustomLayout();

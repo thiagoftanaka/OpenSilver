@@ -101,7 +101,25 @@ namespace Windows.UI.Xaml
                 nameof(IsAutoWidthOnCustomLayout),
                 typeof(bool?),
                 typeof(FrameworkElement),
-                new PropertyMetadata((object)null));
+                new PropertyMetadata(false));
+
+        internal bool IsAutoWidthOnCustomLayoutInternal
+        {
+            get
+            {
+                if (IsAutoWidthOnCustomLayout.HasValue)
+                {
+                    return IsAutoWidthOnCustomLayout.Value;
+                }
+
+                if (VisualTreeHelper.GetParent(this) is FrameworkElement parent)
+                {
+                    return parent.CheckIsAutoWidth(this);
+                }
+
+                return false;
+            }
+        }
 
         /// <summary>
         /// Gets or sets the Auto Height to the root of CustomLayout
@@ -117,7 +135,25 @@ namespace Windows.UI.Xaml
                 nameof(IsAutoHeightOnCustomLayout),
                 typeof(bool?),
                 typeof(FrameworkElement),
-                new PropertyMetadata((object)null));
+                new PropertyMetadata(false));
+
+        internal bool IsAutoHeightOnCustomLayoutInternal
+        {
+            get
+            {
+                if (IsAutoHeightOnCustomLayout.HasValue)
+                {
+                    return IsAutoHeightOnCustomLayout.Value;
+                }
+
+                if (VisualTreeHelper.GetParent(this) is FrameworkElement parent)
+                {
+                    return parent.CheckIsAutoHeight(this);
+                }
+
+                return false;
+            }
+        }
 
         /// <summary>
         /// Enable or disable measure/arrange layout system in a sub part
@@ -142,10 +178,21 @@ namespace Windows.UI.Xaml
         private static void CustomLayout_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             FrameworkElement fe = d as FrameworkElement;
-            if ((bool)e.NewValue == true && fe.IsCustomLayoutRoot)
-                fe.LayoutRootSizeChanged += Element_SizeChanged;
+
+            if (fe.IsAutoHeightOnCustomLayoutInternal || fe.IsAutoWidthOnCustomLayoutInternal)
+            {
+                if ((bool)e.NewValue && fe.IsCustomLayoutRoot)
+                    fe.LayoutRootSizeChanged += Element_SizeChanged;
+                else
+                    fe.LayoutRootSizeChanged -= Element_SizeChanged;
+            }
             else
-                fe.LayoutRootSizeChanged -= Element_SizeChanged;
+            {
+                if ((bool)e.NewValue && fe.IsCustomLayoutRoot)
+                    fe.SizeChanged += Element_SizeChanged;
+                else
+                    fe.SizeChanged -= Element_SizeChanged;
+            }
         }
 
         private static void Element_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -155,10 +202,21 @@ namespace Windows.UI.Xaml
             if (fe.IsCustomLayoutRoot == false)
                 return;
 
-            double width = Math.Max(0, e.NewSize.Width - fe.Margin.Left - fe.Margin.Right);
-            double height = Math.Max(0, e.NewSize.Height - fe.Margin.Top - fe.Margin.Bottom);
+#if OPENSILVER
+            if (OpenSilver.Interop.IsRunningInTheSimulator_WorkAround)
+#elif BRIDGE
+            if (OpenSilver.Interop.IsRunningInTheSimulator)
+#endif
+            {
+                double width = Math.Max(0, e.NewSize.Width - fe.Margin.Left - fe.Margin.Right);
+                double height = Math.Max(0, e.NewSize.Height - fe.Margin.Top - fe.Margin.Bottom);
 
-            fe.UpdateCustomLayout(new Size(width, height));
+                fe.UpdateCustomLayout(new Size(width, height));
+            }
+            else
+            {
+                fe.UpdateCustomLayout(e.NewSize);
+            }
         }
 
         #region Height property

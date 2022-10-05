@@ -1,30 +1,32 @@
 ﻿
 /*===================================================================================
-*
+* 
 *   Copyright (c) Userware/OpenSilver.net
-*
+*      
 *   This file is part of the OpenSilver Runtime (https://opensilver.net), which is
 *   licensed under the MIT license: https://opensource.org/licenses/MIT
-*
+*   
 *   As stated in the MIT license, "the above copyright notice and this permission
 *   notice shall be included in all copies or substantial portions of the Software."
-*
+*  
 \*====================================================================================*/
 
+using System.Text.Json.Serialization;
 
-using System.Threading;
-
-namespace Runtime.OpenSilver.Tests.Maintenance.MemoryLeak
+namespace OpenSilver.Internal.Controls
 {
-    public class GarbageCollectorTracker
+    internal sealed class QuillDelta
     {
-        public bool IsCollected => CollectedResetEvent.WaitOne(0);
+        [JsonPropertyName("insert")]
+        public string Text { get; set; }
 
-        public ManualResetEvent CollectedResetEvent { get; } = new ManualResetEvent(false);
+        [JsonPropertyName("attributes")]
+        public QuillRangeFormat Attributes { get; set; }
+    }
 
-        public void MarkAsCollected()
-        {
-            CollectedResetEvent.Set();
-        }
+    internal sealed class QuillDeltas
+    {
+        [JsonPropertyName("ops")]
+        public QuillDelta[] Operations { get; set; }
     }
 }
