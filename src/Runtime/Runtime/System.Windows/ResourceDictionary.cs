@@ -1244,7 +1244,7 @@ namespace Windows.UI.Xaml
                 && !feResource.IsLoaded && !feResource.IsLoadedInResourceDictionary)
             {
                 feResource.IsLoadedInResourceDictionary = true;
-                feResource.LoadResources();
+                feResource.RaiseLoadedEventOnResources();
                 feResource.RaiseLoadedEvent();
             }
         }
