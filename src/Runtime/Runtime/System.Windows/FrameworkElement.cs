@@ -158,7 +158,7 @@ namespace Windows.UI.Xaml
         {
             get
             {
-                return (_templateChild == null) ? 0 : 1;
+                return (TemplateChild == null) ? 0 : 1;
             }
         }
 
@@ -171,12 +171,12 @@ namespace Windows.UI.Xaml
         /// </remarks>
         internal override UIElement GetVisualChild(int index)
         {
-            if (_templateChild == null || index != 0)
+            if (TemplateChild == null || index != 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(index));
             }
 
-            return _templateChild;
+            return TemplateChild;
         }
 
         #endregion Visual Children
@@ -318,19 +318,16 @@ namespace Windows.UI.Xaml
         // Note: TemplateChild is an UIElement in WPF.
         internal virtual FrameworkElement TemplateChild
         {
-            get
-            {
-                return this._templateChild;
-            }
+            get => _templateChild;
             set
             {
-                if (this._templateChild != value)
+                if (_templateChild != value)
                 {
-                    INTERNAL_VisualTreeManager.DetachVisualChildIfNotNull(this._templateChild, this);
-                    this.RemoveVisualChild(this._templateChild);
-                    this._templateChild = value;
-                    this.AddVisualChild(this._templateChild);
-                    INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(this._templateChild, this, 0);
+                    INTERNAL_VisualTreeManager.DetachVisualChildIfNotNull(_templateChild, this);
+                    RemoveVisualChild(_templateChild);
+                    _templateChild = value;
+                    AddVisualChild(_templateChild);
+                    INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(_templateChild, this, 0);
                 }
             }
         }
@@ -338,13 +335,7 @@ namespace Windows.UI.Xaml
         /// <summary>
         /// Gets the element that should be used as the StateGroupRoot for VisualStateMangager.GoToState calls
         /// </summary>
-        internal virtual FrameworkElement StateGroupsRoot
-        {
-            get
-            {
-                return _templateChild;
-            }
-        }
+        internal virtual FrameworkElement StateGroupsRoot => TemplateChild;
 
         //--------------------------------------
         // Note: this is a "partial" class. For anything related to Size and Alignment, please refer to the other file ("FrameworkElement_HandlingSizeAndAlignment.cs").
@@ -1327,8 +1318,11 @@ namespace Windows.UI.Xaml
             Size MaxSize = new Size(MaxWidth, MaxHeight);
             Size size = new Size(Width, Height);
 
-            availableSize.Width = Math.Max(0, availableSize.Width - Margin.Left - Margin.Right);
-            availableSize.Height = Math.Max(0, availableSize.Height - Margin.Top - Margin.Bottom);
+            if (!this.IsCustomLayoutRoot)
+            {
+                availableSize.Width = Math.Max(0, availableSize.Width - Margin.Left - Margin.Right);
+                availableSize.Height = Math.Max(0, availableSize.Height - Margin.Top - Margin.Bottom);
+            }
             
             availableSize = size.Combine(availableSize).Bounds(MinSize, MaxSize);
 
@@ -1339,8 +1333,11 @@ namespace Windows.UI.Xaml
             measuredSize = new Size(w, h);
             measuredSize = size.Combine(measuredSize).Bounds(MinSize, MaxSize);
 
-            measuredSize.Width = Math.Max(0, measuredSize.Width + Margin.Left + Margin.Right);
-            measuredSize.Height = Math.Max(0, measuredSize.Height + Margin.Top + Margin.Bottom);
+            if (!this.IsCustomLayoutRoot)
+            {
+                measuredSize.Width = Math.Max(0, measuredSize.Width + Margin.Left + Margin.Right);
+                measuredSize.Height = Math.Max(0, measuredSize.Height + Margin.Top + Margin.Bottom);
+            }
 
             return measuredSize;
         }

@@ -101,7 +101,7 @@ namespace Windows.UI.Xaml
                 nameof(IsAutoWidthOnCustomLayout),
                 typeof(bool?),
                 typeof(FrameworkElement),
-                new PropertyMetadata(false));
+                new PropertyMetadata((object)null));
 
         internal bool IsAutoWidthOnCustomLayoutInternal
         {
@@ -135,7 +135,7 @@ namespace Windows.UI.Xaml
                 nameof(IsAutoHeightOnCustomLayout),
                 typeof(bool?),
                 typeof(FrameworkElement),
-                new PropertyMetadata(false));
+                new PropertyMetadata((object)null));
 
         internal bool IsAutoHeightOnCustomLayoutInternal
         {
@@ -178,21 +178,10 @@ namespace Windows.UI.Xaml
         private static void CustomLayout_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             FrameworkElement fe = d as FrameworkElement;
-
-            if (fe.IsAutoHeightOnCustomLayoutInternal || fe.IsAutoWidthOnCustomLayoutInternal)
-            {
-                if ((bool)e.NewValue && fe.IsCustomLayoutRoot)
-                    fe.LayoutRootSizeChanged += Element_SizeChanged;
-                else
-                    fe.LayoutRootSizeChanged -= Element_SizeChanged;
-            }
+            if ((bool)e.NewValue && fe.IsCustomLayoutRoot)
+                fe.LayoutRootSizeChanged += Element_SizeChanged;
             else
-            {
-                if ((bool)e.NewValue && fe.IsCustomLayoutRoot)
-                    fe.SizeChanged += Element_SizeChanged;
-                else
-                    fe.SizeChanged -= Element_SizeChanged;
-            }
+                fe.LayoutRootSizeChanged -= Element_SizeChanged;
         }
 
         private static void Element_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -587,9 +576,9 @@ namespace Windows.UI.Xaml
                                 styleOfOuterDomElement.marginRight = "auto";
                                 if (!(fe is ScrollViewer) && !(fe is WrapPanel)) // Note: we don't know how to handle horizontal alignment properly for the ScrollViewer and the WrapPanel
                                 {
+                                    styleOfOuterDomElement.display = "table";
                                     if (!isCSSGrid || !(fe is Grid))
                                     {
-                                        styleOfOuterDomElement.display = "table";
                                         if (INTERNAL_HtmlDomManager.IsNotUndefinedOrNull(styleOfChildOfOuterDomElement))
                                         {
                                             //Example of the note below: cf at the same place in case HorizontalAlignment.Left of the switch statement
@@ -613,9 +602,9 @@ namespace Windows.UI.Xaml
                                 styleOfOuterDomElement.marginRight = "0px";
                                 if (!(fe is ScrollViewer) && !(fe is WrapPanel)) // Note: we don't know how to handle horizontal alignment properly for the ScrollViewer and the WrapPanel
                                 {
+                                    styleOfOuterDomElement.display = "table";
                                     if (!isCSSGrid || !(fe is Grid))
                                     {
-                                        styleOfOuterDomElement.display = "table";
                                         if (INTERNAL_HtmlDomManager.IsNotUndefinedOrNull(styleOfChildOfOuterDomElement))
                                         {
                                             //Example of the note below: cf at the same place in case HorizontalAlignment.Left of the switch statement
