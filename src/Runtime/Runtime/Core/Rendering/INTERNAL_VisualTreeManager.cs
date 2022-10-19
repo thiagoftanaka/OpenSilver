@@ -771,7 +771,6 @@ if(nextSibling != undefined) {
             // Raise the "Loaded" event: (note: in XAML, the "loaded" event of the children is called before the "loaded" event of the parent)
             if (child is FrameworkElement fe)
             {
-                fe.ApplyTemplate();
                 fe.RaiseLoadedEvent();
                 fe.InvalidateMeasure();
             }
