@@ -1,5 +1,7 @@
 using System.IO;
 using System.Security;
+using System.Threading.Tasks;
+using OpenSilver.IO;
 
 #if MIGRATION
 namespace System.Windows.Controls
@@ -7,8 +9,7 @@ namespace System.Windows.Controls
 namespace Windows.UI.Xaml.Controls
 #endif
 {
-    [OpenSilver.NotImplemented]
-    public sealed partial class SaveFileDialog
+    public sealed class SaveFileDialog
     {
         [OpenSilver.NotImplemented]
         public string Filter
@@ -69,10 +70,15 @@ namespace Windows.UI.Xaml.Controls
         //   T:System.InvalidOperationException:
         //     No file was selected in the dialog box.
         [SecuritySafeCritical]
-        [OpenSilver.NotImplemented]
         public Stream OpenFile()
         {
-            return null;
+            MemoryFileStream memoryFileStream = new MemoryFileStream(WriteCallback);
+            return memoryFileStream;
+        }
+
+        private void WriteCallback(byte[] bytes)
+        {
+            SaveFile(bytes, Path.ChangeExtension(DefaultFileName ?? "data", DefaultExt ?? "dat"));
         }
 
         //
@@ -93,10 +99,58 @@ namespace Windows.UI.Xaml.Controls
         //     Active Scripting in Internet Explorer is disabled.-or-The call to the System.Windows.Controls.OpenFileDialog.ShowDialog
         //     method was not made from user-initiated code or too much time passed between
         //     user-initiation and the display of the dialog.
-        [OpenSilver.NotImplemented]
         public bool? ShowDialog()
         {
-            return null;
+            return true;
+        }
+
+        public async void SaveFile(byte[] bytes, string filename)
+        {
+            await FileSaver.SaveBase64ToFile(Convert.ToBase64String(bytes), filename);
+        }
+    }
+
+    public static class FileSaver
+    {
+        static bool _jsLibraryWasLoaded;
+
+        public static async Task SaveBase64ToFile(string base64, string filename)
+        {
+            if (base64 == null)
+            {
+                throw new ArgumentNullException(nameof(base64));
+            }
+            if (filename == null)
+            {
+                throw new ArgumentNullException(nameof(filename));
+            }
+
+            if (await Initialize())
+            {
+                OpenSilver.Interop.ExecuteJavaScript(@"const binaryString = atob($0);
+                    var uInt8 = new Uint8Array(binaryString.length);
+                    for (var i = 0; i < binaryString.length; i++) uInt8[i] = binaryString.charCodeAt(i);
+
+                    const fileStream = streamSaver.createWriteStream($1, {
+                        size: uInt8.byteLength, // (optional filesize) Will show progress
+                        writableStrategy: undefined, // (optional)
+                        readableStrategy: undefined  // (optional)
+                    });
+
+                    const writer = fileStream.getWriter();
+                    writer.write(uInt8);
+                    writer.close();", base64, filename);
+            }
+        }
+
+        static async Task<bool> Initialize()
+        {
+            if (!_jsLibraryWasLoaded)
+            {
+                await OpenSilver.Interop.LoadJavaScriptFile("https://cdn.jsdelivr.net/npm/streamsaver@2.0.6/StreamSaver.min.js");
+                _jsLibraryWasLoaded = true;
+            }
+            return true;
         }
     }
 }

@@ -100,6 +100,7 @@
 		<Compile Include="OpenSilver\Internal\Xaml\IXamlComponentLoader.cs" />
 		<Compile Include="OpenSilver\Internal\Xaml\ServiceProviderContext.cs" />
 		<Compile Include="OpenSilver\IO\MemoryFileInfo.cs" />
+		<Compile Include="OpenSilver\IO\MemoryFileStream.cs" />
 		<Compile Include="OpenSilver\NotImplementedAttribute.cs" />
 		<Compile Include="PagedCollectionView\CollectionViewGroupInternal.cs" />
 		<Compile Include="PagedCollectionView\CollectionViewGroupRoot.cs" />
@@ -521,7 +522,7 @@
 		<Compile Include="System.Windows.Browser\WORKINPROGRESS\ScriptableTypeAttribute.cs" />
 		<Compile Include="System.Windows.Controls\OpenFileDialog.cs" />
 		<Compile Include="System.Windows.Controls\RichTextBox\RichTextBox.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\SaveFileDialog.cs" />
+		<Compile Include="System.Windows.Controls\SaveFileDialog.cs" />
 		<Compile Include="System.Windows.Controls\ScrollContentPresenter.cs" />
 		<Compile Include="System.Windows.Controls\VirtualizingPanel.cs" />
 		<Compile Include="System.Windows.Controls\VirtualizingStackPanel.cs" />
