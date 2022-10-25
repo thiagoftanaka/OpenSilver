@@ -494,7 +494,7 @@ namespace Windows.UI.Xaml.Data
 
         private void OnSourceErrorsChanged(object sender, DataErrorsChangedEventArgs e)
         {
-            if (e.PropertyName == _propertyPathWalker.FirstNode.PropertyName)
+            if (e.PropertyName == _propertyPathWalker.FinalNode.PropertyName)
             {
                 UpdateNotifyDataErrors((INotifyDataErrorInfo)sender, e.PropertyName, DependencyProperty.UnsetValue);
             }
