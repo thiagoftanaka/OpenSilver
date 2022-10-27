@@ -347,6 +347,8 @@ namespace Windows.UI.Xaml
             }
         }
 
+        internal bool KeepHiddenInFirstRender { get; set; }
+
         public UIElement()
         {
             DesiredSize = new Size();
@@ -1778,7 +1780,7 @@ document.ondblclick = null;
 
         public void UpdateLayout()
         {
-
+            LayoutManager.Current.UpdateLayout();
         }
 
         internal void UpdateCustomLayout(Size newSize)
@@ -1820,10 +1822,10 @@ document.ondblclick = null;
             if (fe != null)
             {
                 if (fe.IsAutoWidthOnCustomLayoutInternal)
-                    availableSize.Width = Math.Max(this.DesiredSize.Width, savedLastSize.Width);
+                    availableSize.Width = this.DesiredSize.Width;
 
                 if (fe.IsAutoHeightOnCustomLayoutInternal)
-                    availableSize.Height = Math.Max(this.DesiredSize.Height, savedLastSize.Height);
+                    availableSize.Height = this.DesiredSize.Height;
             }
 
             Arrange(new Rect(availableSize));
