@@ -23,6 +23,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CSHTML5.Internal;
 
 
 #if MIGRATION
@@ -160,6 +161,13 @@ namespace Windows.UI.Xaml.Controls
             CSHTML5.Interop.ExecuteJavaScript(@"$0.calendarContainer.style.pointerEvents = 'auto'", _flatpickrInstance);
             // Hide the input area:
             CSHTML5.Interop.ExecuteJavaScript(@"$0.style.display = 'none'", div);
+
+            string id = INTERNAL_HtmlDomManager.NewId();
+            OpenSilver.Interop.ExecuteJavaScript(@"$0.calendarContainer.id = $1", _flatpickrInstance, id);
+            INTERNAL_OuterDomElement =
+                INTERNAL_InnerDomElement =
+                    INTERNAL_AdditionalOutsideDivForMargins =
+                        new INTERNAL_HtmlDomElementReference(id, (INTERNAL_AdditionalOutsideDivForMargins as INTERNAL_HtmlDomElementReference)?.Parent);
         }
 
         static void WorkaroundJSILBug(object calendarInstance, object year, object month, object day)

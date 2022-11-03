@@ -1119,7 +1119,7 @@ function(){
             }
         }
 
-        private static string NewId() => "id" + _idGenerator.NewId().ToString();
+        public static string NewId() => "id" + _idGenerator.NewId().ToString();
 
 #if !BRIDGE
         [JSReplacement("null")]
