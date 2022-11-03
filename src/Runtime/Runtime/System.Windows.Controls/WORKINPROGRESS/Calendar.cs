@@ -38,7 +38,8 @@ namespace Windows.UI.Xaml.Controls
         /// A collection of dates that cannot be selected. The default value is an empty collection.
         /// </returns>
         [OpenSilver.NotImplemented]
-        public CalendarBlackoutDatesCollection BlackoutDates { get; private set; }
+        public CalendarBlackoutDatesCollection BlackoutDates { get; private set; } =
+            new CalendarBlackoutDatesCollection();
 
         /// <summary>
         /// Identifies the <see cref="P:System.Windows.Controls.Calendar.DisplayDate" /> dependency property.
