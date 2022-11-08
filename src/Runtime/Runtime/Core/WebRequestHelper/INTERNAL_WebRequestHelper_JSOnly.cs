@@ -168,11 +168,11 @@ namespace System
                 SaveParameters(address, Method, sender, headers, callbackMethod, body, isAsync);
 
                 // safe request, will resend the request with different settings if it crashes.
-                return SendUnsafeRequest(address.OriginalString, Method, isAsync, body, isBinaryRequest);
+                return SendUnsafeRequest(address.OriginalString, Method, isAsync, body.ToString(), isBinaryRequest);
             }
             else
             {
-                SendRequest((object)_xmlHttpRequest, address.OriginalString, Method, isAsync, body);
+                SendRequest((object)_xmlHttpRequest, address.OriginalString, Method, isAsync, body.ToString());
             }
 
             string result;
@@ -217,7 +217,7 @@ namespace System
 
         // special version of sendRequest, it handles some errors and modifies the credentials mode if needed
         // return directly the result of the right response
-        private string SendUnsafeRequest(string address, string method, bool isAsync, object body, bool isBinaryRequest)
+        private string SendUnsafeRequest(string address, string method, bool isAsync, string body, bool isBinaryRequest)
         {
             ConsoleLog_JSOnly("CredentialsMode is set to Auto: if a preflight error appears below, please ignore it.");
 
@@ -395,21 +395,15 @@ namespace System
             OpenSilver.Interop.ExecuteJavaScriptVoid($"{sRequest}.send({sBody})");
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement("$xmlHttpRequest.send(atob($body))")]
-#else
-        [Template("{xmlHttpRequest}.send(atob({body}))")]
-#endif
-        internal static void SendJavaScriptBinaryXmlHttpRequest(CSHTML5.Types.INTERNAL_JSObjectReference xmlHttpRequest,
-            byte[] body)
+        internal static void SendJavaScriptBinaryXmlHttpRequest(object xmlHttpRequest, byte[] body)
         {
-#if BRIDGE || CSHTML5BLAZOR
+            string sRequest = INTERNAL_InteropImplementation.GetVariableStringForJS(xmlHttpRequest);
+            string sBody = INTERNAL_InteropImplementation.GetVariableStringForJS(Convert.ToBase64String(body));
             // Converting base64 string to ArrayBuffer to send
-            OpenSilver.Interop.ExecuteJavaScript(@"const binaryString = atob($1);
+            OpenSilver.Interop.ExecuteJavaScriptVoid($@"var binaryString = atob({sBody});
                 var bufView = new Uint8Array(binaryString.length);
                 for (var i = 0; i < binaryString.length; i++) bufView[i] = binaryString.charCodeAt(i);
-                $0.send(bufView.buffer);", xmlHttpRequest, Convert.ToBase64String(body));
-#endif
+                {sRequest}.send(bufView.buffer);");
         }
 
         private void OnDownloadStringCompleted()
