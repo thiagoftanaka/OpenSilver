@@ -491,6 +491,30 @@ namespace Windows.UI.Xaml.Controls
 
             var img = INTERNAL_HtmlDomManager.CreateImageDomElementAndAppendIt(div, this);
             _imageDiv = img;
+
+            if (IsUnderCustomLayout)
+            {
+                Action imageLoadedCallback = () => { InvalidateMeasure(); };
+                OpenSilver.Interop.ExecuteJavaScript(
+                    $@"let htmlElement = document.querySelector('#{(div as INTERNAL_HtmlDomElementReference)?.UniqueIdentifier}')
+                    let imgElement = htmlElement.querySelector('img');
+                    function loaded() {{
+                        $0();
+                    }}
+
+                    if (imgElement.complete)
+                    {{
+                        loaded();
+                    }}
+                    else
+                    {{
+                        imgElement.addEventListener('load', loaded);
+                        imgElement.addEventListener('error', function() {{
+                            console.log('Error when loading image');
+                        }});
+                    }}", imageLoadedCallback);
+            }
+
             domElementWhereToPlaceChildren = null;
             return div;
         }
