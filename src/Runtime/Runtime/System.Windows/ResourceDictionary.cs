@@ -68,22 +68,11 @@ namespace Windows.UI.Xaml
         //
         internal ResourceDictionary _parentDictionary;
 
-#if BRIDGE
-        private List<FrameworkElement> _ownerFEs = null;
-        private List<Application> _ownerApps = null;
-#else
         private WeakReferenceList _ownerFEs = null;
         private WeakReferenceList _ownerApps = null;
-#endif
 
-#if BRIDGE
-        // The object that becomes the InheritanceContext of all eligible
-        // values in the dictionary - typically the principal owner of the dictionary.        
-        private DependencyObject _inheritanceContext;
-#else
         // We store a weak reference so that the dictionary does not leak the owner.
         private WeakReference _inheritanceContext;
-#endif
 
         // a dummy DO, used as the InheritanceContext when the dictionary's owner is
         // not itself a DO
@@ -256,14 +245,61 @@ namespace Windows.UI.Xaml
         /// </exception>
         public void Add(object key, object value)
         {
+            bool isImplicitStyle = false;
+            bool isImplicitDataTemplate = false;
+
+            switch (key)
+            {
+                case Type type:
+                    if (value is not Style style)
+                    {
+                        throw new ArgumentException("For a Type key the value must be a Style.");
+                    }
+                    if (style.TargetType != type)
+                    {
+                        throw new ArgumentException("For a Type key the Style value must have TargetType which is equals to key.");
+                    }
+                    isImplicitStyle = true;
+                    break;
+
+                case DataTemplateKey:
+                    if (value is not DataTemplate)
+                    {
+                        throw new ArgumentException("For a key of the type DataTemplateKey, value must be a DataTemplate.");
+                    }
+                    isImplicitDataTemplate = true;
+                    break;
+
+                case string:
+                    break;
+
+                default:
+                    throw new ArgumentException("Key must be a Type, a DataTemplateKey or a String.");
+            }
+
             if (value is null)
             {
                 throw new NotSupportedException("Null value not supported in a ResourceDictionary.");
             }
 
-            this.AddInternal(key, value, true);
+            AddInternal(key, value, isImplicitStyle, isImplicitDataTemplate);
         }
 
+        /// <summary>
+        /// Adds an item to the <see cref="ResourceDictionary"/>.
+        /// </summary>
+        /// <param name="key">
+        /// The string key of the item to add.
+        /// </param>
+        /// <param name="value">
+        /// The item value to add.
+        /// </param>
+        /// <exception cref="NotSupportedException">
+        /// Attempted to add null as a value.
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// Attempted to add an item with a key that already exists in this <see cref="ResourceDictionary"/>.
+        /// </exception>
         public void Add(string key, object value)
         {
             if (value is null)
@@ -271,7 +307,7 @@ namespace Windows.UI.Xaml
                 throw new NotSupportedException("Null value not supported in a ResourceDictionary.");
             }
 
-            this.AddInternal(key, value, false);
+            AddInternal(key, value, false, false);
         }
 
         /// <summary>
@@ -328,7 +364,7 @@ namespace Windows.UI.Xaml
                 // Note: we do the search in reversed order as it is the 
                 // Silverlight and WPF behavior.
                 //
-                for (int i = this._mergedDictionaries.Count - 1; (i > -1) && !result; i--)
+                for (int i = this._mergedDictionaries.CountInternal - 1; (i > -1) && !result; i--)
                 {
                     result = this._mergedDictionaries[i].Contains(key);
                 }
@@ -359,18 +395,9 @@ namespace Windows.UI.Xaml
         /// </param>
         public void CopyTo(Array array, int index)
         {
-#if BRIDGE
-            // For some reasons, System.Collections.DictionaryEntry
-            // seems to not exists when running an app with Bridge...
-            throw new NotImplementedException();
-#else
             this.CopyTo(array as DictionaryEntry[], index);
-#endif
         }
 
-        // For some reasons, System.Collections.DictionaryEntry
-        // seems to not exists when running an app with Bridge...
-#if !BRIDGE
         /// <summary>
         ///     Copies the dictionary's elements to a one-dimensional
         ///     Array instance at the specified index.
@@ -391,7 +418,6 @@ namespace Windows.UI.Xaml
             }
             ((ICollection)this._baseDictionary).CopyTo(array, arrayIndex);
         }
-#endif
 
         /// <summary>
         /// Exposes the enumerator, which supports a simple iteration over a non-generic
@@ -537,7 +563,7 @@ namespace Windows.UI.Xaml
 
         void ICollection<KeyValuePair<object, object>>.Add(KeyValuePair<object, object> item)
         {
-            this.AddInternal(item.Key, item.Value, true);
+            Add(item.Key, item.Value);
         }
 
         void ICollection<KeyValuePair<object, object>>.CopyTo(KeyValuePair<object, object>[] array, int arrayIndex)
@@ -591,11 +617,7 @@ namespace Windows.UI.Xaml
 
                 if (inheritanceContext != null)
                 {
-#if BRIDGE
-                    this._inheritanceContext = inheritanceContext;
-#else
                     this._inheritanceContext = new WeakReference(inheritanceContext);
-#endif
 
                     // set InheritanceContext for the existing values
                     this.AddInheritanceContextToValues();
@@ -603,11 +625,7 @@ namespace Windows.UI.Xaml
                 else
                 {
                     // if the first owner is ineligible, use a dummy
-#if BRIDGE
-                    this._inheritanceContext = DummyInheritanceContext;
-#else
                     this._inheritanceContext = new WeakReference(DummyInheritanceContext);
-#endif
 
                     // set InheritanceContext for the existing values
                     this.AddInheritanceContextToValues();
@@ -630,11 +648,7 @@ namespace Windows.UI.Xaml
             {
                 if (this._ownerFEs == null)
                 {
-#if BRIDGE
-                    this._ownerFEs = new List<FrameworkElement>(1);
-#else
                     this._ownerFEs = new WeakReferenceList(1);
-#endif
                 }
                 else if (this._ownerFEs.Contains(fe) && this.ContainsCycle(this))
                 {
@@ -656,11 +670,7 @@ namespace Windows.UI.Xaml
                 {
                     if (this._ownerApps == null)
                     {
-#if BRIDGE
-                        this._ownerApps = new List<Application>(1);
-#else
                         this._ownerApps = new WeakReferenceList(1);
-#endif
                     }
                     else if (this._ownerApps.Contains(app) && this.ContainsCycle(this))
                     {
@@ -806,14 +816,12 @@ namespace Windows.UI.Xaml
                             {
                                 app.HasImplicitStylesInResources = true;
                             }
-
-                            // todo: implement this.
-                            //// If this dictionary has been initialized fire an invalidation
-                            //// to let the tree know of this change.
-                            //if (shouldInvalidate)
-                            //{
-                            //    app.InvalidateResourceReferences(info);
-                            //}
+                            
+                            if (shouldInvalidate)
+                            {
+                                app.InvalidateStyleCache(info);
+                                // app.InvalidateResourceReferences(info);
+                            }
                         }
                     }
                 }
@@ -822,16 +830,15 @@ namespace Windows.UI.Xaml
 
         private void OnMergedDictionariesChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            List<ResourceDictionary> oldDictionaries = null;
-            List<ResourceDictionary> newDictionaries = null;
-            ResourceDictionary mergedDictionary;
+            ResourceDictionary oldDictionary = null;
+            ResourceDictionary newDictionary = null;
             ResourcesChangeInfo info;
 
             if (e.Action != NotifyCollectionChangedAction.Reset)
             {
                 Debug.Assert(
-                    (e.NewItems != null && e.NewItems.Count > 0) ||
-                    (e.OldItems != null && e.OldItems.Count > 0),
+                    (e.NewItems != null && e.NewItems.Count == 1) ||
+                    (e.OldItems != null && e.OldItems.Count == 1),
                     "The NotifyCollectionChanged event fired when no dictionaries were added or removed");
 
                 // If one or more resource dictionaries were removed we
@@ -841,15 +848,8 @@ namespace Windows.UI.Xaml
                 if (e.Action == NotifyCollectionChangedAction.Remove ||
                     e.Action == NotifyCollectionChangedAction.Replace)
                 {
-                    oldDictionaries = new List<ResourceDictionary>(e.OldItems.Count);
-
-                    for (int i = 0; i < e.OldItems.Count; i++)
-                    {
-                        mergedDictionary = (ResourceDictionary)e.OldItems[i];
-                        oldDictionaries.Add(mergedDictionary);
-
-                        this.RemoveParentOwners(mergedDictionary);
-                    }
+                    oldDictionary = (ResourceDictionary)e.OldItems[0];
+                    RemoveParentOwners(oldDictionary);
                 }
 
                 // If one or more resource dictionaries were added to the merged
@@ -858,36 +858,30 @@ namespace Windows.UI.Xaml
                 if (e.Action == NotifyCollectionChangedAction.Add ||
                     e.Action == NotifyCollectionChangedAction.Replace)
                 {
-                    newDictionaries = new List<ResourceDictionary>(e.NewItems.Count);
+                    newDictionary = (ResourceDictionary)e.NewItems[0];
 
-                    for (int i = 0; i < e.NewItems.Count; i++)
+                    // If the merged dictionary HasImplicitStyle mark the outer dictionary the same.
+                    if (!HasImplicitStyles && newDictionary.HasImplicitStyles)
                     {
-                        mergedDictionary = (ResourceDictionary)e.NewItems[i];
-                        newDictionaries.Add(mergedDictionary);
-
-                        // If the merged dictionary HasImplicitStyle mark the outer dictionary the same.
-                        if (!this.HasImplicitStyles && mergedDictionary.HasImplicitStyles)
-                        {
-                            this.HasImplicitStyles = true;
-                        }
-
-                        // If the merged dictionary HasImplicitDataTemplates mark the outer dictionary the same.
-                        if (!this.HasImplicitDataTemplates && mergedDictionary.HasImplicitDataTemplates)
-                        {
-                            this.HasImplicitDataTemplates = true;
-                        }
-
-                        // If the parent dictionary is a theme dictionary mark the merged dictionary the same.
-                        if (this.IsThemeDictionary)
-                        {
-                            mergedDictionary.IsThemeDictionary = true;
-                        }
-
-                        this.PropagateParentOwners(mergedDictionary);
+                        HasImplicitStyles = true;
                     }
+
+                    // If the merged dictionary HasImplicitDataTemplates mark the outer dictionary the same.
+                    if (!HasImplicitDataTemplates && newDictionary.HasImplicitDataTemplates)
+                    {
+                        HasImplicitDataTemplates = true;
+                    }
+
+                    // If the parent dictionary is a theme dictionary mark the merged dictionary the same.
+                    if (IsThemeDictionary)
+                    {
+                        newDictionary.IsThemeDictionary = true;
+                    }
+
+                    PropagateParentOwners(newDictionary);
                 }
 
-                info = new ResourcesChangeInfo(oldDictionaries, newDictionaries, false, false, null);
+                info = new ResourcesChangeInfo(oldDictionary, newDictionary);
             }
             else
             {
@@ -897,8 +891,7 @@ namespace Windows.UI.Xaml
 
             // Notify the owners of the change and fire
             // invalidation if already initialized
-
-            this.NotifyOwners(info);
+            NotifyOwners(info);
         }
 
         /// <summary>
@@ -909,7 +902,7 @@ namespace Windows.UI.Xaml
         {
             if (this._mergedDictionaries != null)
             {
-                for (int i = 0; i < this._mergedDictionaries.Count; i++)
+                for (int i = 0; i < this._mergedDictionaries.CountInternal; i++)
                 {
                     this._mergedDictionaries[i].AddOwner(owner);
                 }
@@ -924,7 +917,7 @@ namespace Windows.UI.Xaml
         {
             if (this._mergedDictionaries != null)
             {
-                for (int i = 0; i < this._mergedDictionaries.Count; i++)
+                for (int i = 0; i < this._mergedDictionaries.CountInternal; i++)
                 {
                     this._mergedDictionaries[i].RemoveOwner(owner);
                 }
@@ -950,11 +943,7 @@ namespace Windows.UI.Xaml
 
                 if (mergedDictionary._ownerFEs == null)
                 {
-#if BRIDGE
-                    mergedDictionary._ownerFEs = new List<FrameworkElement>(this._ownerFEs.Count);
-#else
                     mergedDictionary._ownerFEs = new WeakReferenceList(this._ownerFEs.Count);
-#endif
                 }
 
                 foreach (FrameworkElement fe in this._ownerFEs)
@@ -972,11 +961,7 @@ namespace Windows.UI.Xaml
 
                 if (mergedDictionary._ownerApps == null)
                 {
-#if BRIDGE
-                    mergedDictionary._ownerApps = new List<Application>(this._ownerApps.Count);
-#else
                     mergedDictionary._ownerApps = new WeakReferenceList(this._ownerApps.Count);
-#endif
                 }
 
                 foreach (Application app in _ownerApps)
@@ -1038,13 +1023,9 @@ namespace Windows.UI.Xaml
         {
             get
             {
-#if BRIDGE
-                return this._inheritanceContext;
-#else
                 return (_inheritanceContext != null)
                     ? (DependencyObject)_inheritanceContext.Target
                     : null;
-#endif
             }
         }
 
@@ -1152,7 +1133,7 @@ namespace Windows.UI.Xaml
                     // Note: we do the search in reversed order as it is the 
                     // Silverlight and WPF behavior.
                     //
-                    for (int i = this._mergedDictionaries.Count - 1; (i > -1); i--)
+                    for (int i = this._mergedDictionaries.CountInternal - 1; (i > -1); i--)
                     {
                         value = this._mergedDictionaries[i].GetItem(key);
                         if (value != null)
@@ -1176,46 +1157,45 @@ namespace Windows.UI.Xaml
                 throw new NotSupportedException("Null value not supported in a ResourceDictionary.");
             }
 
-            object oldItem;
-            if (!this._baseDictionary.TryGetValue(key, out oldItem) ||
-                oldItem != value)
+            if (!_baseDictionary.TryGetValue(key, out object oldItem) || oldItem != value)
             {
-                this._baseDictionary[key] = value;
+                _baseDictionary[key] = value;
 
                 // Update the HasImplicitStyles flag
-                this.UpdateHasImplicitStyles(key);
+                UpdateHasImplicitStyles(key);
 
                 // Update the HasImplicitDataTemplates flag
-                this.UpdateHasImplicitDataTemplates(key);
+                UpdateHasImplicitDataTemplates(key);
 
                 // Notify owners of the change and fire invalidate if already initialized
-                this.NotifyOwners(new ResourcesChangeInfo(key));
+                NotifyOwners(new ResourcesChangeInfo(key));
 
-                if (this.IsLoaded())
+                if (IsLoaded())
                 {
                     UnloadResource(oldItem);
                 }
             }
         }
 
-        private void AddInternal(object key, object value, bool updateFlags)
+        private void AddInternal(object key, object value, bool isImplicitStyle, bool isImplicitDataTemplate)
         {
             // Seal styles and templates within App and Theme dictionary
-            this.SealValue(value);
+            SealValue(value);
 
-            this._baseDictionary.Add(key, value);
+            _baseDictionary.Add(key, value);
 
-            if (updateFlags)
+            if (isImplicitStyle)
             {
-                // Update the HasImplicitKey flag
-                this.UpdateHasImplicitStyles(key);
+                HasImplicitStyles = true;
+            }
 
-                // Update the HasImplicitDataTemplates flag
-                this.UpdateHasImplicitDataTemplates(key);
+            if (isImplicitDataTemplate)
+            {
+                HasImplicitDataTemplates = true;
             }
 
             // Notify owners of the change and fire invalidate if already initialized
-            this.NotifyOwners(new ResourcesChangeInfo(key));
+            NotifyOwners(new ResourcesChangeInfo(key));
         }
 
         internal void LoadResources()
@@ -1320,7 +1300,7 @@ namespace Windows.UI.Xaml
                     //}
                     if (_mergedDictionaries != null)
                     {
-                        for (int i = 0; i < _mergedDictionaries.Count; i++)
+                        for (int i = 0; i < _mergedDictionaries.CountInternal; i++)
                         {
                             _mergedDictionaries[i].IsThemeDictionary = value;
                         }
@@ -1332,7 +1312,14 @@ namespace Windows.UI.Xaml
         internal bool HasImplicitStyles
         {
             get { return ReadPrivateFlag(PrivateFlags.HasImplicitStyles); }
-            set { WritePrivateFlag(PrivateFlags.HasImplicitStyles, value); }
+            set
+            { 
+                WritePrivateFlag(PrivateFlags.HasImplicitStyles, value);
+                if (value && _parentDictionary != null && !_parentDictionary.HasImplicitStyles)
+                {
+                    _parentDictionary.HasImplicitStyles = true;
+                }
+            }
         }
 
         internal bool HasImplicitDataTemplates
@@ -1432,5 +1419,35 @@ namespace Windows.UI.Xaml
         }
 
         #endregion
+
+        internal static class Helpers
+        {
+            internal static Dictionary<Type, Style> BuildImplicitStylesCache(ResourceDictionary rd)
+            {
+                static void AddResourcesToCache(ResourceDictionary rd, Dictionary<Type, Style> cache)
+                {
+                    if (rd._mergedDictionaries != null)
+                    {
+                        for (int i = 0; i < rd._mergedDictionaries.CountInternal; i++)
+                        {
+                            AddResourcesToCache(rd._mergedDictionaries[i], cache);
+                        }
+                    }
+
+                    foreach (var kvp in rd._baseDictionary)
+                    {
+                        if (kvp.Key is Type type)
+                        {
+                            Debug.Assert(kvp.Value is Style);
+                            cache[type] = (Style)kvp.Value;
+                        }
+                    }
+                }
+
+                var cache = new Dictionary<Type, Style>();
+                AddResourcesToCache(rd, cache);
+                return cache;
+            }
+        }
     }
 }
