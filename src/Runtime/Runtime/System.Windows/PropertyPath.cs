@@ -215,7 +215,11 @@ namespace Windows.UI.Xaml
 
         private static DependencyObject AsDependencyObject(object o)
         {
-            return o as DependencyObject ?? throw new InvalidOperationException($"'{o}' must be a DependencyObject.");
+            if (o != null && o is not DependencyObject)
+            {
+                throw new InvalidOperationException($"'{o}' must be a DependencyObject.");
+            }
+            return (DependencyObject)o;
         }
 
         private static DependencyProperty DependencyPropertyFromName(string name, Type ownerType)
