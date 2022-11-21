@@ -36,7 +36,7 @@ using Bridge;
 
 namespace System
 {
-    internal class INTERNAL_WebRequestHelper_JSOnly
+    internal sealed class INTERNAL_WebRequestHelper_JSOnly
     {
         object _xmlHttpRequest;
 
