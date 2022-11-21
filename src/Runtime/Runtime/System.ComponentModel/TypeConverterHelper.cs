@@ -34,7 +34,7 @@ using Windows.UI.Xaml.Media.Animation;
 
 namespace System.ComponentModel
 {
-    internal static class TypeConverterHelper
+    public static class TypeConverterHelper
     {
         // sentinel value used to specify we were not able to find a TypeConverter
         internal static readonly TypeConverter NullConverter = new TypeConverter();

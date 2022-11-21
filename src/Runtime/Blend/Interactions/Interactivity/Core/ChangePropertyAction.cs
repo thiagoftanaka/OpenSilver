@@ -11,6 +11,7 @@ namespace Microsoft.Expression.Interactivity.Core
     using System.Reflection;
     using System.Windows.Interactivity;
     using OpenSilver.Internal.Expression.Interactivity;
+    using TypeConverterHelper = System.ComponentModel.TypeConverterHelper;
 
 #if MIGRATION
     using System.Windows;
@@ -136,7 +137,7 @@ namespace Microsoft.Expression.Interactivity.Core
             this.ValidateProperty(propertyInfo);
 
             object newValue = this.Value;
-            TypeConverter converter = TypeConverterHelper.GetTypeConverter(propertyInfo.PropertyType);
+            TypeConverter converter = TypeConverterHelper.GetConverter(propertyInfo.PropertyType);
 
             Exception innerException = null;
             try
@@ -150,7 +151,7 @@ namespace Microsoft.Expression.Interactivity.Core
                     else
                     {
                         // Try asking the value if it can convert itself to the target property
-                        converter = TypeConverterHelper.GetTypeConverter(this.Value.GetType());
+                        converter = TypeConverterHelper.GetConverter(this.Value.GetType());
                         if (converter != null && converter.CanConvertTo(propertyInfo.PropertyType))
                         {
                             newValue = converter.ConvertTo(
@@ -389,7 +390,7 @@ namespace Microsoft.Expression.Interactivity.Core
             object returnValue = currentValue;
 
             Type propertyType = propertyInfo.PropertyType;
-            TypeConverter converter = TypeConverterHelper.GetTypeConverter(propertyInfo.PropertyType);
+            TypeConverter converter = TypeConverterHelper.GetConverter(propertyInfo.PropertyType);
             object value = this.Value;
 
             if (value == null || currentValue == null)
@@ -401,7 +402,7 @@ namespace Microsoft.Expression.Interactivity.Core
 
             if (converter.CanConvertFrom(value.GetType()))
             {
-                value = TypeConverterHelper.DoConversionFrom(converter, value);
+                value = converter.ConvertFrom(value);
             }
 
             if (typeof(double).IsAssignableFrom(propertyType))
@@ -454,10 +455,10 @@ namespace Microsoft.Expression.Interactivity.Core
                 }
                 else if (!secondParameterType.IsAssignableFrom(valueType))
                 {
-                    TypeConverter additionConverter = TypeConverterHelper.GetTypeConverter(secondParameterType);
+                    TypeConverter additionConverter = TypeConverterHelper.GetConverter(secondParameterType);
                     if (additionConverter.CanConvertFrom(valueType))
                     {
-                        convertedValue = TypeConverterHelper.DoConversionFrom(additionConverter, value);
+                        convertedValue = additionConverter.ConvertFrom(value);
                     }
                     else
                     {

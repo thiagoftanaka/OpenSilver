@@ -15,7 +15,7 @@ using System.Reflection;
 
 namespace System.ComponentModel
 {
-    internal sealed class ReflectedPropertyData
+    public sealed class ReflectedPropertyData
     {
         private readonly string _name;                     // the property name
         private readonly Type _componentClass;             // used to determine if we should all on us or on the designer

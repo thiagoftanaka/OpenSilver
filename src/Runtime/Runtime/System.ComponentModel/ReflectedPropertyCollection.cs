@@ -16,7 +16,7 @@ using System.Collections.Generic;
 
 namespace System.ComponentModel
 {
-    internal sealed class ReflectedPropertyCollection : IReadOnlyList<ReflectedPropertyData>
+    public sealed class ReflectedPropertyCollection : IReadOnlyList<ReflectedPropertyData>
     {
         private IDictionary<string, ReflectedPropertyData> _cachedFoundProperties;
         private readonly ReflectedPropertyData[] _properties;
