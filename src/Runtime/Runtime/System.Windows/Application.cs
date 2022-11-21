@@ -388,10 +388,6 @@ namespace Windows.UI.Xaml
                     ResourceDictionary.Helpers.BuildImplicitStylesCache(Resources) :
                     null;
             }
-            else
-            {
-                Debug.Assert(false, "Unexpected resource update !");
-            }
         }
 
         /// <summary>
