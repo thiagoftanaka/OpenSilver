@@ -24,6 +24,6 @@ namespace OpenSilver.Internal.Xaml
     [EditorBrowsable(EditorBrowsableState.Never)]
     public interface IXamlComponentFactory<T> : IXamlComponentFactory
     {
-        new T CreateComponent();
+        U CreateComponent<U>() where U : T;
     }
 }

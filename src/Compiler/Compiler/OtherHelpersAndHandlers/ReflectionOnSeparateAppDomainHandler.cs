@@ -195,6 +195,11 @@ namespace DotNetForHtml5.Compiler
             return _marshalledObject.IsTypeAnEnum(namespaceName, localTypeName, assemblyNameIfAny);
         }
 
+        public bool IsTypeSealed(string namespaceName, string localTypeName, string assemblyNameIfAny = null)
+        {
+            return _marshalledObject.IsTypeSealed(namespaceName, localTypeName, assemblyNameIfAny);
+        }
+
         public void GetMethodReturnValueTypeInfo(string methodName, string namespaceName, string localTypeName, out string returnValueNamespaceName, out string returnValueLocalTypeName, out string returnValueAssemblyName, out bool isTypeString, out bool isTypeEnum, string assemblyNameIfAny = null)
         {
             _marshalledObject.GetMethodReturnValueTypeInfo(methodName, namespaceName, localTypeName, out returnValueNamespaceName, out returnValueLocalTypeName, out returnValueAssemblyName, out isTypeString, out isTypeEnum, assemblyNameIfAny);
@@ -1202,6 +1207,12 @@ namespace DotNetForHtml5.Compiler
             {
                 var elementType = FindType(namespaceName, localTypeName, assemblyNameIfAny);
                 return elementType.IsEnum;
+            }
+
+            public bool IsTypeSealed(string namespaceName, string localTypeName, string assemblyNameIfAny = null)
+            {
+                var elementType = FindType(namespaceName, localTypeName, assemblyNameIfAny);
+                return elementType.IsSealed;
             }
 
             public void GetMethodReturnValueTypeInfo(string methodName, string namespaceName, string localTypeName, out string returnValueNamespaceName, out string returnValueLocalTypeName, out string returnValueAssemblyName, out bool isTypeString, out bool isTypeEnum, string assemblyNameIfAny = null)

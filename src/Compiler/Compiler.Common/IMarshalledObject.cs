@@ -73,6 +73,8 @@ namespace DotNetForHtml5.Compiler.Common
 
         bool IsTypeAnEnum(string namespaceName, string localTypeName, string assemblyNameIfAny = null);
 
+        bool IsTypeSealed(string namespaceName, string localTypeName, string assemblyNameIfAny = null);
+
         void GetMethodReturnValueTypeInfo(string methodName, string namespaceName, string localTypeName, out string returnValueNamespaceName, out string returnValueLocalTypeName, out string returnValueAssemblyName, out bool isTypeString, out bool isTypeEnum, string assemblyNameIfAny = null);
 
         void GetAttachedPropertyGetMethodInfo(string methodName, string namespaceName, string localTypeName, out string declaringTypeName, out string returnValueNamespaceName, out string returnValueLocalTypeName, out bool isTypeString, out bool isTypeEnum, string assemblyNameIfAny = null);

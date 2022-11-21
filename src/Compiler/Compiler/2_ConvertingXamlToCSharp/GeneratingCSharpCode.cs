@@ -323,6 +323,7 @@ namespace {namespaceStringIfAny}
             string componentParamName,
             string loadComponentImpl,
             string createComponentImpl,
+            string createComponentGenericImpl,
             IEnumerable<string> additionalMethods,
             string uiElementFullyQualifiedTypeName,
             string assemblyName,
@@ -354,9 +355,11 @@ public sealed class {factoryName} : {IXamlComponentFactoryClass}<{componentTypeF
         return CreateComponentImpl();
     }}
 
-    {componentTypeFullName} {IXamlComponentFactoryClass}<{componentTypeFullName}>.CreateComponent()
+    T {IXamlComponentFactoryClass}<{componentTypeFullName}>.CreateComponent<T>()
     {{
-        return CreateComponentImpl();
+        {(createComponentGenericImpl != null ?
+            "return CreateComponentGenericImpl<T>();" :
+            "return (T)CreateComponentImpl();")}
     }}
 
     object {IXamlComponentFactoryClass}.CreateComponent()
@@ -390,6 +393,12 @@ public sealed class {factoryName} : {IXamlComponentFactoryClass}<{componentTypeF
     {{
         {createComponentImpl}
     }}
+
+    {(createComponentGenericImpl != null ?
+        $@"private static T CreateComponentGenericImpl<T>() where T : {componentTypeFullName}
+        {{
+            {createComponentGenericImpl}
+        }}" : "")}
 
     {string.Join(Environment.NewLine + Environment.NewLine, additionalMethods)}
 }}

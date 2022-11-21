@@ -254,6 +254,16 @@ namespace DotNetForHtml5.Compiler
                 GetClassInformationFromXaml(_reader.Document, _reflectionOnSeparateAppDomain,
                     out className, out namespaceStringIfAny, out baseType, out hasCodeBehind);
 
+                //GettingInformationAboutXamlTypes.GetClrNamespaceAndLocalName(_reader.Document.Root.Name, out _,
+                //    out string baseTypeName, out string baseTypeAssemblyName);
+                //int separatorIndex = baseType.LastIndexOf('.');
+                //string baseTypeNamespace = "";
+                //if (separatorIndex != -1)
+                //{
+                //    baseTypeNamespace = baseType.Substring(0, separatorIndex);
+                //}
+                //bool isBaseTypeSealed = _reflectionOnSeparateAppDomain.IsTypeSealed(baseTypeNamespace, baseTypeName, baseTypeAssemblyName);
+
                 if (hasCodeBehind)
                 {
                     string connectMethod = parameters.ComponentConnector.ToString();
@@ -278,6 +288,8 @@ namespace DotNetForHtml5.Compiler
 #endif
 );
 
+                    bool isClassSealed = _reflectionOnSeparateAppDomain.IsTypeSealed(namespaceStringIfAny, className);
+
                     string componentTypeFullName = GetFullTypeName(namespaceStringIfAny, className);
 
                     string factoryClass = GenerateFactoryClass(
@@ -285,6 +297,7 @@ namespace DotNetForHtml5.Compiler
                         GetUniqueName(_reader.Document.Root),
                         parameters.CurrentScope.ToString(),
                         $"return ({componentTypeFullName})global::CSHTML5.Internal.TypeInstantiationHelper.Instantiate(typeof({componentTypeFullName}));",
+                        !isClassSealed ? "return (T)global::CSHTML5.Internal.TypeInstantiationHelper.Instantiate(typeof(T));" : null,
                         parameters.ResultingMethods,
                         $"global::{_metadata.SystemWindowsNS}.UIElement",
                         _assemblyNameWithoutExtension,
@@ -298,6 +311,16 @@ namespace DotNetForHtml5.Compiler
                 }
                 else
                 {
+                    int separatorIndex = baseType.LastIndexOf('.');
+                    string baseTypeNamespace = "";
+                    string baseTypeName = baseType;
+                    if (separatorIndex != -1)
+                    {
+                        baseTypeNamespace = baseType.Substring(0, separatorIndex);
+                        baseTypeName = baseType.Substring(separatorIndex + 1);
+                    }
+                    bool isBaseTypeSealed = _reflectionOnSeparateAppDomain.IsTypeSealed(baseTypeNamespace, baseTypeName);
+
                     string rootElementName = GetUniqueName(_reader.Document.Root);
 
                     string finalCode = GenerateFactoryClass(
@@ -305,6 +328,11 @@ namespace DotNetForHtml5.Compiler
                         rootElementName,
                         parameters.CurrentScope.ToString(),
                         string.Join(Environment.NewLine, $"var {rootElementName} = new {baseType}();", $"LoadComponentImpl({rootElementName});", $"return {rootElementName};"),
+                        !isBaseTypeSealed ?
+                            string.Join(Environment.NewLine,
+                                $"var {rootElementName} = global::System.Activator.CreateInstance<T>();",
+                                $"LoadComponentImpl({rootElementName});", $"return {rootElementName};") :
+                            null,
                         parameters.ResultingMethods,
                         $"global::{_metadata.SystemWindowsNS}.UIElement",
                         _assemblyNameWithoutExtension,
@@ -418,12 +446,13 @@ namespace DotNetForHtml5.Compiler
 
                         parameters.StringBuilder.AppendLine(
                             string.Format(
-                                "var {0} = {3}.XamlContext_PushScope({4}, (({1})new {2}()).CreateComponent());",
+                                "var {0} = {3}.XamlContext_PushScope({4}, (({1})new {2}()).CreateComponent<{5}>());",
                                 elementUniqueNameOrThisKeyword,
                                 $"{IXamlComponentFactoryClass}<global::{_metadata.SystemWindowsNS}.ResourceDictionary>",
                                 XamlResourcesHelper.GenerateClassNameFromComponentUri(absoluteSourceUri),
                                 RuntimeHelperClass,
-                                parameters.CurrentXamlContext
+                                parameters.CurrentXamlContext,
+                                elementTypeInCSharp
                             )
                         );
                     }
