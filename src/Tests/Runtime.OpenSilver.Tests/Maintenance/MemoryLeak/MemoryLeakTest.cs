@@ -17,9 +17,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenSilver.Internal.Xaml.Context;
 using System.Collections.ObjectModel;
 using System.Collections;
-using System.Diagnostics;
 using System.ComponentModel;
 using System.Linq;
+using System.Windows.Media.Effects;
 
 #if MIGRATION
 using System.Windows;
@@ -147,6 +147,26 @@ public class MemoryLeakTest
 
         var c = new GCTracker();
         CreateRemoveTextBoxView(c);
+        MemoryLeaksHelper.Collect();
+
+        Assert.IsTrue(c.IsCollected);
+    }
+
+    [TestMethod]
+    public void Brush_Should_Not_Keep_Owner_Alive()
+    {
+        static void CreateRemoveControlWithBackground(GCTracker tracker, Brush brush)
+        {
+            var control = new MyControl { Background = brush };
+            MemoryLeaksHelper.SetTracker(control, tracker);
+
+            Application.Current.MainWindow.Content = control;
+            Application.Current.MainWindow.Content = null;
+        }
+
+        var c = new GCTracker();
+        var brush = new SolidColorBrush();
+        CreateRemoveControlWithBackground(c, brush);
         MemoryLeaksHelper.Collect();
 
         Assert.IsTrue(c.IsCollected);
@@ -298,6 +318,45 @@ public class MemoryLeakTest
         Assert.IsTrue(c.IsCollected);
     }
 
+    [TestMethod]
+    public void DependencyProperty_Listener_Should_Not_Keep_Binding_Target_Alive()
+    {
+        static void CreateBinding(GCTracker tracker, MyViewModel source)
+        {
+            var target = new MyFrameworkElement();
+            MemoryLeaksHelper.SetTracker(target, tracker);
+            var binding = new Binding("Prop3") { Source = source };
+            BindingOperations.SetBinding(target, MyFrameworkElement.MyPropertyProperty, binding);
+
+            Assert.AreEqual((string)target.MyProperty, (string)source.Prop3);
+        }
+
+        var c = new GCTracker();
+        var source = new MyViewModel { Prop3 = "SomeValue" };
+        CreateBinding(c, source);
+        MemoryLeaksHelper.Collect();
+
+        Assert.IsTrue(c.IsCollected);
+    }
+
+    [TestMethod]
+    public void Effect_Should_Not_Keep_Owner_Alive()
+    {
+        static void CreateElementAndApplyEffect(GCTracker tracker, Effect effect)
+        {
+            var element = new MyControl();
+            MemoryLeaksHelper.SetTracker(element, tracker);
+            element.Effect = effect;
+        }
+
+        var c = new GCTracker();
+        var effect = new BlurEffect();
+        CreateElementAndApplyEffect(c, effect);
+        MemoryLeaksHelper.Collect();
+
+        Assert.IsTrue(c.IsCollected);
+    }
+
     private class MyFrameworkElement : FrameworkElement
     {
         public static readonly DependencyProperty MyPropertyProperty =
@@ -316,7 +375,7 @@ public class MemoryLeakTest
 
     private class MyControl : Control { }
 
-    private class MyViewModel : INotifyPropertyChanged
+    private class MyViewModel : DependencyObject, INotifyPropertyChanged
     {
         private string _prop1;
 
@@ -340,6 +399,19 @@ public class MemoryLeakTest
                 _prop2 = value;
                 OnPropertyChanged(nameof(Prop2));
             }
+        }
+
+        public static readonly DependencyProperty Prop3Property =
+            DependencyProperty.Register(
+                nameof(Prop3),
+                typeof(object),
+                typeof(MyViewModel),
+                null);
+
+        public object Prop3
+        {
+            get => GetValue(Prop3Property);
+            set => SetValue(Prop3Property, value);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

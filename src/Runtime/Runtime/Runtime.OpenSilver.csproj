@@ -62,10 +62,8 @@
 		<Compile Include="OpenSilver\Controls\OpenFileDialog.cs" />
 		<Compile Include="OpenSilver\Internal\Clipboard.cs" />
 		<Compile Include="OpenSilver\Internal\DebounceDispatcher.cs" />
-		<Compile Include="OpenSilver\Internal\ICollectionChangedListener.cs" />
-		<Compile Include="OpenSilver\Internal\IErrorsChangedListener.cs" />
+		<Compile Include="OpenSilver\Internal\DependentList.cs" />
 		<Compile Include="OpenSilver\Internal\INameResolver.cs" />
-		<Compile Include="OpenSilver\Internal\IPropertyChangedListener.cs" />
 		<Compile Include="OpenSilver\Internal\NativeEventsManager.cs" />
 		<Compile Include="OpenSilver\Internal\InheritedPropertyChangedEventArgs.cs" />
 		<Compile Include="OpenSilver\Internal\ReferenceIDGenerator.cs" />
@@ -77,14 +75,13 @@
 		<Compile Include="OpenSilver\Internal\Data\DynamicValueConverter.cs" />
 		<Compile Include="OpenSilver\Internal\Data\IPropertyPathNode.cs" />
 		<Compile Include="OpenSilver\Internal\Data\SourcePropertyNode.cs" />
-		<Compile Include="OpenSilver\Internal\Data\DependencyPropertyListener.cs" />
 		<Compile Include="OpenSilver\Internal\Data\DataExtensionMethods.cs" />
 		<Compile Include="OpenSilver\Internal\Data\EnumerableCollectionView.cs" />
 		<Compile Include="OpenSilver\Internal\Data\IndexedEnumerable.cs" />
 		<Compile Include="OpenSilver\Internal\Data\IDependencyPropertyChangedEventArgs.cs" />
 		<Compile Include="OpenSilver\Internal\Data\IndexedPropertyPathNode.cs" />
-		<Compile Include="OpenSilver\Internal\Data\IPropertyChangedListener.cs" />
-		<Compile Include="OpenSilver\Internal\Data\PropertyChangedListener.cs" />
+		<Compile Include="OpenSilver\Internal\Data\IDependencyPropertyChangedListener.cs" />
+		<Compile Include="OpenSilver\Internal\Data\DependencyPropertyChangedListener.cs" />
 		<Compile Include="OpenSilver\Internal\Data\PropertyPathNode.cs" />
 		<Compile Include="OpenSilver\Internal\Data\PropertyPathParser.cs" />
 		<Compile Include="OpenSilver\Internal\Data\PropertyPathWalker.cs" />
@@ -96,6 +93,7 @@
 			<Link>OpenSilver\Internal\XamlResourcesHelper.cs</Link>
 		</Compile>
 		<Compile Include="OpenSilver\Internal\TokenizerHelper.cs" />
+		<Compile Include="OpenSilver\Internal\WeakEventListener.cs" />
 		<Compile Include="OpenSilver\Internal\Xaml\Context\XamlContext.cs" />
 		<Compile Include="OpenSilver\Internal\Xaml\Context\XamlContextStack.cs" />
 		<Compile Include="OpenSilver\Internal\Xaml\Context\XamlObjectFrame.cs" />
@@ -129,6 +127,7 @@
 		<Compile Include="System.ComponentModel.Composition\WORKINPROGRESS\CompositionInitializer.cs" />
 		<Compile Include="System.Runtime.CompilerServices\DefaultInterpolatedStringHandler.cs" />
 		<Compile Include="System.Runtime.CompilerServices\InterpolatedStringHandlerAttribute.cs" />
+		<Compile Include="System.Runtime.CompilerServices\IsExternalInit.cs" />
 		<Compile Include="System.ServiceModel.Channels\WORKINPROGRESS\PollingDuplexMode.cs" />
 		<Compile Include="System.ServiceModel.Channels\WORKINPROGRESS\PollingDuplexHttpBinding.cs" />
 		<Compile Include="System.ServiceModel\WORKINPROGRESS\PollingDuplexHttpSecurity.cs" />

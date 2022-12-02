@@ -41,7 +41,7 @@ namespace Windows.UI.Xaml.Data
     /// <summary>
     /// Contains information about a single instance of a <see cref="Binding" />.
     /// </summary>
-    public class BindingExpression : BindingExpressionBase, IErrorsChangedListener
+    public class BindingExpression : BindingExpressionBase
     {
         // we are not allowed to change the following in BindingExpression because it is used:
         //  - ParentBinding.Mode
@@ -57,17 +57,17 @@ namespace Windows.UI.Xaml.Data
         internal bool INTERNAL_ForceValidateOnNextSetValue = false;
         internal bool IsUpdating;
         private bool _isAttaching;
-        private IDependencyPropertyChangedListener _propertyListener;
         private DynamicValueConverter _dynamicConverter;
         private object _bindingSource;
         private bool _isUpdateOnLostFocus; // True if this binding expression updates on LostFocus
         private bool _needsUpdate; // True if this binding expression has a pending source update
         private FrameworkElement _mentor;
 
-        private DependencyPropertyListener _dataContextListener;
-        private DependencyPropertyListener _cvsListener;
-        private WeakErrorsChangedListener _sourceErrorsChangedListener;
-        private WeakErrorsChangedListener _valueErrorsChangedListener;
+        private DependencyPropertyChangedListener _targetPropertyListener;
+        private DependencyPropertyChangedListener _dataContextListener;
+        private DependencyPropertyChangedListener _cvsListener;
+        private WeakEventListener<BindingExpression, INotifyDataErrorInfo, DataErrorsChangedEventArgs> _sourceErrorsChangedListener;
+        private WeakEventListener<BindingExpression, INotifyDataErrorInfo, DataErrorsChangedEventArgs> _valueErrorsChangedListener;
         private INotifyDataErrorInfo _dataErrorSource;
         private INotifyDataErrorInfo _dataErrorValue;
 
@@ -87,7 +87,7 @@ namespace Windows.UI.Xaml.Data
             _propertyPathWalker = new PropertyPathWalker(this);
         }
 
-        private void OnDataContextChanged(object sender, IDependencyPropertyChangedEventArgs args)
+        private void OnDataContextChanged(DependencyObject d, DependencyPropertyChangedEventArgs args)
         {
             BindingSource = args.NewValue;
 
@@ -246,7 +246,7 @@ namespace Windows.UI.Xaml.Data
             //Listen to changes on the Target if the Binding is TwoWay:
             if (ParentBinding.Mode == BindingMode.TwoWay)
             {
-                _propertyListener = INTERNAL_PropertyStore.ListenToChanged(Target, TargetProperty, UpdateSourceCallback);
+                _targetPropertyListener = new DependencyPropertyChangedListener(Target, TargetProperty, UpdateSourceCallback);
 
                 // If the user wants to force the Validation of the value when the element
                 // is added to the Visual tree, we set a boolean to do it as soon as possible:
@@ -266,15 +266,15 @@ namespace Windows.UI.Xaml.Data
 
             IsAttached = false;
 
-            if (_propertyListener != null)
+            if (_targetPropertyListener != null)
             {
-                _propertyListener.Detach();
-                _propertyListener = null;
+                _targetPropertyListener.Dispose();
+                _targetPropertyListener = null;
             }
 
             if (_dataContextListener != null)
             {
-                _dataContextListener.Source = null;
+                _dataContextListener.Dispose();
                 _dataContextListener = null;
             }
 
@@ -282,13 +282,13 @@ namespace Windows.UI.Xaml.Data
             {
                 if (_sourceErrorsChangedListener != null)
                 {
-                    _sourceErrorsChangedListener.Dispose();
+                    _sourceErrorsChangedListener.Detach();
                     _sourceErrorsChangedListener = null;
                 }
 
                 if (_valueErrorsChangedListener != null)
                 {
-                    _valueErrorsChangedListener.Dispose();
+                    _valueErrorsChangedListener.Detach();
                     _valueErrorsChangedListener = null;
                 }
 
@@ -335,23 +335,20 @@ namespace Windows.UI.Xaml.Data
                 {
                     if (_cvsListener != null)
                     {
-                        _cvsListener.Source = null;
+                        _cvsListener.Dispose();
                         _cvsListener = null;
                     }
 
                     if (value is CollectionViewSource cvs)
                     {
-                        _cvsListener = new DependencyPropertyListener(CollectionViewSource.ViewProperty, OnCollectionViewSourceViewChanged)
-                        {
-                            Source = cvs,
-                        };
+                        _cvsListener = new DependencyPropertyChangedListener(cvs, CollectionViewSource.ViewProperty, OnCollectionViewSourceViewChanged);
                         _bindingSource = cvs.View;
                     }
                 }
             }
         }
 
-        private void OnCollectionViewSourceViewChanged(object sender, IDependencyPropertyChangedEventArgs args)
+        private void OnCollectionViewSourceViewChanged(DependencyObject d, DependencyPropertyChangedEventArgs args)
         {
             _bindingSource = args.NewValue;
 
@@ -382,7 +379,7 @@ namespace Windows.UI.Xaml.Data
             {
                 if (_sourceErrorsChangedListener != null)
                 {
-                    _sourceErrorsChangedListener.Dispose();
+                    _sourceErrorsChangedListener.Detach();
                     _sourceErrorsChangedListener = null;
                 }
 
@@ -390,7 +387,12 @@ namespace Windows.UI.Xaml.Data
 
                 if (_dataErrorSource != null)
                 {
-                    _sourceErrorsChangedListener = new WeakErrorsChangedListener(this, _dataErrorSource);
+                    _sourceErrorsChangedListener = new(this, _dataErrorSource)
+                    {
+                        OnEventAction = static (instance, source, args) => instance.OnSourceErrorsChanged(source, args),
+                        OnDetachAction = static (listener, source) => source.ErrorsChanged -= listener.OnEvent,
+                    };
+                    _dataErrorSource.ErrorsChanged += _sourceErrorsChangedListener.OnEvent;
                 }
             }
 
@@ -398,7 +400,7 @@ namespace Windows.UI.Xaml.Data
             {
                 if (_valueErrorsChangedListener != null)
                 {
-                    _valueErrorsChangedListener.Dispose();
+                    _valueErrorsChangedListener.Detach();
                     _valueErrorsChangedListener = null;
                 }
 
@@ -406,7 +408,12 @@ namespace Windows.UI.Xaml.Data
 
                 if (_dataErrorValue != null)
                 {
-                    _valueErrorsChangedListener = new WeakErrorsChangedListener(this, _dataErrorValue);
+                    _valueErrorsChangedListener = new(this, _dataErrorValue)
+                    {
+                        OnEventAction = static (instance, source, args) => instance.OnValueErrorsChanged(source, args),
+                        OnDetachAction = static (listener, source) => source.ErrorsChanged -= listener.OnEvent,
+                    };
+                    _dataErrorValue.ErrorsChanged += _valueErrorsChangedListener.OnEvent;
                 }
             }
 
@@ -498,21 +505,16 @@ namespace Windows.UI.Xaml.Data
             }
         }
 
-        void IErrorsChangedListener.OnErrorsChanged(object sender, DataErrorsChangedEventArgs e)
+        private void OnSourceErrorsChanged(object sender, DataErrorsChangedEventArgs e)
         {
-            if (sender == _dataErrorSource)
+            if (e.PropertyName == _propertyPathWalker.FinalNode.PropertyName)
             {
-                if (e.PropertyName == _propertyPathWalker.FinalNode.PropertyName)
-                {
-                    UpdateNotifyDataErrors(_dataErrorSource, e.PropertyName, DependencyProperty.UnsetValue);
-                }
-            }
-            else
-            {
-                Debug.Assert(sender == _dataErrorValue);
-                UpdateNotifyDataErrors(DependencyProperty.UnsetValue);
+                UpdateNotifyDataErrors(_dataErrorSource, e.PropertyName, DependencyProperty.UnsetValue);
             }
         }
+
+        private void OnValueErrorsChanged(object sender, DataErrorsChangedEventArgs e)
+            => UpdateNotifyDataErrors(DependencyProperty.UnsetValue);
 
         internal void OnSourceAvailable(bool lastAttempt)
         {
@@ -904,12 +906,21 @@ namespace Windows.UI.Xaml.Data
                     source = mentor = FrameworkElement.FindMentor(Target);
                 }
 
-                if (_dataContextListener == null)
+                if (_dataContextListener != null)
                 {
-                    _dataContextListener = new DependencyPropertyListener(FrameworkElement.DataContextProperty, OnDataContextChanged);
+                    _dataContextListener.Dispose();
+                    _dataContextListener = null;
                 }
-                _dataContextListener.Source = source;
-                source = _dataContextListener.Value;
+
+                if (source is DependencyObject sourceDO)
+                {
+                    _dataContextListener = new DependencyPropertyChangedListener(sourceDO, FrameworkElement.DataContextProperty, OnDataContextChanged);
+                    source = sourceDO.GetValue(FrameworkElement.DataContextProperty);
+                }
+                else
+                {
+                    Debug.Assert(source is null);
+                }
             }
 
             if (useMentor)
@@ -1019,7 +1030,7 @@ namespace Windows.UI.Xaml.Data
             return null;
         }
 
-        private void UpdateSourceCallback(object sender, IDependencyPropertyChangedEventArgs args)
+        private void UpdateSourceCallback(DependencyObject d, DependencyPropertyChangedEventArgs args)
         {
             try
             {
