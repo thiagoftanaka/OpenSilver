@@ -167,8 +167,30 @@ namespace Windows.UI.Xaml.Controls
                     INTERNAL_HtmlDomManager.SetDomElementAttribute(_imageDiv, "src", imageSrc, true);
                     //set the width and height to "inherit" so the image takes up the size defined for it (and applied to _imageDiv's parent):
                     OpenSilver.Interop.ExecuteJavaScriptVoid($"{sImageDiv}.style.width = 'inherit'; {sImageDiv}.style.height = 'inherit'");
+
+                    if (IsUnderCustomLayout)
+                    {
+                        Action imageLoadedCallback = InvalidateMeasure;
+                        OpenSilver.Interop.ExecuteJavaScript(
+                            $@"let imgElement = document.querySelector('#{(_imageDiv as INTERNAL_HtmlDomElementReference)?.UniqueIdentifier}');
+                            function loaded() {{
+                                $0();
+                            }}
+
+                            if (imgElement.complete && imgElement.naturalHeight !== 0)
+                            {{
+                                loaded();
+                            }}
+                            else
+
+                            {{
+                                imgElement.addEventListener('load', loaded);
+                                imgElement.addEventListener('error', function() {{
+                                }});
+                            }}", imageLoadedCallback);
+                    }
                 }
-            }            
+            }
             else
             {
                 //If Source == null we show empty image to prevent broken image icon
@@ -491,29 +513,6 @@ namespace Windows.UI.Xaml.Controls
 
             var img = INTERNAL_HtmlDomManager.CreateImageDomElementAndAppendIt(div, this);
             _imageDiv = img;
-
-            if (IsUnderCustomLayout)
-            {
-                Action imageLoadedCallback = () => { InvalidateMeasure(); };
-                OpenSilver.Interop.ExecuteJavaScript(
-                    $@"let htmlElement = document.querySelector('#{(div as INTERNAL_HtmlDomElementReference)?.UniqueIdentifier}')
-                    let imgElement = htmlElement.querySelector('img');
-                    function loaded() {{
-                        $0();
-                    }}
-
-                    if (imgElement.complete)
-                    {{
-                        loaded();
-                    }}
-                    else
-                    {{
-                        imgElement.addEventListener('load', loaded);
-                        imgElement.addEventListener('error', function() {{
-                            console.log('Error when loading image');
-                        }});
-                    }}", imageLoadedCallback);
-            }
 
             domElementWhereToPlaceChildren = null;
             return div;
