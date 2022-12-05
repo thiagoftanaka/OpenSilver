@@ -35,6 +35,7 @@ using System.ServiceModel.Channels;
 using System.IO;
 using System.Threading.Tasks;
 using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using System.Xml;
 using CSHTML5.Internal;
@@ -1115,7 +1116,7 @@ namespace System.ServiceModel
             {
                 if (methodReturnType != null)
                 {
-                    if (methodReturnType.Name == webMethodName + "Response")
+                    if (Regex.IsMatch(methodReturnType.Name, $@"{webMethodName}Response\d*$"))
                     {
                         if (methodReturnType.GetField("Body") != null)
                         {
@@ -1134,7 +1135,7 @@ namespace System.ServiceModel
                     ParameterInfo[] parameterInfos = method.GetParameters();
                     if (methodReturnType == typeof(IAsyncResult) &&
                        (parameterInfos != null && parameterInfos.Length > 0) &&
-                        parameterInfos[0].ParameterType.Name == webMethodName + "Request")
+                        Regex.IsMatch(parameterInfos[0].ParameterType.Name, $@"{webMethodName}Request\d*$"))
                     {
                         if (parameterInfos[0].ParameterType
                             .GetCustomAttribute<MessageContractAttribute>(true) == null)
