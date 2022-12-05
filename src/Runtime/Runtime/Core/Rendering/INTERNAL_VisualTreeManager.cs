@@ -434,6 +434,16 @@ if(nextSibling != undefined) {
             // Defer loading to when the control becomes visible if the option to not load collapsed controls is enabled:
             if (EnableOptimizationWhereCollapsedControlsAreNotLoaded && child.Visibility == Visibility.Collapsed)
             {
+                object domElementWhereToPlaceGrandChildren = null;
+                object additionalOutsideDivForMargins = null;
+                object outerDomElement = CreateDomElement(child, parent, index,
+                    doesParentRequireToCreateAWrapperForEachChild, innerDivOfWrapperForChild,
+                    domElementWhereToPlaceChildStuff,
+                    child is Control, ref domElementWhereToPlaceGrandChildren, ref additionalOutsideDivForMargins);
+                child.INTERNAL_OuterDomElement = outerDomElement;
+                child.INTERNAL_InnerDomElement = domElementWhereToPlaceGrandChildren;
+                child.INTERNAL_AdditionalOutsideDivForMargins = additionalOutsideDivForMargins ?? outerDomElement;
+
                 child.INTERNAL_DeferredLoadingWhenControlBecomesVisible = () =>
                 {
                     AttachVisualChild_Private_MainSteps(
@@ -509,45 +519,6 @@ if(nextSibling != undefined) {
             var t1 = Performance.now();
 #endif
 
-            // Determine if an additional DIV for handling margins is needed:
-            object additionalOutsideDivForMargins = null;
-            var margin = ((FrameworkElement)child).Margin;
-            bool containsNegativeMargins = (margin.Left < 0d || margin.Top < 0d || margin.Right < 0d || margin.Bottom < 0d);
-            bool isADivForMarginsNeeded = !(parent is Canvas) // Note: In a Canvas, we don't want to add the additional DIV because there are no margins and we don't want to interfere with the pointer events by creating an additional DIV.
-                                            && !(child is Inline); // Note: inside a TextBlock we do not want the HTML DIV because we want to create HTML SPAN elements only (otherwise there would be unwanted line returns).
-
-            if (isADivForMarginsNeeded && (parent.IsCustomLayoutRoot || parent.IsUnderCustomLayout))
-                isADivForMarginsNeeded = false;
-
-            if (isADivForMarginsNeeded)
-            {
-                // Determine where to place it:
-                object whereToPlaceDivForMargins =
-                    (doesParentRequireToCreateAWrapperForEachChild
-                    ? innerDivOfWrapperForChild
-                    : domElementWhereToPlaceChildStuff);
-
-                // Create and append the DIV for handling margins and append:
-                additionalOutsideDivForMargins = INTERNAL_HtmlDomManager.CreateDomElementAndAppendIt("div", whereToPlaceDivForMargins, parent, index); //todo: check if the third parameter should be the child or the parent (make something with margins and put a mouseenter in the parent then see if the event is triggered).
-
-                // Style the DIV for handling margins:
-                var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(additionalOutsideDivForMargins);
-                style.boxSizing = "border-box";
-                if (child is FrameworkElement &&
-                    (((FrameworkElement)child).HorizontalAlignment == HorizontalAlignment.Stretch && double.IsNaN(((FrameworkElement)child).Width)
-                    && !(child is Image && ((Image)child).Stretch == Stretch.None)))
-                {
-                    if (!containsNegativeMargins)
-                        style.width = "100%";
-                }
-                if (child is FrameworkElement &&
-                    (((FrameworkElement)child).VerticalAlignment == VerticalAlignment.Stretch && double.IsNaN(((FrameworkElement)child).Height)
-                    && !(child is Image && ((Image)child).Stretch == Stretch.None)))
-                {
-                    style.height = "100%";
-                } 
-            }
-
 #if PERFSTAT
             Performance.Counter("VisualTreeManager: Create the DIV for the margin", t1);
 #endif
@@ -560,12 +531,6 @@ if(nextSibling != undefined) {
             var t2 = Performance.now();
 #endif
 
-            // Determine where to place the child:
-            object whereToPlaceTheChild = (isADivForMarginsNeeded
-                ? additionalOutsideDivForMargins : (doesParentRequireToCreateAWrapperForEachChild
-                    ? innerDivOfWrapperForChild
-                    : domElementWhereToPlaceChildStuff));
-
             child.IsConnectedToLiveTree = true;
 
             // Set the "ParentWindow" property so that the element knows where to display popups:
@@ -573,24 +538,11 @@ if(nextSibling != undefined) {
 
             // Create and append the DOM structure of the Child:
             object domElementWhereToPlaceGrandChildren = null;
-            object outerDomElement;
             bool isChildAControl = child is Control;
-            if (child.INTERNAL_HtmlRepresentation == null)
-            {
-                bool hasTemplate = isChildAControl && ((Control)child).HasTemplate;
-                if (hasTemplate)
-                {
-                    outerDomElement = ((Control)child).CreateDomElementForControlTemplate(whereToPlaceTheChild, out domElementWhereToPlaceGrandChildren);
-                }
-                else
-                {
-                    outerDomElement = child.CreateDomElement(whereToPlaceTheChild, out domElementWhereToPlaceGrandChildren);
-                }
-            }
-            else
-            {
-                outerDomElement = INTERNAL_HtmlDomManager.CreateDomFromStringAndAppendIt(child.INTERNAL_HtmlRepresentation, whereToPlaceTheChild, child);
-            }
+            object additionalOutsideDivForMargins = null;
+            object outerDomElement = child.INTERNAL_OuterDomElement ?? CreateDomElement(child, parent, index,
+                doesParentRequireToCreateAWrapperForEachChild, innerDivOfWrapperForChild, domElementWhereToPlaceChildStuff,
+                isChildAControl, ref domElementWhereToPlaceGrandChildren, ref additionalOutsideDivForMargins);
 
             // Initialize the "Width" and "Height" of the child DOM structure:
             if (child is FrameworkElement)
@@ -623,8 +575,14 @@ if(nextSibling != undefined) {
 
             // Remember the DIVs:
             child.INTERNAL_OuterDomElement = outerDomElement;
-            child.INTERNAL_InnerDomElement = domElementWhereToPlaceGrandChildren;
-            child.INTERNAL_AdditionalOutsideDivForMargins = additionalOutsideDivForMargins ?? outerDomElement;
+            if (child.INTERNAL_InnerDomElement == null)
+            {
+                child.INTERNAL_InnerDomElement = domElementWhereToPlaceGrandChildren;
+            }
+            if (child.INTERNAL_AdditionalOutsideDivForMargins == null)
+            {
+                child.INTERNAL_AdditionalOutsideDivForMargins = additionalOutsideDivForMargins ?? outerDomElement;
+            }
             child.INTERNAL_InnerDivOfTheChildWrapperOfTheParentIfAny = doesParentRequireToCreateAWrapperForEachChild ? innerDivOfWrapperForChild : null;
 
             // Remember the information about the "VisualChildren":
@@ -776,6 +734,82 @@ if(nextSibling != undefined) {
 #if PERFSTAT
             Performance.Counter("VisualTreeManager: Raise Loaded event", t11);
 #endif
+        }
+
+        private static object CreateDomElement(UIElement child, UIElement parent, int index,
+            bool doesParentRequireToCreateAWrapperForEachChild,
+            object innerDivOfWrapperForChild,
+            object domElementWhereToPlaceChildStuff,
+            bool isChildAControl, ref object domElementWhereToPlaceGrandChildren, ref object additionalOutsideDivForMargins)
+        {
+            // Determine if an additional DIV for handling margins is needed:
+            additionalOutsideDivForMargins = null;
+            var margin = ((FrameworkElement)child).Margin;
+            bool containsNegativeMargins = (margin.Left < 0d || margin.Top < 0d || margin.Right < 0d || margin.Bottom < 0d);
+            bool isADivForMarginsNeeded = !(parent is Canvas) // Note: In a Canvas, we don't want to add the additional DIV because there are no margins and we don't want to interfere with the pointer events by creating an additional DIV.
+                                            && !(child is Inline); // Note: inside a TextBlock we do not want the HTML DIV because we want to create HTML SPAN elements only (otherwise there would be unwanted line returns).
+
+            if (isADivForMarginsNeeded && (parent.IsCustomLayoutRoot || parent.IsUnderCustomLayout))
+                isADivForMarginsNeeded = false;
+
+            if (isADivForMarginsNeeded)
+            {
+                // Determine where to place it:
+                object whereToPlaceDivForMargins =
+                    (doesParentRequireToCreateAWrapperForEachChild
+                    ? innerDivOfWrapperForChild
+                    : domElementWhereToPlaceChildStuff);
+
+                // Create and append the DIV for handling margins and append:
+                additionalOutsideDivForMargins = INTERNAL_HtmlDomManager.CreateDomElementAndAppendIt("div", whereToPlaceDivForMargins, parent, index); //todo: check if the third parameter should be the child or the parent (make something with margins and put a mouseenter in the parent then see if the event is triggered).
+
+                // Style the DIV for handling margins:
+                var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(additionalOutsideDivForMargins);
+                style.boxSizing = "border-box";
+                if (child is FrameworkElement &&
+                    (((FrameworkElement)child).HorizontalAlignment == HorizontalAlignment.Stretch && double.IsNaN(((FrameworkElement)child).Width)
+                    && !(child is Image && ((Image)child).Stretch == Stretch.None)))
+                {
+                    if (!containsNegativeMargins)
+                        style.width = "100%";
+                }
+                if (child is FrameworkElement &&
+                    (((FrameworkElement)child).VerticalAlignment == VerticalAlignment.Stretch && double.IsNaN(((FrameworkElement)child).Height)
+                    && !(child is Image && ((Image)child).Stretch == Stretch.None)))
+                {
+                    style.height = "100%";
+                }
+            }
+
+            // Determine where to place the child:
+            object whereToPlaceTheChild = (isADivForMarginsNeeded
+                ? additionalOutsideDivForMargins : (doesParentRequireToCreateAWrapperForEachChild
+                    ? innerDivOfWrapperForChild
+                    : domElementWhereToPlaceChildStuff));
+
+            object outerDomElement;
+            if (child.INTERNAL_HtmlRepresentation == null)
+            {
+                bool hasTemplate = isChildAControl && ((Control)child).HasTemplate;
+                if (hasTemplate)
+                {
+                    outerDomElement =
+                        ((Control)child).CreateDomElementForControlTemplate(whereToPlaceTheChild,
+                            out domElementWhereToPlaceGrandChildren);
+                }
+                else
+                {
+                    outerDomElement = child.CreateDomElement(whereToPlaceTheChild, out domElementWhereToPlaceGrandChildren);
+                }
+            }
+            else
+            {
+                outerDomElement =
+                    INTERNAL_HtmlDomManager.CreateDomFromStringAndAppendIt(child.INTERNAL_HtmlRepresentation,
+                        whereToPlaceTheChild, child);
+            }
+
+            return outerDomElement;
         }
 
         public static bool IsElementInVisualTree(UIElement child) => child.IsConnectedToLiveTree;
