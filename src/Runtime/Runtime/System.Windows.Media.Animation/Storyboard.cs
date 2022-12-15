@@ -536,14 +536,21 @@ namespace Windows.UI.Xaml.Media.Animation
                 //I'm not sure this is useful but we never know.
                 _expectedAmountOfTimelineEndsDict[parameters.Guid] = Children.Count;
                 _guidToIterationParametersDict[parameters.Guid] = parameters;
-            }            
-            
-            foreach (Timeline timeLine in Children)
+            }
+
+            if (Children.Count > 0)
             {
-                timeLine.Completed -= timeLine_Completed;
-                timeLine.Completed += timeLine_Completed;
-                bool isTimelineSingleLoop = timeLine.RepeatBehavior.HasCount && timeLine.RepeatBehavior.Count == 1;
-                timeLine.StartFirstIteration(parameters, isTimelineSingleLoop, BeginTime);
+                foreach (Timeline timeLine in Children)
+                {
+                    timeLine.Completed -= timeLine_Completed;
+                    timeLine.Completed += timeLine_Completed;
+                    bool isTimelineSingleLoop = timeLine.RepeatBehavior.HasCount && timeLine.RepeatBehavior.Count == 1;
+                    timeLine.StartFirstIteration(parameters, isTimelineSingleLoop, BeginTime);
+                }
+            }
+            else
+            {
+                OnIterationCompleted(this._parameters);
             }
         }
 
