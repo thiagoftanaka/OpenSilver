@@ -1013,19 +1013,23 @@ namespace Windows.UI.Xaml
         /// Identifies the <see cref="Name"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty NameProperty =
-            DependencyProperty.Register(
-                nameof(Name), 
-                typeof(string), 
-                typeof(FrameworkElement), 
-                new PropertyMetadata(string.Empty)
+            DependencyProperty.RegisterAttached(
+                nameof(Name),
+                typeof(string),
+                typeof(FrameworkElement),
+                new PropertyMetadata(string.Empty, null, OnCoerceName)
                 {
                     MethodToUpdateDom = OnNameChanged_MethodToUpdateDom,
                 });
 
+        private static object OnCoerceName(DependencyObject d, object baseValue) => baseValue ?? string.Empty;
+
         private static void OnNameChanged_MethodToUpdateDom(DependencyObject d, object value)
         {
-            var fe = (FrameworkElement)d;
-            INTERNAL_HtmlDomManager.SetDomElementAttribute(fe.INTERNAL_OuterDomElement, "dataId", (value ?? string.Empty).ToString());
+            if (d is FrameworkElement fe)
+            {
+                INTERNAL_HtmlDomManager.SetDomElementAttribute(fe.INTERNAL_OuterDomElement, "dataId", (value ?? string.Empty).ToString());
+            }
         }
 
 #endregion
@@ -1442,56 +1446,16 @@ namespace Windows.UI.Xaml
 
 #region BindingValidationError event
 
-        internal bool INTERNAL_AreThereAnyBindingValidationErrorHandlers = false;
-
-        private List<EventHandler<ValidationErrorEventArgs>> _bindingValidationErrorHandlers;
-
         /// <summary>
         /// Occurs when a data validation error is reported by a binding source.
         /// </summary>
-        public event EventHandler<ValidationErrorEventArgs> BindingValidationError
+        public event EventHandler<ValidationErrorEventArgs> BindingValidationError;
+
+        internal void OnBindingValidationError(ValidationErrorEventArgs e)
         {
-            add
-            {
-                if (_bindingValidationErrorHandlers == null)
-                {
-                    _bindingValidationErrorHandlers = new List<EventHandler<ValidationErrorEventArgs>>();
-                }
-                _bindingValidationErrorHandlers.Add(value);
-
-                this.INTERNAL_AreThereAnyBindingValidationErrorHandlers = true;
-            }
-            remove
-            {
-                if (_bindingValidationErrorHandlers != null)
-                {
-                    _bindingValidationErrorHandlers.Remove(value);
-
-                    if (_bindingValidationErrorHandlers.Count == 0)
-                    {
-                        this.INTERNAL_AreThereAnyBindingValidationErrorHandlers = false;
-                    }
-                }
-                else
-                {
-                    this.INTERNAL_AreThereAnyBindingValidationErrorHandlers = false;
-                }
-            }
+            BindingValidationError?.Invoke(this, e);
         }
 
-        internal void INTERNAL_RaiseBindingValidationErrorEvent(ValidationErrorEventArgs eventArgs)
-        {
-            if (_bindingValidationErrorHandlers != null)
-            {
-                foreach (EventHandler<ValidationErrorEventArgs> eventHandler in _bindingValidationErrorHandlers)
-                {
-                    if (eventHandler != null)
-                    {
-                        eventHandler(this, eventArgs);
-                    }
-                }
-            }
-        }
 #endregion
 
         protected internal override void INTERNAL_OnDetachedFromVisualTree()
