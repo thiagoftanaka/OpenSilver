@@ -229,6 +229,30 @@ namespace OpenSilver.Controls
         }
 
         /// <summary>
+        /// Gets or sets the index of the selected item in the <see cref="OpenFileDialog"/>
+        /// filter drop-down list.
+        /// </summary>
+        /// <returns>
+        /// The index of the selected item in the <see cref="OpenFileDialog"/>
+        /// filter drop-down list. The default is 1.
+        /// </returns>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// The filter index is less than 1.
+        /// </exception>
+        public int FilterIndex { get; set; }
+
+        /// <summary>
+        /// Gets or sets the directory displayed when the dialog starts.
+        /// </summary>
+        /// <returns>
+        /// The directory displayed when the dialog starts. The default is an empty string.
+        /// </returns>
+        /// <exception cref="ArgumentException">
+        /// The directory specified is not a valid file path.
+        /// </exception>
+        public string InitialDirectory { get; set; }
+
+        /// <summary>
         /// Opens the default browser file dialog. This returns a Task, differently from Silverlight.
         /// This is because it is not possible to wait for the dialog to conclude, since the process is single-threaded.
         /// </summary>
