@@ -452,14 +452,16 @@ namespace Windows.UI.Xaml
                     if (endColumn <= grid.ColumnDefinitions.Count - 1)
                     {
                         double pixelWidthSum = 0;
+                        bool shouldLimitWidth = false;
                         for (int i = startColumn; i <= endColumn; i++)
                         {
                             if (grid.ColumnDefinitions[i].Width.GridUnitType == GridUnitType.Pixel)
                             {
                                 pixelWidthSum += grid.ColumnDefinitions[i].Width.Value;
+                                shouldLimitWidth = true;
                             }
                         }
-                        if (pixelWidthSum < fe?.Width)
+                        if (shouldLimitWidth && pixelWidthSum < fe?.Width)
                         {
                             fe.Width = pixelWidthSum;
                         }
