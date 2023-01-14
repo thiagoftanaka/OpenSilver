@@ -366,7 +366,7 @@ namespace Windows.UI.Xaml.Media.Animation
             Stop(null, revertToFormerValue: true);
             foreach (Timeline timeLine in Children)
             {
-                timeLine.Stop(null, revertToFormerValue: true);
+                timeLine.Stop(null);//, revertToFormerValue: true);
             }
         }
 
