@@ -918,8 +918,12 @@ if(nextSibling != undefined) {
                             valueWasRetrieved = true;
                         }
 
-                        // Raise the "PropertyChanged" event
-                        propertyMetadata.PropertyChangedCallback(storage.Owner, new DependencyPropertyChangedEventArgs(value, value, property));
+                        if (value?.Equals(propertyMetadata.DefaultValue) == false)
+                        {
+                            // Raise the "PropertyChanged" event
+                            propertyMetadata.PropertyChangedCallback(storage.Owner,
+                                new DependencyPropertyChangedEventArgs(value, value, property));
+                        }
                     }
                 }
 
