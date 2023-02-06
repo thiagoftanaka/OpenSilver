@@ -18,9 +18,12 @@ using CSHTML5.Internal;
 using OpenSilver.Internal;
 using OpenSilver.Internal.Controls;
 
-#if !MIGRATION
+#if MIGRATION
+using System.Windows.Input;
+#else
 using Windows.Foundation;
 using Windows.UI.Text;
+using Windows.UI.Xaml.Input;
 #endif
 
 #if MIGRATION
@@ -32,12 +35,10 @@ namespace Windows.UI.Xaml.Controls
     internal sealed class TextBoxView : FrameworkElement, ITextBoxView
     {
         private object _contentEditableDiv;
-        private JavascriptCallback _gotFocusCallback;
 
         internal TextBoxView(TextBox host)
         {
             Host = host ?? throw new ArgumentNullException(nameof(host));
-            Unloaded += (o, e) => DisposeJsCallbacks();
         }
 
         internal TextBox Host { get; }
@@ -85,15 +86,12 @@ namespace Windows.UI.Xaml.Controls
             // the focus will be redirected to the <input>, unless the click was on an element that
             // absorbs pointer events.
 
-            DisposeJsCallbacks();
-
-            _gotFocusCallback = JavascriptCallback.Create(TextBoxView_GotFocus);
-
-            string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(INTERNAL_OuterDomElement);
-            string sAction = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_gotFocusCallback);
-            OpenSilver.Interop.ExecuteJavaScriptVoid($"{sElement}.addEventListener('click', {sAction})");
-
             UpdateDomText(Host.Text);
+
+            if (FocusManager.GetFocusedElement() == Host)
+            {
+                INTERNAL_HtmlDomManager.SetFocusNative(_contentEditableDiv);
+            }
         }
 
         protected override void OnAfterApplyHorizontalAlignmentAndWidth()
@@ -155,9 +153,14 @@ namespace Windows.UI.Xaml.Controls
             }
         }
 
-        internal sealed override NativeEventsManager CreateEventsManager()
+        internal sealed override void AddEventListeners()
         {
-            return new NativeEventsManager(this, this, Host, true);
+            NativeEventsHelper.AddEventListeners(this, true);
+        }
+
+        internal sealed override void DispatchEvent(object jsEventArg)
+        {
+            NativeEventCallback(this, Host, jsEventArg);
         }
 
         internal override object GetDomElementToSetContentString()
@@ -242,30 +245,6 @@ element.setAttribute(""data-acceptsreturn"", ""{acceptsReturn.ToString().ToLower
             }
         }
 
-        internal void OnHorizontalScrollBarVisibilityChanged(ScrollBarVisibility scrollVisibility)
-        {
-            if (INTERNAL_HtmlDomManager.IsNotUndefinedOrNull(_contentEditableDiv))
-            {
-                string value = ScrollBarVisibilityToHtmlString(scrollVisibility);
-                if (value != null)
-                {
-                    INTERNAL_HtmlDomManager.GetDomElementStyleForModification(_contentEditableDiv).overflowX = value;
-                }
-            }
-        }
-
-        internal void OnVerticalScrollBarVisibilityChanged(ScrollBarVisibility scrollVisibility)
-        {
-            if (INTERNAL_HtmlDomManager.IsNotUndefinedOrNull(_contentEditableDiv))
-            {
-                string value = ScrollBarVisibilityToHtmlString(scrollVisibility);
-                if (value != null)
-                {
-                    INTERNAL_HtmlDomManager.GetDomElementStyleForModification(_contentEditableDiv).overflowY = value;
-                }
-            }
-        }
-
         internal void OnMaxLengthChanged(int maxLength)
         {
             if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && 
@@ -329,6 +308,14 @@ element.setAttribute(""data-maxlength"", ""{maxLength}"");");
                 OpenSilver.Interop.ExecuteJavaScriptFastAsync($@"
 var element = document.getElementByIdSafe(""{((INTERNAL_HtmlDomElementReference)_contentEditableDiv).UniqueIdentifier}"");
 element.setAttribute(""data-isreadonly"",""{isReadOnly.ToString().ToLower()}"");");
+            }
+        }
+
+        internal void OnIsSpellCheckEnabledChanged(bool isSpellCheckEnabled)
+        {
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && _contentEditableDiv != null)
+            {
+                INTERNAL_HtmlDomManager.SetDomElementAttribute(_contentEditableDiv, "spellcheck", isSpellCheckEnabled);
             }
         }
 
@@ -407,18 +394,9 @@ sel.setBaseAndExtent(nodesAndOffsets['startParent'], nodesAndOffsets['startOffse
 
         private object AddContentEditableDomElement(object parentRef, out object domElementWhereToPlaceChildren)
         {
-            bool isReadOnly = this.Host.IsReadOnly;
-            var outerDivStyle = INTERNAL_HtmlDomManager.CreateDomElementAppendItAndGetStyle("div", parentRef, this, out object outerDiv);
-            string backgroundColor = "transparent"; //value when it is templated
+            bool isReadOnly = Host.IsReadOnly;
 
-            outerDivStyle.backgroundColor = backgroundColor;
-            outerDivStyle.height = "100%";
-
-            var middleDivStyle = INTERNAL_HtmlDomManager.CreateDomElementAppendItAndGetStyle("div", outerDiv, this, out object middleDiv);
-            middleDivStyle.width = "100%";
-            middleDivStyle.height = "100%";
-
-            var contentEditableDivStyle = INTERNAL_HtmlDomManager.CreateDomElementAppendItAndGetStyle("div", middleDiv, this, out object contentEditableDiv);
+            var contentEditableDivStyle = INTERNAL_HtmlDomManager.CreateDomElementAppendItAndGetStyle("div", parentRef, this, out object contentEditableDiv);
             _contentEditableDiv = contentEditableDiv;
 
             contentEditableDivStyle.width = "100%";
@@ -426,16 +404,12 @@ sel.setBaseAndExtent(nodesAndOffsets['startParent'], nodesAndOffsets['startOffse
 
             // Apply Host.TextWrapping
             contentEditableDivStyle.whiteSpace = Host.TextWrapping == TextWrapping.NoWrap ? "nowrap" : "pre-wrap";
-
-            // Apply Host.HorizontalScrollBarVisibility
-            contentEditableDivStyle.overflowX = ScrollBarVisibilityToHtmlString(Host.HorizontalScrollBarVisibility) ?? "hidden";
-
-            // Apply Host.VerticalScrollBarVisibility
-            contentEditableDivStyle.overflowY = ScrollBarVisibilityToHtmlString(Host.VerticalScrollBarVisibility) ?? "hidden";
-            
             contentEditableDivStyle.outline = "solid transparent"; // Note: this is to avoind having the weird border when it has the focus. I could have used outlineWidth = "0px" but or some reason, this causes the caret to not work when there is no text.
             contentEditableDivStyle.background = "solid transparent";
             contentEditableDivStyle.cursor = "text";
+
+            // Disable spell check
+            INTERNAL_HtmlDomManager.SetDomElementAttribute(contentEditableDiv, "spellcheck", this.Host.IsSpellCheckEnabled);
 
             // Apply TextAlignment
             UpdateTextAlignment(contentEditableDivStyle, Host.TextAlignment);
@@ -578,19 +552,12 @@ element_OutsideEventHandler.addEventListener('paste', function(e) {{
     }}
 }}, false);");
 
-            return outerDiv;
+            return contentEditableDiv;
         }
 
         internal string GetText()
         {
             string text = INTERNAL_HtmlDomManager.GetTextBoxText(INTERNAL_InnerDomElement) ?? string.Empty;
-            if (!Host.AcceptsReturn)
-            {
-                // This is just in case the user managed to enter multi-line text in a single-line textbox.
-                // It can happen (due to a bug) when pasting multi-line text under Interned Explorer 10.
-                text = text.Replace('\n', '\0').Replace('\r', '\0');
-            }
-
             // This is the case when the text is changed by backspace or paste.
             InvalidateMeasure();
             return text;
@@ -617,48 +584,6 @@ element_OutsideEventHandler.addEventListener('paste', function(e) {{
             InvalidateMeasure();
         }
 
-        private void TextBoxView_GotFocus(object e)
-        {
-            string sE = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(e);
-            bool ignoreEvent = OpenSilver.Interop.ExecuteJavaScriptBoolean($"document.checkForDivsThatAbsorbEvents({sE})");
-            if (!ignoreEvent)
-            {
-                if (_contentEditableDiv != null)
-                {
-                    string sDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_contentEditableDiv);
-                    OpenSilver.Interop.ExecuteJavaScriptVoid($@"
-if({sE}.target != {sDiv}) {{
- {sDiv}.focus()
- if (document.createRange) {{
-  let r = document.createRange();
-  r.selectNodeContents({sDiv});
-  r.collapse(false);
-  let s = window.getSelection();
-  s.removeAllRanges();
-  s.addRange(r);
- }} else if (document.selection) {{
-  let r = document.body.createTextRange();
-  r.moveToElementText({sDiv});
-  r.collapse(false);
-  r.select();
- }}
-}}");
-                    // -- Firefox, Chrome, Opera, Safari, IE 9+
-                    //Create a range (a range is a like the selection but invisible)
-                    //Select the entire contents of the element with the range
-                    //collapse the range to the end point. false means collapse to end rather than the start
-                    //get the selection object (allows you to change selection)
-                    //remove any selections already made
-                    //make the range you have just created the visible selection
-                    // -- IE 8 and lower
-                    //Create a range (a range is a like the selection but invisible)
-                    //Select the entire contents of the element with the range
-                    //collapse the range to the end point. false means collapse to end rather than the start
-                    //Select the range (make it the visible selection
-                }
-            }
-        }
-
         private static string ScrollBarVisibilityToHtmlString(ScrollBarVisibility scrollVisibility)
         {
             switch (scrollVisibility)
@@ -678,15 +603,15 @@ if({sE}.target != {sDiv}) {{
 
         protected override Size MeasureOverride(Size availableSize)
         {
-            string uniqueIdentifier = ((INTERNAL_HtmlDomElementReference)this.INTERNAL_OuterDomElement).UniqueIdentifier;
-            Size TextSize = Application.Current.TextMeasurementService.MeasureTextBlock(uniqueIdentifier, Host.TextWrapping, Margin, availableSize.Width);
+            string uniqueIdentifier = ((INTERNAL_HtmlDomElementReference)INTERNAL_OuterDomElement).UniqueIdentifier;
+            Size TextSize = Application.Current.TextMeasurementService.MeasureTextBlock(
+                uniqueIdentifier,
+                Host.TextWrapping == TextWrapping.NoWrap ? "pre" : "pre-wrap",
+                string.Empty,
+                Margin,
+                availableSize.Width,
+                "M");
             return TextSize;
-        }
-
-        private void DisposeJsCallbacks()
-        {
-            _gotFocusCallback?.Dispose();
-            _gotFocusCallback = null;
         }
     }
 }

@@ -1,4 +1,3 @@
-﻿
 
 /*===================================================================================
 * 
@@ -12,18 +11,28 @@
 *  
 \*====================================================================================*/
 
-
 #if MIGRATION
-namespace System.Windows.Controls
+namespace System.Windows.Media
 #else
-namespace Windows.UI.Xaml.Controls
+namespace Windows.UI.Xaml.Media
 #endif
 {
-    [OpenSilver.NotImplemented]
-    public abstract partial class ItemsControlDragDropTarget<TItemsControl, TItemContainerType> :
-        DragDropTarget<TItemsControl, TItemContainerType>
-        where TItemsControl : ItemsControl
-        where TItemContainerType : FrameworkElement
-    {
-    }
+    /// <summary>
+    /// Describes how content is positioned vertically in a container.
+    /// </summary>
+    public enum AlignmentY
+	{
+        /// <summary>
+        /// The contents align toward the upper edge of the container.
+        /// </summary>
+        Top = 0,
+        /// <summary>
+        /// The contents align toward the center of the container.
+        /// </summary>
+		Center = 1,
+        /// <summary>
+        /// The contents align toward the lower edge of the container.
+        /// </summary>
+		Bottom = 2
+	}
 }
