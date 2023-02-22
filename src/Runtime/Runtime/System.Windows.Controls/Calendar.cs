@@ -13,10 +13,8 @@
 \*====================================================================================*/
 
 
-#if BRIDGE
-using Bridge;
-#endif
 using CSHTML5;
+using CSHTML5.Internal;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -98,82 +96,37 @@ namespace Windows.UI.Xaml.Controls
             isLoaded = true;
 
             // Get a reference to the HTML DOM representation of the control (must be in the Visual Tree):
-            object div = CSHTML5.Interop.GetDiv(this);
+            object div = INTERNAL_InnerDomElement;
 
             // Render the control: Calendar only
-            _flatpickrInstance = CSHTML5.Interop.ExecuteJavaScript(@"flatpickr($0, {
+            _flatpickrInstance = OpenSilver.Interop.ExecuteJavaScript(@"flatpickr($0, {
                 inline: true, 
                 dateFormat: ""YYYY-MM-DD HH:MM"",
                 defaultDate: $1
                 })", div, GetJsDate(defaultDate));
 
             // Register the JS events:
-#if OPENSILVER
-            if (true)
-#elif BRIDGE
-            if (CSHTML5.Interop.IsRunningInTheSimulator)
-#endif
-            {
-                CSHTML5.Interop.ExecuteJavaScript(@"$0.config.onChange.push(function(args) {
-                    var date = args[0];
-                    if(date !== undefined)
-                    {
-                        var month = date.getMonth() + 1;
-                        var day = date.getDate();
-                        var year = date.getFullYear();
-                        $1(year, month, day);
-                    }
-                });", _flatpickrInstance, (Action<object, object, object>)OnJavaScriptEvent_Change);
+            OpenSilver.Interop.ExecuteJavaScript(@"$0.config.onChange.push(function(args) {
+                var date = args[0];
+                if(date !== undefined)
+                {
+                    var month = date.getMonth() + 1;
+                    var day = date.getDate();
+                    var year = date.getFullYear();
+                    $1(year, month, day);
+                }
+            });", _flatpickrInstance, (Action<object, object, object>)OnJavaScriptEvent_Change);
 
-                CSHTML5.Interop.ExecuteJavaScript(@"$0.config.onMonthChange.push(function(args) {
-                    $1();
-                });", _flatpickrInstance, (Action)OnMonthChange);
-
-
-            }
-            else
-            {
-                // In JS there is a bug that prevents us from using the exact same code as the Simulator. The bug has to do with the "this" keyword when used inside the callback from the JS interop: it returns the "onChange" array because the callback was added with "onChange.push".
-
-                // Force capturing the "this" instance now because in JS "this" keyword has a different meaning when retrieved later:
-                var calendar = CSHTML5.Interop.ExecuteJavaScript(@"$0", this);
-
-                // Register the JS events:
-                CSHTML5.Interop.ExecuteJavaScript(@"$0.config.onChange.push(function(args) {
-                    var date = args[0];
-                    if(date !== undefined)
-                    {
-                        var month = date.getMonth() + 1;
-                        var day = date.getDate();
-                        var year = date.getFullYear();
-                        $1($2, year, month, day);
-                    }
-                });", _flatpickrInstance, (Action<object, object, object, object>)WorkaroundJSILBug, calendar);
-
-                CSHTML5.Interop.ExecuteJavaScript(@"$0.config.onMonthChange.push(function(args) {
-                    $1($2);
-                });", _flatpickrInstance, (Action<object>)WorkaroundJSILBugForOnMonthChange, calendar);
-            }
+            OpenSilver.Interop.ExecuteJavaScript(@"$0.config.onMonthChange.push(function(args) {
+                $1();
+            });", _flatpickrInstance, (Action)OnMonthChange);
 
             RefreshTodayHighlight(IsTodayHighlighted);
 
             // Enable click event
-            CSHTML5.Interop.ExecuteJavaScript(@"$0.calendarContainer.style.pointerEvents = 'auto'", _flatpickrInstance);
+            OpenSilver.Interop.ExecuteJavaScript(@"$0.calendarContainer.style.pointerEvents = 'auto'", _flatpickrInstance);
             // Hide the input area:
-            CSHTML5.Interop.ExecuteJavaScript(@"$0.style.display = 'none'", div);
-
-            string id = INTERNAL_HtmlDomManager.NewId();
-            OpenSilver.Interop.ExecuteJavaScript(@"$0.calendarContainer.id = $1", _flatpickrInstance, id);
-            INTERNAL_OuterDomElement =
-                INTERNAL_InnerDomElement =
-                    INTERNAL_AdditionalOutsideDivForMargins =
-                        new INTERNAL_HtmlDomElementReference(id, (INTERNAL_AdditionalOutsideDivForMargins as INTERNAL_HtmlDomElementReference)?.Parent);
-        }
-
-        static void WorkaroundJSILBug(object calendarInstance, object year, object month, object day)
-        {
-            // cf. comment above.
-            ((Calendar)calendarInstance).OnJavaScriptEvent_Change(year, month, day);
+            OpenSilver.Interop.ExecuteJavaScript(@"$0.style.display = 'none'", div);
         }
 
         void OnJavaScriptEvent_Change(object year, object month, object day)
@@ -189,12 +142,6 @@ namespace Windows.UI.Xaml.Controls
             this.SelectedValue = (DateTime?)dateTime;
             this.SelectedDate = this.SelectedValue;
             RefreshTodayHighlight(IsTodayHighlighted);
-        }
-
-        static void WorkaroundJSILBugForOnMonthChange(object calendarInstance)
-        {
-            // We're doing like in WorkaroundJSILBug for the "onChange" event
-            ((Calendar)calendarInstance).OnMonthChange();
         }
 
         private void OnMonthChange()
@@ -228,7 +175,7 @@ namespace Windows.UI.Xaml.Controls
             if (isLoaded)
             {
                 string borderColor = isTodayHighlighted ? "transparent" : "";
-                CSHTML5.Interop.ExecuteJavaScript(@"var todaySpan = $0.calendarContainer.querySelector('span.today'); 
+                OpenSilver.Interop.ExecuteJavaScript(@"var todaySpan = $0.calendarContainer.querySelector('span.today'); 
                             if(todaySpan) todaySpan.style.borderColor = $1", _flatpickrInstance, borderColor);
             }
         }
@@ -271,12 +218,12 @@ namespace Windows.UI.Xaml.Controls
         {
             if (dateStart == null)
             {
-                CSHTML5.Interop.ExecuteJavaScript(@"$0.config.minDate = undefined", this._flatpickrInstance);
+                OpenSilver.Interop.ExecuteJavaScript(@"$0.config.minDate = undefined", this._flatpickrInstance);
             }
             else
             {
                 DateTime nonNullDateStart = (DateTime)dateStart;
-                CSHTML5.Interop.ExecuteJavaScript(@"$0.config.minDate = $1", this._flatpickrInstance, GetJsDate(nonNullDateStart));
+                OpenSilver.Interop.ExecuteJavaScript(@"$0.config.minDate = $1", this._flatpickrInstance, GetJsDate(nonNullDateStart));
             }
         }
 
@@ -284,12 +231,12 @@ namespace Windows.UI.Xaml.Controls
         {
             if (dateEnd == null)
             {
-                CSHTML5.Interop.ExecuteJavaScript(@"$0.config.maxDate = undefined", this._flatpickrInstance);
+                OpenSilver.Interop.ExecuteJavaScript(@"$0.config.maxDate = undefined", this._flatpickrInstance);
             }
             else
             {
                 DateTime nonNullDateEnd = (DateTime)dateEnd;
-                CSHTML5.Interop.ExecuteJavaScript(@"$0.config.maxDate = $1", this._flatpickrInstance, GetJsDate(nonNullDateEnd));
+                OpenSilver.Interop.ExecuteJavaScript(@"$0.config.maxDate = $1", this._flatpickrInstance, GetJsDate(nonNullDateEnd));
             }
         }
 
@@ -297,7 +244,7 @@ namespace Windows.UI.Xaml.Controls
         {
             if (dateTime == null)
             {
-                CSHTML5.Interop.ExecuteJavaScript(@"$0.config.maxDate = undefined", this._flatpickrInstance);
+                OpenSilver.Interop.ExecuteJavaScript(@"$0.config.maxDate = undefined", this._flatpickrInstance);
             }
             else
             {
@@ -306,7 +253,7 @@ namespace Windows.UI.Xaml.Controls
                 {
                     throw new ArgumentOutOfRangeException("The given date is not in the range specified by System.Windows.Controls.Calendar.DisplayDateStart and System.Windows.Controls.Calendar.DisplayDateEnd");
                 }
-                CSHTML5.Interop.ExecuteJavaScript(@"$0.jumpToDate($1)", this._flatpickrInstance, GetJsDate(nonNullDate));
+                OpenSilver.Interop.ExecuteJavaScript(@"$0.jumpToDate($1)", this._flatpickrInstance, GetJsDate(nonNullDate));
             }
         }
 
@@ -326,15 +273,10 @@ namespace Windows.UI.Xaml.Controls
             nameof(FirstDayOfWeek), typeof(DayOfWeek), typeof(Calendar), new PropertyMetadata(
                 DateTimeFormatInfo.CurrentInfo.FirstDayOfWeek, null));
 
-        //todo: could be nice to have the same as the Bridge.Template for JSIL
-#if BRIDGE
-        [Template("new Date(System.DateTime.getYear({dateTime}), ((System.DateTime.getMonth({dateTime}) - 1) | 0), System.DateTime.getDay({dateTime}))")]
-#endif
         static object GetJsDate(DateTime dateTime)
         {
-            var date = CSHTML5.Interop.ExecuteJavaScript("new Date($0,$1,$2)", dateTime.Year, dateTime.Month - 1, dateTime.Day);
+            var date = OpenSilver.Interop.ExecuteJavaScript("new Date($0,$1,$2)", dateTime.Year, dateTime.Month - 1, dateTime.Day);
             return date;
         }
-
     }
 }
