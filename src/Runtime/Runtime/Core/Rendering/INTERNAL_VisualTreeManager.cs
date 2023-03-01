@@ -563,43 +563,8 @@ if(nextSibling != undefined) {
             object domElementWhereToPlaceChildStuff,
             object wrapperForChild)
         {
-            //--------------------------------------------------------
-            // CREATE THE DIV FOR THE MARGINS (OPTIONAL):
-            //--------------------------------------------------------
-
-#if PERFSTAT
-            var t1 = Performance.now();
-#endif
-
             // Determine if an additional DIV for handling margins is needed:
             object additionalOutsideDivForMargins = null;
-            var margin = ((FrameworkElement)child).Margin;
-            bool containsNegativeMargins = (margin.Left < 0d || margin.Top < 0d || margin.Right < 0d || margin.Bottom < 0d);
-            bool isADivForMarginsNeeded = !(parent is Canvas) // Note: In a Canvas, we don't want to add the additional DIV because there are no margins and we don't want to interfere with the pointer events by creating an additional DIV.
-                                            && !(child is Inline); // Note: inside a TextBlock we do not want the HTML DIV because we want to create HTML SPAN elements only (otherwise there would be unwanted line returns).
-
-            if (isADivForMarginsNeeded && (parent.IsCustomLayoutRoot || parent.IsUnderCustomLayout))
-                isADivForMarginsNeeded = false;
-
-            if (isADivForMarginsNeeded)
-            {
-                // Determine where to place it:
-                object whereToPlaceDivForMargins =
-                    (doesParentRequireToCreateAWrapperForEachChild
-                    ? innerDivOfWrapperForChild
-                    : domElementWhereToPlaceChildStuff);
-
-                // Create and append the DIV for handling margins and append:
-                additionalOutsideDivForMargins = INTERNAL_HtmlDomManager.CreateDomElementAndAppendIt("div", whereToPlaceDivForMargins, parent, index); //todo: check if the third parameter should be the child or the parent (make something with margins and put a mouseenter in the parent then see if the event is triggered).
-                var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(additionalOutsideDivForMargins);
-                style.boxSizing = "border-box";
-                style.width = "100%";
-                style.height = "100%";
-            }
-
-#if PERFSTAT
-            Performance.Counter("VisualTreeManager: Create the DIV for the margin", t1);
-#endif
 
             //--------------------------------------------------------
             // PREPARE THE CHILD:
@@ -809,6 +774,14 @@ if(nextSibling != undefined) {
             object domElementWhereToPlaceChildStuff,
             bool isChildAControl, ref object domElementWhereToPlaceGrandChildren, ref object additionalOutsideDivForMargins)
         {
+            //--------------------------------------------------------
+            // CREATE THE DIV FOR THE MARGINS (OPTIONAL):
+            //--------------------------------------------------------
+
+#if PERFSTAT
+            var t1 = Performance.now();
+#endif
+
             // Determine if an additional DIV for handling margins is needed:
             additionalOutsideDivForMargins = null;
             var margin = ((FrameworkElement)child).Margin;
@@ -847,6 +820,10 @@ if(nextSibling != undefined) {
                     style.height = "100%";
                 }
             }
+
+#if PERFSTAT
+            Performance.Counter("VisualTreeManager: Create the DIV for the margin", t1);
+#endif
 
             // Determine where to place the child:
             object whereToPlaceTheChild = (isADivForMarginsNeeded
