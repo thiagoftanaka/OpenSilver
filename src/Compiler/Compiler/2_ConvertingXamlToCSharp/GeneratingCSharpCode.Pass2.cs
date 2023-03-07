@@ -411,7 +411,7 @@ namespace OpenSilver.Compiler
                             string.Format(
                                 "var {0} = {3}.XamlContext_WriteStartObject({4}, (({1})new {2}()).CreateComponent());",
                                 elementUniqueNameOrThisKeyword,
-                                $"{IXamlComponentFactoryClass}<global::{_metadata.SystemWindowsNS}.ResourceDictionary>",
+                                $"{IXamlComponentFactoryClass}<global::{_settings.Metadata.SystemWindowsNS}.ResourceDictionary>",
                                 XamlResourcesHelper.GenerateClassNameFromComponentUri(absoluteSourceUri),
                                 RuntimeHelperClass,
                                 parameters.CurrentXamlContext
