@@ -205,7 +205,15 @@ namespace Windows.UI.Xaml.Controls
                         !((IGeneratorHost)owner).IsItemItsOwnContainer(owner.Items[item]))
                         generator.Recycle(pos, 1);
                     else
+                    {
+                        if (pos.Index > 0 && pos.Index - 1 < Children.Count &&
+                            Children[pos.Index - 1] is ListBoxItem listBoxItem &&
+                            listBoxItem.IsSelected)
+                        {
+                            listBoxItem.IsSelected = false; // UpdateVisualStates will be called at the end of this
+                        }
                         generator.Remove(pos, 1);
+                    }
                 }
 
                 pos.Index--;
