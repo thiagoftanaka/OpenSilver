@@ -151,6 +151,17 @@ namespace Windows.UI.Xaml.Data
                 {
                     value = UseFallbackValue();
                 }
+
+                // If optimization flags are on, Visibility cannot be Collapsed, otherwise mentor will not be
+                // lazily loaded and the binding will not be reevaluated (when source is null, a callback is added
+                // to mentor Loaded event for reevaluation). Even if the value was supposed to correctly be Collapsed,
+                // mentor has be loaded, binding reevaluated, and result in Collapsed.
+                if ((Application.Current.Host.Settings.EnableOptimizationWhereCollapsedControlsAreNotLoaded ||
+                     Application.Current.Host.Settings.EnableOptimizationWhereCollapsedControlsAreLoadedLast) &&
+                    value is Visibility.Collapsed)
+                {
+                    value = Visibility.Visible;
+                }
             }
             else
             {
