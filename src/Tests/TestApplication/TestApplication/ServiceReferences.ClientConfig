@@ -1,0 +1,26 @@
+﻿<configuration>
+    <system.serviceModel>
+        <bindings>
+            <basicHttpBinding>
+                <binding name="BasicHttpBinding_BasicHttpService" maxBufferSize="2147483647"
+                    maxReceivedMessageSize="2147483647">
+                    <security mode="None" />
+                </binding>
+            </basicHttpBinding>
+            <customBinding>
+                <binding name="CustomBinding_BinaryService">
+                    <binaryMessageEncoding />
+                    <httpTransport maxReceivedMessageSize="2147483647" maxBufferSize="2147483647" />
+                </binding>
+            </customBinding>
+        </bindings>
+        <client>
+            <endpoint address="http://localhost:50506/BasicHttpService.svc" binding="basicHttpBinding"
+                bindingConfiguration="BasicHttpBinding_BasicHttpService" contract="BasicHttpServiceReference.BasicHttpService"
+                name="BasicHttpBinding_BasicHttpService" />
+            <endpoint address="http://localhost:50506/BinaryService.svc" binding="customBinding"
+                bindingConfiguration="CustomBinding_BinaryService" contract="BinaryServiceReference.BinaryService"
+                name="CustomBinding_BinaryService" />
+        </client>
+    </system.serviceModel>
+</configuration>

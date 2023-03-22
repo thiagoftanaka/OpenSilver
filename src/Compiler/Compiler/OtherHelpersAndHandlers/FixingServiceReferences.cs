@@ -535,15 +535,23 @@ namespace OpenSilver.Compiler
                     newBody = string.Format(
 
     @"
-            {3}
-            {2}base.Channel.{4}{0}({1});
+            {11}
+            {6}System.ServiceModel.INTERNAL_WebMethodsCaller.{8}CallWebMethod{0}{7}
+                <{1}{2}>({9}, ""{3}"", {4}, ""{10}"", this);
 ",
-     GetMethodName(methodName, methodType),
-     string.Join(",", parameters),
-     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
-     string.Join(" ", outParamDefinitions.Select(def => $"{def.Key} = default({def.Value});")),
-     (methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")
-     );
+    ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
+    ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
+    interfaceType,
+    GetMethodName(methodName, methodType),
+    parametersDictionaryDefinition,
+    originalCode,
+    ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
+    ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.NotAsyncWithoutReturnType || methodType == MethodType.AsyncEndWithoutReturnType) ? "_WithoutReturnValue" : ""),
+    ((methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")),
+    endpointCode,
+    soapVersion,
+    string.Join(" ", outParamDefinitions.Select(def => $"{def.Key} = default({def.Value});"))
+    );
                 }
                 else //case where there are no parameters
                 {
@@ -551,14 +559,21 @@ namespace OpenSilver.Compiler
                     // Generate the body replacement:
                     newBody = string.Format(
     @"
-            {2}
-            {1}base.Channel.{3}{0}();
+            {6}System.ServiceModel.INTERNAL_WebMethodsCaller.{8}CallWebMethod{0}{7}
+                <{1}{2}>({9}, ""{3}"", {4}, ""{10}"", this);
 ",
-     GetMethodName(methodName, methodType),
-     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
-     string.Join(" ", outParamDefinitions.Select(def => $"{def.Key} = default({def.Value});")),
-     (methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")
-     );
+    ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
+    ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
+    interfaceType,
+    GetMethodName(methodName, methodType),
+    requestParameterName,
+    originalCode,
+    ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
+    ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.NotAsyncWithoutReturnType || methodType == MethodType.AsyncEndWithoutReturnType) ? "_WithoutReturnValue" : ""),
+    ((methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")),
+    endpointCode,
+    soapVersion
+    );
                 }
                 block = block.Replace(methodBodyToReplace, newBody);
                 if (methodBodyToReplace != newBody)

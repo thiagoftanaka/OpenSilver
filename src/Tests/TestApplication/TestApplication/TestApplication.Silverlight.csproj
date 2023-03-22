@@ -56,6 +56,7 @@
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Windows" />
     <Reference Include="system" />
     <Reference Include="System.Core">
@@ -124,6 +125,16 @@
     <Compile Include="MyCustomImageControl.cs" />
     <Compile Include="SampleHeaderedContainer.xaml.cs">
       <DependentUpon>SampleHeaderedContainer.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Service References\BasicHttpServiceReference\Reference.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </Compile>
+    <Compile Include="Service References\BinaryServiceReference\Reference.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Reference.svcmap</DependentUpon>
     </Compile>
     <Compile Include="TestingChildWindow\LoginWindow.xaml.cs">
       <DependentUpon>LoginWindow.xaml</DependentUpon>
@@ -312,7 +323,7 @@
     <Compile Include="Tests\OpenFileDialogTest.xaml.cs">
       <DependentUpon>OpenFileDialogTest.xaml</DependentUpon>
     </Compile>
-	<Compile Include="Tests\PopupZIndexTest.xaml.cs">
+    <Compile Include="Tests\PopupZIndexTest.xaml.cs">
       <DependentUpon>PopupZIndexTest.xaml</DependentUpon>
     </Compile>
     <Compile Include="Tests\Paths\PathChangeTest.xaml.cs">
@@ -324,7 +335,7 @@
     <Compile Include="Tests\PrintingTest.xaml.cs">
       <DependentUpon>PrintingTest.xaml</DependentUpon>
     </Compile>
-	<Compile Include="Tests\PrintDocumentTest.xaml.cs">
+    <Compile Include="Tests\PrintDocumentTest.xaml.cs">
       <DependentUpon>PrintDocumentTest.xaml</DependentUpon>
     </Compile>
     <Compile Include="Tests\RadioButtonTest.xaml.cs">
@@ -338,6 +349,9 @@
     </Compile>
     <Compile Include="Tests\ScrollViewerTest.xaml.cs">
       <DependentUpon>ScrollViewerTest.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Tests\ServiceReferenceTest.xaml.cs">
+      <DependentUpon>ServiceReferenceTest.xaml</DependentUpon>
     </Compile>
     <Compile Include="Tests\ShadowDropEffectTest.xaml.cs">
       <DependentUpon>ShadowDropEffectTest.xaml</DependentUpon>
@@ -405,6 +419,39 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </ApplicationDefinition>
+    <None Include="Service References\BasicHttpServiceReference\BasicHttpService.disco" />
+    <None Include="Service References\BasicHttpServiceReference\configuration91.svcinfo" />
+    <None Include="Service References\BasicHttpServiceReference\configuration.svcinfo" />
+    <None Include="Service References\BasicHttpServiceReference\Reference.svcmap">
+      <Generator>WCF Proxy Generator</Generator>
+      <LastGenOutput>Reference.cs</LastGenOutput>
+    </None>
+    <None Include="Service References\BinaryServiceReference\BinaryService.disco" />
+    <None Include="Service References\BinaryServiceReference\configuration91.svcinfo" />
+    <None Include="Service References\BinaryServiceReference\configuration.svcinfo" />
+    <None Include="Service References\BinaryServiceReference\Reference.svcmap">
+      <Generator>WCF Proxy Generator</Generator>
+      <LastGenOutput>Reference.cs</LastGenOutput>
+    </None>
+    <Content Include="ServiceReferences.ClientConfig">
+      <SubType>Designer</SubType>
+    </Content>
+    <None Include="Service References\BasicHttpServiceReference\BasicHttpService.wsdl" />
+    <None Include="Service References\BasicHttpServiceReference\BasicHttpService.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\BasicHttpServiceReference\BasicHttpService1.wsdl" />
+    <None Include="Service References\BasicHttpServiceReference\BasicHttpService1.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\BinaryServiceReference\BinaryService.wsdl" />
+    <None Include="Service References\BinaryServiceReference\BinaryService.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\BinaryServiceReference\BinaryService1.wsdl" />
+    <None Include="Service References\BinaryServiceReference\BinaryService1.xsd">
+      <SubType>Designer</SubType>
+    </None>
     <Page Include="MainPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -653,7 +700,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-	<Page Include="Tests\PopupZIndexTest.xaml">
+    <Page Include="Tests\PopupZIndexTest.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -669,7 +716,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-	<Page Include="Tests\PrintDocumentTest.xaml">
+    <Page Include="Tests\PrintDocumentTest.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -688,6 +735,10 @@
     <Page Include="Tests\ScrollViewerTest.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Tests\ServiceReferenceTest.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Tests\ShadowDropEffectTest.xaml">
       <SubType>Designer</SubType>
@@ -774,7 +825,13 @@
     <Compile Include="Properties_Silverlight\AssemblyInfo.cs" />
     <None Include="Properties_Silverlight\AppManifest.xml" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadataStorage Include="Service References\BasicHttpServiceReference\" />
+    <WCFMetadataStorage Include="Service References\BinaryServiceReference\" />
+  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
 	Other similar extension points exist, see Microsoft.Common.targets.

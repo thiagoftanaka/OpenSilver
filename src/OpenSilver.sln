@@ -92,6 +92,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Compiler.Tests", "Compiler\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Experimental", "Compiler\Tests\Experimental\Experimental.csproj", "{30AFD58C-A67F-4FAD-954F-484B7B18C850}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApplication.Silverlight.Web", "Tests\TestApplication\TestApplication.Silverlight.Web\TestApplication.Silverlight.Web.csproj", "{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -294,6 +296,12 @@ Global
 		{30AFD58C-A67F-4FAD-954F-484B7B18C850}.SL|Any CPU.Build.0 = SL|Any CPU
 		{30AFD58C-A67F-4FAD-954F-484B7B18C850}.UWP|Any CPU.ActiveCfg = UWP|Any CPU
 		{30AFD58C-A67F-4FAD-954F-484B7B18C850}.UWP|Any CPU.Build.0 = UWP|Any CPU
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}.SL|Any CPU.ActiveCfg = Debug|Any CPU
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}.SL|Any CPU.Build.0 = Debug|Any CPU
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}.UWP|Any CPU.ActiveCfg = Debug|Any CPU
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}.UWP|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -329,6 +337,7 @@ Global
 		{CD78CFFE-189F-4501-9212-ED339379C23C} = {EE82C82C-611F-4CD8-8786-2E1C91EC243E}
 		{AF559796-A41A-4A04-914E-E98A97B6A2A5} = {CD78CFFE-189F-4501-9212-ED339379C23C}
 		{30AFD58C-A67F-4FAD-954F-484B7B18C850} = {CD78CFFE-189F-4501-9212-ED339379C23C}
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A} = {50D518C0-E365-4A4B-A6BB-1B2A725719B7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A13C12CC-0544-49D7-A852-FCE1C884AA54}
