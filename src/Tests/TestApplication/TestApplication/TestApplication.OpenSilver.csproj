@@ -8,6 +8,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="OpenSilver" Version="1.1.0" />
+		<PackageReference Include="System.ServiceModel.Http" Version="4.10.0" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -18,6 +19,8 @@
     <Compile Include="HintBehavior.cs" />
     <Compile Include="LinqSamples.cs" />
     <Compile Include="NotifyPropertyChanged.cs" />
+    <Compile Include="Service References\BasicHttpServiceReference\Reference.cs" />
+    <Compile Include="Service References\BinaryServiceReference\Reference.cs" />
     <Compile Include="Tests\AccordionTest.xaml.cs" />
     <Compile Include="Tests\DragDropTarget\ListBoxDragDropTargetTest.xaml.cs" />
     <Compile Include="Tests\DragDropTarget\PanelDragDropTargetTest.xaml.cs" />
@@ -229,6 +232,7 @@
     <Compile Include="Tests\ScrollViewerTest.xaml.cs">
       <DependentUpon>ScrollViewerTest.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Tests\ServiceReferenceTest.xaml.cs" />
     <Compile Include="Tests\ShadowDropEffectTest.xaml.cs">
       <DependentUpon>ShadowDropEffectTest.xaml</DependentUpon>
     </Compile>
@@ -621,6 +625,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <None Include="ServiceReferences.ClientConfig" />
+  </ItemGroup>
+  <ItemGroup>
     <Page Include="Tests\DragDropTarget\ListBoxDragDropTargetTest.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -647,6 +654,9 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Tests\PopupZIndexTest.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Tests\ServiceReferenceTest.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Tests\TextBlockTest.xaml">

@@ -85,6 +85,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Controls.Layout.Toolkit.Ope
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Compiler.ResourcesExtractor.OpenSilver", "Compiler\Compiler.ResourcesExtractor\Compiler.ResourcesExtractor.OpenSilver.csproj", "{78330CAC-E883-4820-B5A2-B513E099565A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApplication.Silverlight.Web", "Tests\TestApplication\TestApplication.Silverlight.Web\TestApplication.Silverlight.Web.csproj", "{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		SL|Any CPU = SL|Any CPU
@@ -177,6 +179,12 @@ Global
 		{78330CAC-E883-4820-B5A2-B513E099565A}.SL|Any CPU.Build.0 = Release|Any CPU
 		{78330CAC-E883-4820-B5A2-B513E099565A}.UWP|Any CPU.ActiveCfg = Release|Any CPU
 		{78330CAC-E883-4820-B5A2-B513E099565A}.UWP|Any CPU.Build.0 = Release|Any CPU
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}.SL|Any CPU.ActiveCfg = Debug|Any CPU
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}.SL|Any CPU.Build.0 = Debug|Any CPU
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}.UWP|Any CPU.ActiveCfg = Debug|Any CPU
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A}.UWP|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -209,6 +217,7 @@ Global
 		{C4F12E9C-2D44-4C88-9D4E-4B8DBBC87F69} = {BDA9A1B3-15CD-4068-9A6D-BDA030FBEC5E}
 		{946906B2-590F-4E57-BA27-62AFDE5E1B0B} = {BDA9A1B3-15CD-4068-9A6D-BDA030FBEC5E}
 		{78330CAC-E883-4820-B5A2-B513E099565A} = {EE82C82C-611F-4CD8-8786-2E1C91EC243E}
+		{846E32DB-D6B4-4E9B-9894-5BAAB5B5A54A} = {50D518C0-E365-4A4B-A6BB-1B2A725719B7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A13C12CC-0544-49D7-A852-FCE1C884AA54}
