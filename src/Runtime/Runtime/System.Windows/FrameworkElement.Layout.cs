@@ -613,8 +613,8 @@ namespace Windows.UI.Xaml
         {
             internal MinMax(FrameworkElement e)
             {
-                maxHeight = e.MaxHeight;
-                minHeight = e.MinHeight;
+                maxHeight = double.IsNaN(e.MaxHeight) ? double.PositiveInfinity : e.MaxHeight;
+                minHeight = double.IsNaN(e.MinHeight) ? 0 : e.MinHeight;
                 double l = e.Height;
 
                 double height = (double.IsNaN(l) ? double.PositiveInfinity : l);
@@ -623,8 +623,8 @@ namespace Windows.UI.Xaml
                 height = (double.IsNaN(l) ? 0 : l);
                 minHeight = Math.Max(Math.Min(maxHeight, height), minHeight);
 
-                maxWidth = e.MaxWidth;
-                minWidth = e.MinWidth;
+                maxWidth = double.IsNaN(e.MaxWidth) ? double.PositiveInfinity : e.MaxWidth;
+                minWidth = double.IsNaN(e.MinWidth) ? 0 : e.MinWidth;
                 l = e.Width;
 
                 double width = (double.IsNaN(l) ? double.PositiveInfinity : l);
