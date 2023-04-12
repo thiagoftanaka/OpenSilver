@@ -35,6 +35,7 @@ using System.ServiceModel.Channels;
 using System.IO;
 using System.Threading.Tasks;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using System.Xml;
