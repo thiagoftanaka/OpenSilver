@@ -32,6 +32,7 @@ using System.Text;
 using System.Threading.Tasks;
 #if MIGRATION
 using System.Windows;
+using CSHTML5.Types;
 #else
 using Windows.UI.Xaml;
 #endif
@@ -286,8 +287,14 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
             {
                 if (!Interop.IsRunningInTheSimulator)
                 {
+#if MIGRATION
+                    var result = Interop.ExecuteJavaScript("window.localStorage[$0]", GetKeysFirstPart() + key)
+                        as INTERNAL_JSObjectReference;
+                    return result?.GetActualValue();
+#else
                     dynamic localStorage = GetLocalStorage();
                     return Convert.ChangeType((Interop.ExecuteJavaScript("$0[$1]", localStorage, GetKeysFirstPart() + key)), typeof(object));
+#endif
                 }
                 else
                 {
@@ -298,9 +305,13 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
             {
                 if (!Interop.IsRunningInTheSimulator)
                 {
+#if MIGRATION
+                    Interop.ExecuteJavaScriptVoidAsync("window.localStorage[$0] = $1", GetKeysFirstPart() + key, value);
+#else
                     dynamic localStorage = GetLocalStorage();
                     string applicationSpecificKey = GetKeysFirstPart() + key;
                     Interop.ExecuteJavaScriptVoid("$0[$1] = $2", false,  localStorage, applicationSpecificKey, value);
+#endif
                 }
                 else
                 {
@@ -318,8 +329,12 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
         {
             if (!Interop.IsRunningInTheSimulator)
             {
+#if MIGRATION
+                Interop.ExecuteJavaScriptVoidAsync("window.localStorage[$0] = $1", GetKeysFirstPart() + key, value);
+#else
                 dynamic localStorage = GetLocalStorage();
                 localStorage[GetKeysFirstPart() + key] = value;
+#endif
             }
             else
             {
@@ -359,8 +374,14 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
         {
             if (!Interop.IsRunningInTheSimulator)
             {
+#if MIGRATION
+                var result = Interop.ExecuteJavaScript("window.localStorage[$0]", GetKeysFirstPart() + key)
+                    as INTERNAL_JSObjectReference;
+                return result?.GetActualValue() != null;
+#else
                 dynamic localStorage = GetLocalStorage();
                 return (localStorage.getItem(GetKeysFirstPart() + key) != null);
+#endif
             }
             else
             {
@@ -479,7 +500,7 @@ return res;
             }
         }
 
-        #region for the interfaces that we remove for now
+#region for the interfaces that we remove for now
         //public void Add(KeyValuePair<string, object> item)
         //{
         //    throw new NotImplementedException();
@@ -606,6 +627,6 @@ return res;
         //{
         //    get { throw new NotImplementedException(); }
         //}
-        #endregion
+#endregion
     }
 }
