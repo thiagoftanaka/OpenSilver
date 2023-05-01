@@ -20,9 +20,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Markup;
+using System.Windows.Controls;
 
 #if MIGRATION
+using System.Windows.Markup;
+using System.Windows.Media;
+
 namespace System.Windows.Documents
 #else
 namespace Windows.UI.Xaml.Documents
@@ -59,6 +62,7 @@ namespace Windows.UI.Xaml.Documents
             if (INTERNAL_VisualTreeManager.IsElementInVisualTree(run))
             {
                 INTERNAL_HtmlDomManager.SetContentString(run, (string)e.NewValue);
+                (VisualTreeHelper.GetParent(run) as TextBlock)?.Inlines.TextContainer.EndChange();
             }
         }
 

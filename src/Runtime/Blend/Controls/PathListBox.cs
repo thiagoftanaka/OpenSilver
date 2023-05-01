@@ -32,21 +32,21 @@ namespace Microsoft.Expression.Controls
             typeof(FrameworkElement),
             typeof(LayoutPath),
             new PropertyMetadata());
-        public static readonly DependencyProperty WrapItemsProperty = DependencyProperty.Register(nameof(WrapItems),
-            typeof(FrameworkElement),
-            typeof(LayoutPath),
-            new PropertyMetadata());
+        //public static readonly DependencyProperty WrapItemsProperty = DependencyProperty.Register(nameof(WrapItems),
+        //    typeof(FrameworkElement),
+        //    typeof(LayoutPath),
+        //    new PropertyMetadata());
 
-        public PathListBox() { }
+        //public PathListBox() { }
 
         public LayoutPathCollection LayoutPaths { get; } = new LayoutPathCollection();
 
         public double StartItemIndex { get; set; }
 
-        public bool WrapItems { get; set; }
+        //public bool WrapItems { get; set; }
 
-        protected override DependencyObject GetContainerForItemOverride() { return default(DependencyObject); }
+        //protected override DependencyObject GetContainerForItemOverride() { return default(DependencyObject); }
 
-        protected override bool IsItemItsOwnContainerOverride(object item) { return true; }
+        //protected override bool IsItemItsOwnContainerOverride(object item) { return true; }
     }
 }
