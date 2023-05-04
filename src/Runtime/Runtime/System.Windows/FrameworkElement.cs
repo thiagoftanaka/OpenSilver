@@ -488,46 +488,14 @@ namespace Windows.UI.Xaml
         /// <returns>The "root" dom element of the FrameworkElement.</returns>
         public override object CreateDomElement(object parentRef, out object domElementWhereToPlaceChildren)
         {
-            //------------------
-            // It is important to create at least 2 divs so that horizontal and vertical alignments work properly (cf. "ApplyHorizontalAlignment" and "ApplyVerticalAlignment" methods)
-            //------------------
-
-            object div1;
-            var div1style = INTERNAL_HtmlDomManager.CreateDomElementAppendItAndGetStyle("div", parentRef, this, out div1);
-            if (!this.IsUnderCustomLayout)
-            {
-                object div2 = INTERNAL_HtmlDomManager.CreateFrameworkDomElementAndAppendIt(div1, this, false);
-                domElementWhereToPlaceChildren = div2;
-
-                if (this.IsCustomLayoutRoot)
-                {
-                    div1style.position = "relative";
-                }
-            }
-            else
-            {
-                domElementWhereToPlaceChildren = div1;
-            }
-            return div1;
+            return CreateDomElementInternal(parentRef, out domElementWhereToPlaceChildren);
         }
 
-        //BRIDGETODO
-        // Bridge bug : when we use virtual, override & out/base in a function, bridge doesn't compile
-        // so delete this class when the bug is resolved
-        public object CreateDomElement_WorkaroundBridgeInheritanceBug(object parentRef, out object domElementWhereToPlaceChildren)
+        internal object CreateDomElementInternal(object parentRef, out object domElementWhereToPlaceChildren)
         {
-            //------------------
-            // It is important to create at least 2 divs so that horizontal and vertical alignments work properly (cf. "ApplyHorizontalAlignment" and "ApplyVerticalAlignment" methods)
-            //------------------
-
-            object div1;
-            var div1style = INTERNAL_HtmlDomManager.CreateDomElementAppendItAndGetStyle("div", parentRef, this, out div1);
-            object div2;
-            var div2style = INTERNAL_HtmlDomManager.CreateDomElementAppendItAndGetStyle("div", div1, this, out div2);
-            div2style.width = "100%";
-            div2style.height = "100%";
-            domElementWhereToPlaceChildren = div2;
-            return div1;
+            object div = INTERNAL_HtmlDomManager.CreateDomLayoutElementAndAppendIt("div", parentRef, this);
+            domElementWhereToPlaceChildren = div;
+            return div;
         }
 
         // Internal helper so the FrameworkElement could see the
@@ -598,19 +566,6 @@ namespace Windows.UI.Xaml
 #endif
         {
             
-        }
-
-        // Note: the returned Size is unused for now.
-        internal override sealed Size MeasureCore()
-        {
-            if (!this.ApplyTemplate())
-            {
-                if (this.TemplateChild != null)
-                {
-                    INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(this.TemplateChild, this, 0);
-                }
-            }
-            return new Size();
         }
 
         //
@@ -1244,8 +1199,6 @@ namespace Windows.UI.Xaml
             {
                 UpdateThemeStyleProperty();
             }
-
-            InvalidateMeasureInternal();
         }
 
         // Extracts the required flag and returns
