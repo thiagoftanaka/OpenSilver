@@ -17,6 +17,7 @@ using System.Linq;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Globalization;
+using System.Windows.Markup;
 using CSHTML5.Internal;
 using CSHTML5;
 
@@ -37,12 +38,8 @@ namespace Windows.UI.Xaml
     /// <summary>
     /// Represents an application window.
     /// </summary>
-    [global::System.Windows.Markup.ContentProperty("Content")]
-#if RECURSIVE_CONSTRUCTION_FIXED
-    public partial class Window : ContentControl
-#else
-    public partial class Window : FrameworkElement
-#endif
+    [ContentProperty(nameof(Content))]
+    public class Window : FrameworkElement
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Window"/> class.
@@ -164,7 +161,6 @@ namespace Windows.UI.Xaml
 
             // Raise the "Loaded" event:
             RaiseLoadedEvent();
-            InvalidateMeasure();
             
             SizeChanged += WindowSizeChangedEventHandler;
         }
@@ -214,23 +210,21 @@ namespace Windows.UI.Xaml
         {
             get
             {
-                var actualSize = this.INTERNAL_GetActualWidthAndHeight();
-                double width = actualSize.Width; //(double)INTERNAL_HtmlDomManager.GetRawHtmlBody().clientWidth; // Commented because it didn't work properly in the Simulator.
-                double height = actualSize.Height; //(double)INTERNAL_HtmlDomManager.GetRawHtmlBody().clientHeight; // Commented because it didn't work properly in the Simulator.
-                if (!double.IsNaN(width) && !double.IsNaN(height))
+                if (INTERNAL_OuterDomElement is not null)
+                {
+                    string sDiv = INTERNAL_InteropImplementation.GetVariableStringForJS(INTERNAL_OuterDomElement);
+                    double width = OpenSilver.Interop.ExecuteJavaScriptDouble($"{sDiv}.offsetWidth");
+                    double height = OpenSilver.Interop.ExecuteJavaScriptDouble($"{sDiv}.offsetHeight");
                     return new Rect(0, 0, width, height);
-                else
-                    return new Rect(0, 0, 0, 0);
+                }
+
+                return new Rect(0, 0, 0, 0);
             }
         }
 
         #endregion
 
-#if RECURSIVE_CONSTRUCTION_FIXED
-        protected override void OnContentChanged(object oldContent, object newContent)
-#else
         protected void OnContentChanged(object oldContent, object newContent)
-#endif
         {
             if (_isLoaded)
             {
@@ -242,9 +236,6 @@ namespace Windows.UI.Xaml
                 this.INTERNAL_ParentWindow = this;
 
                 // Attach the child UI element:
-#if RECURSIVE_CONSTRUCTION_FIXED
-                base.OnContentChanged(oldContent, newContent);
-#else
                 UIElement newChild = newContent as UIElement;
                 UIElement oldChild = oldContent as UIElement;
 
@@ -252,15 +243,12 @@ namespace Windows.UI.Xaml
                 RemoveVisualChild(oldChild);
                 AddVisualChild(newChild);
                 INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(newChild, this);
-#endif
+
                 // We can now revert the "ParentWindow" to null (cf. comment above):
                 this.INTERNAL_ParentWindow = null;
             }
         }
 
-
-#if RECURSIVE_CONSTRUCTION_FIXED
-#else
         /// <summary>
         /// Gets or sets the content of the Window.
         /// </summary>
@@ -269,27 +257,31 @@ namespace Windows.UI.Xaml
             get { return (FrameworkElement)GetValue(ContentProperty); }
             set { SetValue(ContentProperty, value); }
         }
+
         /// <summary>
-        /// Identifies the Content dependency property.
+        /// Identifies the <see cref="Content"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty ContentProperty =
-            DependencyProperty.Register("Content", typeof(FrameworkElement), typeof(Window), new PropertyMetadata(null, Content_Changed)
-            { CallPropertyChangedWhenLoadedIntoVisualTree = WhenToCallPropertyChangedEnum.IfPropertyIsSet });
+            DependencyProperty.Register(
+                nameof(Content),
+                typeof(FrameworkElement),
+                typeof(Window),
+                new PropertyMetadata(null, OnContentChanged));
 
-        static internal void Content_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        private static void OnContentChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             var window = (Window)d;
             window.OnContentChanged(e.OldValue, e.NewValue);
+            window.SetLayoutSize();
         }
-#endif
 
-#if BRIDGE
-        [Bridge.Template("true")]
-        private static bool IsRunningInJavaScript()
+        private void SetLayoutSize()
         {
-            return false;
+            Rect bounds = Bounds;
+            Measure(bounds.Size);
+            Arrange(bounds);
+            UpdateLayout();
         }
-#endif
 
         /// <summary>
         /// Attempts to activate the application window by bringing it to the foreground
@@ -393,21 +385,23 @@ namespace Windows.UI.Xaml
 
         protected override Size MeasureOverride(Size availableSize)
         {
-            if (this.Content as FrameworkElement == null)
-                return new Size();
-
-            FrameworkElement _content = this.Content as FrameworkElement;
-            Rect windowBounds = this.Bounds;
-            availableSize = new Size(windowBounds.Width, windowBounds.Height);
-            _content.Measure(availableSize);
-            return _content.DesiredSize;
+            availableSize = Bounds.Size;
+            if (Content is not null)
+            {
+                Content.Measure(availableSize);
+                return Content.DesiredSize;
+            }
+            return availableSize;
         }
 
         protected override Size ArrangeOverride(Size finalSize)
         {
-            Rect windowBounds = this.Bounds;
-            finalSize = new Size(windowBounds.Width, windowBounds.Height);
-            return base.ArrangeOverride(finalSize);
+            finalSize = Bounds.Size;
+            if (Content is not null)
+            {
+                Content.Arrange(new Rect(new Point(), finalSize));
+            }
+            return finalSize;
         }
     }
 }
