@@ -76,18 +76,6 @@ namespace Windows.UI.Xaml
             };
             INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(associatedTextBlock, parent);
 
-            bool hasMarginDiv = false;
-            if (associatedTextBlock.INTERNAL_AdditionalOutsideDivForMargins != null)
-            {
-                hasMarginDiv = true;
-
-                var wrapperDivStyle = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(associatedTextBlock.INTERNAL_AdditionalOutsideDivForMargins);
-                wrapperDivStyle.position = "absolute";
-                wrapperDivStyle.visibility = "hidden";
-                wrapperDivStyle.left = "-100000px";
-                wrapperDivStyle.top = "-100000px";
-            }
-
             textBlockReference = associatedTextBlock.INTERNAL_OuterDomElement;
             textBlockDivStyle = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(textBlockReference);
             textBlockDivStyle.position = "absolute";
@@ -96,8 +84,8 @@ namespace Windows.UI.Xaml
             textBlockDivStyle.width = "";
             textBlockDivStyle.borderWidth = "1";
             textBlockDivStyle.whiteSpace = "pre";
-            textBlockDivStyle.left = hasMarginDiv ? "0px" : "-100000px";
-            textBlockDivStyle.top = hasMarginDiv ? "0px" : "-100000px";
+            textBlockDivStyle.left = "-100000px";
+            textBlockDivStyle.top = "-100000px";
 
             associatedTextBlock.Text = "A";
 
@@ -135,9 +123,9 @@ namespace Windows.UI.Xaml
             int sepIndex = strTextSize != null ? strTextSize.IndexOf('|') : -1;
             if (sepIndex > -1)
             {
-                double actualWidth = double.Parse(strTextSize.Substring(0, sepIndex), CultureInfo.InvariantCulture);
-                double actualHeight = double.Parse(strTextSize.Substring(sepIndex + 1), CultureInfo.InvariantCulture);
-                measuredSize = new Size(actualWidth + 1, actualHeight);
+                measuredSize = new Size(
+                    double.Parse(strTextSize.Substring(0, sepIndex), CultureInfo.InvariantCulture),
+                    double.Parse(strTextSize.Substring(sepIndex + 1), CultureInfo.InvariantCulture));
             }
             else
             {
