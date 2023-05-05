@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,21 +11,34 @@
 *  
 \*====================================================================================*/
 
-
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.ComponentModel;
+using System.Security;
+using System.Windows.Browser.Internal;
 using CSHTML5;
+using OpenSilver.Internal;
 
 namespace System.Windows.Browser
 {
-    public sealed partial class HtmlDocument : HtmlObject
+    /// <summary>
+    /// Represents the HTML document in the browser.
+    /// </summary>
+    public sealed class HtmlDocument : HtmlObject
     {
-        public HtmlDocument()
-        {
+        private HtmlElement _body;
+        private HtmlElement _documentElement;
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete(Helper.ObsoleteMemberMessage + " Use System.Windows.Browser.HtmlPage.Document instead.")]
+        public HtmlDocument()
+            : this(new DocumentRef())
+        {
+        }
+
+        internal HtmlDocument(IJSObjectRef jsObject)
+            : base(jsObject)
+        {
         }
 
         /// <summary>
@@ -67,30 +79,30 @@ namespace System.Windows.Browser
                 return query;
             }
         }
-        //
-        // Summary:
-        //     Gets a single browser element.
-        //
-        // Parameters:
-        //   id:
-        //     A string identifier for a named browser element.
-        //
-        // Returns:
-        //     A reference to a browser element.
-        //
-        // Exceptions:
-        //   System.ArgumentException:
-        //     id is an empty string.
-        //
-        //   System.ArgumentNullException:
-        //     id is null.
-        //
-        //   System.InvalidOperationException:
-        //     An unexpected error occurred.
-		[OpenSilver.NotImplemented]
+
+        /// <summary>
+        /// Gets a single browser element.
+        /// </summary>
+        /// <param name="id">
+        /// A string identifier for a named browser element.
+        /// </param>
+        /// <returns>
+        /// A reference to a browser element.
+        /// </returns>
+        /// <exception cref="ArgumentException">
+        /// id is an empty string.
+        /// </exception>
+        /// <exception cref="ArgumentNullException">
+        /// id is null.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// An unexpected error occurred.
+        /// </exception>
         public HtmlElement GetElementById(string id)
         {
-            return null;
+            ValidateParameter(id);
+
+            return (HtmlElement)Invoke("getElementById", id);
         }
 
         /// <summary>
@@ -101,6 +113,74 @@ namespace System.Windows.Browser
         {
             get => OpenSilver.Interop.ExecuteJavaScriptString("document.cookie") ?? string.Empty;
             set => OpenSilver.Interop.ExecuteJavaScriptVoid($"document.cookie = {INTERNAL_InteropImplementation.GetVariableStringForJS(value)}");
+        }
+
+        /// <summary>
+        /// Gets a reference to the BODY element of the HTML document.
+        /// </summary>
+        /// <returns>
+        /// The HTML document's BODY element.
+        /// </returns>
+        public HtmlElement Body => _body ??= (HtmlElement)GetProperty("body");
+
+        /// <summary>
+        /// Gets a reference to the browser's DOCUMENT element.
+        /// </summary>
+        /// <returns>
+        /// The browser's DOCUMENT element.
+        /// </returns>
+        public HtmlElement DocumentElement => _documentElement ??= (HtmlElement)GetProperty("documentElement");
+
+        /// <summary>
+        /// Creates a browser element.
+        /// </summary>
+        /// <param name="tagName">
+        /// The tag name of the browser element to create.
+        /// </param>
+        /// <returns>
+        /// A reference to a browser element.
+        /// </returns>
+        /// <exception cref="ArgumentException">
+        /// tagName is an empty string.
+        /// </exception>
+        /// <exception cref="ArgumentNullException">
+        /// tagName is null.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// An unexpected error occurred.
+        /// </exception>
+        public HtmlElement CreateElement(string tagName)
+        {
+            ValidateParameter(tagName);
+
+            return (HtmlElement)Invoke("createElement", tagName);
+        }
+
+        /// <summary>
+        /// Gets a collection of browser elements.
+        /// </summary>
+        /// <param name="tagName">
+        /// A browser element's tag name.
+        /// </param>
+        /// <returns>
+        /// A collection of references to HTML elements that correspond to the requested
+        /// tag name.
+        /// </returns>
+        /// <exception cref="ArgumentException">
+        /// tagName is an empty string.
+        /// </exception>
+        /// <exception cref="ArgumentNullException">
+        /// tagName is null.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// An unexpected error occurred.
+        /// </exception>
+        [SecuritySafeCritical]
+        public ScriptObjectCollection GetElementsByTagName(string tagName)
+        {
+            ValidateParameter(tagName);
+
+            return (ScriptObjectCollection)Invoke("getElementsByTagName", tagName);
         }
     }
 }

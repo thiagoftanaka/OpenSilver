@@ -12,17 +12,28 @@
 \*====================================================================================*/
 
 using System;
+using System.ComponentModel;
+using System.Windows.Browser.Internal;
+using OpenSilver.Internal;
+
 #if !MIGRATION
 using Windows.UI.Xaml;
 #endif
 
 namespace System.Windows.Browser
 {
-    public sealed partial class HtmlWindow : HtmlObject
+    public sealed class HtmlWindow : HtmlObject
     {
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete(Helper.ObsoleteMemberMessage + " Use System.Windows.Browser.HtmlPage.Window instead.")]
         public HtmlWindow()
+            : this(new WindowRef())
         {
+        }
 
+        internal HtmlWindow(IJSObjectRef jsObject)
+            : base(jsObject)
+        {
         }
 
         /// <summary>
@@ -66,7 +77,7 @@ namespace System.Windows.Browser
         /// <returns>The results of the JavaScript engine's evaluation of the string in the code parameter.</returns>
         public object Eval(string code)
         {
-            return OpenSilver.Interop.ExecuteJavaScript("eval($0)", code);
+            return Invoke("eval", code);
         }
 
         [OpenSilver.NotImplemented]
@@ -100,9 +111,6 @@ namespace System.Windows.Browser
         /// <returns>
         /// true if the user clicked the OK button; otherwise, false.
         /// </returns>
-#if BRIDGE
-        [Bridge.Template("confirm(confirmText)")]
-#endif
         public bool Confirm(string confirmText)
         {
             if (OpenSilver.Interop.IsRunningInTheSimulator)
@@ -113,44 +121,6 @@ namespace System.Windows.Browser
             {
                 return OpenSilver.Interop.ExecuteJavaScriptBoolean($"confirm({CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(confirmText)})");
             }
-        }
-
-        /// <summary>
-        /// Gets the value of a property that is identified by name on the current <see cref="HtmlWindow" />
-        /// </summary>
-        /// <param name="name">
-        /// The name of the property.
-        /// </param>
-        /// <returns>
-        /// <see langword="null" /> if the property does not exist.
-        /// </returns>
-        /// <exception cref="ArgumentNullException">
-        /// <paramref name="name"/> is <see langword="null" />.
-        /// </exception>
-        /// <exception cref="ArgumentException">
-        /// <paramref name="name"/> is an empty string or contains an embedded null character (\0).
-        /// </exception>
-#if BRIDGE
-        [Bridge.Template("{name}")]
-#endif
-        public override object GetProperty(string name)
-        {
-            var result = default(object);
-
-            if (name is null)
-            {
-                throw new ArgumentNullException(name);
-            }
-            else if (string.IsNullOrEmpty(name) || name.Contains("\\0"))
-            {
-                throw new ArgumentException($"{nameof(name)} is an empty string or contains an embedded null character (\0)");
-            }
-
-            using(var jsObject = OpenSilver.Interop.ExecuteJavaScript(name))
-                if (!jsObject.ToString().Equals("undefined"))
-                    result = jsObject;
-
-            return result;
         }
     }
 }
