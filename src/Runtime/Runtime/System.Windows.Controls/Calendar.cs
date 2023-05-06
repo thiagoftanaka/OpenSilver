@@ -102,8 +102,8 @@ namespace Windows.UI.Xaml.Controls
             _flatpickrInstance = OpenSilver.Interop.ExecuteJavaScript(@"flatpickr($0, {
                 inline: true, 
                 dateFormat: ""YYYY-MM-DD HH:MM"",
-                defaultDate: $1
-                })", div, GetJsDate(defaultDate));
+                defaultDate: new Date($1, $2, $3)
+                })", div, defaultDate.Year, defaultDate.Month - 1, defaultDate.Day);
 
             // Register the JS events:
             OpenSilver.Interop.ExecuteJavaScriptVoid(@"$0.config.onChange.push(function(args) {
@@ -223,7 +223,8 @@ namespace Windows.UI.Xaml.Controls
             else
             {
                 DateTime nonNullDateStart = (DateTime)dateStart;
-                OpenSilver.Interop.ExecuteJavaScriptVoid(@"$0.config.minDate = $1", flushQueue:false, this._flatpickrInstance, GetJsDate(nonNullDateStart));
+                OpenSilver.Interop.ExecuteJavaScriptVoid(@"$0.config.minDate = new Date($1, $2, $3)", flushQueue:false,
+                    this._flatpickrInstance, nonNullDateStart.Year, nonNullDateStart.Month - 1, nonNullDateStart.Day);
             }
         }
 
@@ -236,7 +237,8 @@ namespace Windows.UI.Xaml.Controls
             else
             {
                 DateTime nonNullDateEnd = (DateTime)dateEnd;
-                OpenSilver.Interop.ExecuteJavaScriptVoid(@"$0.config.maxDate = $1", flushQueue:false, this._flatpickrInstance, GetJsDate(nonNullDateEnd));
+                OpenSilver.Interop.ExecuteJavaScriptVoid(@"$0.config.maxDate = new Date($1, $2, $3)", flushQueue:false,
+                    this._flatpickrInstance, nonNullDateEnd.Year, nonNullDateEnd.Month - 1, nonNullDateEnd.Day);
             }
         }
 
@@ -253,7 +255,8 @@ namespace Windows.UI.Xaml.Controls
                 {
                     throw new ArgumentOutOfRangeException("The given date is not in the range specified by System.Windows.Controls.Calendar.DisplayDateStart and System.Windows.Controls.Calendar.DisplayDateEnd");
                 }
-                OpenSilver.Interop.ExecuteJavaScriptVoid(@"$0.jumpToDate($1)", flushQueue:false, this._flatpickrInstance, GetJsDate(nonNullDate));
+                OpenSilver.Interop.ExecuteJavaScriptVoid(@"$0.jumpToDate(new Date($1, $2, $3))", flushQueue:false,
+                    this._flatpickrInstance, nonNullDate.Year, nonNullDate.Month - 1, nonNullDate.Day);
             }
         }
 
@@ -272,11 +275,5 @@ namespace Windows.UI.Xaml.Controls
         public static readonly DependencyProperty FirstDayOfWeekProperty = DependencyProperty.Register(
             nameof(FirstDayOfWeek), typeof(DayOfWeek), typeof(Calendar), new PropertyMetadata(
                 DateTimeFormatInfo.CurrentInfo.FirstDayOfWeek, null));
-
-        static object GetJsDate(DateTime dateTime)
-        {
-            using(var date = OpenSilver.Interop.ExecuteJavaScript("new Date($0,$1,$2)", dateTime.Year, dateTime.Month - 1, dateTime.Day))
-                return date;
-        }
     }
 }
