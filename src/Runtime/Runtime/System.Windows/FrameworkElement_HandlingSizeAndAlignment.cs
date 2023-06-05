@@ -968,7 +968,7 @@ namespace Windows.UI.Xaml
 
         internal static void Margin_MethodToUpdateDom(DependencyObject d, object newValue)
         {
-            var fe = (FrameworkElement)d;            
+            var fe = (FrameworkElement)d;
             if (INTERNAL_VisualTreeManager.IsElementInVisualTree(fe) && !fe.IsUnderCustomLayout)
             {
                 var margin = (Thickness)newValue;
@@ -1214,7 +1214,7 @@ namespace Windows.UI.Xaml
                         return 0d;
                     }
                 }
-                
+
                 return 0d;
             }
         }
@@ -1243,7 +1243,7 @@ namespace Windows.UI.Xaml
                         return 0d;
                     }
                 }
-                
+
                 return 0d;
             }
         }
@@ -1263,7 +1263,7 @@ namespace Windows.UI.Xaml
                 null);
 
         bool _isSubsribedToSizeChanged = false;
-        internal void SubsribeToSizeChanged()
+        internal void SubscribeToSizeChanged()
         {
             if (!_isSubsribedToSizeChanged)
             {
@@ -1335,18 +1335,15 @@ namespace Windows.UI.Xaml
         #region SizeChanged
 
         private Size _valueOfLastSizeChanged = new Size(0d, 0d);
-        private List<SizeChangedEventHandler> _sizeChangedEventHandlers;
         private readonly IResizeObserverAdapter _resizeObserver = ResizeObserverFactory.Create();
 
         // Size changed event for the CustomLayout Root
         internal Size _valueOfLayoutRootLastSizeChanged = new Size(0d, 0d);
-        internal List<SizeChangedEventHandler> _layoutRootSizeChangedEventHandlers;
         internal readonly IResizeObserverAdapter _layoutRootResizeObserver = ResizeObserverFactory.Create();
 
         private void HandleSizeChanged(Size currentSize)
         {
             if (this._sizeChangedEventHandlers != null
-               && this._sizeChangedEventHandlers.Count > 0
                && INTERNAL_VisualTreeManager.IsElementInVisualTree(this)
                && this._isLoaded)
             {
@@ -1362,10 +1359,7 @@ namespace Windows.UI.Xaml
                     SizeChangedEventArgs e = new SizeChangedEventArgs(currentSize);
 
                     // Raise the "SizeChanged" event of all the listeners:
-                    for (int i = 0; i < this._sizeChangedEventHandlers.Count; i++)
-                    {
-                        this._sizeChangedEventHandlers[i](this, e);
-                    }
+                    this._sizeChangedEventHandlers(this, e);
                 }
             }
         }
@@ -1373,7 +1367,6 @@ namespace Windows.UI.Xaml
         internal void LayoutRootHandleSizeChanged(Size currentSize)
         {
             if (this._layoutRootSizeChangedEventHandlers != null
-               && this._layoutRootSizeChangedEventHandlers.Count > 0
                && INTERNAL_VisualTreeManager.IsElementInVisualTree(this)
                && this._isLoaded)
             {
@@ -1389,10 +1382,7 @@ namespace Windows.UI.Xaml
                     SizeChangedEventArgs e = new SizeChangedEventArgs(currentSize);
 
                     // Raise the "LayoutRootSizeChanged" event of all the listeners:
-                    for (int i = 0; i < this._layoutRootSizeChangedEventHandlers.Count; i++)
-                    {
-                        this._layoutRootSizeChangedEventHandlers[i](this, e);
-                    }
+                    this._layoutRootSizeChangedEventHandlers(this, e);
                 }
             }
         }
@@ -1408,7 +1398,6 @@ namespace Windows.UI.Xaml
                     HandleSizeChanged(Size.Empty);
 
                 if (this._sizeChangedEventHandlers != null &&
-                    this._sizeChangedEventHandlers.Count > 0 &&
                     !this._resizeObserver.IsObserved)
                 {
                     if (double.IsNaN(this.Width) || double.IsNaN(this.Height))
@@ -1422,7 +1411,6 @@ namespace Windows.UI.Xaml
             if (this.IsCustomLayoutRoot)
             {
                 if (this._layoutRootSizeChangedEventHandlers != null &&
-                    this._layoutRootSizeChangedEventHandlers.Count > 0 &&
                     !this._layoutRootResizeObserver.IsObserved)
                 {
                     if (double.IsNaN(this.Width) || double.IsNaN(this.Height))
@@ -1445,14 +1433,11 @@ namespace Windows.UI.Xaml
                 _layoutRootResizeObserver.Unobserve(this.INTERNAL_AdditionalOutsideDivForMargins);
         }
 
+        private SizeChangedEventHandler _sizeChangedEventHandlers;
         public event SizeChangedEventHandler SizeChanged
         {
             add
             {
-                if (this._sizeChangedEventHandlers == null)
-                {
-                    this._sizeChangedEventHandlers = new List<SizeChangedEventHandler>();
-                }
                 if (!this._resizeObserver.IsObserved && this.INTERNAL_OuterDomElement != null)
                 {
                     if (this.IsUnderCustomLayout == false)
@@ -1468,33 +1453,23 @@ namespace Windows.UI.Xaml
                         }
                     }
                 }
-                this._sizeChangedEventHandlers.Add(value);
+                this._sizeChangedEventHandlers += value;
             }
             remove
             {
-                if (this._sizeChangedEventHandlers == null)
+                this._sizeChangedEventHandlers -= value;
+                if (this._sizeChangedEventHandlers == null && this._resizeObserver.IsObserved)
                 {
-                    return;
-                }
-
-                if (this._sizeChangedEventHandlers.Remove(value))
-                {
-                    if (this._sizeChangedEventHandlers.Count == 0 && this._resizeObserver.IsObserved)
-                    {
-                        _resizeObserver.Unobserve(this.INTERNAL_OuterDomElement);
-                    }
+                    _resizeObserver.Unobserve(this.INTERNAL_OuterDomElement);
                 }
             }
         }
 
+        private SizeChangedEventHandler _layoutRootSizeChangedEventHandlers;
         internal event SizeChangedEventHandler LayoutRootSizeChanged
         {
             add
             {
-                if (this._layoutRootSizeChangedEventHandlers == null)
-                {
-                    this._layoutRootSizeChangedEventHandlers = new List<SizeChangedEventHandler>();
-                }
                 if (!this._layoutRootResizeObserver.IsObserved && this.INTERNAL_AdditionalOutsideDivForMargins != null)
                 {
                     if (double.IsNaN(this.Width) || double.IsNaN(this.Height))
@@ -1507,21 +1482,15 @@ namespace Windows.UI.Xaml
                         LayoutRootHandleSizeChanged(new Size(this.Width, this.Height));
                     }
                 }
-                this._layoutRootSizeChangedEventHandlers.Add(value);
+                this._layoutRootSizeChangedEventHandlers += value;
             }
             remove
             {
-                if (this._layoutRootSizeChangedEventHandlers == null)
-                {
-                    return;
-                }
+                this._layoutRootSizeChangedEventHandlers -= value;
 
-                if (this._layoutRootSizeChangedEventHandlers.Remove(value))
+                if (this._layoutRootSizeChangedEventHandlers == null && this._layoutRootResizeObserver.IsObserved)
                 {
-                    if (this._layoutRootSizeChangedEventHandlers.Count == 0 && this._layoutRootResizeObserver.IsObserved)
-                    {
-                        _layoutRootResizeObserver.Unobserve(this.INTERNAL_AdditionalOutsideDivForMargins);
-                    }
+                    _layoutRootResizeObserver.Unobserve(this.INTERNAL_AdditionalOutsideDivForMargins);
                 }
             }
         }

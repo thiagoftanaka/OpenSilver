@@ -223,26 +223,6 @@ namespace Windows.UI.Xaml.Media.Animation
             InitializeKeyFramesSet();
         }
 
-        internal override void RestoreDefaultCore()
-        {
-            ResetAllTimers();
-            _appliedKeyFramesCount = 0;
-        }
-
-        private void ResetAllTimers()
-        {
-            if (_keyFramesToObjectTimers != null)
-            {
-                if (_keyFramesToObjectTimers.Values != null)
-                {
-                    foreach (var frameTimers in _keyFramesToObjectTimers.Values)
-                    {
-                        frameTimers.Reset();
-                    }
-                }
-            }
-        }
-
         protected override Duration GetNaturalDurationCore()
         {
             return new Duration(LargestTimeSpanKeyTime);
@@ -318,15 +298,6 @@ namespace Windows.UI.Xaml.Media.Animation
                 if (HasTimer)
                 {
                     _timer.Stop();
-                }
-            }
-
-            internal void Reset()
-            {
-                if (HasTimer)
-                {
-                    _timer.Stop();
-                    _timer = NewTimer(_timer.Interval);
                 }
             }
         }

@@ -34,8 +34,6 @@ namespace OpenSilver.IO
 
         public string Name { get; }
 
-        public long Length => _content.Length;
-
         public string Extension => Path.GetExtension(Name);
 
         public Stream OpenRead()
@@ -56,5 +54,14 @@ namespace OpenSilver.IO
 
         [NotImplemented]
         public virtual string FullName => Name;
+
+        public virtual long Length
+        {
+            get
+            {
+                if (_content != null) { return _content.Length; }
+                return 0;
+            }
+        }
     }
 }
