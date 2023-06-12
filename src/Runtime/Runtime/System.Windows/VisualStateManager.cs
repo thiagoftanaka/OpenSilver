@@ -74,16 +74,23 @@ namespace Windows.UI.Xaml
             // This is because we don't know what the custom VSM will want to do. But for our default implementation,
             // we know that if we haven't found the state, we don't actually want to do anything.
             VisualStateManager customVsm = GetCustomVisualStateManager(stateGroupsRoot);
+            bool skipped = false;
+            bool result = false;
             if (customVsm != null)
             {
-                return customVsm.GoToStateCore(control, stateGroupsRoot, stateName, group, state, useTransitions);
+                result = customVsm.GoToStateCore(control, stateGroupsRoot, stateName, group, state, useTransitions, out skipped);
             }
             else if (state != null)
             {
-                return GoToStateInternal(control, stateGroupsRoot, group, state, useTransitions);
+                result = GoToStateInternal(control, stateGroupsRoot, group, state, useTransitions, out skipped);
             }
 
-            return false;
+            if (skipped)
+            {
+                state?.Storyboard?.INTERNAL_RaiseCompletedEvent();
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -136,9 +143,9 @@ namespace Windows.UI.Xaml
         /// <summary>
         ///     Allows subclasses to override the GoToState logic.
         /// </summary>
-        protected virtual bool GoToStateCore(Control control, FrameworkElement templateRoot, string stateName, VisualStateGroup group, VisualState state, bool useTransitions)
+        protected virtual bool GoToStateCore(Control control, FrameworkElement templateRoot, string stateName, VisualStateGroup group, VisualState state, bool useTransitions, out bool skipped)
         {
-            return GoToStateInternal(control, templateRoot, group, state, useTransitions);
+            return GoToStateInternal(control, templateRoot, group, state, useTransitions, out skipped);
         }
 
         #region CustomVisualStateManager
@@ -248,8 +255,10 @@ namespace Windows.UI.Xaml
             return false;
         }
 
-        private static bool GoToStateInternal(Control control, FrameworkElement stateGroupsRoot, VisualStateGroup group, VisualState state, bool useTransitions)
+        private static bool GoToStateInternal(Control control, FrameworkElement stateGroupsRoot, VisualStateGroup group, VisualState state, bool useTransitions, out bool skipped)
         {
+            skipped = false;
+
             if (stateGroupsRoot == null)
             {
                 throw new ArgumentNullException("stateGroupsRoot");
@@ -270,6 +279,7 @@ namespace Windows.UI.Xaml
                 VisualState lastState = group.CurrentState;
                 if (lastState == state)
                 {
+                    skipped = true;
                     return true;
                 }
 
