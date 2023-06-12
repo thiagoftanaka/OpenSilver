@@ -963,7 +963,9 @@ if(nextSibling != undefined) {
                             valueWasRetrieved = true;
                         }
 
-                        if (value?.Equals(propertyMetadata.DefaultValue) == false)
+                        if (propertyMetadata.CallPropertyChangedWhenLoadedIntoVisualTree ==
+                            WhenToCallPropertyChangedEnum.Always ||
+                            value?.Equals(propertyMetadata.DefaultValue) == false)
                         {
                             // Raise the "PropertyChanged" event
                             propertyMetadata.PropertyChangedCallback(

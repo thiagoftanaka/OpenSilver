@@ -27,7 +27,7 @@ namespace Windows.UI.Xaml
 {
     public enum WhenToCallPropertyChangedEnum
     {
-        Always, //todo: implement this
+        Always,
         IfPropertyIsSet,
         Never
     }
