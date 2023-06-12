@@ -380,7 +380,7 @@ namespace Windows.UI.Xaml.Controls.Primitives
             if (IsHorizontalRevealMode)
             {
                 double targetWidth = TargetSize.Width;
-                if (Double.IsNaN(targetWidth))
+                if (Double.IsNaN(targetWidth) && ContentSite.ActualWidth != 0)
                 {
                     // NaN has the same meaning as autosize, which in this context means the desired size
                     targetWidth = ContentSite.ActualWidth;
@@ -392,7 +392,7 @@ namespace Windows.UI.Xaml.Controls.Primitives
             if (IsVerticalRevealMode)
             {
                 double targetHeight = TargetSize.Height;
-                if (Double.IsNaN(targetHeight))
+                if (Double.IsNaN(targetHeight) && ContentSite.ActualHeight != 0)
                 {
                     // NaN has the same meaning as autosize, which in this context means the desired size
                     targetHeight = ContentSite.ActualHeight;
