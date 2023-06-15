@@ -510,8 +510,9 @@ namespace Windows.UI.Xaml.Tests
 
         private class Test_CustomVisualStateManager : VisualStateManager
         {
-            protected override bool GoToStateCore(Control control, FrameworkElement templateRoot, string stateName, VisualStateGroup group, VisualState state, bool useTransitions)
+            protected override bool GoToStateCore(Control control, FrameworkElement templateRoot, string stateName, VisualStateGroup group, VisualState state, bool useTransitions, out bool skipped)
             {
+                skipped = false;
                 var innerControl = (control as MyControl2).InnerControl;
                 if (innerControl == null)
                     return false;
