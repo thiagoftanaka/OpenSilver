@@ -51,8 +51,7 @@ namespace Windows.UI.Xaml
                     if (dp == null && DependencyPropertyOwnerType != null)
                     {
                         // Trying on TargetObject type in case it was registered there
-                        dp = INTERNAL_TypeToStringsToDependencyProperties.GetPropertyInTypeOrItsBaseTypes(source.GetType(),
-                            propertyName);
+                        dp = DependencyProperty.FromName(propertyName, source.GetType());
                     }
 
                     if (dp != null)
