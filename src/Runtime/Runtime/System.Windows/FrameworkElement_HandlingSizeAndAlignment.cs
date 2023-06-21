@@ -67,15 +67,16 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="Height"/> dependency 
-        /// property.
+        /// Identifies the <see cref="Height"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty HeightProperty =
             DependencyProperty.Register(
                 nameof(Height),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(double.NaN, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange)
+                new FrameworkPropertyMetadata(
+                    double.NaN,
+                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange)
                 {
                     GetCSSEquivalent = (instance) => new CSSEquivalent
                     {
@@ -88,7 +89,8 @@ namespace Windows.UI.Xaml
                         Name = new List<string> { "height" },
                         ApplyAlsoWhenThereIsAControlTemplate = true
                     }
-                });
+                },
+                IsWidthHeightValid);
 
         #endregion
 
@@ -113,7 +115,9 @@ namespace Windows.UI.Xaml
                 nameof(Width),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(double.NaN, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange)
+                new FrameworkPropertyMetadata(
+                    double.NaN,
+                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange)
                 {
                     GetCSSEquivalent = (instance) => new CSSEquivalent
                     {
@@ -126,7 +130,8 @@ namespace Windows.UI.Xaml
                         Name = new List<string> { "width" },
                         ApplyAlsoWhenThereIsAControlTemplate = true
                     }
-                });
+                },
+                IsWidthHeightValid);
 
         #endregion
 
@@ -197,7 +202,7 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.Margin"/> dependency property.
+        /// Identifies the <see cref="Margin"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty MarginProperty =
             DependencyProperty.Register(
@@ -221,8 +226,7 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.MinHeight"/> dependency 
-        /// property.
+        /// Identifies the <see cref="MinHeight"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty MinHeightProperty =
             DependencyProperty.Register(
@@ -246,8 +250,7 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.MinWidth"/> dependency 
-        /// property.
+        /// Identifies the <see cref="MinWidth"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty MinWidthProperty =
             DependencyProperty.Register(
@@ -271,8 +274,7 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.MaxHeight"/> dependency 
-        /// property.
+        /// Identifies the <see cref="MaxHeight"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty MaxHeightProperty =
             DependencyProperty.Register(
@@ -296,8 +298,7 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.MaxWidth"/> dependency 
-        /// property.
+        /// Identifies the <see cref="MaxWidth"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty MaxWidthProperty =
             DependencyProperty.Register(
@@ -308,7 +309,24 @@ namespace Windows.UI.Xaml
 
         #endregion
 
+        private static bool IsWidthHeightValid(object value)
+        {
+            double v = (double)value;
+            return double.IsNaN(v) || (v >= 0.0d && !double.IsPositiveInfinity(v));
+        }
 
+        internal static bool IsMinWidthHeightValid(object value)
+        {
+            double v = (double)value;
+            return !double.IsNaN(v) && v >= 0.0d && !double.IsPositiveInfinity(v);
+        }
+
+        internal static bool IsMaxWidthHeightValid(object value)
+        {
+            double v = (double)value;
+            return !double.IsNaN(v) && v >= 0.0;
+        }
+        
         #region ActualWidth / ActualHeight
 
         /// <summary>

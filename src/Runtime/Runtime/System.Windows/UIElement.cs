@@ -700,8 +700,7 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="UIElement.Visibility"/> dependency 
-        /// property.
+        /// Identifies the <see cref="Visibility"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty VisibilityProperty =
             DependencyProperty.Register(
