@@ -707,7 +707,7 @@ namespace Windows.UI.Xaml
                 nameof(Visibility),
                 typeof(Visibility),
                 typeof(UIElement),
-                new PropertyMetadata(Visibility.Visible, OnVisibilityChanged));
+                new PropertyMetadata(VisibilityBoxes.VisibleBox, OnVisibilityChanged, CoerceVisibility));
 
         private string _previousValueOfDisplayCssProperty = "block";
 
@@ -723,6 +723,12 @@ namespace Windows.UI.Xaml
 
             // The IsVisible property depends on this property.
             uie.UpdateIsVisible();
+        }
+
+        private static object CoerceVisibility(DependencyObject d, object baseValue)
+        {
+            Visibility visibility = (Visibility)baseValue;
+            return VisibilityBoxes.Box(visibility);
         }
 
         private void SwitchVisibilityIfNeeded(bool isVisible)

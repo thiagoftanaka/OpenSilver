@@ -379,7 +379,8 @@ if(nextSibling != undefined) {
                 index,
                 doesParentRequireToCreateAWrapperForEachChild,
                 innerDivOfWrapperForChild,
-                domElementWhereToPlaceChildStuff);
+                domElementWhereToPlaceChildStuff,
+                wrapperForChild);
         }
 
         static void AttachVisualChild_Private_MainSteps(UIElement child,
@@ -387,7 +388,8 @@ if(nextSibling != undefined) {
             int index,
             bool doesParentRequireToCreateAWrapperForEachChild,
             object innerDivOfWrapperForChild,
-            object domElementWhereToPlaceChildStuff)
+            object domElementWhereToPlaceChildStuff,
+            object wrapperForChild)
         {
             //--------------------------------------------------------
             // PREPARE THE CHILD:
@@ -675,7 +677,7 @@ if(nextSibling != undefined) {
                             // Raise the "PropertyChanged" event
                             propertyMetadata.PropertyChangedCallback(
                                 dependencyObject,
-                                new DependencyPropertyChangedEventArgs(value, value, property));
+                                new DependencyPropertyChangedEventArgs(value, value, property, propertyMetadata));
                         }
                     }
                 }

@@ -345,7 +345,8 @@ namespace Windows.UI.Xaml.Controls
                 nameof(Padding),
                 typeof(Thickness),
                 typeof(Border),
-                new FrameworkPropertyMetadata(new Thickness(), FrameworkPropertyMetadataOptions.AffectsMeasure));
+                new FrameworkPropertyMetadata(new Thickness(), FrameworkPropertyMetadataOptions.AffectsMeasure),
+                IsThicknessValid);
 
         protected override Size MeasureOverride(Size availableSize)
         {
