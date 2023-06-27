@@ -12,6 +12,7 @@
 \*====================================================================================*/
 
 using System;
+using CSHTML5.Internal;
 
 #if MIGRATION
 using System.Windows.Controls.Primitives;
@@ -248,6 +249,9 @@ namespace Windows.UI.Xaml.Controls
             info.ScrollOwner = sv;
             info.ScrollOwner.ScrollInfo = info;
             sv.InvalidateScrollInfo();
+
+            var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(INTERNAL_OuterDomElement);
+            style.overflow = "hidden";
         }
 
         protected override Size MeasureOverride(Size constraint)
