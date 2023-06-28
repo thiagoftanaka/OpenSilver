@@ -1202,15 +1202,16 @@ document.textboxHelpers = (function () {
     return {
         createView: function (id, parentId) {
             const view = document.createElementSafe('textarea', id, parentId, -1);
-            view.style.fontSize = "inherit";
-            view.style.fontFamily = "inherit";
-            view.style.resize = "none";
-            view.style.outline = "none";
-            view.style.border = "none";
-            view.style.boxSizing = "border-box";
-            view.style.background = "transparent";
-            view.style.cursor = "text";
-            view.style.overflow = "hidden";
+            view.style.fontSize = 'inherit';
+            view.style.fontFamily = 'inherit';
+            view.style.color = 'inherit';
+            view.style.resize = 'none';
+            view.style.outline = 'none';
+            view.style.border = 'none';
+            view.style.boxSizing = 'border-box';
+            view.style.background = 'transparent';
+            view.style.cursor = 'text';
+            view.style.overflow = 'hidden';
             view.style.tabSize = '4';
 
             view.setAttribute('tabindex', -1);

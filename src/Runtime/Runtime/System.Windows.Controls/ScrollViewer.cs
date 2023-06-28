@@ -68,10 +68,7 @@ namespace Windows.UI.Xaml.Controls
         /// </summary>
         internal ScrollBar ElementVerticalScrollBar { get; private set; }
 
-        internal IScrollInfo ScrollInfo
-        {
-            get; set;
-        }
+        internal IScrollInfo ScrollInfo { get; set; }
 
         /// <summary>
         /// Gets a value that contains the horizontal offset of the scrolled content.
@@ -81,19 +78,21 @@ namespace Windows.UI.Xaml.Controls
         /// </returns>
         public double HorizontalOffset
         {
-            get { return (double)GetValue(HorizontalOffsetProperty); }
-            private set { SetValue(HorizontalOffsetProperty, value); }
+            get => (double)GetValue(HorizontalOffsetProperty);
+            private set => SetValue(HorizontalOffsetPropertyKey, value);
         }
 
-        /// <summary>
-        /// Identifies the <see cref="HorizontalOffset"/> dependency property.
-        /// </summary>
-        public static readonly DependencyProperty HorizontalOffsetProperty =
-            DependencyProperty.Register(
+        private static readonly DependencyPropertyKey HorizontalOffsetPropertyKey =
+            DependencyProperty.RegisterReadOnly(
                 nameof(HorizontalOffset),
                 typeof(double),
                 typeof(ScrollViewer),
                 new PropertyMetadata(0.0));
+
+        /// <summary>
+        /// Identifies the <see cref="HorizontalOffset"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty HorizontalOffsetProperty = HorizontalOffsetPropertyKey.DependencyProperty;
 
         /// <summary>
         /// Gets or sets a value that indicates whether a horizontal <see cref="ScrollBar"/> 
@@ -106,8 +105,8 @@ namespace Windows.UI.Xaml.Controls
         /// </returns>
         public ScrollBarVisibility HorizontalScrollBarVisibility
         {
-            get { return (ScrollBarVisibility)GetValue(HorizontalScrollBarVisibilityProperty); }
-            set { SetValue(HorizontalScrollBarVisibilityProperty, value); }
+            get => (ScrollBarVisibility)GetValue(HorizontalScrollBarVisibilityProperty);
+            set => SetValue(HorizontalScrollBarVisibilityProperty, value);
         }
 
         /// <summary>
@@ -125,7 +124,7 @@ namespace Windows.UI.Xaml.Controls
             if (d is ScrollViewer scrollViewer)
             {
                 scrollViewer.InvalidateMeasure();
-                if (scrollViewer.ScrollInfo != null)
+                if (scrollViewer.ScrollInfo is not null)
                 {
                     scrollViewer.ScrollInfo.CanHorizontallyScroll = scrollViewer.HorizontalScrollBarVisibility != ScrollBarVisibility.Disabled;
                     scrollViewer.ScrollInfo.CanVerticallyScroll = scrollViewer.VerticalScrollBarVisibility != ScrollBarVisibility.Disabled;
@@ -142,19 +141,21 @@ namespace Windows.UI.Xaml.Controls
         /// </returns>
         public double VerticalOffset
         {
-            get { return (double)GetValue(VerticalOffsetProperty); }
-            private set { SetValue(VerticalOffsetProperty, value); }
+            get => (double)GetValue(VerticalOffsetProperty);
+            private set => SetValue(VerticalOffsetPropertyKey, value);
         }
 
-        /// <summary>
-        /// Identifies the <see cref="VerticalOffset"/> dependency property.
-        /// </summary>
-        public static readonly DependencyProperty VerticalOffsetProperty =
-            DependencyProperty.Register(
+        private static readonly DependencyPropertyKey VerticalOffsetPropertyKey =
+            DependencyProperty.RegisterReadOnly(
                 nameof(VerticalOffset),
                 typeof(double),
                 typeof(ScrollViewer),
                 new PropertyMetadata(0.0));
+
+        /// <summary>
+        /// Identifies the <see cref="VerticalOffset"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty VerticalOffsetProperty = VerticalOffsetPropertyKey.DependencyProperty;
 
         /// <summary>
         /// Gets or sets a value that indicates whether a vertical <see cref="ScrollBar"/> 
@@ -167,8 +168,8 @@ namespace Windows.UI.Xaml.Controls
         /// </returns>
         public ScrollBarVisibility VerticalScrollBarVisibility
         {
-            get { return (ScrollBarVisibility)GetValue(VerticalScrollBarVisibilityProperty); }
-            set { SetValue(VerticalScrollBarVisibilityProperty, value); }
+            get => (ScrollBarVisibility)GetValue(VerticalScrollBarVisibilityProperty);
+            set => SetValue(VerticalScrollBarVisibilityProperty, value);
         }
 
         /// <summary>
@@ -188,10 +189,7 @@ namespace Windows.UI.Xaml.Controls
         /// <param name="offset">
         /// The position that the content scrolls to.
         /// </param>
-        public void ScrollToHorizontalOffset(double offset)
-        {
-            SetScrollOffset(Orientation.Horizontal, offset);
-        }
+        public void ScrollToHorizontalOffset(double offset) => SetScrollOffset(Orientation.Horizontal, offset);
 
         /// <summary>
         /// Scrolls the content that is within the <see cref="ScrollViewer"/> to the 
@@ -200,10 +198,7 @@ namespace Windows.UI.Xaml.Controls
         /// <param name="offset">
         /// The position that the content scrolls to.
         /// </param>
-        public void ScrollToVerticalOffset(double offset)
-        {
-            SetScrollOffset(Orientation.Vertical, offset);
-        }
+        public void ScrollToVerticalOffset(double offset) => SetScrollOffset(Orientation.Vertical, offset);
 
         /// <summary>
         /// Gets the value of the <see cref="HorizontalScrollBarVisibility"/> dependency property 
@@ -309,20 +304,21 @@ namespace Windows.UI.Xaml.Controls
             ElementHorizontalScrollBar = GetTemplateChild(ElementHorizontalScrollBarName) as ScrollBar;
             ElementVerticalScrollBar = GetTemplateChild(ElementVerticalScrollBarName) as ScrollBar;
 
-            if (null != ElementHorizontalScrollBar)
+            if (ElementHorizontalScrollBar is not null)
             {
                 ElementHorizontalScrollBar.Scroll += delegate (object sender, ScrollEventArgs e) { HandleScroll(Orientation.Horizontal, e); };
             }
-            if (null != ElementVerticalScrollBar)
+            if (ElementVerticalScrollBar is not null)
             {
                 ElementVerticalScrollBar.Scroll += delegate (object sender, ScrollEventArgs e) { HandleScroll(Orientation.Vertical, e); };
             }
+
             UpdateScrollbarVisibility();
         }
 
-        void SetScrollOffset(Orientation orientation, double value)
+        private void SetScrollOffset(Orientation orientation, double value)
         {
-            if (ScrollInfo != null)
+            if (ScrollInfo is not null)
             {
                 double scrollable = (orientation == Orientation.Horizontal) ? ScrollableWidth : ScrollableHeight;
                 double clamped = Math.Max(value, 0);
@@ -345,7 +341,7 @@ namespace Windows.UI.Xaml.Controls
         /// <param name="e">A ScrollEventArgs that contains the event data.</param> 
         private void HandleScroll(Orientation orientation, ScrollEventArgs e)
         {
-            if (ScrollInfo != null)
+            if (ScrollInfo is not null)
             {
                 bool horizontal = orientation == Orientation.Horizontal;
 
@@ -397,7 +393,7 @@ namespace Windows.UI.Xaml.Controls
         /// <remarks>Similar to WPF's corresponding ScrollViewer method.</remarks>
         internal void ScrollInDirection(Key key)
         {
-            if (ScrollInfo != null)
+            if (ScrollInfo is not null)
             {
                 switch (key)
                 {
@@ -416,16 +412,18 @@ namespace Windows.UI.Xaml.Controls
                 }
             }
         }
-
-        /// <summary>
-        /// Identifies the <see cref="ScrollableHeight"/> dependency property.
-        /// </summary>
-        public static readonly DependencyProperty ScrollableHeightProperty =
-            DependencyProperty.Register(
+        
+        private static readonly DependencyPropertyKey ScrollableHeightPropertyKey =
+            DependencyProperty.RegisterReadOnly(
                 nameof(ScrollableHeight),
                 typeof(double),
                 typeof(ScrollViewer),
                 new PropertyMetadata(0.0));
+
+        /// <summary>
+        /// Identifies the <see cref="ScrollableHeight"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty ScrollableHeightProperty = ScrollableHeightPropertyKey.DependencyProperty;
 
         /// <summary>
         /// Gets a value that represents the vertical size of the area that can be scrolled;
@@ -436,19 +434,21 @@ namespace Windows.UI.Xaml.Controls
         /// </returns>
         public double ScrollableHeight
         {
-            get { return (double)GetValue(ScrollableHeightProperty); }
-            private set { SetValue(ScrollableHeightProperty, value); }
+            get => (double)GetValue(ScrollableHeightProperty);
+            private set => SetValue(ScrollableHeightPropertyKey, value);
         }
 
-        /// <summary>
-        /// Identifies the <see cref="ScrollableWidth"/> dependency property.
-        /// </summary>
-        public static readonly DependencyProperty ScrollableWidthProperty =
-            DependencyProperty.Register(
+        private static readonly DependencyPropertyKey ScrollableWidthPropertyKey =
+            DependencyProperty.RegisterReadOnly(
                 nameof(ScrollableWidth),
                 typeof(double),
                 typeof(ScrollViewer),
                 new PropertyMetadata(0.0));
+
+        /// <summary>
+        /// Identifies the <see cref="ScrollableWidth"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty ScrollableWidthProperty = ScrollableWidthPropertyKey.DependencyProperty;
 
         /// <summary>
         /// Gets a value that represents the horizontal size of the area that can be scrolled;
@@ -459,19 +459,21 @@ namespace Windows.UI.Xaml.Controls
         /// </returns>
         public double ScrollableWidth
         {
-            get { return (double)GetValue(ScrollableWidthProperty); }
-            private set { SetValue(ScrollableWidthProperty, value); }
+            get => (double)GetValue(ScrollableWidthProperty);
+            private set => SetValue(ScrollableWidthPropertyKey, value);
         }
 
-        /// <summary>
-        /// Identifies the <see cref="ViewportHeight"/> dependency property.
-        /// </summary>
-        public static readonly DependencyProperty ViewportHeightProperty =
-            DependencyProperty.Register(
+        private static readonly DependencyPropertyKey ViewportHeightPropertyKey =
+            DependencyProperty.RegisterReadOnly(
                 nameof(ViewportHeight),
                 typeof(double),
                 typeof(ScrollViewer),
                 new PropertyMetadata(0.0));
+
+        /// <summary>
+        /// Identifies the <see cref="ViewportHeight"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty ViewportHeightProperty = ViewportHeightPropertyKey.DependencyProperty;
 
         /// <summary>
         /// Gets a value that contains the vertical size of the viewable content.
@@ -481,19 +483,21 @@ namespace Windows.UI.Xaml.Controls
         /// </returns>
         public double ViewportHeight
         {
-            get { return (double)GetValue(ViewportHeightProperty); }
-            private set { SetValue(ViewportHeightProperty, value); }
+            get => (double)GetValue(ViewportHeightProperty);
+            private set => SetValue(ViewportHeightPropertyKey, value);
         }
 
-        /// <summary>
-        /// Identifies the <see cref="ViewportWidth"/> dependency property.
-        /// </summary>
-        public static readonly DependencyProperty ViewportWidthProperty =
-            DependencyProperty.Register(
+        private static readonly DependencyPropertyKey ViewportWidthPropertyKey =
+            DependencyProperty.RegisterReadOnly(
                 nameof(ViewportWidth),
                 typeof(double),
                 typeof(ScrollViewer),
                 new PropertyMetadata(0.0));
+
+        /// <summary>
+        /// Identifies the <see cref="ViewportWidth"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty ViewportWidthProperty = ViewportWidthPropertyKey.DependencyProperty;
 
         /// <summary>
         /// Gets a value that contains the horizontal size of the viewable content.
@@ -503,19 +507,22 @@ namespace Windows.UI.Xaml.Controls
         /// </returns>
         public double ViewportWidth
         {
-            get { return (double)GetValue(ViewportWidthProperty); }
-            private set { SetValue(ViewportWidthProperty, value); }
+            get => (double)GetValue(ViewportWidthProperty);
+            private set => SetValue(ViewportWidthPropertyKey, value);
         }
+
+        private static readonly DependencyPropertyKey ComputedHorizontalScrollBarVisibilityPropertyKey =
+            DependencyProperty.RegisterReadOnly(
+                nameof(ComputedHorizontalScrollBarVisibility),
+                typeof(Visibility),
+                typeof(ScrollViewer),
+                null);
 
         /// <summary>
         /// Identifies the <see cref="ComputedHorizontalScrollBarVisibility"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty ComputedHorizontalScrollBarVisibilityProperty =
-            DependencyProperty.Register(
-                nameof(ComputedHorizontalScrollBarVisibility),
-                typeof(Visibility),
-                typeof(ScrollViewer),
-                null);
+            ComputedHorizontalScrollBarVisibilityPropertyKey.DependencyProperty;
 
         /// <summary>
         /// Gets a value that indicates whether the horizontal <see cref="ScrollBar"/> is visible.
@@ -526,19 +533,22 @@ namespace Windows.UI.Xaml.Controls
         /// </returns>
         public Visibility ComputedHorizontalScrollBarVisibility
         {
-            get { return (Visibility)this.GetValue(ComputedHorizontalScrollBarVisibilityProperty); }
-            private set { this.SetValue(ComputedHorizontalScrollBarVisibilityProperty, value); }
+            get => (Visibility)GetValue(ComputedHorizontalScrollBarVisibilityProperty);
+            private set => SetValue(ComputedHorizontalScrollBarVisibilityPropertyKey, value);
         }
+
+        private static readonly DependencyPropertyKey ComputedVerticalScrollBarVisibilityPropertyKey =
+            DependencyProperty.RegisterReadOnly(
+                nameof(ComputedVerticalScrollBarVisibility),
+                typeof(Visibility),
+                typeof(ScrollViewer),
+                null);
 
         /// <summary>
         /// Identifies the <see cref="ComputedVerticalScrollBarVisibility"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty ComputedVerticalScrollBarVisibilityProperty =
-            DependencyProperty.Register(
-                nameof(ComputedVerticalScrollBarVisibility),
-                typeof(Visibility),
-                typeof(ScrollViewer),
-                null);
+            ComputedVerticalScrollBarVisibilityPropertyKey.DependencyProperty;
 
         /// <summary>
         /// Gets a value that indicates whether the vertical <see cref="ScrollBar"/> is visible.
@@ -549,19 +559,21 @@ namespace Windows.UI.Xaml.Controls
         /// </returns>
         public Visibility ComputedVerticalScrollBarVisibility
         {
-            get { return (Visibility)this.GetValue(ComputedVerticalScrollBarVisibilityProperty); }
-            private set { this.SetValue(ComputedVerticalScrollBarVisibilityProperty, value); }
+            get => (Visibility)GetValue(ComputedVerticalScrollBarVisibilityProperty);
+            private set => SetValue(ComputedVerticalScrollBarVisibilityPropertyKey, value);
         }
 
-        /// <summary>
-        /// Identifier for the <see cref="ExtentHeight"/> dependency property.
-        /// </summary>
-        public static readonly DependencyProperty ExtentHeightProperty =
-            DependencyProperty.Register(
+        private static readonly DependencyPropertyKey ExtentHeightPropertyKey =
+            DependencyProperty.RegisterReadOnly(
                 nameof(ExtentHeight),
                 typeof(double),
                 typeof(ScrollViewer),
                 new PropertyMetadata(0.0));
+
+        /// <summary>
+        /// Identifier for the <see cref="ExtentHeight"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty ExtentHeightProperty = ExtentHeightPropertyKey.DependencyProperty;
 
         /// <summary>
         /// Gets the vertical size of all the content for display in the <see cref="ScrollViewer"/>.
@@ -571,19 +583,21 @@ namespace Windows.UI.Xaml.Controls
         /// </returns>
         public double ExtentHeight
         {
-            get { return (double)GetValue(ExtentHeightProperty); }
-            private set { SetValue(ExtentHeightProperty, value); }
+            get => (double)GetValue(ExtentHeightProperty);
+            private set => SetValue(ExtentHeightPropertyKey, value);
         }
 
-        /// <summary>
-        /// Identifier for the <see cref="ExtentWidth"/> dependency property.
-        /// </summary>
-        public static readonly DependencyProperty ExtentWidthProperty =
-            DependencyProperty.Register(
+        private static readonly DependencyPropertyKey ExtentWidthPropertyKey =
+            DependencyProperty.RegisterReadOnly(
                 nameof(ExtentWidth),
                 typeof(double),
                 typeof(ScrollViewer),
                 new PropertyMetadata(0.0));
+
+        /// <summary>
+        /// Identifier for the <see cref="ExtentWidth"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty ExtentWidthProperty = ExtentWidthPropertyKey.DependencyProperty;
 
         /// <summary>
         /// Gets the horizontal size of all the content for display in the <see cref="ScrollViewer"/>.
@@ -593,8 +607,8 @@ namespace Windows.UI.Xaml.Controls
         /// </returns>
         public double ExtentWidth
         {
-            get { return (double)GetValue(ExtentWidthProperty); }
-            private set { SetValue(ExtentWidthProperty, value); }
+            get => (double)GetValue(ExtentWidthProperty);
+            private set => SetValue(ExtentWidthPropertyKey, value);
         }
 
         /// <summary>
@@ -602,7 +616,7 @@ namespace Windows.UI.Xaml.Controls
         /// </summary>
         public void InvalidateScrollInfo()
         {
-            if (ScrollInfo != null)
+            if (ScrollInfo is not null)
             {
                 // ScrollBar visibility has to be updated before ViewportHeight/Width, because
                 // that will trigger ScrollBar control sizing which depends on ScrollBar ActualWidth/Height
@@ -628,48 +642,29 @@ namespace Windows.UI.Xaml.Controls
             }
         }
 
-        void UpdateScrollbarVisibility()
+        private void UpdateScrollbarVisibility()
         {
             // Update horizontal ScrollBar 
-            Visibility horizontalVisibility;
-            switch (HorizontalScrollBarVisibility)
+            Visibility horizontalVisibility = HorizontalScrollBarVisibility switch
             {
-                case ScrollBarVisibility.Visible:
-                    horizontalVisibility = TemplatedParent is TextBox ? Visibility.Collapsed : Visibility.Visible;
-                    break;
-                case ScrollBarVisibility.Disabled:
-                case ScrollBarVisibility.Hidden:
-                    horizontalVisibility = Visibility.Collapsed;
-                    break;
-                default:  // Avoids compiler warning about uninitialized variable
-                case ScrollBarVisibility.Auto:
-                    horizontalVisibility = ScrollInfo == null || ScrollInfo.ExtentWidth <= ScrollInfo.ViewportWidth ||
-                        TemplatedParent is TextBox ? Visibility.Collapsed : Visibility.Visible;
-                    break;
-            }
+                ScrollBarVisibility.Visible => Visibility.Visible,
+                ScrollBarVisibility.Disabled or ScrollBarVisibility.Hidden => Visibility.Collapsed,
+                _ => (ScrollInfo is null || ScrollInfo.ExtentWidth <= ScrollInfo.ViewportWidth) ? Visibility.Collapsed : Visibility.Visible,
+            };
 
             if (horizontalVisibility != ComputedHorizontalScrollBarVisibility)
             {
                 ComputedHorizontalScrollBarVisibility = horizontalVisibility;
                 InvalidateMeasure();
             }
+
             // Update vertical ScrollBar
-            Visibility verticalVisibility;
-            switch (VerticalScrollBarVisibility)
+            Visibility verticalVisibility = VerticalScrollBarVisibility switch
             {
-                case ScrollBarVisibility.Visible:
-                    verticalVisibility = TemplatedParent is TextBox ? Visibility.Collapsed : Visibility.Visible;
-                    break;
-                case ScrollBarVisibility.Disabled:
-                case ScrollBarVisibility.Hidden:
-                    verticalVisibility = Visibility.Collapsed;
-                    break;
-                default:  // Avoids compiler warning about uninitialized variable
-                case ScrollBarVisibility.Auto:
-                    verticalVisibility = ScrollInfo == null || ScrollInfo.ExtentHeight <= ScrollInfo.ViewportHeight ||
-                        TemplatedParent is TextBox ? Visibility.Collapsed : Visibility.Visible;
-                    break;
-            }
+                ScrollBarVisibility.Visible => Visibility.Visible,
+                ScrollBarVisibility.Disabled or ScrollBarVisibility.Hidden => Visibility.Collapsed,
+                _ => (ScrollInfo is null || ScrollInfo.ExtentHeight <= ScrollInfo.ViewportHeight) ? Visibility.Collapsed : Visibility.Visible,
+            };
 
             if (verticalVisibility != ComputedVerticalScrollBarVisibility)
             {
@@ -678,31 +673,24 @@ namespace Windows.UI.Xaml.Controls
             }
         }
 
-        void UpdateScrollBar(Orientation orientation, double value)
+        private void UpdateScrollBar(Orientation orientation, double value)
         {
-            try
+            // Update relevant ScrollBar
+            if (orientation == Orientation.Horizontal)
             {
-                // Update relevant ScrollBar
-                if (orientation == Orientation.Horizontal)
+                HorizontalOffset = value;
+                if (ElementHorizontalScrollBar is not null)
                 {
-                    HorizontalOffset = value;
-                    if (ElementHorizontalScrollBar != null)
-                    {
-                        ElementHorizontalScrollBar.Value = value;
-                    }
-                }
-                else
-                {
-                    VerticalOffset = value;
-                    if (ElementVerticalScrollBar != null)
-                    {
-                        ElementVerticalScrollBar.Value = value;
-                    }
+                    ElementHorizontalScrollBar.Value = value;
                 }
             }
-            finally
+            else
             {
-
+                VerticalOffset = value;
+                if (ElementVerticalScrollBar is not null)
+                {
+                    ElementVerticalScrollBar.Value = value;
+                }
             }
         }
 
@@ -736,7 +724,7 @@ namespace Windows.UI.Xaml.Controls
             base.OnPointerWheelChanged(e);
 #endif
 
-            if (e.Handled || ScrollInfo == null || e.Delta == 0)
+            if (e.Handled || ScrollInfo is null || e.Delta == 0)
             {
                 return;
             }
@@ -769,7 +757,7 @@ namespace Windows.UI.Xaml.Controls
         {
             base.OnKeyDown(e);
 
-            if (ScrollInfo != null && !e.Handled && !TemplatedParentHandlesScrolling)
+            if (ScrollInfo is not null && !e.Handled && !TemplatedParentHandlesScrolling)
             {
                 // Parent is not going to handle scrolling; do so here 
                 bool control = ModifierKeys.Control == (Keyboard.Modifiers & ModifierKeys.Control);

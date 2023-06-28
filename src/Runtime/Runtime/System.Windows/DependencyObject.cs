@@ -44,7 +44,7 @@ namespace Windows.UI.Xaml
 
         private HashSet<DependencyObject> _contextListeners;
 
-        internal event EventHandler InheritedContextChanged;        
+        internal event EventHandler InheritedContextChanged;
 
         private ContextStorage _contextStorage;
 
@@ -569,23 +569,16 @@ namespace Windows.UI.Xaml
 
         internal virtual void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
         {
+            e.Metadata?.PropertyChangedCallback?.Invoke(this, e);
         }
 
         internal void NotifyPropertyChange(DependencyPropertyChangedEventArgs e)
         {
-            if (e.Metadata is not null && e.Metadata.PropertyChangedCallback is not null)
-            {
-                e.Metadata.PropertyChangedCallback(this, e);
-            }
-
-            //---------------------
-            // Update bindings if any:
-            //---------------------
-
-            InvalidateDependents(e);
-
-            // Raise the InvalidateMeasure or InvalidateArrange
+            // fire change notifications
             OnPropertyChanged(e);
+            
+            // update bindings
+            InvalidateDependents(e);
         }
 
         internal void SetLocalStyleValue(DependencyProperty dp, object value)

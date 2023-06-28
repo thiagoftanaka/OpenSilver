@@ -262,7 +262,10 @@ namespace Windows.UI.Xaml.Controls
             switch (e.Key)
             {
                 case Key.Enter:
-                    KeyboardCloseDropDown(true);
+                    if (ItemsControlFromItemContainer(FocusManager.GetFocusedElement() as DependencyObject) == this)
+                    {
+                        KeyboardCloseDropDown(true);
+                    }
                     break;
                 case Key.Escape:
                     KeyboardCloseDropDown(false);
@@ -695,9 +698,13 @@ namespace Windows.UI.Xaml.Controls
                 // Hide the Popup
                 //-----------------------------
 
+                bool hasFocus = FocusManager.HasFocus(comboBox, true);
+
                 // Close the popup:
                 if (comboBox._popup != null)
+                {
                     comboBox._popup.IsOpen = false;
+                }
 
                 // Ensure that the toggle button is unchecked:
                 if (comboBox._dropDownToggle != null && comboBox._dropDownToggle.IsChecked == true)
@@ -714,7 +721,7 @@ namespace Windows.UI.Xaml.Controls
                 comboBox.OnDropDownClosed(new RoutedEventArgs());
 #endif
 
-                if (FocusManager.HasFocus(comboBox, true))
+                if (hasFocus)
                 {
                     comboBox.ScrollTo(-1);
                 }

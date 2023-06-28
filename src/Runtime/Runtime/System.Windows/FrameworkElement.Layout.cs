@@ -547,11 +547,8 @@ namespace Windows.UI.Xaml
                 else //already have a list
                 {
                     var list = (Dictionary<EventHandler, object>)cachedLayoutUpdatedItems;
-                    if (list.ContainsKey(d))
-                    {
-                        LayoutEventList.ListItem item = (LayoutEventList.ListItem)list[d];
-                        return item;
-                    }
+                    LayoutEventList.ListItem item = (LayoutEventList.ListItem)list[d];
+                    return item;
                 }
                 return null;
             }
