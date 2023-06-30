@@ -124,9 +124,9 @@ namespace Windows.UI.Xaml
             int sepIndex = strTextSize != null ? strTextSize.IndexOf('|') : -1;
             if (sepIndex > -1)
             {
-                double actualWidth = double.Parse(strTextSize.Substring(0, sepIndex), CultureInfo.InvariantCulture);
-                double actualHeight = double.Parse(strTextSize.Substring(sepIndex + 1), CultureInfo.InvariantCulture);
-                measuredSize = new Size(actualWidth + 1, actualHeight);
+                measuredSize = new Size(
+                    double.Parse(strTextSize.Substring(0, sepIndex), CultureInfo.InvariantCulture),
+                    double.Parse(strTextSize.Substring(sepIndex + 1), CultureInfo.InvariantCulture));
             }
             else
             {

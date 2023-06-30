@@ -739,7 +739,8 @@ document.measureTextBlock = function (uid, whiteSpace, overflowWrap, padding, ma
 
         element.style.maxWidth = maxWidth;
 
-        const size = element.offsetWidth + "|" + element.offsetHeight;
+        const rect = element.getBoundingClientRect();
+        const size = Math.ceil(rect.width) + "|" + Math.ceil(rect.height);
 
         element.innerHTML = '';
 
