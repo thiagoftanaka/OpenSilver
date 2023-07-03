@@ -63,7 +63,6 @@ namespace Windows.UI.Xaml
         
         private ApplicationLifetimeObjectsCollection _lifetimeObjects;
         private ResourceDictionary _resources;
-        private Host _host;
         private Dictionary<object, object> _implicitResourcesCache;
         private Host _host;
 

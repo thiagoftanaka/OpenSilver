@@ -416,68 +416,6 @@ namespace Windows.UI.Xaml
                         height = clippingSize.Height;
                     }
 
-        internal override Rect? GetLayoutClip(Size layoutSlotSize)
-        {
-            if (NeedsClipBounds || ClipToBounds)
-            {
-                // see if  MaxWidth/MaxHeight limit the element
-                MinMax mm = new MinMax(this);
-
-                //this is in element's local rendering coord system
-                Size inkSize = RenderSize;
-
-                double maxWidthClip = double.IsPositiveInfinity(mm.maxWidth) ? inkSize.Width : mm.maxWidth;
-                double maxHeightClip = double.IsPositiveInfinity(mm.maxHeight) ? inkSize.Height : mm.maxHeight;
-
-                //need to clip because the computed sizes exceed MaxWidth/MaxHeight/Width/Height
-                bool needToClipLocally =
-                     ClipToBounds //need to clip at bounds even if inkSize is less then maxSize
-                  || DoubleUtil.LessThan(maxWidthClip, inkSize.Width)
-                  || DoubleUtil.LessThan(maxHeightClip, inkSize.Height);
-
-                //now lets say we already clipped by MaxWidth/MaxHeight, lets see if further clipping is needed
-                inkSize.Width = Math.Min(inkSize.Width, mm.maxWidth);
-                inkSize.Height = Math.Min(inkSize.Height, mm.maxHeight);
-
-                //now see if layout slot should clip the element
-                Thickness margin = Margin;
-                double marginWidth = margin.Left + margin.Right;
-                double marginHeight = margin.Top + margin.Bottom;
-
-                Size clippingSize = new Size(Math.Max(0, layoutSlotSize.Width - marginWidth),
-                                             Math.Max(0, layoutSlotSize.Height - marginHeight));
-
-                bool needToClipSlot =
-                    ClipToBounds //forces clip at layout slot bounds even if reported sizes are ok
-                 || DoubleUtil.LessThan(clippingSize.Width, inkSize.Width)
-                 || DoubleUtil.LessThan(clippingSize.Height, inkSize.Height);
-
-                if (needToClipSlot)
-                {
-                    Point offset = VisualOffset;
-
-                    double left, top, width, height;
-                    if (offset.X < 0)
-                    {
-                        left = -offset.X;
-                        width = clippingSize.Width - offset.X;
-                    }
-                    else
-                    {
-                        left = 0;
-                        width = clippingSize.Width;
-                    }
-                    if (offset.Y < 0)
-                    {
-                        top = -offset.Y;
-                        height = clippingSize.Height - offset.Y;
-                    }
-                    else
-                    {
-                        top = 0;
-                        height = clippingSize.Height;
-                    }
-
                     Rect slotRect = new Rect(left, top, width, height);
 
                     if (needToClipLocally) //intersect 2 rects

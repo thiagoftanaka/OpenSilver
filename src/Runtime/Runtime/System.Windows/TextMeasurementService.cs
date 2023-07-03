@@ -51,6 +51,8 @@ namespace Windows.UI.Xaml
         private object textBlockReference;
         private TextBlock associatedTextBlock;
 
+        private string measureTextBlockElementID;
+
         private string savedWhiteSpace;
         private Thickness savedTextBlockPadding;
 
