@@ -82,38 +82,23 @@ if (div.style.display == "grid") {
 // DEFINE OTHER SCRIPTS
 //------------------------------
 
-document.getXamlRoot = function () {
-    let xamlRoot = document.getElementById("opensilver-root");
-    if (!xamlRoot) {
-        xamlRoot = document.getElementById("cshtml5-root");
+document.getAppParams = function (element) {
+    if (element) {
+        return JSON.stringify(
+            Array.from(
+                element.getElementsByTagName("param"),
+                function (p) { return { Name: p.name, Value: p.value }; }
+            )
+        );
     }
-    return xamlRoot;
-}
 
-document.clearXamlRoot = function () {
-    const children = document.getXamlRoot().children;
-
-    for (i = children.length - 1; i >= 0; i--) {
-        if (children[i].tagName !== "PARAM") {
-            children[i].remove();
-        }
-    }
-}
-
-document.getAppParams = function () {
-    return JSON.stringify(
-        Array.from(
-            document.getXamlRoot().getElementsByTagName("param"),
-            function (p) { return { Name: p.name, Value: p.value }; }
-        )
-    );
+    return JSON.stringify([]);
 }
 
 document.ResXFiles = {};
 
 document.jsObjRef = {};
 document.callbackCounterForSimulator = 0;
-document.measureTextBlockElement = null;
 
 document.performanceCounters = [];
 
@@ -387,7 +372,7 @@ document.setFocus = function (element) {
     });
 };
 
-document.createInputManager = function (root, callback) {
+document.createInputManager = function (callback) {
     if (document.inputManager) return;
 
     // This must remain synchronyzed with the EVENTS enum defined in InputManager.cs.
@@ -454,11 +439,7 @@ document.createInputManager = function (root, callback) {
         return e.timeStamp - _lastTouchEndTimeStamp < 500;
     };
 
-    function initDom(root) {
-
-        // Make sure the root div is keyboard focusable, so that we can tab into the app.
-        root.tabIndex = Math.max(root.tabIndex, 0);
-
+    function initDom() {
         document.addEventListener('mousedown', function (e) {
             if (!e.isHandled) {
                 switch (e.button) {
@@ -515,56 +496,60 @@ document.createInputManager = function (root, callback) {
             callback('', EVENTS.WINDOW_BLUR, e);
             _modifiers = MODIFIERKEYS.NONE;
         });
-
-        root.addEventListener('focusin', function (e) { callback(getClosestElementId(e.target), EVENTS.FOCUS, e); });
-
-        root.addEventListener('mousemove', function (e) {
-            if (shouldIgnoreMouseEvent(e)) return;
-
-            e.isHandled = true;
-            const target = _mouseCapture || e.target;
-            callback(getClosestElementId(target), EVENTS.MOUSE_MOVE, e);
-        });
-
-        root.addEventListener('wheel', function (e) {
-            e.isHandled = true;
-            callback(getClosestElementId(e.target), EVENTS.WHEEL, e);
-        });
-
-        root.addEventListener('mousedown', function (e) {
-            if (shouldIgnoreMouseEvent(e)) return;
-
-            e.isHandled = true;
-            let id = (_mouseCapture === null || e.target === _mouseCapture) ? getClosestElementId(e.target) : '';
-            switch (e.button) {
-                case 0:
-                    callback(id, EVENTS.MOUSE_LEFT_DOWN, e);
-                    break;
-                case 2:
-                    callback(id, EVENTS.MOUSE_RIGHT_DOWN, e);
-                    break;
-            }
-        });
-
-        root.addEventListener('mouseup', function (e) {
-            if (shouldIgnoreMouseEvent(e)) return;
-
-            e.isHandled = true;
-            const target = _mouseCapture || e.target;
-            switch (e.button) {
-                case 0:
-                    callback(getClosestElementId(target), EVENTS.MOUSE_LEFT_UP, e);
-                    break;
-                case 2:
-                    callback(getClosestElementId(target), EVENTS.MOUSE_RIGHT_UP, e);
-                    break;
-            }
-        });
     };
 
-    initDom(root);
+    initDom();
 
     document.inputManager = {
+        registerRoot: function (root) {
+            // Make sure the root div is keyboard focusable, so that we can tab into the app.
+            root.tabIndex = Math.max(root.tabIndex, 0);
+
+            root.addEventListener('focusin', function (e) { callback(getClosestElementId(e.target), EVENTS.FOCUS, e); });
+
+            root.addEventListener('mousemove', function (e) {
+                if (shouldIgnoreMouseEvent(e)) return;
+
+                e.isHandled = true;
+                const target = _mouseCapture || e.target;
+                callback(getClosestElementId(target), EVENTS.MOUSE_MOVE, e);
+            });
+
+            root.addEventListener('wheel', function (e) {
+                e.isHandled = true;
+                callback(getClosestElementId(e.target), EVENTS.WHEEL, e);
+            });
+
+            root.addEventListener('mousedown', function (e) {
+                if (shouldIgnoreMouseEvent(e)) return;
+
+                e.isHandled = true;
+                let id = (_mouseCapture === null || e.target === _mouseCapture) ? getClosestElementId(e.target) : '';
+                switch (e.button) {
+                    case 0:
+                        callback(id, EVENTS.MOUSE_LEFT_DOWN, e);
+                        break;
+                    case 2:
+                        callback(id, EVENTS.MOUSE_RIGHT_DOWN, e);
+                        break;
+                }
+            });
+
+            root.addEventListener('mouseup', function (e) {
+                if (shouldIgnoreMouseEvent(e)) return;
+
+                e.isHandled = true;
+                const target = _mouseCapture || e.target;
+                switch (e.button) {
+                    case 0:
+                        callback(getClosestElementId(target), EVENTS.MOUSE_LEFT_UP, e);
+                        break;
+                    case 2:
+                        callback(getClosestElementId(target), EVENTS.MOUSE_RIGHT_UP, e);
+                        break;
+                }
+            });
+        },
         addListeners: function (element, isFocusable) {
             const view = typeof element === 'string' ? document.getElementById(element) : element;
             if (!view) return;
@@ -712,8 +697,8 @@ document.setVisualBounds = function (id, left, top, width, height, clip, clipLef
     }
 }
 
-document.measureTextBlock = function (uid, whiteSpace, overflowWrap, padding, maxWidth, emptyVal) {
-    var element = document.measureTextBlockElement;
+document.measureTextBlock = function (measureElementId, uid, whiteSpace, overflowWrap, padding, maxWidth, emptyVal) {
+    var element = document.getElementById(measureElementId);
     var elToMeasure = document.getElementById(uid);
     if (element && elToMeasure) {
         var computedStyle = getComputedStyle(elToMeasure);
@@ -1113,6 +1098,156 @@ const isTouchDevice = () => {
         (navigator.maxTouchPoints > 0) ||
         (navigator.msMaxTouchPoints > 0));
 }
+
+document.textboxHelpers = (function () {
+    function getSelectionLength(view) {
+        return view.selectionEnd - view.selectionStart;
+    };
+
+    function getCaretPosition(view) {
+        return view.selectionDirection === 'forward' ? view.selectionEnd : view.selectionStart;
+    };
+
+    function isNewLineChar(c) {
+        return c === '\n' || c === '\r';
+    };
+
+    function navigateInDirection(view, e) {
+        if (!e.shiftKey && !e.ctrlKey && getSelectionLength(view) > 0) {
+            return true;
+        }
+
+        switch (e.key) {
+            case 'ArrowLeft':
+            case 'ArrowUp':
+                return getCaretPosition(view) > 0;
+            case 'ArrowRight':
+            case 'ArrowDown':
+                return getCaretPosition(view) < view.value.length;
+            default:
+                return false;
+        }
+    };
+
+    function navigateByPage(view, e) {
+        // In Chrome, navigation with PageUp and PageDown does not work when overflow is set to 'hidden',
+        // so we manually update the cursor position here.
+
+        if (e.ctrlKey) {
+            return false;
+        }
+
+        if (e.key === 'PageDown') {
+            if (getCaretPosition(view) < view.value.length || (!e.shiftKey && getSelectionLength(view) > 0)) {
+                const start = e.shiftKey ? (view.selectionDirection === 'forward' ? view.selectionStart : view.selectionEnd) : view.value.length;
+                const end = view.value.length;
+                view.setSelectionRange(start, end, 'forward');
+                return true;
+            }
+        } else {
+            if (getCaretPosition(view) > 0 || (!e.shiftKey && getSelectionLength(view) > 0)) {
+                const start = 0;
+                const end = e.shiftKey ? (view.selectionDirection === 'forward' ? view.selectionStart : view.selectionEnd) : 0;
+                view.setSelectionRange(start, end, 'backward');
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    function navigateToStart(view, e) {
+        if (!e.shiftKey && getSelectionLength(view) > 0) {
+            return true;
+        }
+
+        const caretIndex = getCaretPosition(view); 
+        return caretIndex > 0 && (e.ctrlKey || !isNewLineChar(view.value[caretIndex - 1]));
+    };
+
+    function navigateToEnd(view, e) {
+        if (!e.shiftKey && getSelectionLength(view) > 0) {
+            return true;
+        }
+
+        const caretIndex = getCaretPosition(view); 
+        return caretIndex < view.value.length && (e.ctrlKey || !isNewLineChar(view.value[caretIndex]));
+    };
+
+    function handleTab(view, e) {
+        if (view.getAttribute('data-acceptstab') === 'true' &&
+            (getSelectionLength(view) > 0 || view.maxLength < 0 || view.value.length < view.maxLength)) {
+            e.preventDefault();
+            view.setRangeText('\t', view.selectionStart, view.selectionEnd, 'end');
+            return true;
+        }
+
+        return false;
+    };
+
+    return {
+        createView: function (id, parentId) {
+            const view = document.createElementSafe('textarea', id, parentId, -1);
+            view.style.fontSize = 'inherit';
+            view.style.fontFamily = 'inherit';
+            view.style.color = 'inherit';
+            view.style.resize = 'none';
+            view.style.outline = 'none';
+            view.style.border = 'none';
+            view.style.boxSizing = 'border-box';
+            view.style.background = 'transparent';
+            view.style.cursor = 'text';
+            view.style.overflow = 'hidden';
+            view.style.tabSize = '4';
+
+            view.setAttribute('tabindex', -1);
+
+            view.addEventListener('paste', function (e) {
+                if (this.getAttribute('data-acceptsreturn') === 'false') {
+                    e.preventDefault();
+                    let content = (e.originalEvent || e).clipboardData.getData('text/plain');
+                    if (content !== undefined) {
+                        content = content.replace(/\n/g, '').replace(/\r/g, '');
+                    }
+                    document.execCommand('insertText', false, content);
+                }
+            }, false);
+        },
+        onKeyDownNative: function (view, e) {
+            switch (e.key.toLowerCase()) {
+                case 'arrowleft':
+                case 'arrowright':
+                case 'arrowdown':
+                case 'arrowup':
+                    return navigateInDirection(view, e);
+                case 'pagedown':
+                case 'pageup':
+                    return navigateByPage(view, e);
+                case 'home':
+                    return navigateToStart(view, e);
+                case 'end':
+                    return navigateToEnd(view, e);
+                case 'delete':
+                    return getCaretPosition(view) < view.value.length || getSelectionLength(view) > 0;
+                case 'backspace':
+                    return getCaretPosition(view) > 0 || getSelectionLength(view) > 0;
+                case 'c':
+                case 'x':
+                    return e.ctrlKey && getSelectionLength(view) > 0;
+                case 'a':
+                    return e.ctrlKey && getSelectionLength(view) < view.value.length;
+                case 'v':
+                case 'y':
+                case 'z':
+                    return e.ctrlKey;
+                case 'tab':
+                    return handleTab(view, e);
+                default:
+                    return false;
+            }
+        },
+    };
+})();
 
 document.textboxHelpers = (function () {
     function getSelectionLength(view) {

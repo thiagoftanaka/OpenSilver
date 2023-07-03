@@ -474,7 +474,7 @@ element_OutsideEventHandler.addEventListener('keydown', function(e) {{
         protected override Size MeasureOverride(Size availableSize)
         {
             string uniqueIdentifier = ((INTERNAL_HtmlDomElementReference)INTERNAL_OuterDomElement).UniqueIdentifier;
-            Size textSize = Application.Current.TextMeasurementService.MeasureTextBlock(
+            Size textSize = INTERNAL_ParentWindow.TextMeasurementService.MeasureText(
                 uniqueIdentifier,
                 Host.TextWrapping == TextWrapping.NoWrap ? "pre" : "pre-wrap",
                 Host.TextWrapping == TextWrapping.NoWrap ? string.Empty : "break-word",

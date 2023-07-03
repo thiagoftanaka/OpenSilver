@@ -16,6 +16,7 @@ using System.Globalization;
 using OpenSilver.Internal;
 using CSHTML5;
 using CSHTML5.Internal;
+using System.Diagnostics;
 
 #if MIGRATION
 using System.Windows.Controls;
@@ -33,14 +34,12 @@ namespace Windows.UI.Xaml
 {
     internal interface ITextMeasurementService
     {
-        Size MeasureTextBlock(string uid,
-                              string whiteSpace,
-                              string overflowWrap,
-                              Thickness padding,
-                              double maxWidth,
-                              string emptyVal);
-
-        void CreateMeasurementText(UIElement parent);
+        Size MeasureText(string uid,
+                         string whiteSpace,
+                         string overflowWrap,
+                         Thickness padding,
+                         double maxWidth,
+                         string emptyVal);
     }
 
     /// <summary>
@@ -55,20 +54,19 @@ namespace Windows.UI.Xaml
         private string savedWhiteSpace;
         private Thickness savedTextBlockPadding;
 
-        public TextMeasurementService()
+        public TextMeasurementService(UIElement parent)
         {
+            Debug.Assert(parent is not null);
+
+            measureTextBlockElementID = "";
             savedWhiteSpace = "pre";
             savedTextBlockPadding = new Thickness(double.NegativeInfinity);
+
+            CreateMeasurementText(parent);
         }
 
-        public void CreateMeasurementText(UIElement parent)
+        private void CreateMeasurementText(UIElement parent)
         {
-            // For TextBlock
-            if (associatedTextBlock != null)
-            {
-                INTERNAL_VisualTreeManager.DetachVisualChildIfNotNull(associatedTextBlock, parent);
-            }
-
             associatedTextBlock = new TextBlock
             {
                 // Prevent the TextBlock from using an implicit style that could mess up the layout
@@ -89,16 +87,15 @@ namespace Windows.UI.Xaml
 
             associatedTextBlock.Text = "A";
 
-            OpenSilver.Interop.ExecuteJavaScriptFastAsync(
-                $"document.measureTextBlockElement={INTERNAL_InteropImplementation.GetVariableStringForJS(textBlockReference)}");
+            measureTextBlockElementID = ((INTERNAL_HtmlDomElementReference)textBlockReference).UniqueIdentifier;
         }
 
-        public Size MeasureTextBlock(string uid,
-                                     string whiteSpace,
-                                     string overflowWrap,
-                                     Thickness padding,
-                                     double maxWidth,
-                                     string emptyVal)
+        public Size MeasureText(string uid,
+                                string whiteSpace,
+                                string overflowWrap,
+                                Thickness padding,
+                                double maxWidth,
+                                string emptyVal)
         {
             if (textBlockReference == null)
             {
@@ -118,7 +115,7 @@ namespace Windows.UI.Xaml
             else
                 savedTextBlockPadding = padding;
 
-            string javaScriptCodeToExecute = $@"document.measureTextBlock(""{uid}"",""{whiteSpace}"",""{overflowWrap}"",""{strPadding}"",""{strMaxWidth}"",""{emptyVal}"")";
+            string javaScriptCodeToExecute = $@"document.measureTextBlock(""{measureTextBlockElementID}"",""{uid}"",""{whiteSpace}"",""{overflowWrap}"",""{strPadding}"",""{strMaxWidth}"",""{emptyVal}"")";
             string strTextSize = OpenSilver.Interop.ExecuteJavaScriptString(javaScriptCodeToExecute);
             Size measuredSize;
             int sepIndex = strTextSize != null ? strTextSize.IndexOf('|') : -1;

@@ -32,11 +32,13 @@ namespace Windows.UI.Xaml
         private readonly JavaScriptCallback _fullscreenchangeCallback;
         private readonly IResizeObserverAdapter _resizeObserver;
 
-        public Content() : this(false) { }
-
-        internal Content(bool hookupEvents)
+        public Content() : this(null)
         {
-            if (hookupEvents)
+        }
+
+        internal Content(Application app)
+        {
+            if (app is not null)
             {
                 _fullscreenchangeCallback = JavaScriptCallback.Create(FullScreenChangedCallback, true);
 
@@ -45,7 +47,7 @@ namespace Windows.UI.Xaml
                     $"document.addEventListener('fullscreenchange', {INTERNAL_InteropImplementation.GetVariableStringForJS(_fullscreenchangeCallback)})");
 
                 _resizeObserver = ResizeObserverFactory.Create();
-                _resizeObserver.Observe(INTERNAL_HtmlDomManager.GetApplicationRootDomElement(), OnContentSizeChanged);
+                _resizeObserver.Observe(app.GetRootDiv(), OnContentSizeChanged);
 
                 // WORKINPROGRESS
                 // Add Zoomed event

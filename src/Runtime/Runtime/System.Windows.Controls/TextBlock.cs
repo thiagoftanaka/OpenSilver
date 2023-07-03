@@ -354,7 +354,7 @@ namespace Windows.UI.Xaml.Controls
 
             if (_noWrapSize == Size.Empty)
             {
-                _noWrapSize = Application.Current.TextMeasurementService.MeasureTextBlock(
+                _noWrapSize = INTERNAL_ParentWindow.TextMeasurementService.MeasureText(
                     uniqueIdentifier,
                     "pre",
                     string.Empty,
@@ -369,7 +369,7 @@ namespace Windows.UI.Xaml.Controls
                 return _noWrapSize;
             }
 
-            Size textSize = Application.Current.TextMeasurementService.MeasureTextBlock(
+            Size textSize = INTERNAL_ParentWindow.TextMeasurementService.MeasureText(
                 uniqueIdentifier,
                 TextWrapping == TextWrapping.NoWrap ? "pre" : "pre-wrap",
                 TextWrapping == TextWrapping.NoWrap ? string.Empty : "break-word",
