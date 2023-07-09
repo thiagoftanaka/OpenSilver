@@ -105,15 +105,16 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.Height"/> dependency 
-        /// property.
+        /// Identifies the <see cref="Height"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty HeightProperty =
             DependencyProperty.Register(
                 nameof(Height),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(double.NaN, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange)
+                new FrameworkPropertyMetadata(
+                    double.NaN,
+                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange)
                 {
                     GetCSSEquivalent = (instance) => new CSSEquivalent
                     {
@@ -127,7 +128,8 @@ namespace Windows.UI.Xaml
                         Name = new List<string> { "height" },
                         ApplyAlsoWhenThereIsAControlTemplate = true
                     }
-                });
+                },
+                IsWidthHeightValid);
 
         private static void Height_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -197,14 +199,16 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.Width"/> dependency property.
+        /// Identifies the <see cref="Width"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty WidthProperty =
             DependencyProperty.Register(
                 nameof(Width),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(double.NaN, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange)
+                new FrameworkPropertyMetadata(
+                    double.NaN,
+                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange)
                 {
                     GetCSSEquivalent = (instance) => new CSSEquivalent
                     {
@@ -218,7 +222,8 @@ namespace Windows.UI.Xaml
                         Name = new List<string> { "width" },
                         ApplyAlsoWhenThereIsAControlTemplate = true
                     }
-                });
+                },
+                IsWidthHeightValid);
 
         internal static void Width_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -954,17 +959,20 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.Margin"/> dependency property.
+        /// Identifies the <see cref="Margin"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty MarginProperty =
             DependencyProperty.Register(
                 nameof(Margin),
                 typeof(Thickness),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(new Thickness(), FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange)
+                new FrameworkPropertyMetadata(
+                    new Thickness(),
+                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange)
                 {
                     MethodToUpdateDom = Margin_MethodToUpdateDom,
-                });
+                },
+                IsMarginValid);
 
         internal static void Margin_MethodToUpdateDom(DependencyObject d, object newValue)
         {
@@ -1021,6 +1029,12 @@ namespace Windows.UI.Xaml
             }
         }
 
+        private static bool IsMarginValid(object value)
+        {
+            Thickness m = (Thickness)value;
+            return Thickness.IsValid(m, true, false, false, false);
+        }
+
         #endregion
 
 
@@ -1036,18 +1050,21 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.MinHeight"/> dependency 
-        /// property.
+        /// Identifies the <see cref="MinHeight"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty MinHeightProperty =
             DependencyProperty.Register(
                 nameof(MinHeight),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange, MinHeight_Changed)
+                new FrameworkPropertyMetadata(
+                    0d,
+                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange,
+                    MinHeight_Changed)
                 {
                     CallPropertyChangedWhenLoadedIntoVisualTree = WhenToCallPropertyChangedEnum.IfPropertyIsSet
-                });
+                },
+                IsMinWidthHeightValid);
 
         private static void MinHeight_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -1076,18 +1093,21 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.MinWidth"/> dependency 
-        /// property.
+        /// Identifies the <see cref="MinWidth"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty MinWidthProperty =
             DependencyProperty.Register(
                 nameof(MinWidth),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange, MinWidth_Changed)
+                new FrameworkPropertyMetadata(
+                    0d,
+                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange,
+                    MinWidth_Changed)
                 {
                     CallPropertyChangedWhenLoadedIntoVisualTree = WhenToCallPropertyChangedEnum.IfPropertyIsSet
-                });
+                },
+                IsMinWidthHeightValid);
 
         private static void MinWidth_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -1116,18 +1136,21 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.MaxHeight"/> dependency 
-        /// property.
+        /// Identifies the <see cref="MaxHeight"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty MaxHeightProperty =
             DependencyProperty.Register(
                 nameof(MaxHeight),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(double.PositiveInfinity, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange, MaxHeight_Changed)
+                new FrameworkPropertyMetadata(
+                    double.PositiveInfinity,
+                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange,
+                    MaxHeight_Changed)
                 {
                     CallPropertyChangedWhenLoadedIntoVisualTree = WhenToCallPropertyChangedEnum.IfPropertyIsSet
-                });
+                },
+                IsMaxWidthHeightValid);
 
         private static void MaxHeight_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -1158,18 +1181,21 @@ namespace Windows.UI.Xaml
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.MaxWidth"/> dependency 
-        /// property.
+        /// Identifies the <see cref="MaxWidth"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty MaxWidthProperty =
             DependencyProperty.Register(
                 nameof(MaxWidth),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(double.PositiveInfinity, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange, MaxWidth_Changed)
+                new FrameworkPropertyMetadata(
+                    double.PositiveInfinity,
+                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange,
+                    MaxWidth_Changed)
                 {
                     CallPropertyChangedWhenLoadedIntoVisualTree = WhenToCallPropertyChangedEnum.IfPropertyIsSet
-                });
+                },
+                IsMaxWidthHeightValid);
 
         private static void MaxWidth_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -1187,7 +1213,24 @@ namespace Windows.UI.Xaml
 
         #endregion
 
+        private static bool IsWidthHeightValid(object value)
+        {
+            double v = (double)value;
+            return double.IsNaN(v) || (v >= 0.0d && !double.IsPositiveInfinity(v));
+        }
 
+        internal static bool IsMinWidthHeightValid(object value)
+        {
+            double v = (double)value;
+            return !double.IsNaN(v) && v >= 0.0d && !double.IsPositiveInfinity(v);
+        }
+
+        internal static bool IsMaxWidthHeightValid(object value)
+        {
+            double v = (double)value;
+            return !double.IsNaN(v) && v >= 0.0;
+        }
+        
         #region ActualWidth / ActualHeight
 
         /// <summary>
