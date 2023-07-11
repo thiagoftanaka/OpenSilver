@@ -411,10 +411,24 @@ if(nextSibling != undefined) {
 
             // Create and append the DOM structure of the Child:
             object domElementWhereToPlaceGrandChildren = null;
+            object outerDomElement;
             bool isChildAControl = child is Control;
-            object outerDomElement = child.INTERNAL_OuterDomElement ?? CreateDomElement(child, parent, index,
-                doesParentRequireToCreateAWrapperForEachChild, innerDivOfWrapperForChild, domElementWhereToPlaceChildStuff,
-                isChildAControl, ref domElementWhereToPlaceGrandChildren);
+            if (child.INTERNAL_HtmlRepresentation == null)
+            {
+                bool hasTemplate = isChildAControl && ((Control)child).HasTemplate;
+                if (hasTemplate)
+                {
+                    outerDomElement = ((Control)child).CreateDomElementForControlTemplate(whereToPlaceTheChild, out domElementWhereToPlaceGrandChildren);
+                }
+                else
+                {
+                    outerDomElement = child.CreateDomElement(whereToPlaceTheChild, out domElementWhereToPlaceGrandChildren);
+                }
+            }
+            else
+            {
+                outerDomElement = INTERNAL_HtmlDomManager.CreateDomFromStringAndAppendIt(child.INTERNAL_HtmlRepresentation, whereToPlaceTheChild, child);
+            }
 
             // For debugging purposes (to better read the output html), add a class to the outer DIV that tells us the corresponding type of the element (Border, StackPanel, etc.):
             INTERNAL_HtmlDomManager.SetDomElementAttribute(outerDomElement, "class", child.GetType().ToString());
@@ -514,54 +528,6 @@ if(nextSibling != undefined) {
 #if PERFSTAT
             Performance.Counter("VisualTreeManager: Raise Loaded event", t11);
 #endif
-        }
-
-        private static object CreateDomElement(UIElement child, UIElement parent, int index,
-            bool doesParentRequireToCreateAWrapperForEachChild,
-            object innerDivOfWrapperForChild,
-            object domElementWhereToPlaceChildStuff,
-            bool isChildAControl, ref object domElementWhereToPlaceGrandChildren)
-        {
-            //--------------------------------------------------------
-            // CREATE THE DIV FOR THE MARGINS (OPTIONAL):
-            //--------------------------------------------------------
-
-#if PERFSTAT
-            var t1 = Performance.now();
-#endif
-
-#if PERFSTAT
-            Performance.Counter("VisualTreeManager: Create the DIV for the margin", t1);
-#endif
-
-            // Determine where to place the child:
-            object whereToPlaceTheChild = (doesParentRequireToCreateAWrapperForEachChild
-                    ? innerDivOfWrapperForChild
-                    : domElementWhereToPlaceChildStuff);
-
-            object outerDomElement;
-            if (child.INTERNAL_HtmlRepresentation == null)
-            {
-                bool hasTemplate = isChildAControl && ((Control)child).HasTemplate;
-                if (hasTemplate)
-                {
-                    outerDomElement =
-                        ((Control)child).CreateDomElementForControlTemplate(whereToPlaceTheChild,
-                            out domElementWhereToPlaceGrandChildren);
-                }
-                else
-                {
-                    outerDomElement = child.CreateDomElement(whereToPlaceTheChild, out domElementWhereToPlaceGrandChildren);
-                }
-            }
-            else
-            {
-                outerDomElement =
-                    INTERNAL_HtmlDomManager.CreateDomFromStringAndAppendIt(child.INTERNAL_HtmlRepresentation,
-                        whereToPlaceTheChild, child);
-            }
-
-            return outerDomElement;
         }
         public static bool IsElementInVisualTree(UIElement element) => element.IsConnectedToLiveTree && !element.IsUnloading;
 
