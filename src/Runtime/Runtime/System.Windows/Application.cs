@@ -367,7 +367,7 @@ namespace Windows.UI.Xaml
                 tcs.SetResult(_resourcesCache[uriResource.OriginalString.ToLower()]);
                 return tcs.Task;
             }
-            HashSet2<string> supportedExtensions = new HashSet2<string>(new string[] { ".txt", ".xml", ".config", ".json", ".clientconfig", ".xaml" });
+            HashSet2<string> supportedExtensions = new HashSet2<string>(new string[] { ".txt", ".xml", ".config", ".json", ".clientconfig"});
 
             string uriAsString = uriResource.OriginalString;
             string extension = uriAsString.Substring(uriAsString.LastIndexOf('.'));
