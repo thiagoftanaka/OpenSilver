@@ -28,28 +28,31 @@ namespace TestApplication.Tests
         {
         }
 
+        #region ApplicationSettings File
         private void ButtonSaveToIsolatedStorage_Click(object sender, RoutedEventArgs e)
         {
             string path = TextBoxWithIsolatedStorageFilePath.Text;
-            FileSystemHelpers.WriteTextToFile(path, TextBoxWithNewTextForIsolatedStorage.Text);
+            FileSystemHelpers.WriteTextToFile(path, TextBoxWithNewTextForIsolatedStorage.Text, false);
         }
 
         private void ButtonLoadFromIsolatedStorage_Click(object sender, RoutedEventArgs e)
         {
             string path = TextBoxWithIsolatedStorageFilePath.Text;
-            TextBlockWithLoadedText.Text = FileSystemHelpers.ReadTextFromFile(path);
+            TextBlockWithApplicationLoadedText.Text = FileSystemHelpers.ReadTextFromFile(path, false);
         }
 
         private void ButtonDeleteFromIsolatedStorage_Click(object sender, RoutedEventArgs e)
         {
             string path = TextBoxWithIsolatedStorageFilePath.Text;
-            FileSystemHelpers.DeleteFile(path);
+            FileSystemHelpers.DeleteFile(path, false);
         }
+        #endregion
 
+        #region ApplicationSettings IsolatedStorageSettings
         private void ButtonSaveToIsolatedStorageSettings_Click(object sender, RoutedEventArgs e)
         {
             string key = TextBoxWithIsolatedStorageSettingsKey.Text;
-            FileSystemHelpers.WriteTextToSettings(key, TextBoxWithIsolatedStorageSettingsValue.Text);
+            FileSystemHelpers.WriteTextToSettings(key, TextBoxWithIsolatedStorageSettingsValue.Text, false);
         }
         private void ButtonSaveToIsolatedStorageSettingsWithAdd_Click(object sender, RoutedEventArgs e)
         {
@@ -67,7 +70,7 @@ namespace TestApplication.Tests
         private void ButtonLoadFromIsolatedStorageSettings_Click(object sender, RoutedEventArgs e)
         {
             string key = TextBoxWithIsolatedStorageSettingsKey.Text;
-            TextBlockWithIsolatedStorageSettingsLoadedText.Text = FileSystemHelpers.ReadTextFromSettings(key);
+            TextBlockWithIsolatedStorageSettingsLoadedText.Text = FileSystemHelpers.ReadTextFromSettings(key, false);
             TextBlockWithIsolatedStorageSettingsElementsCount.Text = IsolatedStorageSettings.ApplicationSettings.Count.ToString();
             string temp = "";
             foreach (var pair in IsolatedStorageSettings.ApplicationSettings)
@@ -91,13 +94,82 @@ namespace TestApplication.Tests
             }
             TextBlockWithIsolatedStorageSettingsElements.Text = temp;
         }
+        #endregion
+
+        #region SiteSettings File
+        private void ButtonSaveToSiteIsolatedStorage_Click(object sender, RoutedEventArgs e)
+        {
+            string path = TextBoxWithSiteIsolatedStorageFilePath.Text;
+            FileSystemHelpers.WriteTextToFile(path, TextBoxWithNewTextForSiteIsolatedStorage.Text, true);
+        }
+
+        private void ButtonLoadFromSiteIsolatedStorage_Click(object sender, RoutedEventArgs e)
+        {
+            string path = TextBoxWithSiteIsolatedStorageFilePath.Text;
+            TextBlockWithSiteLoadedText.Text = FileSystemHelpers.ReadTextFromFile(path, true);
+        }
+
+        private void ButtonDeleteFromSiteIsolatedStorage_Click(object sender, RoutedEventArgs e)
+        {
+            string path = TextBoxWithSiteIsolatedStorageFilePath.Text;
+            FileSystemHelpers.DeleteFile(path, true);
+        }
+        #endregion
+
+        #region SiteSettings IsolatedStorageSettings
+        private void ButtonSaveToSiteIsolatedStorageSettings_Click(object sender, RoutedEventArgs e)
+        {
+            string key = TextBoxWithSiteIsolatedStorageSettingsKey.Text;
+            FileSystemHelpers.WriteTextToSettings(key, TextBoxWithSiteIsolatedStorageSettingsValue.Text, true);
+        }
+        private void ButtonSaveToSiteIsolatedStorageSettingsWithAdd_Click(object sender, RoutedEventArgs e)
+        {
+            string key = TextBoxWithSiteIsolatedStorageSettingsKey.Text;
+            IsolatedStorageSettings.SiteSettings.Add(key, TextBoxWithSiteIsolatedStorageSettingsValue.Text);
+        }
+
+        private void ButtonRemoveFromSiteIsolatedStorageSettings_Click(object sender, RoutedEventArgs e)
+        {
+            string key = TextBoxWithSiteIsolatedStorageSettingsKey.Text;
+            IsolatedStorageSettings.SiteSettings.Remove(key);
+        }
+
+        private void ButtonLoadFromSiteIsolatedStorageSettings_Click(object sender, RoutedEventArgs e)
+        {
+            string key = TextBoxWithSiteIsolatedStorageSettingsKey.Text;
+            TextBlockWithSiteIsolatedStorageSettingsLoadedText.Text = FileSystemHelpers.ReadTextFromSettings(key, true);
+            TextBlockWithSiteIsolatedStorageSettingsElementsCount.Text = IsolatedStorageSettings.SiteSettings.Count.ToString();
+            string temp = "";
+            foreach (var pair in IsolatedStorageSettings.SiteSettings)
+            {
+                temp += "{" + pair.Key + "," + pair.Value + "},";
+            }
+            TextBlockWithSiteIsolatedStorageSettingsElements.Text = temp;
+        }
+
+        private void ButtonLoadFromSiteIsolatedStorageUsingTryGetValue_Click(object sender, RoutedEventArgs e)
+        {
+            string key = TextBoxWithSiteIsolatedStorageSettingsKey.Text;
+            string value = string.Empty;
+            IsolatedStorageSettings.SiteSettings.TryGetValue(key, out value);
+            TextBlockWithSiteIsolatedStorageSettingsLoadedText.Text = value;
+            TextBlockWithSiteIsolatedStorageSettingsElementsCount.Text = IsolatedStorageSettings.SiteSettings.Count.ToString();
+            string temp = "";
+            foreach (var pair in IsolatedStorageSettings.SiteSettings)
+            {
+                temp += "{" + pair.Key + "," + pair.Value + "},";
+            }
+            TextBlockWithSiteIsolatedStorageSettingsElements.Text = temp;
+        }
+        #endregion
 
         public static class FileSystemHelpers
         {
-            public static void WriteTextToFile(string fileName, string fileContent)
+            public static void WriteTextToFile(string fileName, string fileContent, bool isForSite)
             {
 #if OPENSILVER || SILVERLIGHT
-                using (IsolatedStorageFile storage = IsolatedStorageFile.GetUserStoreForApplication())
+                using (IsolatedStorageFile storage =
+                       isForSite ? IsolatedStorageFile.GetUserStoreForSite() : IsolatedStorageFile.GetUserStoreForApplication())
 #else
                 using (IsolatedStorageFile storage = IsolatedStorageFile.GetUserStoreForAssembly())
 #endif
@@ -120,10 +192,11 @@ namespace TestApplication.Tests
                 }
             }
 
-            public static void DeleteFile(string fileName)
+            public static void DeleteFile(string fileName, bool isForSite)
             {
 #if OPENSILVER || SILVERLIGHT
-                using (IsolatedStorageFile storage = IsolatedStorageFile.GetUserStoreForApplication())
+                using (IsolatedStorageFile storage =
+                       isForSite ? IsolatedStorageFile.GetUserStoreForSite() : IsolatedStorageFile.GetUserStoreForApplication())
 #else
                 using (IsolatedStorageFile storage = IsolatedStorageFile.GetUserStoreForAssembly())
 #endif
@@ -132,10 +205,11 @@ namespace TestApplication.Tests
                 }
             }
 
-            public static string ReadTextFromFile(string fileName)
+            public static string ReadTextFromFile(string fileName, bool isForSite)
             {
 #if OPENSILVER || SILVERLIGHT
-                using (IsolatedStorageFile storage = IsolatedStorageFile.GetUserStoreForApplication())
+                using (IsolatedStorageFile storage =
+                       isForSite ? IsolatedStorageFile.GetUserStoreForSite() : IsolatedStorageFile.GetUserStoreForApplication())
 #else
                 using (IsolatedStorageFile storage = IsolatedStorageFile.GetUserStoreForAssembly())
 #endif
@@ -164,16 +238,17 @@ namespace TestApplication.Tests
                 return null;
             }
 
-            public static void WriteTextToSettings(string key, string value)
+            public static void WriteTextToSettings(string key, string value, bool isForSite)
             {
-                IsolatedStorageSettings.ApplicationSettings[key] = value;
+                (isForSite ? IsolatedStorageSettings.SiteSettings : IsolatedStorageSettings.ApplicationSettings)[key] = value;
             }
 
-            public static string ReadTextFromSettings(string key)
+            public static string ReadTextFromSettings(string key, bool isForSite)
             {
-                if (IsolatedStorageSettings.ApplicationSettings.Contains(key))
+                IsolatedStorageSettings settings = isForSite ? IsolatedStorageSettings.SiteSettings : IsolatedStorageSettings.ApplicationSettings;
+                if (settings.Contains(key))
                 {
-                    object value = IsolatedStorageSettings.ApplicationSettings[key];
+                    object value = settings[key];
                     if (value is string)
                     {
                         return (string)value;
@@ -190,6 +265,16 @@ namespace TestApplication.Tests
             }
 
 
+        }
+
+        private void ButtonClearIsolatedStorageSettings_Click(object sender, RoutedEventArgs e)
+        {
+            IsolatedStorageSettings.ApplicationSettings.Clear();
+        }
+
+        private void ButtonClearSiteIsolatedStorageSettings_Click(object sender, RoutedEventArgs e)
+        {
+            IsolatedStorageSettings.SiteSettings.Clear();
         }
     }
 }

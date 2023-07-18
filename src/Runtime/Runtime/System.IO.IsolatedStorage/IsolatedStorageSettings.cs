@@ -31,7 +31,10 @@ using Bridge;
 using System.Text;
 using System.Threading.Tasks;
 #if MIGRATION
+using System.Runtime.CompilerServices;
 using System.Windows;
+using CSHTML5.Types;
+using System.Windows.Input;
 #else
 using Windows.UI.Xaml;
 #endif
@@ -68,6 +71,7 @@ namespace System.IO.IsolatedStorage
     public sealed partial class IsolatedStorageSettings : IEnumerable, IEnumerable<KeyValuePair<string, object>> // : IDictionary<string, object>, ICollection<KeyValuePair<string, object>>, IDictionary, ICollection
     {
         string _fullApplicationName = null;
+        private AppDomain _appDomain;
 
 #if !BRIDGE
         [JSReplacement("true")]
@@ -134,15 +138,22 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
 
         string GetKeysFirstPart()
         {
-            return "storage_" + _fullApplicationName + "_settings_";
+            return $"storage_{_fullApplicationName}{(_appDomain != null ? $"_{_appDomain.Id}" : "")}_settings_";
         }
 
-        IsolatedStorageSettings()
+        private IsolatedStorageSettings() : this(null)
+        {
+        }
+
+        private IsolatedStorageSettings(AppDomain appDomain)
         {
             _fullApplicationName = Application.Current.ToString();
+            _appDomain = appDomain;
         }
 
         static IsolatedStorageSettings _applicationSettings = null;
+        static IsolatedStorageSettings _domainSettings;
+
         /// <summary>
         /// Gets an instance of System.IO.IsolatedStorage.IsolatedStorageSettings that
         /// contains the contents of the application's System.IO.IsolatedStorage.IsolatedStorageFile,
@@ -161,8 +172,6 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
             }
         }
 
-
-
         /// <summary>
         /// Gets the number of key-value pairs that are stored in the dictionary.
         /// </summary>
@@ -172,6 +181,10 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
             {
                 if (!Interop.IsRunningInTheSimulator)
                 {
+#if MIGRATION
+                    return Interop.ExecuteJavaScriptInt32(
+                            $"Object.keys(window.localStorage).filter(k => k.startsWith('{GetKeysFirstPart()}')).length");
+#else
                     dynamic localStorage = GetLocalStorage();
                     int length = localStorage.length;
                     int count = 0;
@@ -183,16 +196,21 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
                         }
                     }
                     return count;
+#endif
                 }
                 else
                 {
-                    return IsolatedStorageSettingsForCSharp.Instance.Count;
+                    return GetSettingsForCSharpForApplicationOrSite().Count;
                 }
             }
         }
 
-
-
+        private IsolatedStorageSettingsForCSharp GetSettingsForCSharpForApplicationOrSite()
+        {
+            return _appDomain != null
+                ? IsolatedStorageSettingsForCSharp.DomainInstance
+                : IsolatedStorageSettingsForCSharp.Instance;
+        }
 
         /// <summary>
         /// Gets a collection that contains the keys in the dictionary.
@@ -203,6 +221,11 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
             {
                 if (!Interop.IsRunningInTheSimulator)
                 {
+#if MIGRATION
+                    string keys = Interop.ExecuteJavaScriptString(
+                            $"Object.keys(window.localStorage).filter(k => k.startsWith('{GetKeysFirstPart()}')).join(';')");
+                    return keys?.Replace(GetKeysFirstPart(), "").Split(';');
+#else
                     dynamic localStorage = GetLocalStorage();
                     List<string> keysList = new List<string>();
                     int length = localStorage.length;
@@ -215,10 +238,11 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
                         }
                     }
                     return keysList;
+#endif
                 }
                 else
                 {
-                    return IsolatedStorageSettingsForCSharp.Instance.Keys.ToList<string>();
+                    return GetSettingsForCSharpForApplicationOrSite().Keys.ToList<string>();
                 }
             }
         }
@@ -235,7 +259,8 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
         ////     the contents of the application's System.IO.IsolatedStorage.IsolatedStorageFile,
         ////     scoped at the domain level. If an instance does not already exist, a new
         ////     instance is created.
-        //public static IsolatedStorageSettings SiteSettings { get; }
+        public static IsolatedStorageSettings SiteSettings =>
+            _domainSettings ??= new IsolatedStorageSettings(AppDomain.CurrentDomain);
 
         /// <summary>
         /// Gets a collection that contains the values in the dictionary.
@@ -246,6 +271,11 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
             {
                 if (!Interop.IsRunningInTheSimulator)
                 {
+#if MIGRATION
+                    string keys = Interop.ExecuteJavaScriptString(
+                            $"Object.entries(window.localStorage).filter(([k, v], index) => k.startsWith('{GetKeysFirstPart()}')).map(([k, v], index) => v).join(';')");
+                    return keys.Split(';');
+#else
                     dynamic localStorage = GetLocalStorage();
                     List<object> valuesList = new List<object>();
                     int length = localStorage.length;
@@ -258,15 +288,15 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
                         }
                     }
                     return valuesList;
+#endif
                 }
                 else
                 {
 #if BRIDGE
-                    return (ICollection)(INTERNAL_BridgeWorkarounds.GetDictionaryValues_SimulatorCompatible<string, Object>(IsolatedStorageSettingsForCSharp.Instance).ToList<object>());
+                    return (ICollection)(INTERNAL_BridgeWorkarounds.GetDictionaryValues_SimulatorCompatible<string, Object>(GetSettingsForCSharpForApplicationOrSite()).ToList<object>());
 #else
-                    return (ICollection)IsolatedStorageSettingsForCSharp.Instance.Values.ToList<object>();
+                    return GetSettingsForCSharpForApplicationOrSite().Values.ToList<object>();
 #endif
-
                 }
             }
         }
@@ -286,25 +316,35 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
             {
                 if (!Interop.IsRunningInTheSimulator)
                 {
+#if MIGRATION
+                    var result = Interop.ExecuteJavaScript("window.localStorage[$0]", GetKeysFirstPart() + key)
+                        as INTERNAL_JSObjectReference;
+                    return result?.GetActualValue();
+#else
                     dynamic localStorage = GetLocalStorage();
                     return Convert.ChangeType((Interop.ExecuteJavaScript("$0[$1]", localStorage, GetKeysFirstPart() + key)), typeof(object));
+#endif
                 }
                 else
                 {
-                    return IsolatedStorageSettingsForCSharp.Instance[key];
+                    return GetSettingsForCSharpForApplicationOrSite()[key];
                 }
             }
             set
             {
                 if (!Interop.IsRunningInTheSimulator)
                 {
+#if MIGRATION
+                    Interop.ExecuteJavaScriptVoidAsync("window.localStorage[$0] = $1", GetKeysFirstPart() + key, value);
+#else
                     dynamic localStorage = GetLocalStorage();
                     string applicationSpecificKey = GetKeysFirstPart() + key;
                     Interop.ExecuteJavaScriptVoid("$0[$1] = $2", false,  localStorage, applicationSpecificKey, value);
+#endif
                 }
                 else
                 {
-                    IsolatedStorageSettingsForCSharp.Instance[key] = value;
+                    GetSettingsForCSharpForApplicationOrSite()[key] = value;
                 }
             }
         }
@@ -318,13 +358,17 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
         {
             if (!Interop.IsRunningInTheSimulator)
             {
+#if MIGRATION
+                Interop.ExecuteJavaScriptVoidAsync("window.localStorage[$0] = $1", GetKeysFirstPart() + key, value);
+#else
                 dynamic localStorage = GetLocalStorage();
                 localStorage[GetKeysFirstPart() + key] = value;
+#endif
             }
             else
             {
-                IsolatedStorageSettingsForCSharp.Instance.Add(key, value);
-                IsolatedStorageSettingsForCSharp.Instance.Save();
+                GetSettingsForCSharpForApplicationOrSite().Add(key, value);
+                GetSettingsForCSharpForApplicationOrSite().Save();
             }
         }
 
@@ -336,16 +380,23 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
         {
             if (!Interop.IsRunningInTheSimulator)
             {
+#if MIGRATION
+                foreach (string key in Keys)
+                {
+                    Interop.ExecuteJavaScriptVoidAsync("delete window.localStorage[$0]", GetKeysFirstPart() + key);
+                }
+#else
                 dynamic localStorage = GetLocalStorage();
                 List<string> keys = (List<string>)Keys;
                 foreach (string key in keys)
                 {
                     localStorage.removeItem(GetKeysFirstPart() + key);
                 }
+#endif
             }
             else
             {
-                IsolatedStorageSettingsForCSharp.Instance.Clear();
+                GetSettingsForCSharpForApplicationOrSite().Clear();
             }
         }
 
@@ -359,12 +410,18 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
         {
             if (!Interop.IsRunningInTheSimulator)
             {
+#if MIGRATION
+                var result = Interop.ExecuteJavaScript("window.localStorage[$0]", GetKeysFirstPart() + key)
+                    as INTERNAL_JSObjectReference;
+                return result?.GetActualValue() != null;
+#else
                 dynamic localStorage = GetLocalStorage();
                 return (localStorage.getItem(GetKeysFirstPart() + key) != null);
+#endif
             }
             else
             {
-                return IsolatedStorageSettingsForCSharp.Instance.ContainsKey(key);
+                return GetSettingsForCSharpForApplicationOrSite().ContainsKey(key);
             }
         }
 
@@ -377,6 +434,12 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
         {
             if (!Interop.IsRunningInTheSimulator)
             {
+#if MIGRATION
+                return Interop.ExecuteJavaScriptBoolean(
+                    $@"let existedBefore = Object.keys(window.localStorage).includes('{GetKeysFirstPart() + key}');
+delete window.localStorage['{GetKeysFirstPart() + key}'];
+existedBefore && !Object.keys(window.localStorage).includes('{GetKeysFirstPart() + key}');");
+#else
                 dynamic localStorage = GetLocalStorage();
                 bool result = Convert.ToBoolean(Interop.ExecuteJavaScript(@"(function() {
 var res = $0.getItem($1) != null;
@@ -385,11 +448,12 @@ return res;
 })()", localStorage, GetKeysFirstPart() + key)
                     );
                 return result;
+#endif
             }
             else
             {
-                bool ret = IsolatedStorageSettingsForCSharp.Instance.Remove(key);
-                IsolatedStorageSettingsForCSharp.Instance.Save();
+                bool ret = GetSettingsForCSharpForApplicationOrSite().Remove(key);
+                GetSettingsForCSharpForApplicationOrSite().Save();
                 return ret;
             }
         }
@@ -420,6 +484,16 @@ return res;
         {
             if (!Interop.IsRunningInTheSimulator)
             {
+#if MIGRATION
+                object valueAttempt = this[key];
+                if (valueAttempt != null)
+                {
+                    value = (T)valueAttempt;
+                    return true;
+                }
+                value = default;
+                return false;
+#else
                 dynamic localStorage = GetLocalStorage();
                 using(var temp = Interop.ExecuteJavaScript("$0.getItem($1)", localStorage, GetKeysFirstPart() + key))
                     if (Convert.ToBoolean(Interop.ExecuteJavaScript("$0 == null",temp)))
@@ -432,11 +506,12 @@ return res;
                         value = Convert.ChangeType(temp, typeof(T));
                         return true;
                     }
+#endif
             }
             else
             {
                 object temp;
-                bool ret = IsolatedStorageSettingsForCSharp.Instance.TryGetValue(key, out temp);
+                bool ret = GetSettingsForCSharpForApplicationOrSite().TryGetValue(key, out temp);
                 value = (T)temp;
                 return ret;
             }
@@ -462,6 +537,13 @@ return res;
         {
             if (!Interop.IsRunningInTheSimulator)
             {
+#if MIGRATION
+                foreach (var keyValuePair in ((IEnumerable<string>)Keys).Zip((IEnumerable<object>)Values,
+                             (key, value) => new KeyValuePair<string, object>(key, value)))
+                {
+                    yield return keyValuePair;
+                }
+#else
                 dynamic localStorage = GetLocalStorage();
                 List<string> keys = (List<string>)Keys;
                 foreach (string key in keys)
@@ -469,10 +551,11 @@ return res;
                     string item = localStorage.getItem(GetKeysFirstPart() + key);
                     yield return new KeyValuePair<string, object>(key, item);
                 }
+#endif
             }
             else
             {
-                foreach (KeyValuePair<string, object> kv in IsolatedStorageSettingsForCSharp.Instance)
+                foreach (KeyValuePair<string, object> kv in GetSettingsForCSharpForApplicationOrSite())
                 {
                     yield return kv;
                 }

@@ -34,13 +34,15 @@ namespace System.IO.IsolatedStorage
         #region Constants/Variables
 
         private const string Filename = "Settings.bin";
-        private static readonly Dictionary<string, object> AppDictionary = new Dictionary<string, object>();
+        private readonly Dictionary<string, object> _appDictionary = new Dictionary<string, object>();
 
         private static readonly IsolatedStorageSettingsForCSharp StaticIsolatedStorageSettings = new IsolatedStorageSettingsForCSharp();
 
         //TODO implemente bellow with BRIDGE (seems long)
 #if !BRIDGE
         private static readonly IFormatter Formatter = new BinaryFormatter();
+
+        private static readonly IsolatedStorageSettingsForCSharp StaticDomainIsolatedStorageSettings = new(isForDomain: true);
 #endif
 
         #endregion
@@ -48,21 +50,20 @@ namespace System.IO.IsolatedStorage
         #region Singleton Implementation
 
 #if !BRIDGE
-        /// <summary>
-        ///     Its static constructor.
-        /// </summary>
-        static IsolatedStorageSettingsForCSharp()
+        private IsolatedStorageSettingsForCSharp(bool isForDomain)
         {
-            LoadData();
+            LoadData(isForDomain);
         }
-#endif
 
+        private IsolatedStorageSettingsForCSharp() : this(false) { }
+#else
         /// <summary>
         ///     Its a private constructor.
         /// </summary>
         private IsolatedStorageSettingsForCSharp()
         {
         }
+#endif
 
         /// <summary>
         ///     Its a static singleton instance.
@@ -72,13 +73,19 @@ namespace System.IO.IsolatedStorage
             get { return StaticIsolatedStorageSettings; }
         }
 
-        //TODO : verify we don't need the method below using Bridge
+
 #if !BRIDGE
+        public static IsolatedStorageSettingsForCSharp DomainInstance => StaticDomainIsolatedStorageSettings;
+
+        //TODO : verify we don't need the method below using Bridge
         // public acces´s for tests
-        public static void LoadData()
+        public void LoadData(bool isForDomain)
         {
             // IsolatedStorageFile isoStore = IsolatedStorageFile.GetStore(IsolatedStorageScope.User | IsolatedStorageScope.Assembly, null, null);
-            IsolatedStorageFile isoStore = IsolatedStorageFile.GetUserStoreForAssembly();
+            IsolatedStorageFile isoStore = isForDomain ?
+                IsolatedStorageFile.GetMachineStoreForDomain() :
+                IsolatedStorageFile.GetMachineStoreForApplication();
+
             if (isoStore.GetFileNames(Filename).Length == 0)
             {
                 // File not exists. Let us NOT try to DeSerialize it.        
@@ -98,7 +105,7 @@ namespace System.IO.IsolatedStorage
                 IDictionaryEnumerator enumerator = appData.GetEnumerator();
                 while (enumerator.MoveNext())
                 {
-                    AppDictionary[enumerator.Key.ToString()] = enumerator.Value;
+                    _appDictionary[enumerator.Key.ToString()] = enumerator.Value;
                 }
             }
             finally
@@ -123,13 +130,13 @@ namespace System.IO.IsolatedStorage
         {
             get
             {
-                return AppDictionary.ContainsKey(key)
-                           ? AppDictionary[key]
+                return _appDictionary.ContainsKey(key)
+                           ? _appDictionary[key]
                            : defaultvalue;
             }
             set
             {
-                AppDictionary[key] = value;
+                _appDictionary[key] = value;
 #if !BRIDGE
                 Save();
 #endif
@@ -150,7 +157,7 @@ namespace System.IO.IsolatedStorage
             try
             {
                 // Serialize dictionary into the IsolatedStorage.                                
-                Formatter.Serialize(stream, AppDictionary);
+                Formatter.Serialize(stream, _appDictionary);
             }
             finally
             {
@@ -165,7 +172,7 @@ namespace System.IO.IsolatedStorage
 
         public void Add(string key, object value)
         {
-            AppDictionary.Add(key, value);
+            _appDictionary.Add(key, value);
 #if !BRIDGE
             Save();
 #endif
@@ -173,12 +180,12 @@ namespace System.IO.IsolatedStorage
 
         public bool ContainsKey(string key)
         {
-            return AppDictionary.ContainsKey(key);
+            return _appDictionary.ContainsKey(key);
         }
 
         public ICollection<string> Keys
         {
-            get { return AppDictionary.Keys; }
+            get { return _appDictionary.Keys; }
         }
 
         public bool Remove(string key)
@@ -188,7 +195,7 @@ namespace System.IO.IsolatedStorage
 #if !BRIDGE
                 Save();
 #endif
-                AppDictionary.Remove(key);
+                _appDictionary.Remove(key);
                 return true;
             }
             catch
@@ -199,7 +206,7 @@ namespace System.IO.IsolatedStorage
 
         public bool TryGetValue(string key, out object value)
         {
-            return AppDictionary.TryGetValue(key, out value);
+            return _appDictionary.TryGetValue(key, out value);
         }
 
         public ICollection<object> Values
@@ -207,19 +214,19 @@ namespace System.IO.IsolatedStorage
             get
             {
 #if BRIDGE
-                return INTERNAL_BridgeWorkarounds.GetDictionaryValues_SimulatorCompatible(AppDictionary).ToList();
+                return INTERNAL_BridgeWorkarounds.GetDictionaryValues_SimulatorCompatible(_appDictionary).ToList();
 #else
-                return AppDictionary.Values;
+                return _appDictionary.Values;
 #endif
             }
         }
 
         public object this[string key]
         {
-            get { return AppDictionary[key]; }
+            get { return _appDictionary[key]; }
             set
             {
-                AppDictionary[key] = value;
+                _appDictionary[key] = value;
 #if !BRIDGE
                 Save();
 #endif
@@ -229,12 +236,12 @@ namespace System.IO.IsolatedStorage
 
         public void Add(KeyValuePair<string, object> item)
         {
-            AppDictionary.Add(item.Key, item.Value);
+            _appDictionary.Add(item.Key, item.Value);
         }
 
         public void Clear()
         {
-            AppDictionary.Clear();
+            _appDictionary.Clear();
 #if !BRIDGE
             Save();
 #endif
@@ -242,7 +249,7 @@ namespace System.IO.IsolatedStorage
 
         public bool Contains(KeyValuePair<string, object> item)
         {
-            return AppDictionary.ContainsKey(item.Key);
+            return _appDictionary.ContainsKey(item.Key);
         }
 
         public void CopyTo(KeyValuePair<string, object>[] array, int arrayIndex)
@@ -252,7 +259,7 @@ namespace System.IO.IsolatedStorage
 
         public int Count
         {
-            get { return AppDictionary.Count; }
+            get { return _appDictionary.Count; }
         }
 
         public bool IsReadOnly
@@ -262,17 +269,17 @@ namespace System.IO.IsolatedStorage
 
         public bool Remove(KeyValuePair<string, object> item)
         {
-            return AppDictionary.Remove(item.Key);
+            return _appDictionary.Remove(item.Key);
         }
 
         public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
         {
-            return AppDictionary.GetEnumerator();
+            return _appDictionary.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return AppDictionary.GetEnumerator();
+            return _appDictionary.GetEnumerator();
         }
 
         #endregion
