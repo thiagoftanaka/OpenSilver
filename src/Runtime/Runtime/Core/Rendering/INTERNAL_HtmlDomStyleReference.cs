@@ -148,6 +148,7 @@ namespace CSHTML5.Internal
         public string flexGrow { set { SetStylePropertyValue("flexGrow", value); } }
         public string flexShrink { set { SetStylePropertyValue("flexShrink", value); } }
         public string flexBasis { set { SetStylePropertyValue("flexBasis", value); } }
+        public string userSelect { set { SetStylePropertyValue("userSelect", value); } }
 
         //-----------------------------------------------------------------------
         // Usage stats for To-Do Calendar (number of types each property is set):
