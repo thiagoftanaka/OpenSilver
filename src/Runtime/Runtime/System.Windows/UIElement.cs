@@ -306,7 +306,6 @@ namespace Windows.UI.Xaml
         public UIElement()
         {
             PreviousAvailableSize = new Size(double.PositiveInfinity, double.PositiveInfinity);
-            IsFirstRendering = false;
             
             NeverMeasured = true;
             NeverArranged = true;
@@ -707,9 +706,21 @@ namespace Windows.UI.Xaml
                 nameof(Visibility),
                 typeof(Visibility),
                 typeof(UIElement),
-                new PropertyMetadata(VisibilityBoxes.VisibleBox, OnVisibilityChanged, CoerceVisibility));
-
-        private string _previousValueOfDisplayCssProperty = "block";
+                new PropertyMetadata(VisibilityBoxes.VisibleBox, OnVisibilityChanged, CoerceVisibility)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
+                    {
+                        var uie = (UIElement)d;
+                        if ((Visibility)newValue == Visibility.Collapsed)
+                        {
+                            INTERNAL_HtmlDomManager.AddCSSClass(uie.INTERNAL_OuterDomElement, "uielement-collapsed");
+                        }
+                        else
+                        {
+                            INTERNAL_HtmlDomManager.RemoveCSSClass(uie.INTERNAL_OuterDomElement, "uielement-collapsed");
+                        }
+                    },
+                });
 
         private static void OnVisibilityChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -717,9 +728,6 @@ namespace Windows.UI.Xaml
             Visibility newVisibility = (Visibility)e.NewValue;
 
             uie.VisibilityCache = newVisibility;
-
-            // Make the CSS changes required to apply the visibility at the DOM level:
-            INTERNAL_ApplyVisibility(uie, newVisibility);
 
             // The IsVisible property depends on this property.
             uie.UpdateIsVisible();
@@ -765,36 +773,6 @@ namespace Windows.UI.Xaml
 
                 //invalidate parent
                 InvalidateParentMeasure();
-            }
-        }
-
-        internal static void INTERNAL_ApplyVisibility(UIElement uiElement, Visibility newValue)
-        {
-            // Set the CSS to make the DOM element visible/collapsed:
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(uiElement))
-            {
-                // Get a reference to the most outer DOM element to show/hide:
-                object mostOuterDomElement = uiElement.INTERNAL_OuterDomElement;
-                var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(mostOuterDomElement);
-
-                // Apply the visibility:
-                if (newValue == Visibility.Collapsed)
-                {
-                    // Remember the current value of the CSS property "display" so that we can later revert to it:
-                    string previousValueOfDisplayCssProperty = style.display;
-                    if (previousValueOfDisplayCssProperty != "none")
-                        uiElement._previousValueOfDisplayCssProperty = previousValueOfDisplayCssProperty;
-
-                    // Hide the DOM element (or its wrapper if any):
-                    style.display = "none";
-                }
-                else
-                {
-                    // Show the DOM element (or its wrapper if any) by reverting the CSS property "display" to its previous value:
-                    if (style.display == "none")
-                        style.display = uiElement._previousValueOfDisplayCssProperty;
-                }
-                INTERNAL_WorkaroundIE11IssuesWithScrollViewerInsideGrid.RefreshLayoutIfIE();
             }
         }
 

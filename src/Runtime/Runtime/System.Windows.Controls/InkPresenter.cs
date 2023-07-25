@@ -21,6 +21,7 @@ using OpenSilver.Internal;
 using System.Windows.Ink;
 using System.Windows.Input;
 #else
+using Windows.Foundation;
 using Windows.UI.Xaml.Ink;
 using Windows.UI.Xaml.Input;
 #endif

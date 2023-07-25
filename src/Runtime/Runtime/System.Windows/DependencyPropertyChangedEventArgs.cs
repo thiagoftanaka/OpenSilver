@@ -48,7 +48,7 @@ namespace Windows.UI.Xaml
         /// Gets the value of the property after the change.
         /// </summary>
         public object NewValue { get; }
-        
+
         /// <summary>
         /// Gets the identifier for the dependency property where the value change occurred.
         /// </summary>

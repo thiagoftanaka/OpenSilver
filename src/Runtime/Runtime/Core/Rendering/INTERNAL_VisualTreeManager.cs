@@ -430,15 +430,9 @@ if(nextSibling != undefined) {
                 outerDomElement = INTERNAL_HtmlDomManager.CreateDomFromStringAndAppendIt(child.INTERNAL_HtmlRepresentation, whereToPlaceTheChild, child);
             }
 
-            // For debugging purposes (to better read the output html), add a class to the outer DIV that tells us the corresponding type of the element (Border, StackPanel, etc.):
-            INTERNAL_HtmlDomManager.SetDomElementAttribute(outerDomElement, "class", child.GetType().ToString());
-
-            // Set Visibility hidden when rendering with CustomLayout
-            if ((child.IsLayoutRoot || child.KeepHiddenInFirstRender) && child.Visibility == Visibility.Visible)
-            {
-                INTERNAL_HtmlDomManager.GetDomElementStyleForModification(outerDomElement).visibility = "hidden";
-                child.IsFirstRendering = true;
-            }
+            // For debugging purposes (to better read the output html), add a class to the outer DIV
+            // that tells us the corresponding type of the element (Border, StackPanel, etc.):
+            INTERNAL_HtmlDomManager.AddCSSClass(outerDomElement, child.GetType().ToString());
 
 #if PERFSTAT
             Performance.Counter("VisualTreeManager: Prepare the child", t2);
@@ -493,6 +487,10 @@ if(nextSibling != undefined) {
             if (enableDeferredRenderingOfCollapsedControls && !child.IsVisible)
             {
                 child.RenderingIsDeferred = true;
+                if (child.Visibility == Visibility.Collapsed)
+                {
+                    INTERNAL_HtmlDomManager.AddCSSClass(child.INTERNAL_OuterDomElement, "uielement-collapsed");
+                }
             }
             else
             {
@@ -503,14 +501,6 @@ if(nextSibling != undefined) {
             {
                 ((Control)child).UpdateSystemFocusVisuals();
             }
-
-            //--------------------------------------------------------
-            // APPLY THE VISIBILITY:
-            //--------------------------------------------------------
-
-            Visibility childVisibility = child.Visibility;
-            if (childVisibility == Visibility.Collapsed)
-                UIElement.INTERNAL_ApplyVisibility(child, childVisibility);
 
             //--------------------------------------------------------
             // RAISE THE "LOADED" EVENT:

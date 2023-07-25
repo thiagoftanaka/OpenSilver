@@ -353,12 +353,6 @@ namespace Windows.UI.Xaml
             offset.Y += finalRect.Y + margin.Top + padding.Top;
 
             SetLayoutOffset(offset, oldRenderSize);
-
-            if (IsFirstRendering)
-            {
-                IsFirstRendering = false;
-                INTERNAL_HtmlDomManager.GetDomElementStyleForModification(INTERNAL_OuterDomElement).visibility = "visible";
-            }
         }
 
         internal override Rect? GetLayoutClip(Size layoutSlotSize)

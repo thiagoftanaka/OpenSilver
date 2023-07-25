@@ -40,18 +40,20 @@ namespace Windows.UI.Xaml.Data
     /// </summary>
     public class BindingExpression : BindingExpressionBase
     {
-        // we are not allowed to change the following in BindingExpression because it is used:
-        //  - ParentBinding.Mode
-        //  - ParentBinding.Converter
-        //  - ParentBinding.ConverterLanguage
-        //  - ParentBinding.ConverterParameter
+        [Flags]
+        private enum BindingStatus
+        {
+            None = 0,
+            UpdatingValue = 1 << 0,
+            UpdatingSource = 1 << 1,
+            Attaching = 1 << 2,
+            NeedsUpdate = 1 << 3,
+        }
 
-        internal bool IsUpdating;
-        private bool _isAttaching;
+        private BindingStatus _status = BindingStatus.None;
+        private bool _isUpdateOnLostFocus;
         private DynamicValueConverter _dynamicConverter;
         private object _bindingSource;
-        private bool _isUpdateOnLostFocus; // True if this binding expression updates on LostFocus
-        private bool _needsUpdate; // True if this binding expression has a pending source update
         private IInternalFrameworkElement _mentor;
         private ValidationError _baseValidationError;
         private List<ValidationError> _notifyDataErrors;
@@ -66,11 +68,44 @@ namespace Windows.UI.Xaml.Data
 
         private readonly PropertyPathWalker _propertyPathWalker;
 
-        internal BindingExpression(Binding binding, DependencyObject target, DependencyProperty property)
-            : this(binding, property)
+        internal bool IsUpdatingValue
         {
-            Target = target;
+            get => ReadFlag(BindingStatus.UpdatingValue);
+            set => WriteFlag(BindingStatus.UpdatingValue, value);
         }
+
+        private bool IsUpdatingSource
+        {
+            get => ReadFlag(BindingStatus.UpdatingSource);
+            set => WriteFlag(BindingStatus.UpdatingSource, value);
+        }
+
+        private bool IsAttaching
+        {
+            get => ReadFlag(BindingStatus.Attaching);
+            set => WriteFlag(BindingStatus.Attaching, value);
+        }
+
+        // True if this binding expression has a pending source update
+        private bool NeedsUpdate
+        {
+            get => ReadFlag(BindingStatus.NeedsUpdate);
+            set => WriteFlag(BindingStatus.NeedsUpdate, value);
+        }
+
+        private void WriteFlag(BindingStatus flag, bool value)
+        {
+            if (value)
+            {
+                _status |= flag;
+            }
+            else
+            {
+                _status &= ~flag;
+            }
+        }
+
+        private bool ReadFlag(BindingStatus flag) => (flag & _status) != 0;
 
         internal BindingExpression(Binding binding, DependencyProperty property)
         {
@@ -116,7 +151,7 @@ namespace Windows.UI.Xaml.Data
 
             // found this info at: https://msdn.microsoft.com/fr-fr/library/windows/apps/windows.ui.xaml.data.bindingexpression.updatesource.aspx
             // in the remark.
-            if (!IsUpdating && ParentBinding.Mode == BindingMode.TwoWay)
+            if (_status == BindingStatus.None && ParentBinding.Mode == BindingMode.TwoWay)
             {
                 UpdateSourceObject(Target.GetValue(TargetProperty));
             }
@@ -194,14 +229,6 @@ namespace Windows.UI.Xaml.Data
             return (ParentBinding.Mode == BindingMode.TwoWay);
         }
 
-        internal override void SetValue(DependencyObject d, DependencyProperty dp, object value)
-        {
-            if (CanSetValue(d, dp))
-            {
-                TryUpdateSourceObject(value);
-            }
-        }
-
         internal override void OnAttach(DependencyObject d, DependencyProperty dp)
         {
             if (IsAttached)
@@ -209,7 +236,7 @@ namespace Windows.UI.Xaml.Data
 
             ParentBinding.Seal();
 
-            _isAttaching = IsAttached = true;
+            IsAttaching = IsAttached = true;
 
             Target = d;
 
@@ -234,7 +261,7 @@ namespace Windows.UI.Xaml.Data
                 _targetPropertyListener = new DependencyPropertyChangedListener(Target, TargetProperty, UpdateSourceCallback);
             }
 
-            _isAttaching = false;
+            IsAttaching = false;
         }
 
         internal override void OnDetach(DependencyObject d, DependencyProperty dp)
@@ -647,14 +674,14 @@ namespace Windows.UI.Xaml.Data
 
         internal void TryUpdateSourceObject(object value)
         {
-            if (IsUpdating || ParentBinding.UpdateSourceTrigger == UpdateSourceTrigger.Explicit)
+            if (_status != BindingStatus.None || ParentBinding.UpdateSourceTrigger == UpdateSourceTrigger.Explicit)
             {
                 return;
             }
 
             if (_isUpdateOnLostFocus && ReferenceEquals(FocusManager.GetFocusedElement(), Target))
             {
-                _needsUpdate = true;
+                NeedsUpdate = true;
                 return;
             }
 
@@ -667,7 +694,7 @@ namespace Windows.UI.Xaml.Data
                 return;
 
             IPropertyPathNode node = _propertyPathWalker.FinalNode;
-            bool oldIsUpdating = IsUpdating;
+            bool oldIsUpdating = IsUpdatingSource;
 
             object convertedValue = value;
             Type expectedType = node.Type;
@@ -690,7 +717,7 @@ namespace Windows.UI.Xaml.Data
 
                 if (!DependencyProperty.IsValidType(convertedValue, expectedType))
                 {
-                    IsUpdating = true;
+                    IsUpdatingSource = true;
 
 #if MIGRATION
                     convertedValue = DynamicConverter.Convert(convertedValue, expectedType, null, ParentBinding.ConverterCulture);
@@ -723,7 +750,7 @@ namespace Windows.UI.Xaml.Data
             }
             finally
             {
-                IsUpdating = oldIsUpdating;
+                IsUpdatingSource = oldIsUpdating;
             }
 
             vError ??= GetBaseValidationError();
@@ -765,9 +792,9 @@ namespace Windows.UI.Xaml.Data
 
         private void OnTargetLostFocus(object sender, RoutedEventArgs e)
         {
-            if (_needsUpdate)
+            if (NeedsUpdate)
             {
-                _needsUpdate = false;
+                NeedsUpdate = false;
                 UpdateSourceObject(Target.GetValue(TargetProperty));
             }
         }
@@ -808,7 +835,7 @@ namespace Windows.UI.Xaml.Data
 
             return UseDynamicConverter(value, dp.PropertyType);
         }
-        
+
         private object UseDynamicConverter(object value, Type targetType)
         {
             object convertedValue;
@@ -1017,7 +1044,7 @@ namespace Windows.UI.Xaml.Data
                         sourceFE.AsDependencyObject(),
                         FrameworkElement.DataContextProperty,
                         OnDataContextChanged);
-                    
+
                     source = sourceFE.GetValue(FrameworkElement.DataContextProperty);
                 }
                 else
@@ -1136,7 +1163,7 @@ namespace Windows.UI.Xaml.Data
         {
             try
             {
-                TryUpdateSourceObject(Target.GetValue(TargetProperty));
+                TryUpdateSourceObject(args.NewValue);
             }
             catch (Exception err)
             {
@@ -1146,17 +1173,12 @@ namespace Windows.UI.Xaml.Data
 
         private void Refresh()
         {
-            if (_isAttaching)
-                return;
+            if (IsAttaching || !IsAttached) return;
 
-            if (IsAttached)
-            {
-                bool oldIsUpdating = IsUpdating;
-                IsUpdating = true;
-                Target.ApplyExpression(TargetProperty, this, ParentBinding._isInStyle);
-
-                IsUpdating = oldIsUpdating;
-            }
+            bool oldIsUpdating = IsUpdatingValue;
+            IsUpdatingValue = true;
+            Target.ApplyExpression(TargetProperty, this, ParentBinding._isInStyle);
+            IsUpdatingValue = oldIsUpdating;
         }
     }
 }

@@ -494,27 +494,9 @@ namespace Windows.UI.Xaml
 
         internal object CreateDomElementInternal(object parentRef, out object domElementWhereToPlaceChildren)
         {
-            object div1 = INTERNAL_HtmlDomManager.CreateDomElementAndAppendIt("div", parentRef, this);
-            domElementWhereToPlaceChildren = div1;
-            return div1;
-        }
-
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public object CreateDomElement_WorkaroundBridgeInheritanceBug(object parentRef, out object domElementWhereToPlaceChildren)
-        {
-            //------------------
-            // It is important to create at least 2 divs so that horizontal and vertical alignments work properly (cf. "ApplyHorizontalAlignment" and "ApplyVerticalAlignment" methods)
-            //------------------
-
-            object div1;
-            var div1style = INTERNAL_HtmlDomManager.CreateDomElementAppendItAndGetStyle("div", parentRef, this, out div1);
-            object div2;
-            var div2style = INTERNAL_HtmlDomManager.CreateDomElementAppendItAndGetStyle("div", div1, this, out div2);
-            div2style.width = "100%";
-            div2style.height = "100%";
-            domElementWhereToPlaceChildren = div2;
-            return div1;
+            object div = INTERNAL_HtmlDomManager.CreateDomLayoutElementAndAppendIt("div", parentRef, this);
+            domElementWhereToPlaceChildren = div;
+            return div;
         }
 
         // Internal helper so the FrameworkElement could see the

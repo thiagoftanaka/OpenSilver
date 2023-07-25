@@ -439,28 +439,7 @@ namespace Windows.UI.Xaml.Controls
                 nameof(Padding),
                 typeof(Thickness),
                 typeof(Control),
-                new FrameworkPropertyMetadata(new Thickness(), FrameworkPropertyMetadataOptions.AffectsMeasure)
-                {
-                    MethodToUpdateDom = static (d, newValue) =>
-                    {
-                        var control = (Control)d;
-                        // if the parent is a canvas, we ignore this property and we want to ignore this
-                        // property if there is a ControlTemplate on this control.
-                        // textblock under custom layout can support padding property now
-                        if (control.INTERNAL_InnerDomElement != null && 
-                            !control.HasTemplate && 
-                            control.INTERNAL_VisualParent is not Canvas && 
-                            control is TextBlock)
-                        {
-                            var domStyle = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(control.INTERNAL_InnerDomElement);
-                            Thickness padding = (Thickness)newValue;
-
-                            // todo: if the container has a padding, add it to the margin
-                            domStyle.boxSizing = "border-box";
-                            domStyle.padding = $"{padding.Top.ToInvariantString()}px {padding.Right.ToInvariantString()}px {padding.Bottom.ToInvariantString()}px {padding.Left.ToInvariantString()}px";
-                        }
-                    },
-                });
+                new FrameworkPropertyMetadata(new Thickness(), FrameworkPropertyMetadataOptions.AffectsMeasure));
 
         //-----------------------
         // HORIZONTALCONTENTALIGNMENT

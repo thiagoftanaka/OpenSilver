@@ -39,7 +39,7 @@ namespace System.Windows.Controls
 namespace Windows.UI.Xaml.Controls
 #endif
 {
-    internal sealed class RichTextBoxView : FrameworkElement, ITextBoxView
+    internal sealed class RichTextBoxView : FrameworkElement
     {
         private static bool _quillJSInitialized;
 
@@ -62,7 +62,7 @@ namespace Windows.UI.Xaml.Controls
 
             domElementWhereToPlaceChildren = null;
 
-            object div = INTERNAL_HtmlDomManager.CreateDomElementAndAppendIt("div", parentRef, this);
+            object div = INTERNAL_HtmlDomManager.CreateDomLayoutElementAndAppendIt("div", parentRef, this);
             object quillContainer = INTERNAL_HtmlDomManager.CreateDomElementAndAppendIt("div", div, this);
 
             string script = "let options = {"

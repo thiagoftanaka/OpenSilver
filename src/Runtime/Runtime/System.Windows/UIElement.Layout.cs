@@ -687,8 +687,6 @@ namespace Windows.UI.Xaml
 
         internal uint TreeLevel { get; set; }
 
-        internal bool IsFirstRendering { get; set; }
-
         internal bool KeepHiddenInFirstRender { get; set; }
 
         internal bool IsLayoutRoot => this is Window || this is PopupRoot;

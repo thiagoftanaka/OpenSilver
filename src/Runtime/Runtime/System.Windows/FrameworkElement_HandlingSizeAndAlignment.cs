@@ -349,7 +349,7 @@ namespace Windows.UI.Xaml
         
         #region ActualWidth / ActualHeight
 
-        private static PropertyMetadata _actualWidthMetadata = new ReadOnlyPropertyMetadata(0d, GetActualWidth);
+        private static readonly PropertyMetadata _actualWidthMetadata = new ReadOnlyPropertyMetadata(0d, GetActualWidth);
 
         private static readonly DependencyPropertyKey ActualWidthPropertyKey =
             DependencyProperty.RegisterReadOnly(
@@ -378,7 +378,7 @@ namespace Windows.UI.Xaml
         /// </returns>
         public double ActualWidth => RenderSize.Width;
 
-        private static PropertyMetadata _actualHeightMetadata = new ReadOnlyPropertyMetadata(0d, GetActualHeight);
+        private static readonly PropertyMetadata _actualHeightMetadata = new ReadOnlyPropertyMetadata(0d, GetActualHeight);
 
         private static readonly DependencyPropertyKey ActualHeightPropertyKey =
             DependencyProperty.RegisterReadOnly(

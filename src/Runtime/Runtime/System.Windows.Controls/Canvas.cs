@@ -206,36 +206,6 @@ namespace Windows.UI.Xaml.Controls
             return (int)element.GetValue(ZIndexProperty);
         }
 
-        public override object CreateDomElement(object parentRef, out object domElementWhereToPlaceChildren)
-        {
-            var div = INTERNAL_HtmlDomManager.CreateCanvasDomElementAndAppendIt(parentRef, this);
-            domElementWhereToPlaceChildren = div;
-            return div;
-
-            //domElementWhereToPlaceChildren = div;
-
-            //var div1 = INTERNAL_HtmlDomManager.CreateDomElement("div");
-            //var div2 = INTERNAL_HtmlDomManager.CreateDomElement("div");
-            //div2.style.position = "absolute";
-            //INTERNAL_HtmlDomManager.AppendChild(div1, div2);
-            //domElementWhereToPlaceChildren = div2;
-
-            //return div;
-
-            /* -------------------------------
-             * A canvas should look like this:
-             * -------------------------------
-             * <div style="width: 50px; height: 50px;">
-             *     <div style="position:relative"> width & height are the size of the canvas itself
-             *         ... children (with position: absolute), below are two example of children
-             *         <div style="background-color: rgb(200,0,200);width:20px;height:20px;  position: absolute"></div>
-             *         <div style="background-color: rgb(100,0,200);width:20px;height:20px;margin-left:20px;margin-right:auto;  position: absolute"></div>
-             *     </div>
-             * </div>
-            */
-
-        }
-
         protected override Size MeasureOverride(Size availableSize)
         {
             var childConstraint = new Size(double.PositiveInfinity, double.PositiveInfinity);

@@ -144,35 +144,33 @@ document.getActualWidthAndHeight = function (element) {
     return (typeof element === 'undefined' || element === null) ? '0|0' : element['offsetWidth'].toFixed(3) + '|' + element['offsetHeight'].toFixed(3);
 }
 
-document.createElementSafe = function (tagName, id, parentElement, index) {
-    const newElement = document.createElement(tagName);
+document.createElementSafe = function (tagName, id, parent, index) {
+    if (typeof parent === 'string') parent = document.getElementById(parent);
+    if (parent == null) return null;
 
-    newElement.setAttribute('id', id);
-    newElement.setAttribute('xamlid', id);
+    const element = document.createElement(tagName);
 
-    if (typeof parentElement == 'string') {
-        parentElement = document.getElementById(parentElement);
+    element.setAttribute('id', id);
+    element.setAttribute('xamlid', id);
+
+    if (index < 0 || index >= parent.children.length) {
+        parent.appendChild(element);
+    } else {
+        parent.insertBefore(element, parent.children[index]);
     }
 
-    if (parentElement == null) {
-        console.log('createElement is failed becaused of the removed parent.');
-        return null;
-    }
-
-    if (index < 0 || index >= parentElement.children.length) {
-        parentElement.appendChild(newElement);
-    }
-    else {
-        var nextSibling = parentElement.children[index];
-        parentElement.insertBefore(newElement, nextSibling);
-    }
-
-    Object.defineProperty(newElement, 'dump', {
+    Object.defineProperty(element, 'dump', {
         get() { return document.dumpProperties(id); }
     });
 
-    return newElement;
-}
+    return element;
+};
+
+document.createLayoutElement = function (tagName, id, parent, index) {
+    const element = document.createElementSafe(tagName, id, parent, index);
+    if (element) element.classList.add('uielement-unarranged');
+    return element;
+};
 
 document.dumpProperties = function (id, ...names) {
     if (DotNet && DotNet.invokeMethod) {
@@ -181,21 +179,20 @@ document.dumpProperties = function (id, ...names) {
     return null;
 };
 
-document.createTextBlockElement = function (id, parentElement, wrap) {
-    const newElement = document.createElementSafe('div', id, parentElement, -1);
-
-    if (newElement) {
-        newElement.style['overflow'] = 'hidden';
-        newElement.style['textAlign'] = 'left';
-        newElement.style['boxSizing'] = 'border-box';
+document.createTextBlockElement = function (id, parent, wrap) {
+    const element = document.createLayoutElement('div', id, parent, -1);
+    if (element) {
+        element.style.overflow = 'hidden';
+        element.style.textAlign = 'left';
+        element.style.boxSizing = 'border-box';
         if (wrap) {
-            newElement.style['overflowWrap'] = 'break-word';
-            newElement.style['whiteSpace'] = 'pre-wrap';
+            element.style.overflowWrap = 'break-word';
+            element.style.whiteSpace = 'pre-wrap';
         } else {
-            newElement.style['whiteSpace'] = 'pre';
+            element.style.whiteSpace = 'pre';
         }
     }
-}
+};
 
 document.createPopupRootElement = function (id, rootElement, pointerEvents) {
     if (!rootElement) return;
@@ -206,20 +203,10 @@ document.createPopupRootElement = function (id, rootElement, pointerEvents) {
     popupRoot.style.position = 'absolute';
     popupRoot.style.width = '100%';
     popupRoot.style.height = '100%';
-    popupRoot.style.overflowX = 'hidden';
-    popupRoot.style.overflowY = 'hidden';
+    popupRoot.style.overflow = 'clip';
     popupRoot.style.pointerEvents = pointerEvents;
     rootElement.appendChild(popupRoot);
-}
-
-document.createCanvasElement = function (id, parentElement) {
-    const newElement = document.createElementSafe('div', id, parentElement, -1);
-
-    if (newElement) {
-        newElement.style['overflow'] = 'display';
-        newElement.style['position'] = 'relative';
-    }
-}
+};
 
 document.createImageElement = function (id, parentElement) {
     const img = document.createElementSafe('img', id, parentElement, -1);
@@ -239,20 +226,7 @@ document.createImageElement = function (id, parentElement) {
             this.style.display = 'none';
         });
     }
-}
-
-document.createFrameworkElement = function (id, parentElement, enablePointerEvents) {
-    const newElement = document.createElementSafe('div', id, parentElement, -1);
-
-    if (newElement) {
-        newElement.style['width'] = '100%';
-        newElement.style['height'] = '100%';
-
-        if (enablePointerEvents) {
-            newElement.style['pointerEvents'] = 'all';
-        }
-    }
-}
+};
 
 document.createTextElement = function (id, tagName, parent) {
     if (typeof parent === 'string') parent = document.getElementById(parent);
@@ -261,30 +235,29 @@ document.createTextElement = function (id, tagName, parent) {
     const textElement = document.createElement(tagName);
     textElement.setAttribute('id', id);
 
-    if (index < 0 || index >= parent.children.length) {
-        parent.appendChild(textElement);
-    } else {
-        parent.insertBefore(textElement, parent.children[index]);
-    }
+    parent.appendChild(textElement);
 };
 
 document.createShapeOuterElement = function (id, parentElement) {
-    const newElement = document.createElementSafe('div', id, parentElement, -1);
+    const newElement = document.createLayoutElement('div', id, parentElement, -1);
 
     if (newElement) {
-        newElement.style['lineHeight'] = '0';     // Line height is not needed in shapes because it causes layout issues.
-        newElement.style['fontSize'] = '0';       //this allows this div to be as small as we want (for some reason in Firefox, what contains a canvas has a height of at least about (1 + 1/3) * fontSize)
+        newElement.style.lineHeight = '0';     // Line height is not needed in shapes because it causes layout issues.
+        newElement.style.fontSize = '0';       //this allows this div to be as small as we want (for some reason in Firefox, what contains a canvas has a height of at least about (1 + 1/3) * fontSize)
     }
-}
+};
 
-document.createShapeInnerElement = function (id, parentElement) {
-    const newElement = document.createElementSafe('canvas', id, parentElement, -1);
+document.createShapeInnerElement = function (id, parent) {
+    if (typeof parent === 'string') parent = document.getElementById(parent);
+    if (parent === null) return null;
 
-    if (newElement) {
-        newElement.style['width'] = '0';
-        newElement.style['height'] = '0';
-    }
-}
+    const canvas = document.createElement('canvas');
+    canvas.setAttribute('id', id);
+    canvas.style.width = '0px';
+    canvas.style.height = '0px';
+
+    parent.appendChild(canvas);
+};
 
 document.set2dContextProperty = function (id, propertyName, propertyValue) {
     const element = document.getElementById(id);
@@ -391,11 +364,10 @@ document.createInputManager = function (callback) {
         FOCUS: 10,
         BLUR: 11,
         KEYPRESS: 12,
-        INPUT: 13,
-        TOUCH_START: 14,
-        TOUCH_END: 15,
-        TOUCH_MOVE: 16,
-        WINDOW_BLUR: 17,
+        TOUCH_START: 13,
+        TOUCH_END: 14,
+        TOUCH_MOVE: 15,
+        WINDOW_BLUR: 16,
     };
 
     const MODIFIERKEYS = {
@@ -598,13 +570,6 @@ document.createInputManager = function (callback) {
                     }
                 });
 
-                view.addEventListener('input', function (e) {
-                    if (!e.isHandled) {
-                        e.isHandled = true;
-                        callback(getClosestElementId(this), EVENTS.INPUT, e);
-                    }
-                });
-
                 view.addEventListener('keydown', function (e) {
                     if (!e.isHandled) {
                         e.isHandled = true;
@@ -686,42 +651,55 @@ document.setVisualBounds = function (id, left, top, width, height, clip, clipLef
         element.style.top = top + 'px';
         element.style.width = width + 'px';
         element.style.height = height + 'px';
-        element.style.margin = '0';
-        element.style.padding = '0';
         element.style.position = 'absolute';
         if (clip) {
             element.style.clipPath = `polygon(${clipLeft}px ${clipTop}px, ${clipWidth}px ${clipTop}px, ${clipWidth}px ${clipHeight}px, ${clipLeft}px ${clipHeight}px)`;
         } else {
             element.style.clipPath = '';
         }
+        element.classList.remove('uielement-unarranged');
     }
 }
 
-document.measureTextBlock = function (measureElementId, uid, whiteSpace, overflowWrap, padding, maxWidth, emptyVal) {
-    var element = document.getElementById(measureElementId);
-    var elToMeasure = document.getElementById(uid);
-    if (element && elToMeasure) {
-        var computedStyle = getComputedStyle(elToMeasure);
+document.createMeasurementService = function (parent) {
+    if (!parent) return null;
+    const measurer = document.createElement('div');
+    measurer.id = `${parent.id}-msr`; 
+    measurer.style.position = 'absolute';
+    measurer.style.visibility = 'hidden';
+    measurer.style.height = '';
+    measurer.style.width = '';
+    measurer.style.boxSizing = 'border-box';
+    measurer.style.whiteSpace = 'pre';
+    measurer.style.left = '-100000px';
+    measurer.style.top = '-100000px';
+    measurer.style.textAlign = 'left';
+    parent.appendChild(measurer);
+    return measurer.id;
+};
 
+document.measureTextBlock = function (measureElementId, uid, whiteSpace, overflowWrap, maxWidth, emptyVal) {
+    const element = document.getElementById(measureElementId);
+    const elToMeasure = document.getElementById(uid);
+    if (element && elToMeasure) {
         if (elToMeasure instanceof HTMLTextAreaElement) {
-            element.innerHTML = elToMeasure.value.length == 0 ? emptyVal : elToMeasure.value;
+            let text = elToMeasure.value.length == 0 ? emptyVal : elToMeasure.value;
+            // if the text ends with a new line, we need to add one more or it will not be measured
+            if (text.endsWith('\n')) text += '\n';
+            element.innerHTML = text;
         } else {
             element.innerHTML = elToMeasure.innerHTML.length == 0 ? emptyVal : elToMeasure.innerHTML;
         }
+
+        const computedStyle = getComputedStyle(elToMeasure);
 
         element.style.fontSize = computedStyle.fontSize;
         element.style.fontWeight = computedStyle.fontWeight;
         element.style.fontFamily = computedStyle.fontFamily;
         element.style.fontStyle = computedStyle.fontStyle;
 
-        if (whiteSpace.length > 0)
-            element.style.whiteSpace = whiteSpace;
+        element.style.whiteSpace = whiteSpace;
         element.style.overflowWrap = overflowWrap;
-        if (padding.length > 0) {
-            element.style.boxSizing = "border-box";
-            element.style.padding = padding;
-        }
-
         element.style.maxWidth = maxWidth;
 
         const rect = element.getBoundingClientRect();
@@ -1137,6 +1115,7 @@ document.textboxHelpers = (function () {
                 const start = e.shiftKey ? (view.selectionDirection === 'forward' ? view.selectionStart : view.selectionEnd) : view.value.length;
                 const end = view.value.length;
                 view.setSelectionRange(start, end, 'forward');
+                view.scrollTo(view.scrollWidth, view.scrollHeight);
                 return true;
             }
         } else {
@@ -1144,6 +1123,7 @@ document.textboxHelpers = (function () {
                 const start = 0;
                 const end = e.shiftKey ? (view.selectionDirection === 'forward' ? view.selectionStart : view.selectionEnd) : 0;
                 view.setSelectionRange(start, end, 'backward');
+                view.scrollTo(0, 0);
                 return true;
             }
         }
@@ -1182,7 +1162,7 @@ document.textboxHelpers = (function () {
 
     return {
         createView: function (id, parentId) {
-            const view = document.createElementSafe('textarea', id, parentId, -1);
+            const view = document.createLayoutElement('textarea', id, parentId, -1);
             view.style.fontSize = 'inherit';
             view.style.fontFamily = 'inherit';
             view.style.color = 'inherit';
@@ -1194,6 +1174,7 @@ document.textboxHelpers = (function () {
             view.style.cursor = 'text';
             view.style.overflow = 'hidden';
             view.style.tabSize = '4';
+            view.style.padding = '0px';
 
             view.setAttribute('tabindex', -1);
 
