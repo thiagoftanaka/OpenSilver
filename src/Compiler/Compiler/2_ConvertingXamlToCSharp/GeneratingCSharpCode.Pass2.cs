@@ -14,6 +14,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -405,14 +406,26 @@ namespace OpenSilver.Compiler
                             _fileNameWithPathRelativeToProjectRoot,
                             _assemblyNameWithoutExtension);
 
+                        // Initially, ResourceDictionary (or subclass) is instantiated and remains empty.
                         parameters.StringBuilder.AppendLine(
                             string.Format(
-                                "var {0} = {3}.XamlContext_WriteStartObject({4}, (({1})new {2}()).CreateComponent());",
+                                "var {0} = {1}.XamlContext_WriteStartObject({2}, new {3}());",
                                 elementUniqueNameOrThisKeyword,
-                                $"{IXamlComponentFactoryClass}<global::{_settings.Metadata.SystemWindowsNS}.ResourceDictionary>",
-                                XamlResourcesHelper.GenerateClassNameFromComponentUri(absoluteSourceUri),
                                 RuntimeHelperClass,
-                                parameters.CurrentXamlContext
+                                parameters.CurrentXamlContext,
+                                elementTypeInCSharp
+                            )
+                        );
+
+                        // The ResourceDictionary content is only loaded at the time Source is set,
+                        // so that users could do things like caching (by interrupting Source being set
+                        // in an ResourceDictionary inherited class).
+                        parameters.StringBuilder.AppendLine(
+                            string.Format(
+                                "{0}.SourceChanged += (s, e) => {{ (({1})new {2}()).LoadComponent({0}); }};",
+                                elementUniqueNameOrThisKeyword,
+                                IXamlComponentLoaderClass,
+                                XamlResourcesHelper.GenerateClassNameFromComponentUri(absoluteSourceUri)
                             )
                         );
                     }
@@ -844,7 +857,40 @@ namespace OpenSilver.Compiler
                             }
                             else
                             {
-                                parameters.StringBuilder.AppendLine(string.Format("{0}.{1} = {2};", parentElementUniqueNameOrThisKeyword, propertyName, childUniqueName));
+                                bool isApplication = parentElement != null &&
+                                                     _reflectionOnSeparateAppDomain.IsAssignableFrom(
+                                                        _settings.Metadata.SystemWindowsNS, "Application",
+                                                        parentElement.Name.NamespaceName, parentElement.Name.LocalName);
+                                // If Application.Resources is being set, new and current collections should be merged,
+                                // because the current collection could already have items by here.
+                                if (isApplication && propertyName == "Resources")
+                                {
+                                    // Add items to Resources
+                                    parameters.StringBuilder.AppendLine(string.Format(
+                                        @"foreach (global::System.Collections.DictionaryEntry entry in (global::System.Collections.IDictionary){2}) if (!{0}.{1}.Contains(entry.Key)) {0}.{1}.Add(entry.Key, entry.Value);",
+                                        parentElementUniqueNameOrThisKeyword, propertyName, childUniqueName));
+
+                                    // Add items to Resources.MergedDictionaries. Items cannot be in two dictionaries,
+                                    // so they are removed before added to the other collection.
+                                    parameters.StringBuilder.AppendLine(string.Format(
+@"var existingMergedDictionaries = (global::System.Windows.PresentationFrameworkCollection<global::System.Windows.ResourceDictionary>){0}.{1}.MergedDictionaries;
+var incomingMergedDictionaries = (global::System.Windows.PresentationFrameworkCollection<global::System.Windows.ResourceDictionary>){2}.MergedDictionaries;
+for (int i = 0; i < incomingMergedDictionaries.Count; ++i)
+{{
+    global::System.Windows.ResourceDictionary dict = incomingMergedDictionaries[i];
+    incomingMergedDictionaries.Remove(dict);
+    if (!existingMergedDictionaries.Contains(dict))
+    {{
+        existingMergedDictionaries.Add(dict);
+    }}
+}}",
+            parentElementUniqueNameOrThisKeyword, propertyName, childUniqueName));
+                                }
+                                else
+                                {
+                                    parameters.StringBuilder.AppendLine(string.Format("{0}.{1} = {2};",
+                                        parentElementUniqueNameOrThisKeyword, propertyName, childUniqueName));
+                                }
                             }
                         }
                         else
