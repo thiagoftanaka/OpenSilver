@@ -902,10 +902,6 @@ namespace CSHTML5.Internal
                     }
                 }
             }
-            else
-            {
-                throw new InvalidOperationException("Please set the Name property of the CSSEquivalent class.");
-            }
         }
     }
 }
