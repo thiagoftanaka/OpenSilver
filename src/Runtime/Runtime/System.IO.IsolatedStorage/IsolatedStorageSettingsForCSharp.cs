@@ -23,6 +23,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 #if !BRIDGE
 using System.Runtime.Serialization.Formatters.Binary;
+using OpenSilver;
 #endif
 using System.Text;
 using System.Threading.Tasks;
@@ -36,14 +37,25 @@ namespace System.IO.IsolatedStorage
         private const string Filename = "Settings.bin";
         private readonly Dictionary<string, object> _appDictionary = new Dictionary<string, object>();
 
-        private static readonly IsolatedStorageSettingsForCSharp StaticIsolatedStorageSettings = new IsolatedStorageSettingsForCSharp();
+        private static readonly IsolatedStorageSettingsForCSharp StaticIsolatedStorageSettings;
 
         //TODO implemente bellow with BRIDGE (seems long)
 #if !BRIDGE
-        private static readonly IFormatter Formatter = new BinaryFormatter();
+        private static readonly IFormatter Formatter;
 
-        private static readonly IsolatedStorageSettingsForCSharp StaticDomainIsolatedStorageSettings = new(isForDomain: true);
+        private static readonly IsolatedStorageSettingsForCSharp StaticDomainIsolatedStorageSettings;
 #endif
+
+
+        static IsolatedStorageSettingsForCSharp()
+        {
+#if !BRIDGE
+            // Formatter has to be instantiated first because it is used during the instance constructor execution
+            Formatter = new BinaryFormatter();
+            StaticIsolatedStorageSettings = new IsolatedStorageSettingsForCSharp();
+#endif
+            StaticDomainIsolatedStorageSettings = new IsolatedStorageSettingsForCSharp(isForDomain: true);
+        }
 
         #endregion
 
@@ -82,9 +94,18 @@ namespace System.IO.IsolatedStorage
         public void LoadData(bool isForDomain)
         {
             // IsolatedStorageFile isoStore = IsolatedStorageFile.GetStore(IsolatedStorageScope.User | IsolatedStorageScope.Assembly, null, null);
-            IsolatedStorageFile isoStore = isForDomain ?
-                IsolatedStorageFile.GetMachineStoreForDomain() :
-                IsolatedStorageFile.GetMachineStoreForApplication();
+            IsolatedStorageFile isoStore;
+            if (!Interop.IsRunningInTheSimulator)
+            {
+                isoStore = isForDomain
+                    ? IsolatedStorageFile.GetUserStoreForDomain()
+                    : IsolatedStorageFile.GetUserStoreForApplication();
+            }
+            else
+            {
+                // Using GetUserStoreForAssembly for Simulator because it threw Application Identity-related exception
+                isoStore = IsolatedStorageFile.GetUserStoreForAssembly();
+            }
 
             if (isoStore.GetFileNames(Filename).Length == 0)
             {
