@@ -67,5 +67,22 @@ namespace Windows.UI.Xaml.Documents
             get { return (int)GetValue(CharacterSpacingProperty); }
             set { SetValue(CharacterSpacingProperty, value); }
         }
+
+        internal FrameworkElement GetLayoutParent()
+        {
+            DependencyObject parent = this;
+
+            do
+            {
+                parent = VisualTreeHelper.GetParent(parent);
+                if (parent is not TextElement)
+                {
+                    break;
+                }
+            }
+            while (parent is not null);
+
+            return parent as FrameworkElement;
+        }
     }
 }
