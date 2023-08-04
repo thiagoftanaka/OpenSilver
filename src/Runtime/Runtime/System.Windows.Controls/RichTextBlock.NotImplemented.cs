@@ -31,32 +31,6 @@ namespace Windows.UI.Xaml.Controls
     public sealed partial class RichTextBlock : FrameworkElement
     {
         /// <summary>
-        /// Identifies the <see cref="CharacterSpacing"/> dependency property.
-        /// </summary>
-        [OpenSilver.NotImplemented]
-        public static readonly DependencyProperty CharacterSpacingProperty =
-            DependencyProperty.Register(
-                nameof(CharacterSpacing),
-                typeof(int),
-                typeof(RichTextBlock),
-                new PropertyMetadata(0));
-
-        /// <summary>
-        /// Gets or sets the distance between characters of text in the control measured
-        /// in 1000ths of the font size.
-        /// </summary>
-        /// <returns>
-        /// The distance between characters of text in the control measured in 1000ths of
-        /// the font size. The default is 0.
-        /// </returns>
-        [OpenSilver.NotImplemented]
-        public int CharacterSpacing
-        {
-            get => (int)GetValue(CharacterSpacingProperty);
-            set => SetValue(CharacterSpacingProperty, value);
-        }
-
-        /// <summary>
         /// Identifies the <see cref="FontStretch"/> dependency property.
         /// </summary>
         [OpenSilver.NotImplemented]
@@ -207,18 +181,6 @@ namespace Windows.UI.Xaml.Controls
             get => (string)GetValue(SelectedTextProperty);
             private set => SetValue(SelectedTextPropertyKey, value);
         }
-
-        /// <summary>
-        /// Gets a value that represents the offset in pixels from the top of the content
-        /// to the baseline of the first paragraph. The baseline of the paragraph is the
-        /// baseline of the first line in it.
-        /// </summary>
-        /// <returns>
-        /// The computed baseline for the first paragraph, or 0 if the <see cref="RichTextBlock"/>
-        /// is empty.
-        /// </returns>
-        [OpenSilver.NotImplemented]
-        public double BaselineOffset { get; }
 
         /// <summary>
         /// Gets a <see cref="TextPointer"/> that indicates the end of content

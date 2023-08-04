@@ -11,6 +11,8 @@
 *  
 \*====================================================================================*/
 
+using System.Diagnostics;
+
 #if !MIGRATION
 using Windows.UI.Text;
 #endif
@@ -36,4 +38,23 @@ internal static class TextElementProperties
             typeof(FontWeight),
             typeof(TextElementProperties),
             new PropertyMetadata(FontWeights.Normal) { Inherits = true, });
+
+    public static readonly DependencyProperty CharacterSpacingProperty =
+        DependencyProperty.RegisterAttached(
+            "CharacterSpacing",
+            typeof(int),
+            typeof(TextElementProperties),
+            new PropertyMetadata(0) { Inherits = true, });
+
+    internal static double GetBaseLineOffsetNative(UIElement uie)
+    {
+        Debug.Assert(uie is not null);
+        if (uie.INTERNAL_OuterDomElement is not null)
+        {
+            string sDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(uie.INTERNAL_OuterDomElement);
+            return OpenSilver.Interop.ExecuteJavaScriptDouble($"document.getBaseLineOffset({sDiv});");
+        }
+
+        return 0.0;
+    }
 }

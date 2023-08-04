@@ -62,6 +62,22 @@ namespace Windows.UI.Xaml.Controls
 
             return (Inline)Inlines[index];
         }
+
+        static TextBlock()
+        {
+            CharacterSpacingProperty.OverrideMetadata(
+                typeof(TextBlock),
+                new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
+                    {
+                        var tb = (TextBlock)d;
+                        double value = (int)newValue / 1000.0;
+                        var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(tb.INTERNAL_OuterDomElement);
+                        style.letterSpacing = $"{value.ToInvariantString()}em";
+                    },
+                });
+        }
         
         public TextBlock()
         {
@@ -189,9 +205,9 @@ namespace Windows.UI.Xaml.Controls
                         style.textAlign = (TextAlignment)newValue switch
                         {
                             TextAlignment.Center => "center",
-                            TextAlignment.Right => "right",
+                            TextAlignment.Right => "end",
                             TextAlignment.Justify => "justify",
-                            _ => "left",
+                            _ => "start",
                         };
                     },
                 });
@@ -298,25 +314,21 @@ namespace Windows.UI.Xaml.Controls
                 nameof(LineHeight),
                 typeof(double),
                 typeof(TextBlock),
-                new PropertyMetadata(0d)
+                new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsMeasure)
                 {
-                    MethodToUpdateDom = (instance, value) =>
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
                     {
-                        double valueAsDouble = (double)value;
-                        if (valueAsDouble < 0)
-                        {
-                            throw new ArgumentException("TextBlock.LineHeight is set to a non-positive value.");
-                        }
-                        if (valueAsDouble > 0)
-                        {
-                            ((TextBlock)instance).UpdateCSSLineHeight(value.ToString() + "px");
-                        }
-                        else
-                        {
-                            ((TextBlock)instance).UpdateCSSLineHeight("normal"); //todo: adapt this to what the value would exactly be in Silverlight (probably something like "125%" but I'm not sure of the exact value)
-                        }
-                    }
-                });
+                        var tb = (TextBlock)d;
+                        double v = (double)newValue;
+                        INTERNAL_HtmlDomManager.GetDomElementStyleForModification(tb.INTERNAL_OuterDomElement).lineHeight =
+                            v switch
+                            {
+                                0.0 => "normal",
+                                _ => $"{v.ToInvariantString()}px",
+                            };
+                    },
+                },
+                IsValidLineHeight);
 
         /// <summary>
         /// Gets or sets the height of each line of content.
@@ -327,13 +339,31 @@ namespace Windows.UI.Xaml.Controls
             set => SetValue(LineHeightProperty, value); 
         }
 
-        private void UpdateCSSLineHeight(string value)
+        private static bool IsValidLineHeight(object o)
         {
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
+            double d = (double)o;
+            return !double.IsNaN(d) && d >= 0;
+        }
+
+        /// <summary>
+        /// Returns a value by which each line of text is offset from a baseline.
+        /// </summary>
+        /// <returns>
+        /// The amount by which each line of text is offset from the baseline, in device
+        /// independent pixels. <see cref="double.NaN"/> indicates that an optimal baseline offset
+        /// is automatically calculated from the current font characteristics. The default
+        /// is 0.0.
+        /// </returns>
+        public double BaselineOffset => GetBaseLineOffset(this);
+
+        private static double GetBaseLineOffset(TextBlock tb)
+        {
+            if (!string.IsNullOrEmpty(tb.Text))
             {
-                var domStyle = INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(this);
-                domStyle.lineHeight = value ?? "";
+                return TextElementProperties.GetBaseLineOffsetNative(tb);
             }
+
+            return 0.0;
         }
 
         internal override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
@@ -351,7 +381,7 @@ namespace Windows.UI.Xaml.Controls
 
         protected override Size MeasureOverride(Size availableSize)
         {
-            string uniqueIdentifier = ((INTERNAL_HtmlDomElementReference)this.INTERNAL_OuterDomElement).UniqueIdentifier;
+            string uniqueIdentifier = ((INTERNAL_HtmlDomElementReference)INTERNAL_OuterDomElement).UniqueIdentifier;
 
             if (_noWrapSize == Size.Empty)
             {
@@ -383,5 +413,40 @@ namespace Windows.UI.Xaml.Controls
         }
 
         protected override Size ArrangeOverride(Size finalSize) => finalSize;
+
+        /// <summary>
+        /// Identifies the <see cref="LineStackingStrategy"/> dependency property.
+        /// </summary>
+        [OpenSilver.NotImplemented]
+        public static readonly DependencyProperty LineStackingStrategyProperty =
+            DependencyProperty.Register(
+                nameof(LineStackingStrategy),
+                typeof(LineStackingStrategy),
+                typeof(TextBlock),
+                new PropertyMetadata(LineStackingStrategy.MaxHeight));
+
+        /// <summary>
+        /// Gets or sets a value that indicates how a line box is determined for each line
+        /// of text in the <see cref="TextBlock"/>.
+        /// </summary>
+        /// <returns>
+        /// A value that indicates how a line box is determined for each line of text in
+        /// the <see cref="TextBlock"/>. The default is <see cref="LineStackingStrategy.MaxHeight"/>.
+        /// </returns>
+        [OpenSilver.NotImplemented]
+        public LineStackingStrategy LineStackingStrategy
+        {
+            get => (LineStackingStrategy)GetValue(LineStackingStrategyProperty);
+            set => SetValue(LineStackingStrategyProperty, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the font source that is applied to the text for rendering content.
+        /// </summary>
+        /// <returns>
+        /// The font source that is used to render content in the text box. The default is null.
+        /// </returns>
+        [OpenSilver.NotImplemented]
+        public FontSource FontSource { get; set; }
     }
 }

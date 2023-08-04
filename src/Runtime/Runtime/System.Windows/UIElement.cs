@@ -1382,7 +1382,7 @@ namespace Windows.UI.Xaml
         RenderingInvalidated = 0x00200000,
         IsVisibleCache = 0x00400000,
         //AreTransformsClean = 0x00800000,
-        //IsOpacitySuppressed = 0x01000000,
+        BypassLayoutPolicies = 0x01000000, //IsOpacitySuppressed = 0x01000000,
         //ExistsEventHandlersStore = 0x02000000,
         //TouchesOverCache = 0x04000000,
         //TouchesOverChanged = 0x08000000,

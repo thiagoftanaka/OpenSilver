@@ -512,7 +512,7 @@ namespace Windows.UI.Xaml
 
         private void Render()
         {
-            if (!IsLayoutRoot)
+            if (!BypassLayoutPolicies)
             {
                 INTERNAL_HtmlDomManager.SetVisualBounds(
                     INTERNAL_HtmlDomManager.GetDomElementStyleForModification(INTERNAL_OuterDomElement),
@@ -685,10 +685,12 @@ namespace Windows.UI.Xaml
             set { WriteFlag(CoreFlags.MeasureDuringArrange, value); }
         }
 
+        internal bool BypassLayoutPolicies
+        {
+            get { return ReadFlag(CoreFlags.BypassLayoutPolicies); }
+            set { WriteFlag(CoreFlags.BypassLayoutPolicies, value); }
+        }
+
         internal uint TreeLevel { get; set; }
-
-        internal bool KeepHiddenInFirstRender { get; set; }
-
-        internal bool IsLayoutRoot => this is Window || this is PopupRoot;
     }
 }

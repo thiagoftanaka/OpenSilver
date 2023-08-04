@@ -383,6 +383,11 @@ namespace Windows.UI.Xaml
                 OnStyleChanged(this, new DependencyPropertyChangedEventArgs(null, defaultValue, StyleProperty, metadata));
             }
 
+            if (((FlowDirection)FlowDirectionProperty.GetDefaultValue(this)) == FlowDirection.RightToLeft)
+            {
+                IsRightToLeft = true;
+            }
+
             Application app = Application.Current;
             if (app != null && app.HasImplicitStylesInResources)
             {
@@ -981,15 +986,44 @@ namespace Windows.UI.Xaml
 
         #endregion Triggers
 
-        #region Work in progress
+        #region FlowDirection
 
-        [OpenSilver.NotImplemented]
+        /// <summary>
+        /// Identifies the <see cref="FlowDirection"/> dependency property.
+        /// </summary>
         public static readonly DependencyProperty FlowDirectionProperty =
             DependencyProperty.Register(
                 nameof(FlowDirection),
                 typeof(FlowDirection),
                 typeof(FrameworkElement),
-                new PropertyMetadata(FlowDirection.LeftToRight));
+                new FrameworkPropertyMetadata(
+                    FlowDirection.LeftToRight,
+                    FrameworkPropertyMetadataOptions.Inherits,
+                    OnFlowDirectionChanged,
+                    CoerceFlowDirection)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
+                    {
+                        const string DIR = "dir";
+                        const string RTL = "rtl";
+                        const string LTR = "ltr";
+
+                        var fe = (FrameworkElement)d;
+                        var direction = (FlowDirection)newValue;
+
+                        if (VisualTreeHelper.GetParent(fe) is FrameworkElement parent
+                            && parent.FlowDirection == direction)
+                        {
+                            INTERNAL_HtmlDomManager.RemoveAttribute(fe.INTERNAL_OuterDomElement, DIR);
+                            return;
+                        }
+
+                        INTERNAL_HtmlDomManager.SetDomElementAttribute(
+                            fe.INTERNAL_OuterDomElement,
+                            DIR,
+                            direction == FlowDirection.LeftToRight ? LTR : RTL);
+                    },
+                });
 
         /// <summary>
         /// Gets or sets the direction that text and other user interface 
@@ -1000,18 +1034,34 @@ namespace Windows.UI.Xaml
         /// parent element, as a value of the enumeration. The default value 
         /// is <see cref="FlowDirection.LeftToRight" />.
         /// </returns>
-        [OpenSilver.NotImplemented]
         public FlowDirection FlowDirection
         {
-            get
-            {
-                return (FlowDirection)this.GetValue(FrameworkElement.FlowDirectionProperty);
-            }
-            set
-            {
-                this.SetValue(FrameworkElement.FlowDirectionProperty, (Enum)value);
-            }
+            get => IsRightToLeft ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
+            set => SetValue(FlowDirectionProperty, value);
         }
+
+        private static void OnFlowDirectionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var fe = (FrameworkElement)d;
+            // Cache the new value as a bit to optimize accessing the FlowDirection property's CLR accessor
+            fe.IsRightToLeft = ((FlowDirection)e.NewValue) == FlowDirection.RightToLeft;
+        }
+
+        private static object CoerceFlowDirection(DependencyObject d, object baseValue)
+        {
+            FlowDirection direction = (FlowDirection)baseValue;
+            return (direction != FlowDirection.RightToLeft) ? FlowDirection.LeftToRight : FlowDirection.RightToLeft;
+        }
+
+        internal bool IsRightToLeft
+        {
+            get { return ReadInternalFlag(InternalFlags.IsRightToLeft); }
+            set { WriteInternalFlag(InternalFlags.IsRightToLeft, value); }
+        }
+
+        #endregion
+
+        #region Work in progress
 
         /// <summary>
         /// Identifies the <see cref="Language"/> dependency property.
@@ -1283,7 +1333,7 @@ namespace Windows.UI.Xaml
 
         // FlowDirection is set to RightToLeft (0 == LeftToRight, 1 == RightToLeft)
         // This is an optimization to speed reading the FlowDirection property
-        //IsRightToLeft = 0x20000000,
+        IsRightToLeft = 0x20000000,
 
         ShouldLookupImplicitStyles = 0x40000000,
 

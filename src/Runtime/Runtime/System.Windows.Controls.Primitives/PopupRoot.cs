@@ -67,6 +67,8 @@ namespace Windows.UI.Xaml.Controls.Primitives
 
         internal PopupRoot(string uniqueIdentifier, Window parentWindow, Popup popup)
         {
+            BypassLayoutPolicies = true;
+
             INTERNAL_UniqueIndentifier = uniqueIdentifier;
             INTERNAL_ParentWindow = parentWindow;
             INTERNAL_LinkedPopup = popup;

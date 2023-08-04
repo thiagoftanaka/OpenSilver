@@ -360,9 +360,7 @@ if(nextSibling != undefined) {
             parent.INTERNAL_VisualChildrenInformation.Add(child,
                 new INTERNAL_VisualChildInformation()
                 {
-                    INTERNAL_UIElement = child,
                     INTERNAL_OptionalChildWrapper_OuterDomElement = wrapperForChild,
-                    INTERNAL_OptionalChildWrapper_ChildWrapperInnerDomElement = innerDivOfWrapperForChild
                 });
 
 #if PERFSTAT

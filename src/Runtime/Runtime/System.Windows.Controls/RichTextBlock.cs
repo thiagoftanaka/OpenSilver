@@ -254,9 +254,9 @@ namespace Windows.UI.Xaml.Controls
                         style.textAlign = (TextAlignment)newValue switch
                         {
                             TextAlignment.Center => "center",
-                            TextAlignment.Right => "right",
+                            TextAlignment.Right => "end",
                             TextAlignment.Justify => "justify",
-                            _ => "left",
+                            _ => "start",
                         };
                     },
                 });
@@ -381,6 +381,60 @@ namespace Windows.UI.Xaml.Controls
         {
             get => (Brush)GetValue(ForegroundProperty);
             set => SetValue(ForegroundProperty, value);
+        }
+
+        /// <summary>
+        /// Identifies the <see cref="CharacterSpacing"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty CharacterSpacingProperty =
+            TextElementProperties.CharacterSpacingProperty.AddOwner(
+                typeof(RichTextBlock),
+                new FrameworkPropertyMetadata(
+                    0,
+                    FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
+                    {
+                        var rtb = (RichTextBlock)d;
+                        double value = (int)newValue / 1000.0;
+                        var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(rtb.INTERNAL_OuterDomElement);
+                        style.letterSpacing = $"{value.ToInvariantString()}em";
+                    },
+                });
+
+        /// <summary>
+        /// Gets or sets the distance between characters of text in the control measured
+        /// in 1000ths of the font size.
+        /// </summary>
+        /// <returns>
+        /// The distance between characters of text in the control measured in 1000ths of
+        /// the font size. The default is 0.
+        /// </returns>
+        public int CharacterSpacing
+        {
+            get => (int)GetValue(CharacterSpacingProperty);
+            set => SetValue(CharacterSpacingProperty, value);
+        }
+
+        /// <summary>
+        /// Gets a value that represents the offset in pixels from the top of the content
+        /// to the baseline of the first paragraph. The baseline of the paragraph is the
+        /// baseline of the first line in it.
+        /// </summary>
+        /// <returns>
+        /// The computed baseline for the first paragraph, or 0 if the <see cref="RichTextBlock"/>
+        /// is empty.
+        /// </returns>
+        public double BaselineOffset => GetBaseLineOffset(this);
+
+        private static double GetBaseLineOffset(RichTextBlock rtb)
+        {
+            if (rtb.Blocks.Count > 0)
+            {
+                return TextElementProperties.GetBaseLineOffsetNative(rtb);
+            }
+
+            return 0.0;
         }
 
         public override object CreateDomElement(object parentRef, out object domElementWhereToPlaceChildren)

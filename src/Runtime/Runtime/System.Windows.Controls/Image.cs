@@ -322,50 +322,6 @@ namespace Windows.UI.Xaml.Controls
             }
         }
 
-        //private async Task RefreshSource()
-        //{
-        //    string sImageDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_imageDiv);
-        //    if (Source != null)
-        //    {
-        //        Loaded += Image_Loaded;
-        //        var imageSrc = await Source.GetDataStringAsync(this);
-        //        if (!string.IsNullOrEmpty(imageSrc))
-        //        {
-        //            INTERNAL_HtmlDomManager.SetDomElementAttribute(_imageDiv, "src", imageSrc, true);
-        //            //set the width and height to "inherit" so the image takes up the size defined for it (and applied to _imageDiv's parent):
-        //            OpenSilver.Interop.ExecuteJavaScriptVoid(
-        //                $"{sImageDiv}.style.width = 'inherit'; {sImageDiv}.style.height = 'inherit'");
-
-        //            if (IsUnderCustomLayout)
-        //            {
-        //                Action imageLoadedCallback = InvalidateMeasure;
-        //                OpenSilver.Interop.ExecuteJavaScript(
-        //                    $@"let imgElement = document.querySelector('#{(_imageDiv as INTERNAL_HtmlDomElementReference)?.UniqueIdentifier}');
-        //                    function loaded() {{
-        //                        $0();
-        //                    }}
-
-        //                    if (imgElement.complete && imgElement.naturalHeight !== 0)
-        //                    {{
-        //                        loaded();
-        //                    }}
-        //                    else
-
-        //                    {{
-        //                        imgElement.addEventListener('load', loaded);
-        //                        imgElement.addEventListener('error', function() {{
-        //                        }});
-        //                    }}", imageLoadedCallback);
-        //            }
-        //        }
-        //    }
-        //    else
-        //    {
-        //        //If Source == null we show empty image to prevent broken image icon
-        //        INTERNAL_HtmlDomManager.SetDomElementAttribute(_imageDiv, "src", TransparentGifOnePixel, true);
-        //    }
-        //}
-
         private void ProcessLoadEvent()
         {
             _naturalSize = GetNaturalSize();

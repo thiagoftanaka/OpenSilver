@@ -183,7 +183,7 @@ document.createTextBlockElement = function (id, parent, wrap) {
     const element = document.createLayoutElement('div', id, parent, -1);
     if (element) {
         element.style.overflow = 'hidden';
-        element.style.textAlign = 'left';
+        element.style.textAlign = 'start';
         element.style.boxSizing = 'border-box';
         if (wrap) {
             element.style.overflowWrap = 'break-word';
@@ -697,6 +697,7 @@ document.measureTextBlock = function (measureElementId, uid, whiteSpace, overflo
         element.style.fontWeight = computedStyle.fontWeight;
         element.style.fontFamily = computedStyle.fontFamily;
         element.style.fontStyle = computedStyle.fontStyle;
+        element.style.letterSpacing = computedStyle.letterSpacing;
 
         element.style.whiteSpace = whiteSpace;
         element.style.overflowWrap = overflowWrap;
@@ -712,6 +713,15 @@ document.measureTextBlock = function (measureElementId, uid, whiteSpace, overflo
 
     return "0|0";
 }
+
+document.getBaseLineOffset = (function () {
+    const ctx = document.createElement('canvas').getContext('2d');
+    return function (element) {
+        if (!element) return 0.0;
+        ctx.font = getComputedStyle(element).font;
+        return ctx.measureText('').fontBoundingBoxAscent;
+    };
+})();
 
 document.setContentString = function (id, text, removeTextWrapping) {
     var el = document.getElementById(id);
@@ -1091,12 +1101,18 @@ document.textboxHelpers = (function () {
         }
 
         switch (e.key) {
-            case 'ArrowLeft':
             case 'ArrowUp':
                 return getCaretPosition(view) > 0;
-            case 'ArrowRight':
             case 'ArrowDown':
                 return getCaretPosition(view) < view.value.length;
+            case 'ArrowLeft':
+                return window.getComputedStyle(view).direction === 'ltr' ?
+                    (getCaretPosition(view) > 0) :
+                    (getCaretPosition(view) < view.value.length);
+            case 'ArrowRight':
+                return window.getComputedStyle(view).direction === 'ltr' ?
+                    (getCaretPosition(view) < view.value.length) :
+                    (getCaretPosition(view) > 0);
             default:
                 return false;
         }
@@ -1166,6 +1182,7 @@ document.textboxHelpers = (function () {
             view.style.fontSize = 'inherit';
             view.style.fontFamily = 'inherit';
             view.style.color = 'inherit';
+            view.style.letterSpacing = 'inherit';
             view.style.resize = 'none';
             view.style.outline = 'none';
             view.style.border = 'none';

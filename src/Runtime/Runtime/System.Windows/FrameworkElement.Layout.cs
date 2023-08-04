@@ -109,7 +109,7 @@ namespace Windows.UI.Xaml
                 INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(TemplateChild, this, 0);
             }
 
-            bool isLayoutRoot = IsLayoutRoot;
+            bool isLayoutRoot = BypassLayoutPolicies;
 
             Thickness margin = Margin;
             double marginWidth = isLayoutRoot ? 0 : margin.Left + margin.Right;
@@ -240,7 +240,7 @@ namespace Windows.UI.Xaml
             // that child will get in its ArrangeOverride.
             Size arrangeSize = finalRect.Size;
 
-            bool isLayoutRoot = IsLayoutRoot;
+            bool isLayoutRoot = BypassLayoutPolicies;
 
             Thickness margin = Margin;
 

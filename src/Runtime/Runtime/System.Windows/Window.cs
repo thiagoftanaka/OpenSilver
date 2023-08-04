@@ -48,6 +48,8 @@ namespace Windows.UI.Xaml
 
         internal Window(bool hookUpEvents)
         {
+            BypassLayoutPolicies = true;
+
             if (hookUpEvents)
             {
                 new DOMEventManager(
