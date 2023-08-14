@@ -76,7 +76,7 @@ namespace Windows.UI.Xaml
                 typeof(FrameworkElement),
                 new FrameworkPropertyMetadata(
                     double.NaN,
-                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange)
+                    FrameworkPropertyMetadataOptions.AffectsMeasure)
                 {
                     GetCSSEquivalent = (instance) => new CSSEquivalent
                     {
@@ -117,7 +117,7 @@ namespace Windows.UI.Xaml
                 typeof(FrameworkElement),
                 new FrameworkPropertyMetadata(
                     double.NaN,
-                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange)
+                    FrameworkPropertyMetadataOptions.AffectsMeasure)
                 {
                     GetCSSEquivalent = (instance) => new CSSEquivalent
                     {
@@ -158,7 +158,7 @@ namespace Windows.UI.Xaml
                 nameof(HorizontalAlignment),
                 typeof(HorizontalAlignment),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(HorizontalAlignment.Stretch, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange));
+                new FrameworkPropertyMetadata(HorizontalAlignment.Stretch, FrameworkPropertyMetadataOptions.AffectsArrange));
 
         #endregion
 
@@ -185,7 +185,7 @@ namespace Windows.UI.Xaml
                 nameof(VerticalAlignment),
                 typeof(VerticalAlignment),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(VerticalAlignment.Stretch, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange));
+                new FrameworkPropertyMetadata(VerticalAlignment.Stretch, FrameworkPropertyMetadataOptions.AffectsArrange));
 
         #endregion
 
@@ -211,7 +211,7 @@ namespace Windows.UI.Xaml
                 typeof(FrameworkElement),
                 new FrameworkPropertyMetadata(
                     new Thickness(),
-                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange),
+                    FrameworkPropertyMetadataOptions.AffectsMeasure),
                 IsMarginValid);
 
         private static bool IsMarginValid(object value)
@@ -241,9 +241,7 @@ namespace Windows.UI.Xaml
                 nameof(MinHeight),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(
-                    0d,
-                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange),
+                new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsMeasure),
                 IsMinWidthHeightValid);
 
         #endregion
@@ -268,9 +266,7 @@ namespace Windows.UI.Xaml
                 nameof(MinWidth),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(
-                    0d,
-                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange),
+                new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsMeasure),
                 IsMinWidthHeightValid);
 
         #endregion
@@ -295,9 +291,7 @@ namespace Windows.UI.Xaml
                 nameof(MaxHeight),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(
-                    double.PositiveInfinity,
-                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange),
+                new FrameworkPropertyMetadata(double.PositiveInfinity, FrameworkPropertyMetadataOptions.AffectsMeasure),
                 IsMaxWidthHeightValid);
 
         #endregion
@@ -322,9 +316,7 @@ namespace Windows.UI.Xaml
                 nameof(MaxWidth),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(
-                    double.PositiveInfinity,
-                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange),
+                new FrameworkPropertyMetadata(double.PositiveInfinity, FrameworkPropertyMetadataOptions.AffectsMeasure),
                 IsMaxWidthHeightValid);
 
         #endregion

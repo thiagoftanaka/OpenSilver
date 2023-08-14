@@ -66,7 +66,7 @@ namespace Windows.UI.Xaml.Controls
                 nameof(Orientation),
                 typeof(Orientation),
                 typeof(StackPanel),
-                new FrameworkPropertyMetadata(Orientation.Vertical, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange));
+                new FrameworkPropertyMetadata(Orientation.Vertical, FrameworkPropertyMetadataOptions.AffectsMeasure));
 
         protected override Size MeasureOverride(Size constraint)
         {

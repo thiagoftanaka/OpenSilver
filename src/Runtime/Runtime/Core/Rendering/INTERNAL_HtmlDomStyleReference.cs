@@ -18,6 +18,7 @@ namespace CSHTML5.Internal
 {
     public class INTERNAL_HtmlDomStyleReference : DynamicObject
     {
+#pragma warning disable IDE1006 // Naming Styles
         internal string Uid { get; }
 
         internal INTERNAL_HtmlDomStyleReference(string elementId)
@@ -31,24 +32,9 @@ namespace CSHTML5.Internal
 
         public override bool TrySetMember(SetMemberBinder binder, object value)
         {
-            SetStylePropertyValue(binder.Name, (value ?? "").ToString());
+            SetStylePropertyValue(binder.Name, (value ?? string.Empty).ToString());
             return true;
         }
-
-        private void SetStylePropertyValue(string propertyName, string propertyValue) =>
-            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
-                $"document.setDomStyle('{Uid}', '{propertyName}', '{propertyValue}');");
-
-        private void SetTransformPropertyValue(string propertyValue) =>
-            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
-                $"document.setDomTransform('{Uid}', '{propertyValue}');");
-
-        private void SetTransformOriginPropertyValue(string propertyValue) =>
-            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
-                $"document.setDomTransformOrigin('{Uid}', '{propertyValue}');");
-
-        private string GetCSSProperty(string propertyName) =>
-            OpenSilver.Interop.ExecuteJavaScriptString($"document.getElementById('{Uid}').{propertyName};");
 
         public string background { set { SetStylePropertyValue("background", value); } }
         public string backgroundColor { set { SetStylePropertyValue("backgroundColor", value); } }
@@ -155,6 +141,30 @@ namespace CSHTML5.Internal
         public string flexBasis { set { SetStylePropertyValue("flexBasis", value); } }
         public string userSelect { set { SetStylePropertyValue("userSelect", value); } }
 
+        internal void setProperty(string propertyName, string value) =>
+            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
+                $"document.setStyleProperty('{Uid}', '{propertyName}', '{value}');");
+
+        internal void setProperty(string propertyName, string value, string priority) =>
+            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
+                $"document.setStyleProperty('{Uid}', '{propertyName}', '{value}', '{priority}');");
+
+        private void SetStylePropertyValue(string propertyName, string value) =>
+            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
+                $"document.setDomStyle('{Uid}', '{propertyName}', '{value}');");
+
+        private void SetTransformPropertyValue(string propertyValue) =>
+            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
+                $"document.setDomTransform('{Uid}', '{propertyValue}');");
+
+        private void SetTransformOriginPropertyValue(string propertyValue) =>
+            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
+                $"document.setDomTransformOrigin('{Uid}', '{propertyValue}');");
+
+        private string GetCSSProperty(string propertyName) =>
+            OpenSilver.Interop.ExecuteJavaScriptString(
+                $"document.getElementById('{Uid}').style.{propertyName};");
+
         //-----------------------------------------------------------------------
         // Usage stats for To-Do Calendar (number of types each property is set):
         //-----------------------------------------------------------------------
@@ -184,5 +194,6 @@ namespace CSHTML5.Internal
         //verticalAlign, 552
         //whiteSpace, 378
         //width, 6973
+#pragma warning restore IDE1006 // Naming Styles
     }
 }
