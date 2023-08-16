@@ -243,15 +243,8 @@ namespace Windows.UI.Xaml
             bool isLayoutRoot = BypassLayoutPolicies;
 
             Thickness margin = Margin;
-
-            // In case it's a textblock, needs to consider paddding like margin while arrange.
-            Thickness padding = new Thickness();
-            if (this is Controls.TextBlock textBlock)
-            {
-                padding = textBlock.Padding;
-            }
-            double marginWidth = isLayoutRoot ? 0 : margin.Left + margin.Right + padding.Left + padding.Right;
-            double marginHeight = isLayoutRoot ? 0 : margin.Top + margin.Bottom + padding.Top + padding.Bottom;
+            double marginWidth = isLayoutRoot ? 0 : margin.Left + margin.Right;
+            double marginHeight = isLayoutRoot ? 0 : margin.Top + margin.Bottom;
             arrangeSize.Width = Math.Max(0, arrangeSize.Width - marginWidth);
             arrangeSize.Height = Math.Max(0, arrangeSize.Height - marginHeight);
 
@@ -349,8 +342,8 @@ namespace Windows.UI.Xaml
 
             Point offset = isLayoutRoot ? new Point() : ComputeAlignmentOffset(clientSize, clippedInkSize);
 
-            offset.X += finalRect.X + margin.Left + padding.Left;
-            offset.Y += finalRect.Y + margin.Top + padding.Top;
+            offset.X += finalRect.X + margin.Left;
+            offset.Y += finalRect.Y + margin.Top;
 
             SetLayoutOffset(offset, oldRenderSize);
         }
