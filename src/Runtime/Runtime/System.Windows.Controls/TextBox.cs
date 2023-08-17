@@ -666,6 +666,7 @@ namespace Windows.UI.Xaml.Controls
 
             e.Handled = true;
             Focus();
+            CaptureMouse();
         }
 
         /// <summary>
@@ -691,6 +692,7 @@ namespace Windows.UI.Xaml.Controls
 #endif
 
             e.Handled = true;
+            ReleaseMouseCapture();
         }
 
 #if MIGRATION
