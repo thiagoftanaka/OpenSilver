@@ -217,7 +217,7 @@
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="WindowStates">
                                 <VisualState x:Name="Open">
-                                    <Storyboard>
+                                    <Storyboard BeginTime="00:00:00.1">
                                         <DoubleAnimation BeginTime="0"
                                                          Storyboard.TargetName="Overlay"
                                                          Storyboard.TargetProperty="Opacity"

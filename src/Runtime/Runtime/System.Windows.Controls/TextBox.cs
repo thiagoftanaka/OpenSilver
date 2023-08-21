@@ -13,8 +13,8 @@
 
 using System;
 using System.ComponentModel;
-using OpenSilver.Internal.Controls;
 using CSHTML5;
+using OpenSilver.Internal.Controls;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
 
