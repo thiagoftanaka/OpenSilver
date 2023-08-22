@@ -105,7 +105,9 @@ if (popupRoot) {sWindow}.removeChild(popupRoot);");
                 yield return popupRoot;
             }
         }
-
+        
+        internal static IEnumerable<PopupRoot> GetActivePopupRoots() => PopupRootIdentifierToInstance;
+        
         /// <summary>
         /// Returns the coordinates of the UIElement, relative to the Window that contains it.
         /// </summary>

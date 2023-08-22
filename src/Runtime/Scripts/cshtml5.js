@@ -151,7 +151,10 @@ document.createElementSafe = function (tagName, id, parent, index) {
     const element = document.createElement(tagName);
 
     element.setAttribute('id', id);
-    element.setAttribute('xamlid', id);
+    Object.defineProperty(element, 'xamlid', {
+        value: id,
+        writable: false,
+    });
 
     if (index < 0 || index >= parent.children.length) {
         parent.appendChild(element);
@@ -199,7 +202,10 @@ document.createPopupRootElement = function (id, rootElement, pointerEvents) {
 
     const popupRoot = document.createElement('div');
     popupRoot.setAttribute('id', id);
-    popupRoot.setAttribute('xamlid', id);
+    Object.defineProperty(popupRoot, 'xamlid', {
+        value: id,
+        writable: false,
+    });
     popupRoot.style.position = 'absolute';
     popupRoot.style.width = '100%';
     popupRoot.style.height = '100%';
@@ -246,7 +252,10 @@ document.createShapeElement = function (svgId, shapeId, defsId, svgTagName, pare
     svg.classList.add('uielement-shape');
     svg.classList.add('uielement-unarranged');
     svg.setAttribute('id', svgId);
-    svg.setAttribute('xamlid', svgId);
+    Object.defineProperty(svg, 'xamlid', {
+        value: svgId,
+        writable: false,
+    });
     Object.defineProperty(svg, 'dump', {
         get() { return document.dumpProperties(svgId); }
     });
@@ -423,8 +432,9 @@ document.createInputManager = function (callback) {
 
     function getClosestElementId(element) {
         while (element) {
-            if (element.hasAttribute('xamlid')) {
-                return element.getAttribute('xamlid');
+            const xamlid = element.xamlid;
+            if (xamlid) {
+                return xamlid;
             }
 
             element = element.parentElement;
@@ -1079,25 +1089,17 @@ var jsilConfig = {
     ]
 };
 
-window.elementsFromPointOpensilver = function (x, y, element) {
-    if (!element) element = document.body;
-    const elements = [];
-    const walker = document.createTreeWalker(element, NodeFilter.SHOW_ELEMENT, null, false);
-    let currentNode = walker.currentNode;
-    while (currentNode) {
-        const xamlid = currentNode.getAttribute('xamlid');
-        if (xamlid && PerformHitTest(x, y, currentNode)) {
-            elements.push(xamlid);
+document.elementsFromPointOpenSilver = function (x, y) {
+    const ids = [];
+    const hitTestResults = document.elementsFromPoint(x, y);
+    for (const el of hitTestResults) {
+        const xamlid = el.xamlid;
+        if (xamlid) {
+            ids.push(xamlid);
         }
-        currentNode = walker.nextNode();
     }
-    return JSON.stringify(elements.reverse());
+    return JSON.stringify(ids);
 };
-
-function PerformHitTest(x, y, element) {
-    const rect = element.getBoundingClientRect();
-    return rect.x <= x && x <= rect.x + rect.width && rect.y <= y && y <= rect.y + rect.height;
-}
 
 //------------------------------
 // Just to check if client browser support touch
@@ -1107,6 +1109,166 @@ const isTouchDevice = () => {
         (navigator.maxTouchPoints > 0) ||
         (navigator.msMaxTouchPoints > 0));
 }
+
+document.textboxHelpers = (function () {
+    function getSelectionLength(view) {
+        return view.selectionEnd - view.selectionStart;
+    };
+
+    function getCaretPosition(view) {
+        return view.selectionDirection === 'forward' ? view.selectionEnd : view.selectionStart;
+    };
+
+    function isNewLineChar(c) {
+        return c === '\n' || c === '\r';
+    };
+
+    function navigateInDirection(view, e) {
+        if (!e.shiftKey && !e.ctrlKey && getSelectionLength(view) > 0) {
+            return true;
+        }
+
+        switch (e.key) {
+            case 'ArrowUp':
+                return getCaretPosition(view) > 0;
+            case 'ArrowDown':
+                return getCaretPosition(view) < view.value.length;
+            case 'ArrowLeft':
+                return window.getComputedStyle(view).direction === 'ltr' ?
+                    (getCaretPosition(view) > 0) :
+                    (getCaretPosition(view) < view.value.length);
+            case 'ArrowRight':
+                return window.getComputedStyle(view).direction === 'ltr' ?
+                    (getCaretPosition(view) < view.value.length) :
+                    (getCaretPosition(view) > 0);
+            default:
+                return false;
+        }
+    };
+
+    function navigateByPage(view, e) {
+        // In Chrome, navigation with PageUp and PageDown does not work when overflow is set to 'hidden',
+        // so we manually update the cursor position here.
+
+        if (e.ctrlKey) {
+            return false;
+        }
+
+        if (e.key === 'PageDown') {
+            if (getCaretPosition(view) < view.value.length || (!e.shiftKey && getSelectionLength(view) > 0)) {
+                const start = e.shiftKey ? (view.selectionDirection === 'forward' ? view.selectionStart : view.selectionEnd) : view.value.length;
+                const end = view.value.length;
+                view.setSelectionRange(start, end, 'forward');
+                view.scrollTo(view.scrollWidth, view.scrollHeight);
+                return true;
+            }
+        } else {
+            if (getCaretPosition(view) > 0 || (!e.shiftKey && getSelectionLength(view) > 0)) {
+                const start = 0;
+                const end = e.shiftKey ? (view.selectionDirection === 'forward' ? view.selectionStart : view.selectionEnd) : 0;
+                view.setSelectionRange(start, end, 'backward');
+                view.scrollTo(0, 0);
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    function navigateToStart(view, e) {
+        if (!e.shiftKey && getSelectionLength(view) > 0) {
+            return true;
+        }
+
+        const caretIndex = getCaretPosition(view); 
+        return caretIndex > 0 && (e.ctrlKey || !isNewLineChar(view.value[caretIndex - 1]));
+    };
+
+    function navigateToEnd(view, e) {
+        if (!e.shiftKey && getSelectionLength(view) > 0) {
+            return true;
+        }
+
+        const caretIndex = getCaretPosition(view); 
+        return caretIndex < view.value.length && (e.ctrlKey || !isNewLineChar(view.value[caretIndex]));
+    };
+
+    function handleTab(view, e) {
+        if (view.getAttribute('data-acceptstab') === 'true' &&
+            (getSelectionLength(view) > 0 || view.maxLength < 0 || view.value.length < view.maxLength)) {
+            e.preventDefault();
+            view.setRangeText('\t', view.selectionStart, view.selectionEnd, 'end');
+            return true;
+        }
+
+        return false;
+    };
+
+    return {
+        createView: function (id, parentId) {
+            const view = document.createLayoutElement('textarea', id, parentId, -1);
+            view.style.fontSize = 'inherit';
+            view.style.fontFamily = 'inherit';
+            view.style.color = 'inherit';
+            view.style.letterSpacing = 'inherit';
+            view.style.resize = 'none';
+            view.style.outline = 'none';
+            view.style.border = 'none';
+            view.style.boxSizing = 'border-box';
+            view.style.background = 'transparent';
+            view.style.cursor = 'text';
+            view.style.overflow = 'hidden';
+            view.style.tabSize = '4';
+            view.style.padding = '0px';
+
+            view.setAttribute('tabindex', -1);
+
+            view.addEventListener('paste', function (e) {
+                if (this.getAttribute('data-acceptsreturn') === 'false') {
+                    e.preventDefault();
+                    let content = (e.originalEvent || e).clipboardData.getData('text/plain');
+                    if (content !== undefined) {
+                        content = content.replace(/\n/g, '').replace(/\r/g, '');
+                    }
+                    document.execCommand('insertText', false, content);
+                }
+            }, false);
+        },
+        onKeyDownNative: function (view, e) {
+            switch (e.key.toLowerCase()) {
+                case 'arrowleft':
+                case 'arrowright':
+                case 'arrowdown':
+                case 'arrowup':
+                    return navigateInDirection(view, e);
+                case 'pagedown':
+                case 'pageup':
+                    return navigateByPage(view, e);
+                case 'home':
+                    return navigateToStart(view, e);
+                case 'end':
+                    return navigateToEnd(view, e);
+                case 'delete':
+                    return getCaretPosition(view) < view.value.length || getSelectionLength(view) > 0;
+                case 'backspace':
+                    return getCaretPosition(view) > 0 || getSelectionLength(view) > 0;
+                case 'c':
+                case 'x':
+                    return e.ctrlKey && getSelectionLength(view) > 0;
+                case 'a':
+                    return e.ctrlKey && getSelectionLength(view) < view.value.length;
+                case 'v':
+                case 'y':
+                case 'z':
+                    return e.ctrlKey;
+                case 'tab':
+                    return handleTab(view, e);
+                default:
+                    return false;
+            }
+        },
+    };
+})();
 
 document.textboxHelpers = (function () {
     function getSelectionLength(view) {

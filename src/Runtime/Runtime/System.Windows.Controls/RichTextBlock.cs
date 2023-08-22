@@ -46,6 +46,8 @@ namespace Windows.UI.Xaml.Controls
             Blocks = new BlockCollection(this, false);
         }
 
+        internal sealed override bool EnablePointerEventsCore => true;
+
         /// <summary>
         /// Gets the contents of the <see cref="RichTextBlock"/>.
         /// </summary>
