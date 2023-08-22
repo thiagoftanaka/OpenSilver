@@ -337,11 +337,10 @@ namespace Windows.UI.Xaml.Controls.Primitives
         /// <param name="arrangeSize">Size of the visible part of the control.</param>
         private void UpdateClip(Size arrangeSize)
         {
-            if (Clip != _clippingRectangle)
+            Clip = new RectangleGeometry
             {
-                Clip = _clippingRectangle;
-            }
-            _clippingRectangle.Rect = new Rect(0.0, 0.0, arrangeSize.Width, arrangeSize.Height);
+                Rect = new Rect(0.0, 0.0, arrangeSize.Width, arrangeSize.Height)
+            };
         }
 
         /// <summary>
@@ -440,7 +439,6 @@ namespace Windows.UI.Xaml.Controls.Primitives
         {
             DefaultStyleKey = typeof(ExpandableContentControl);
             _clippingRectangle = new RectangleGeometry();
-            Clip = _clippingRectangle;
         }
 
         /// <summary>
