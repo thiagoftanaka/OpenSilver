@@ -675,6 +675,7 @@ namespace Windows.UI.Xaml.Shapes
         protected internal sealed override void INTERNAL_OnDetachedFromVisualTree()
         {
             base.INTERNAL_OnDetachedFromVisualTree();
+            INTERNAL_HtmlDomManager.RemoveFromGlobalStore(SvgElement);
             SvgElement = null;
             DefsElement = null;
             _fillBrush = null;
