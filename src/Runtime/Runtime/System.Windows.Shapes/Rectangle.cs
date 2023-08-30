@@ -147,8 +147,8 @@ namespace Windows.UI.Xaml.Shapes
             var rect = new Rect(
                 margin,
                 margin,
-                Math.Max(0, finalSize.Width - penThickness),
-                Math.Max(0, finalSize.Height - penThickness));
+                Math.Max(Math.Max(0, finalSize.Width - penThickness), penThickness),
+                Math.Max(Math.Max(0, finalSize.Height - penThickness), penThickness));
 
             switch (Stretch)
             {
