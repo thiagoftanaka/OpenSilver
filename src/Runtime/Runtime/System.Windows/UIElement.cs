@@ -1040,12 +1040,12 @@ namespace Windows.UI.Xaml
         /// </summary>
         /// <returns>True if the object has pointer capture; otherwise, false.</returns>
 #if MIGRATION
-        public bool CaptureMouse()
+        public bool CaptureMouse(bool allowTextSelection = false)
 #else
         public bool CapturePointer(Pointer value = null)
 #endif
         {
-            return InputManager.Current.CaptureMouse(this);
+            return InputManager.Current.CaptureMouse(this, allowTextSelection);
         }
 
         /// <summary>

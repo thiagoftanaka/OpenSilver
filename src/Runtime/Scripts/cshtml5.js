@@ -419,6 +419,7 @@ document.createInputManager = function (callback) {
 
     let _modifiers = MODIFIERKEYS.NONE;
     let _mouseCapture = null;
+    let _allowTextSelectionWhenMouseCaptured = false;
     let _suppressContextMenu = false;
     let _lastTouchEndTimeStamp = 0;
 
@@ -488,6 +489,10 @@ document.createInputManager = function (callback) {
                     callback(getClosestElementId(target), EVENTS.MOUSE_MOVE, e);
                 }
             }
+        });
+
+        document.addEventListener('selectstart', function (e) {
+            if (_mouseCapture !== null && !_allowTextSelectionWhenMouseCaptured) e.preventDefault();
         });
 
         document.addEventListener('contextmenu', function (e) {
@@ -628,11 +633,13 @@ document.createInputManager = function (callback) {
         getModifiers: function () {
             return _modifiers;
         },
-        captureMouse: function (element) {
+        captureMouse: function (element, allowTextSelection) {
             _mouseCapture = element;
+            _allowTextSelectionWhenMouseCaptured = allowTextSelection;
         },
         releaseMouseCapture: function () {
             _mouseCapture = null;
+            _allowTextSelectionWhenMouseCaptured = false;
         },
         suppressContextMenu: function (value) {
             _suppressContextMenu = value;

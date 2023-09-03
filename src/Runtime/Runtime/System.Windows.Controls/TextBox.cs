@@ -666,7 +666,7 @@ namespace Windows.UI.Xaml.Controls
 
             e.Handled = true;
             Focus();
-            CaptureMouse();
+            CaptureMouse(true);
         }
 
         /// <summary>
