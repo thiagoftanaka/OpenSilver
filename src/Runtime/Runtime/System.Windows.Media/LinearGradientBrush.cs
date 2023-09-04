@@ -19,6 +19,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
+using OpenSilver.Internal.Media.Animation;
 
 #if MIGRATION
 using System.Windows.Shapes;
@@ -36,8 +37,10 @@ namespace Windows.UI.Xaml.Media
     /// <summary>
     /// Paints an area with a linear gradient.
     /// </summary>
-    public sealed class LinearGradientBrush : GradientBrush
+    public sealed class LinearGradientBrush : GradientBrush, ICloneOnAnimation<LinearGradientBrush>
     {
+        private readonly bool _isClone;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="LinearGradientBrush"/> class.
         /// </summary>
@@ -59,6 +62,15 @@ namespace Windows.UI.Xaml.Media
         {
             GradientStops = gradientStopCollection;
             EndPoint = EndPointFromAngle(angle);
+        }
+
+        private LinearGradientBrush(LinearGradientBrush original)
+            : base(original)
+        {
+            _isClone = true;
+
+            StartPoint = original.StartPoint;
+            EndPoint = original.EndPoint;
         }
 
         /// <summary>
@@ -106,7 +118,11 @@ namespace Windows.UI.Xaml.Media
             get => (Point)GetValue(StartPointProperty);
             set => SetValue(StartPointProperty, value);
         }
-        
+
+        bool ICloneOnAnimation<LinearGradientBrush>.IsClone => _isClone;
+
+        LinearGradientBrush ICloneOnAnimation<LinearGradientBrush>.Clone() => new LinearGradientBrush(this);
+
         private Point EndPointFromAngle(double angle)
         {
             // Convert the angle from degrees to radians

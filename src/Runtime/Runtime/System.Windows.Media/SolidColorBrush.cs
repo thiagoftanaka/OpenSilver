@@ -17,6 +17,7 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows.Markup;
 using OpenSilver.Internal;
+using OpenSilver.Internal.Media.Animation;
 
 #if MIGRATION
 using System.Windows.Shapes;
@@ -34,8 +35,10 @@ namespace Windows.UI.Xaml.Media
     /// Paints an area with a solid color.
     /// </summary>
     [ContentProperty(nameof(Color))]
-    public sealed class SolidColorBrush : Brush
+    public sealed class SolidColorBrush : Brush, ICloneOnAnimation<SolidColorBrush>
     {
+        private readonly bool _isClone;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="SolidColorBrush"/> class 
         /// with no color.
@@ -52,6 +55,14 @@ namespace Windows.UI.Xaml.Media
         public SolidColorBrush(Color color)
         {
             Color = color;
+        }
+
+        private SolidColorBrush(SolidColorBrush original)
+            : base(original)
+        {
+            _isClone = true;
+
+            Color = original.Color;
         }
 
         /// <summary>
@@ -104,11 +115,16 @@ namespace Windows.UI.Xaml.Media
 
         internal string INTERNAL_ToHtmlString() => Color.INTERNAL_ToHtmlString(Opacity);
 
+        SolidColorBrush ICloneOnAnimation<SolidColorBrush>.Clone() => new SolidColorBrush(this);
+
+        bool ICloneOnAnimation<SolidColorBrush>.IsClone => _isClone;
+
         [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public object ConvertToCSSValue() => Color.INTERNAL_ToHtmlString(Opacity);
 
-        public object Clone() => new SolidColorBrush(Color);
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public object Clone() => new SolidColorBrush(this);
 
         [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]

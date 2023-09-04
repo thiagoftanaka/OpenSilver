@@ -20,6 +20,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
+using OpenSilver.Internal.Media.Animation;
 
 #if MIGRATION
 using System.Windows.Shapes;
@@ -38,12 +39,14 @@ namespace Windows.UI.Xaml.Media
     /// Paints an area with a radial gradient. A focal point defines the beginning of
     /// the gradient, and a circle defines the end point of the gradient.
     /// </summary>
-    public sealed class RadialGradientBrush : GradientBrush
+    public sealed class RadialGradientBrush : GradientBrush, ICloneOnAnimation<RadialGradientBrush>
     {
+        private readonly bool _isClone;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RadialGradientBrush"/> class.
         /// </summary>
-        public RadialGradientBrush() {}
+        public RadialGradientBrush() { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RadialGradientBrush"/> class
@@ -55,6 +58,17 @@ namespace Windows.UI.Xaml.Media
         public RadialGradientBrush(GradientStopCollection gradientStopCollection)
         {
             GradientStops = gradientStopCollection;
+        }
+
+        private RadialGradientBrush(RadialGradientBrush original)
+            : base(original)
+        {
+            _isClone = true;
+
+            Center = original.Center;
+            GradientOrigin = original.GradientOrigin;
+            RadiusX = original.RadiusX;
+            RadiusY = original.RadiusY;
         }
 
         /// <summary>
@@ -168,6 +182,10 @@ namespace Windows.UI.Xaml.Media
             get => (double)GetValue(RadiusYProperty);
             set => SetValue(RadiusYProperty, value);
         }
+
+        bool ICloneOnAnimation<RadialGradientBrush>.IsClone => _isClone;
+
+        RadialGradientBrush ICloneOnAnimation<RadialGradientBrush>.Clone() => new RadialGradientBrush(this);
 
         internal override Task<string> GetDataStringAsync(UIElement parent)
             => Task.FromResult(INTERNAL_ToHtmlString(parent));

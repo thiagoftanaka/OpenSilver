@@ -87,6 +87,7 @@ internal sealed class InputManager
     private int _clickCount;
     private int _lastClickTime;
     private WeakReference<UIElement> _lastClickTarget;
+    private bool _mouseLeftDown;
 
     private InputManager()
     {
@@ -117,7 +118,7 @@ internal sealed class InputManager
 
     internal bool CaptureMouse(UIElement uie, bool allowTextSelection = false)
     {
-        if (Pointer.INTERNAL_captured is null)
+        if (Pointer.INTERNAL_captured is null && _mouseLeftDown)
         {
             Pointer.INTERNAL_captured = uie;
 
@@ -132,7 +133,7 @@ internal sealed class InputManager
 
     internal void ReleaseMouseCapture(UIElement uie)
     {
-        if (Pointer.INTERNAL_captured is not null)
+        if (Pointer.INTERNAL_captured == uie)
         {
             Pointer.INTERNAL_captured = null;
             OpenSilver.Interop.ExecuteJavaScriptVoid($"document.inputManager.releaseMouseCapture();");
@@ -173,11 +174,17 @@ internal sealed class InputManager
         switch (eventType)
         {
             case EVENTS.MOUSE_LEFT_DOWN:
+                _mouseLeftDown = true;
                 RefreshClickCount(null, MouseButton.Left, Environment.TickCount, new Point());
                 break;
 
             case EVENTS.MOUSE_RIGHT_DOWN:
                 RefreshClickCount(null, MouseButton.Right, Environment.TickCount, new Point());
+                break;
+
+            case EVENTS.MOUSE_LEFT_UP:
+                _mouseLeftDown = false;
+                ReleaseMouseCapture();
                 break;
 
             case EVENTS.FOCUS:
@@ -187,6 +194,14 @@ internal sealed class InputManager
             case EVENTS.WINDOW_BLUR:
                 OnWindowBlur(jsEventArg);
                 break;
+        }
+    }
+
+    private void ReleaseMouseCapture()
+    {
+        if (Pointer.INTERNAL_captured is UIElement uie)
+        {
+            ReleaseMouseCapture(uie);
         }
     }
 
@@ -237,10 +252,12 @@ internal sealed class InputManager
 
             case EVENTS.MOUSE_LEFT_DOWN:
             case EVENTS.TOUCH_START:
+                _mouseLeftDown = true;
                 ProcessOnMouseLeftButtonDown(uie, jsEventArg);
                 break;
 
             case EVENTS.MOUSE_LEFT_UP:
+                _mouseLeftDown = false;
                 ProcessOnMouseLeftButtonUp(uie, jsEventArg);
                 break;
 
@@ -341,16 +358,9 @@ internal sealed class InputManager
                 closeToolTips: false);
 
             ProcessOnTapped(mouseTarget, jsEventArg);
-
-            mouseTarget.Dispatcher.BeginInvoke(() =>
-            {
-#if MIGRATION
-                Pointer.INTERNAL_captured?.ReleaseMouseCapture();
-#else
-                Pointer.INTERNAL_captured?.ReleasePointerCapture();
-#endif
-            });
         }
+
+        ReleaseMouseCapture();
     }
 
     private void ProcessOnMouseRightButtonDown(UIElement uie, object jsEventArg)
@@ -399,16 +409,9 @@ internal sealed class InputManager
 
             e.FillEventArgs(mouseTarget, jsEventArg);
             mouseTarget.RaiseEvent(e);
-
-            mouseTarget.Dispatcher.BeginInvoke(() =>
-            {
-#if MIGRATION
-                Pointer.INTERNAL_captured?.ReleaseMouseCapture();
-#else
-                Pointer.INTERNAL_captured?.ReleasePointerCapture();
-#endif
-            });
         }
+
+        ReleaseMouseCapture();
     }
 
     private void ProcessOnWheel(UIElement uie, object jsEventArg)

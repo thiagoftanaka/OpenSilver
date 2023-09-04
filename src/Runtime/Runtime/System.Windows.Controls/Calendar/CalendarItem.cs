@@ -1598,6 +1598,14 @@ namespace Windows.UI.Xaml.Controls.Primitives
             }
         }
 
+        /// <summary>
+        /// Resets mouse states.
+        /// </summary>
+        internal void ResetStates()
+        {
+            _isMouseLeftButtonDown = false;
+        }
+
 #if SILVERLIGHT
         /// <summary>
         /// Inherited code: Requires comment.

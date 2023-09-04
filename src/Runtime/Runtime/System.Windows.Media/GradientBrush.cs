@@ -37,6 +37,18 @@ namespace Windows.UI.Xaml.Media
         /// </summary>
         protected GradientBrush() { }
 
+        private protected GradientBrush(GradientBrush original)
+            : base(original)
+        {
+            MappingMode = original.MappingMode;
+            SpreadMethod = original.SpreadMethod;
+            ColorInterpolationMode = original.ColorInterpolationMode;
+            foreach (GradientStop stop in original.GradientStops)
+            {
+                GradientStops.Add(new GradientStop { Offset = stop.Offset, Color = stop.Color });
+            }
+        }
+
         /// <summary>
         /// Identifies the <see cref="GradientStops"/> dependency property.
         /// </summary>
@@ -213,7 +225,7 @@ namespace Windows.UI.Xaml.Media
                 yield return (stop.Offset, stop.Color);
                 i++;
             }
-            
+
             // No more stops, exit
             if (i == orderedStops.Length)
             {
@@ -231,7 +243,7 @@ namespace Windows.UI.Xaml.Media
                 yield return (finalStop.Offset, finalStop.Color);
                 yield break;
             }
-            
+
             yield return (1.0, InterpolateGradientStopsArgbColor(orderedStops[i - 1], finalStop, 1.0));
 
             static Color InterpolateGradientStopsArgbColor(GradientStop from, GradientStop to, double midPoint)
@@ -250,7 +262,7 @@ namespace Windows.UI.Xaml.Media
                     (byte)(fromColor.B + (toColor.B - fromColor.B) * value));
             }
         }
-        
+
         internal static string ConvertBrushMappingModeToString(BrushMappingMode mappingMode)
             => mappingMode switch
             {
