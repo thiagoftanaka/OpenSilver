@@ -756,6 +756,9 @@ namespace Windows.UI.Xaml.Controls.Primitives
 
         internal void PutPopupInFront()
         {
+            if (_popupRoot == null)
+                return;
+
             if (Canvas.MaxZIndex > _currentZIndex)
             {
                 _currentZIndex = Canvas.MaxZIndex;
