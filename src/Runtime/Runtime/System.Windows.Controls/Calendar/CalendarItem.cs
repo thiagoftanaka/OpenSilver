@@ -224,21 +224,25 @@ namespace Windows.UI.Xaml.Controls.Primitives
             get { return _monthView; }
             private set
             {
-#if SILVERLIGHT
                 if (_monthView != null)
                 {
+#if MIGRATION
                     _monthView.MouseLeave -= MonthView_MouseLeave;
-                }
+#else
+                    _monthView.PointerExited -= MonthView_MouseLeave;
 #endif
+                }
 
                 _monthView = value;
 
-#if SILVERLIGHT
                 if (_monthView != null)
                 {
+#if MIGRATION
                     _monthView.MouseLeave += MonthView_MouseLeave;
-                }
+#else
+                    _monthView.PointerExited += MonthView_MouseLeave;
 #endif
+                }
             }
         }
 
@@ -255,21 +259,25 @@ namespace Windows.UI.Xaml.Controls.Primitives
             get { return _yearView; }
             private set
             {
-#if SILVERLIGHT
                 if (_yearView != null)
                 {
+#if MIGRATION
                     _yearView.MouseLeave -= YearView_MouseLeave;
-                }
+#else
+                    _yearView.PointerExited -= YearView_MouseLeave;
 #endif
+                }
 
                 _yearView = value;
 
-#if SILVERLIGHT
                 if (_yearView != null)
                 {
+#if MIGRATION
                     _yearView.MouseLeave += YearView_MouseLeave;
-                }
+#else
+                    _yearView.PointerExited += YearView_MouseLeave;
 #endif
+                }
             }
         }
 
@@ -1599,15 +1607,6 @@ namespace Windows.UI.Xaml.Controls.Primitives
         }
 
         /// <summary>
-        /// Resets mouse states.
-        /// </summary>
-        internal void ResetStates()
-        {
-            _isMouseLeftButtonDown = false;
-        }
-
-#if SILVERLIGHT
-        /// <summary>
         /// Inherited code: Requires comment.
         /// </summary>
         /// <param name="sender">Inherited code: Requires comment 1.</param>
@@ -1616,12 +1615,14 @@ namespace Windows.UI.Xaml.Controls.Primitives
         {
             if (_lastCalendarDayButton != null)
             {
+#if MIGRATION
                 _lastCalendarDayButton.CaptureMouse();
+#else
+                _lastCalendarDayButton.CapturePointer(e.Pointer);
+#endif
             }
         }
-#endif
 
-#if SILVERLIGHT
         /// <summary>
         /// Inherited code: Requires comment.
         /// </summary>
@@ -1631,10 +1632,13 @@ namespace Windows.UI.Xaml.Controls.Primitives
         {
             if (_lastCalendarButton != null)
             {
+#if MIGRATION
                 _lastCalendarButton.CaptureMouse();
+#else
+                _lastCalendarButton.CapturePointer(e.Pointer);
+#endif
             }
         }
-#endif
 #endregion Mouse Events
     }
 }

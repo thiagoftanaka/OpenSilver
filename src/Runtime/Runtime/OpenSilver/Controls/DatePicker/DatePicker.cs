@@ -48,7 +48,7 @@ namespace OpenSilver.Controls
 
         private void OnGotFocus(object sender, RoutedEventArgs e)
         {
-            if (IsEnabled && _textBox != null)
+            if (e.OriginalSource == this && IsEnabled && _textBox != null)
                 _textBox.Focus();
         }
 

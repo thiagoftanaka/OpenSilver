@@ -381,6 +381,15 @@ namespace Windows.UI.Xaml.Controls
 
         protected override Size MeasureOverride(Size availableSize)
         {
+            Thickness padding = Padding;
+            double paddingWidth = padding.Left + padding.Right;
+            double paddingHeight = padding.Top + padding.Bottom;
+
+            if (string.IsNullOrEmpty(Text))
+            {
+                return new Size(paddingWidth, paddingHeight);
+            }
+
             string uniqueIdentifier = ((INTERNAL_HtmlDomElementReference)INTERNAL_OuterDomElement).UniqueIdentifier;
 
             if (_noWrapSize == Size.Empty)
@@ -392,10 +401,6 @@ namespace Windows.UI.Xaml.Controls
                     double.PositiveInfinity,
                     string.Empty);
             }
-
-            Thickness padding = Padding;
-            double paddingWidth = padding.Left + padding.Right;
-            double paddingHeight = padding.Top + padding.Bottom;
 
             if (TextWrapping == TextWrapping.NoWrap || (_noWrapSize.Width + paddingWidth) <= availableSize.Width)
             {
