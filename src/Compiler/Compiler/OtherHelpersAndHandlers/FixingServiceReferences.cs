@@ -351,13 +351,13 @@ namespace OpenSilver.Compiler
                 finalText = finalText.Replace($"{pair.Key}<", $"{pair.Value}<");
             }
 
-            finalText = FixBasicHttpBinding(finalText, soapVersion);
+            finalText = FixBasicHttpBinding(finalText);
 
             return finalText;
 
         }
 
-        private static string FixBasicHttpBinding(string text, string soapVersion)
+        private static string FixBasicHttpBinding(string text)
         {
             return string.Join(Environment.NewLine,
                 //\r\n for non-Unix platforms, or \n for Unix platforms
@@ -449,7 +449,6 @@ namespace OpenSilver.Compiler
                 //todo-perf: this and the "check the amount of parameters and adapt the body replacement:" part may be a bit redundant since they're both about the parameters of the method so we might be able to make the compilation slightly faster by changing this (probably unnoticeable).
                 Dictionary<string, string> parameterNamesToTheirDefinitions = new Dictionary<string, string>();
                 Dictionary<string, string> outParamDefinitions = new Dictionary<string, string>();
-                List<string> parameters = new List<string>();
                 if (!string.IsNullOrWhiteSpace(methodParametersDefinitions))
                 {
                     string[] splittedMethodParametersDefinition = SplitStringTakingAccountOfBrackets(methodParametersDefinitions, ',');
@@ -487,12 +486,10 @@ namespace OpenSilver.Compiler
                         if (isOutParam)
                         {
                             outParamDefinitions.Add(parameterName, parameterTypeAsString);
-                            parameters.Add(parameterTypeAsString);
                         }
                         else
                         {
                             parameterNamesToTheirDefinitions.Add(parameterName, string.Format(@"{0}", parameterName));
-                            parameters.Add(string.Format(@"{0}", parameterName));
                         }
                     }
                 }
@@ -539,19 +536,19 @@ namespace OpenSilver.Compiler
             {6}System.ServiceModel.INTERNAL_WebMethodsCaller.{8}CallWebMethod{0}{7}
                 <{1}{2}>({9}, ""{3}"", {4}, ""{10}"", this);
 ",
-    ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
-    ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
-    interfaceType,
-    GetMethodName(methodName, methodType),
-    parametersDictionaryDefinition,
-    originalCode,
-    ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
-    ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.NotAsyncWithoutReturnType || methodType == MethodType.AsyncEndWithoutReturnType) ? "_WithoutReturnValue" : ""),
-    ((methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")),
-    endpointCode,
-    soapVersion,
-    string.Join(" ", outParamDefinitions.Select(def => $"{def.Key} = default({def.Value});"))
-    );
+     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
+     ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
+     interfaceType,
+     GetMethodName(methodName, methodType),
+     parametersDictionaryDefinition,
+     originalCode,
+     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
+     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.NotAsyncWithoutReturnType || methodType == MethodType.AsyncEndWithoutReturnType) ? "_WithoutReturnValue" : ""),
+     ((methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")),
+     endpointCode,
+     soapVersion,
+     string.Join(" ", outParamDefinitions.Select(def => $"{def.Key} = default({def.Value});"))
+     );
                 }
                 else //case where there are no parameters
                 {
@@ -562,18 +559,18 @@ namespace OpenSilver.Compiler
             {6}System.ServiceModel.INTERNAL_WebMethodsCaller.{8}CallWebMethod{0}{7}
                 <{1}{2}>({9}, ""{3}"", {4}, ""{10}"", this);
 ",
-    ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
-    ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
-    interfaceType,
-    GetMethodName(methodName, methodType),
-    requestParameterName,
-    originalCode,
-    ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
-    ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.NotAsyncWithoutReturnType || methodType == MethodType.AsyncEndWithoutReturnType) ? "_WithoutReturnValue" : ""),
-    ((methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")),
-    endpointCode,
-    soapVersion
-    );
+     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
+     ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
+     interfaceType,
+     GetMethodName(methodName, methodType),
+     requestParameterName,
+     originalCode,
+     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
+     ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.NotAsyncWithoutReturnType || methodType == MethodType.AsyncEndWithoutReturnType) ? "_WithoutReturnValue" : ""),
+     ((methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")),
+     endpointCode,
+     soapVersion
+     );
                 }
                 block = block.Replace(methodBodyToReplace, newBody);
                 if (methodBodyToReplace != newBody)
