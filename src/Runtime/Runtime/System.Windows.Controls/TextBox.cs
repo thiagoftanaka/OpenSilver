@@ -111,6 +111,23 @@ namespace Windows.UI.Xaml.Controls
                     }}
                 }});"
             );
+
+            FontFamilyProperty.OverrideMetadata(
+                typeof(TextBox),
+                new FrameworkPropertyMetadata(FontFamily.Default, FrameworkPropertyMetadataOptions.Inherits, OnFontFamilyChanged)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
+                    {
+                        var tb = (TextBox)d;
+                        var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(tb.INTERNAL_OuterDomElement);
+                        style.fontFamily = ((FontFamily)newValue).GetFontFace(tb).CssFontName;
+                    },
+                });
+        }
+
+        private static void OnFontFamilyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            TextElementProperties.InvalidateMeasureOnFontFamilyChanged((TextBox)d, (FontFamily)e.NewValue);
         }
 
         public TextBox()

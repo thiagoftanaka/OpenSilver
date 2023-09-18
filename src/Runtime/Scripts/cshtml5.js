@@ -741,6 +741,7 @@ document.measureTextBlock = function (measureElementId, uid, whiteSpace, overflo
         element.style.fontWeight = computedStyle.fontWeight;
         element.style.fontFamily = computedStyle.fontFamily;
         element.style.fontStyle = computedStyle.fontStyle;
+        element.style.lineHeight = computedStyle.lineHeight;
         element.style.letterSpacing = computedStyle.letterSpacing;
 
         element.style.whiteSpace = whiteSpace;
@@ -1116,7 +1117,18 @@ const isTouchDevice = () => {
     return (('ontouchstart' in window) ||
         (navigator.maxTouchPoints > 0) ||
         (navigator.msMaxTouchPoints > 0));
-}
+};
+
+document.loadFont = async function (family, source, loadedCallback) {
+    try {
+        const font = new FontFace(family, source);
+        await font.load();
+        document.fonts.add(font);
+        loadedCallback(true);
+    } catch (error) {
+        loadedCallback(false);
+    }
+};
 
 document.textboxHelpers = (function () {
     function getSelectionLength(view) {
