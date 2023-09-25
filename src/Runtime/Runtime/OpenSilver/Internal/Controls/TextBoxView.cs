@@ -49,7 +49,7 @@ internal sealed class TextBoxView : TextViewBase<TextBox>
 
         if (FocusManager.GetFocusedElement() == Host)
         {
-            INTERNAL_HtmlDomManager.SetFocusNative(InputDiv);
+            InputManager.SetFocusNative(InputDiv);
         }
     }
 

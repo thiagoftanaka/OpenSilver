@@ -133,15 +133,7 @@ namespace CSHTML5.Internal
 
             if (element.IsConnectedToLiveTree)
             {
-                if (element.IsPointerOver)
-                {
-                    element.RaiseMouseLeave();
-                }
-
-                if (FocusManager.GetFocusedElement() == element)
-                {
-                    KeyboardNavigation.UpdateFocusedElement(null);
-                }
+                InputManager.Current.OnElementRemoved(element);
 
                 // Call the "OnDetached" of the element. This is particularly useful for elements to
                 // clear any references they have to DOM elements. For example, the Grid will use it

@@ -1048,27 +1048,5 @@ namespace Windows.UI.Xaml
         internal virtual UIElement KeyboardTarget => this;
 
         internal bool IsPointerOver { get; set; }
-
-        internal void RaiseMouseLeave()
-        {
-            Debug.Assert(IsPointerOver == true);
-            IsPointerOver = false;
-
-#if MIGRATION
-            var e = new MouseEventArgs
-            {
-                RoutedEvent = MouseLeaveEvent,
-                OriginalSource = this,
-            };
-#else
-            var e = new PointerRoutedEventArgs
-            {
-                RoutedEvent = PointerExitedEvent,
-                OriginalSource = this,
-            };
-#endif
-
-            RaiseEvent(e);
-        }
     }
 }

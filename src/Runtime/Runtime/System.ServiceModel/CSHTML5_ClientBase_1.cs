@@ -1368,7 +1368,7 @@ namespace System.ServiceModel
 
                             DataContractSerializerCustom dataContractSerializer =
                                 new DataContractSerializerCustom(
-                                    parameterInfos[i].ParameterType,
+                                    parameterInfos[i].ParameterType.IsByRef ? parameterInfos[i].ParameterType.GetElementType(): parameterInfos[i].ParameterType,
                                     types,
                                     isXmlSerializer);
 

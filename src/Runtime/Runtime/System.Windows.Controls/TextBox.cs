@@ -87,6 +87,18 @@ namespace Windows.UI.Xaml.Controls
                     },
                 });
 
+            FontFamilyProperty.OverrideMetadata(
+                typeof(TextBox),
+                new FrameworkPropertyMetadata(FontFamily.Default, FrameworkPropertyMetadataOptions.Inherits, OnFontFamilyChanged)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
+                    {
+                        var tb = (TextBox)d;
+                        var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(tb.INTERNAL_OuterDomElement);
+                        style.fontFamily = ((FontFamily)newValue).GetFontFace(tb).CssFontName;
+                    },
+                });
+
             JavaScriptCallback javaScriptCallback = JavaScriptCallback.Create((Action<string>)(activeElement =>
             {
                 IDisposable jsObjectReference = OpenSilver.Interop.ExecuteJavaScript(
@@ -111,18 +123,6 @@ namespace Windows.UI.Xaml.Controls
                     }}
                 }});"
             );
-
-            FontFamilyProperty.OverrideMetadata(
-                typeof(TextBox),
-                new FrameworkPropertyMetadata(FontFamily.Default, FrameworkPropertyMetadataOptions.Inherits, OnFontFamilyChanged)
-                {
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
-                    {
-                        var tb = (TextBox)d;
-                        var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(tb.INTERNAL_OuterDomElement);
-                        style.fontFamily = ((FontFamily)newValue).GetFontFace(tb).CssFontName;
-                    },
-                });
         }
 
         private static void OnFontFamilyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -136,7 +136,7 @@ namespace Windows.UI.Xaml.Controls
             IsEnabledChanged += (o, e) => UpdateVisualStates();
         }
 
-        internal sealed override object GetFocusTarget() => _textViewHost?.View?.InputDiv;
+        internal sealed override object GetFocusTarget() => _textViewHost?.View?.InputDiv ?? base.GetFocusTarget();
 
         /// <summary>
         /// Gets or sets the value that determines whether the text box allows and displays

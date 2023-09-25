@@ -78,7 +78,7 @@ namespace Windows.UI.Xaml.Controls
             IsEnabledChanged += (o, e) => UpdateVisualStates();
         }
 
-        internal sealed override object GetFocusTarget() => _textViewHost?.View?.InputDiv;
+        internal sealed override object GetFocusTarget() => _textViewHost?.View?.InputDiv ?? base.GetFocusTarget();
 
         /// <summary>
         /// Identifies the <see cref="PasswordChar"/> dependency property.

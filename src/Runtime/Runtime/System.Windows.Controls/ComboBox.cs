@@ -415,6 +415,7 @@ namespace Windows.UI.Xaml.Controls
 
             e.Handled = true;
 
+            Focus();
             IsDropDownOpen = true;
         }
 

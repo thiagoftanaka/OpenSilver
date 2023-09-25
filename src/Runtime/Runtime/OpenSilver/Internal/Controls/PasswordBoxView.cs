@@ -45,7 +45,7 @@ internal sealed class PasswordBoxView : TextViewBase<PasswordBox>
 
         if (FocusManager.GetFocusedElement() == Host)
         {
-            INTERNAL_HtmlDomManager.SetFocusNative(InputDiv);
+            InputManager.SetFocusNative(InputDiv);
         }
     }
 
