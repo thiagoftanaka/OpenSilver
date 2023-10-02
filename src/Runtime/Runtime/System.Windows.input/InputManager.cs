@@ -192,14 +192,14 @@ internal sealed class InputManager
         return (ModifierKeys)OpenSilver.Interop.ExecuteJavaScriptInt32("document.inputManager.getModifiers();", false);
     }
 
-    internal bool CaptureMouse(UIElement uie, bool allowTextSelection = false)
+    internal bool CaptureMouse(UIElement uie)
     {
         if (Pointer.INTERNAL_captured is null && _mouseLeftDown)
         {
             Pointer.INTERNAL_captured = uie;
 
             string sDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(uie.INTERNAL_OuterDomElement);
-            OpenSilver.Interop.ExecuteJavaScriptVoid($"document.inputManager.captureMouse({sDiv}, {allowTextSelection.ToString().ToLower()});");
+            OpenSilver.Interop.ExecuteJavaScriptVoid($"document.inputManager.captureMouse({sDiv});");
 
             return true;
         }

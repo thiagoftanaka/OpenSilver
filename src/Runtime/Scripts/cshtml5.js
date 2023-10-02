@@ -456,7 +456,6 @@ document.createInputManager = function (callback) {
 
     let _modifiers = MODIFIERKEYS.NONE;
     let _mouseCapture = null;
-    let _allowTextSelectionWhenMouseCaptured = false;
     let _suppressContextMenu = false;
     let _lastTouchEndTimeStamp = 0;
 
@@ -692,7 +691,7 @@ document.createInputManager = function (callback) {
         getModifiers: function () {
             return _modifiers;
         },
-        captureMouse: function (element, allowTextSelection) {
+        captureMouse: function (element) {
             _mouseCapture = element;
             document.body.classList.add('opensilver-mouse-captured');
         },
