@@ -424,7 +424,7 @@ internal sealed class InputManager
         }
         else
         {
-            DependencyObject rootVisual = Application.Current?.RootVisual;
+            DependencyObject rootVisual = Window.Current?.Content;
             if (rootVisual is not null)
             {
                 KeyboardNavigation.Current.Navigate(

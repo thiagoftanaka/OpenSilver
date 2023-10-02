@@ -38,6 +38,13 @@ body {
     -webkit-user-select: text; /* 'none' prevents copy paste. 'text' allows it. */
 }
 
+.opensilver-mouse-captured {
+    -moz-user-select: none; /* Firefox */
+    -webkit-user-select: none; /* Chrome, Safari, and Opera */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none;
+}
+
 .uielement-collapsed {
     display: none !important;
 }

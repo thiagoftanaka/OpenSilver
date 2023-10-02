@@ -526,10 +526,6 @@ document.createInputManager = function (callback) {
             }
         });
 
-        document.addEventListener('selectstart', function (e) {
-            if (_mouseCapture !== null && !_allowTextSelectionWhenMouseCaptured) e.preventDefault();
-        });
-
         document.addEventListener('contextmenu', function (e) {
             if (_suppressContextMenu ||
                 (_mouseCapture !== null && this !== _mouseCapture)) {
@@ -698,11 +694,11 @@ document.createInputManager = function (callback) {
         },
         captureMouse: function (element, allowTextSelection) {
             _mouseCapture = element;
-            _allowTextSelectionWhenMouseCaptured = allowTextSelection;
+            document.body.classList.add('opensilver-mouse-captured');
         },
         releaseMouseCapture: function () {
             _mouseCapture = null;
-            _allowTextSelectionWhenMouseCaptured = false;
+            document.body.classList.remove('opensilver-mouse-captured');
         },
         suppressContextMenu: function (value) {
             _suppressContextMenu = value;
