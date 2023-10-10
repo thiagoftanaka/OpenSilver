@@ -11,9 +11,8 @@
 *  
 \*====================================================================================*/
 
-using System.Windows.Controls;
+using System;
 using System.Windows.Markup;
-using System.Windows.Media;
 using CSHTML5.Internal;
 
 #if MIGRATION

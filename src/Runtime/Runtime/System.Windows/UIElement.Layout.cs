@@ -35,7 +35,6 @@ namespace Windows.UI.Xaml
 {
     public partial class UIElement
     {
-        private Size _size;
         private Size _desiredSize;
 
         /// <summary>
@@ -44,11 +43,7 @@ namespace Windows.UI.Xaml
         /// <returns>
         /// The rendered size for this object. There is no default value.
         /// </returns>
-        public Size RenderSize
-        {
-            get => IsVisible ? _size : new Size();
-            internal set => _size = value;
-        }
+        public Size RenderSize { get; internal set; }
 
         /// <summary>
         /// Gets the size that this <see cref="UIElement"/> computed during the measure
