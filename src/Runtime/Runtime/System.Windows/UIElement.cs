@@ -545,39 +545,8 @@ namespace Windows.UI.Xaml
 
         private static void RenderTransform_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            var uiElement = (UIElement)d;
-            Transform newValue = (Transform)e.NewValue;
-            if (e.OldValue != null)
-            {
-                ((Transform)e.OldValue).INTERNAL_UnapplyTransform();
-                ((Transform)e.OldValue).INTERNAL_parent = null;
-            }
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(uiElement))
-            {
-                if (newValue != null)
-                {
-                    newValue.INTERNAL_parent = uiElement;
-                    newValue.INTERNAL_ApplyTransform();
-
-                    // Ensure that the default RenderTransformOrigin is (0,0) like in normal XAML, instead of (0.5,0.5) like in CSS:
-                    if (!uiElement.INTERNAL_RenderTransformOriginHasBeenApplied)
-                        ApplyRenderTransformOrigin(uiElement, new Point(0d, 0d));
-                }
-                else
-                {
-                    var domStyle = INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(uiElement);
-
-                    try
-                    {
-                        domStyle.transform = "";
-                    }
-                    catch
-                    {
-                    }
-                }
-            }
+            Transform.ProcessChanged(d as UIElement, e.OldValue as Transform, e.NewValue as Transform);
         }
-
 
         public Point RenderTransformOrigin
         {
@@ -604,23 +573,8 @@ namespace Windows.UI.Xaml
             var uiElement = (UIElement)d;
             if (INTERNAL_VisualTreeManager.IsElementInVisualTree(uiElement))
             {
-                ApplyRenderTransformOrigin(uiElement, (Point)e.NewValue);
+                Transform.ApplyRenderTransformOrigin(uiElement, (Point)e.NewValue);
             }
-        }
-
-        private static void ApplyRenderTransformOrigin(UIElement uiElement, Point newValue)
-        {
-            var domStyle = INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(uiElement);
-            string transformOriginValue = $"{(newValue.X * 100).ToString(CultureInfo.InvariantCulture)}% {(newValue.Y * 100).ToString(CultureInfo.InvariantCulture)}%";
-
-            try
-            {
-                domStyle.transformOrigin = transformOriginValue;
-            }
-            catch
-            {
-            }
-            uiElement.INTERNAL_RenderTransformOriginHasBeenApplied = true;
         }
 
 #endregion

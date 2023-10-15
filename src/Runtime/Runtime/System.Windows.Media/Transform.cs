@@ -11,7 +11,9 @@
 *  
 \*====================================================================================*/
 
+using CSHTML5.Internal;
 using System;
+using System.Globalization;
 
 #if !MIGRATION
 using Windows.Foundation;
@@ -112,6 +114,61 @@ namespace Windows.UI.Xaml.Media
         internal void RaiseTransformChanged()
         {
             Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        internal static void ProcessChanged(UIElement uiElement, Transform oldValue, Transform newValue)
+        {
+            if (oldValue != null)
+            {
+                oldValue.INTERNAL_UnapplyTransform();
+                oldValue.INTERNAL_parent = null;
+            }
+            if (uiElement != null && INTERNAL_VisualTreeManager.IsElementInVisualTree(uiElement))
+            {
+                if (newValue != null)
+                {
+                    newValue.INTERNAL_parent = uiElement;
+                    if (newValue is TransformGroup transformGroup)
+                    {
+                        foreach (var child in transformGroup.Children)
+                        {
+                            child.INTERNAL_parent = uiElement;
+                        }
+                    }
+                    newValue.INTERNAL_ApplyTransform();
+
+                    // Ensure that the default RenderTransformOrigin is (0,0) like in normal XAML, instead of (0.5,0.5) like in CSS:
+                    if (!uiElement.INTERNAL_RenderTransformOriginHasBeenApplied)
+                        ApplyRenderTransformOrigin(uiElement, new Point(0d, 0d));
+                }
+                else
+                {
+                    var domStyle = INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(uiElement);
+
+                    try
+                    {
+                        domStyle.transform = "";
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+        }
+
+        internal static void ApplyRenderTransformOrigin(UIElement uiElement, Point newValue)
+        {
+            var domStyle = INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(uiElement);
+            string transformOriginValue = $"{(newValue.X * 100).ToString(CultureInfo.InvariantCulture)}% {(newValue.Y * 100).ToString(CultureInfo.InvariantCulture)}%";
+
+            try
+            {
+                domStyle.transformOrigin = transformOriginValue;
+            }
+            catch
+            {
+            }
+            uiElement.INTERNAL_RenderTransformOriginHasBeenApplied = true;
         }
     }
 }

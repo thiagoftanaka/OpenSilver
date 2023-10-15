@@ -20,6 +20,8 @@ using System.ComponentModel;
 using System.Threading;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
+using System.Globalization;
+using System.Windows;
 
 #if MIGRATION
 using System.Windows.Controls;
@@ -59,6 +61,7 @@ namespace Windows.UI.Xaml.Media
         {
             Opacity = original.Opacity;
             RelativeTransform = original.RelativeTransform;
+            _propertiesWhereUsed = (original as IHasAccessToPropertiesWhereItIsUsed2).PropertiesWhereUsed;
             Transform = original.Transform;
         }
 
@@ -250,13 +253,34 @@ namespace Windows.UI.Xaml.Media
         /// <summary>
         /// Identifies the <see cref="Transform"/> dependency property.
         /// </summary>
-        [OpenSilver.NotImplemented]
         public static readonly DependencyProperty TransformProperty =
             DependencyProperty.Register(
                 nameof(Transform),
                 typeof(Transform),
                 typeof(Brush),
-                null);
+                new PropertyMetadata(null, Transform_Changed)
+                {
+                    CallPropertyChangedWhenLoadedIntoVisualTree = WhenToCallPropertyChangedEnum.IfPropertyIsSet
+                });
+
+        private static void Transform_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var brush = (Brush)d;
+            var propertiesWhereUsed = ((IHasAccessToPropertiesWhereItIsUsed2)brush)?.PropertiesWhereUsed;
+            if (propertiesWhereUsed != null)
+            {
+                foreach (var item in propertiesWhereUsed.ToArray())
+                {
+                    if (!item.Key.TryGetDependencyObject(out DependencyObject dependencyObject) ||
+                        dependencyObject is not UIElement uiElement)
+                    {
+                        continue;
+                    }
+
+                    Transform.ProcessChanged(uiElement, e.OldValue as Transform, e.NewValue as Transform);
+                }
+            }
+        }
 
         /// <summary>
         /// Gets or sets the transformation that is applied to the brush.
@@ -264,7 +288,6 @@ namespace Windows.UI.Xaml.Media
         /// <returns>
         /// The transformation to apply to the brush.
         /// </returns>
-        [OpenSilver.NotImplemented]
         public Transform Transform
         {
             get { return (Transform)GetValue(TransformProperty); }

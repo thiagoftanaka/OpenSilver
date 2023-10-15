@@ -12,6 +12,7 @@
 \*====================================================================================*/
 
 using System;
+using CSHTML5.Internal;
 
 #if MIGRATION
 using System.Windows.Controls.Primitives;
@@ -40,6 +41,7 @@ namespace Windows.UI.Xaml.Controls
     {
         private const string ProgressBarIndicatorName = "ProgressBarIndicator";
         private const string ProgressBarTrackName = "ProgressBarTrack";
+        private const string IndeterminateRootName = "IndeterminateRoot";
         private const string StateIndeterminate = "Indeterminate";
         private const string StateDeterminate = "Determinate";
 
@@ -104,6 +106,13 @@ namespace Windows.UI.Xaml.Controls
 
             _indicator = GetTemplateChild(ProgressBarIndicatorName) as FrameworkElement;
             _track = GetTemplateChild(ProgressBarTrackName) as FrameworkElement;
+            var indeterminateRoot = GetTemplateChild(IndeterminateRootName) as FrameworkElement;
+            if (indeterminateRoot != null)
+            {
+                var indeterminateRootStyle = INTERNAL_HtmlDomManager
+                    .GetDomElementStyleForModification(indeterminateRoot.INTERNAL_OuterDomElement);
+                indeterminateRootStyle.overflow = "hidden";
+            }
 
             if (_indicator != null && _track != null)
             {
