@@ -1,5 +1,6 @@
 ﻿using MahApps.Metro.Controls;
 using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Core.DevToolsProtocolExtension;
 using Microsoft.Web.WebView2.Wpf;
 using Microsoft.Win32;
 using OpenSilver;
@@ -363,6 +364,9 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
 
             MainWebBrowser.CoreWebView2InitializationCompleted += (_s, _e) => { Debug.WriteLine("Initialization completed"); };
             await MainWebBrowser.EnsureCoreWebView2Async(environment);
+
+            var devToolsHelper = MainWebBrowser.CoreWebView2.GetDevToolsProtocolHelper();
+            await devToolsHelper.Emulation.SetTouchEmulationEnabledAsync(true);
         }
 
         private void MainWindow_Closed(object sender, EventArgs e)
@@ -516,9 +520,10 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
                 bool isJs = uriString.EndsWith(".js", StringComparison.InvariantCultureIgnoreCase);
                 if ((isCss || isJs) && Uri.TryCreate(uriString, UriKind.RelativeOrAbsolute, out Uri uri))
                 {
-                    if (uri.Scheme == Uri.UriSchemeFile && File.Exists(uri.AbsolutePath))
+                    string filePath = Uri.UnescapeDataString(uri.AbsolutePath);
+                    if (uri.Scheme == Uri.UriSchemeFile && File.Exists(filePath))
                     {
-                        string content = File.ReadAllText(uri.AbsolutePath);
+                        string content = File.ReadAllText(filePath);
                         
                         string contentType = "Encoding:utf8\n";
                         if (isCss)
@@ -547,12 +552,12 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
             }
         }
 
-        async Task OnLoadedAsync()
+        private async Task OnLoadedAsync()
         {
             if (!_htmlHasBeenLoaded)
             {
                 _htmlHasBeenLoaded = true;
-                UpdateWebBrowserAndWebPageSizeBasedOnCurrentState();
+                await UpdateWebBrowserAndWebPageSizeBasedOnCurrentState();
 
                 // Start the app:
                 ShowLoadingMessage();
@@ -564,7 +569,7 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
 
                 bool success = await _openSilverRuntimeDispatcher.InvokeAsync(() => StartApplication());
 
-                await Dispatcher.BeginInvoke((Action)(() =>
+                await Dispatcher.BeginInvoke(async () =>
                 {
                     if (success)
                     {
@@ -575,8 +580,8 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
 
                     SyncXamlInspectorVisibility();
 
-                    UpdateWebBrowserAndWebPageSizeBasedOnCurrentState();
-                }), DispatcherPriority.ApplicationIdle); // We do so in order to give the time to the rendering engine to display the "Loading..." message.
+                    await UpdateWebBrowserAndWebPageSizeBasedOnCurrentState();
+                }, DispatcherPriority.ApplicationIdle); // We do so in order to give the time to the rendering engine to display the "Loading..." message.
             }
         }
 
@@ -1193,13 +1198,13 @@ Click OK to continue.";
             inputBox.Show();
         }
 
-        private void DisplaySize_Click(object sender, RoutedEventArgs e)
+        private async void DisplaySize_Click(object sender, RoutedEventArgs e)
         {
             SaveDisplaySize();
-            UpdateWebBrowserAndWebPageSizeBasedOnCurrentState();
+            await UpdateWebBrowserAndWebPageSizeBasedOnCurrentState();
         }
 
-        void UpdateWebBrowserAndWebPageSizeBasedOnCurrentState()
+        private async Task UpdateWebBrowserAndWebPageSizeBasedOnCurrentState()
         {
             if (DisplaySize_Phone.IsChecked == true)
             {
@@ -1226,6 +1231,8 @@ Click OK to continue.";
                     SetWebBrowserSize(320, 480);
                     ContainerForMainWebBrowserAndHighlightElement.Margin = new Thickness(10, 60, 10, 60);
                 }
+
+                await SetTouchEmulation(true);
             }
             else if (DisplaySize_Tablet.IsChecked == true)
             {
@@ -1252,6 +1259,8 @@ Click OK to continue.";
                     SetWebBrowserSize(768, 1024);
                     ContainerForMainWebBrowserAndHighlightElement.Margin = new Thickness(10, 60, 10, 60);
                 }
+
+                await SetTouchEmulation(true);
             }
             else if (DisplaySize_Desktop.IsChecked == true)
             {
@@ -1270,16 +1279,24 @@ Click OK to continue.";
 
                 SetWebBrowserSize(double.NaN, double.NaN);
                 ContainerForMainWebBrowserAndHighlightElement.Margin = new Thickness(0, 0, 0, 0);
-                Dispatcher.BeginInvoke((Action)(() =>
+                await Dispatcher.BeginInvoke(() =>
                 {
-                    this.Width = 1024;
-                    this.Height = 768;
-                }));
+                    Width = 1024;
+                    Height = 768;
+                });
+
+                await SetTouchEmulation(false);
             }
             else
             {
                 MessageBox.Show("Error: no display size selected. Please report this error to the authors.");
             }
+        }
+
+        private async Task SetTouchEmulation(bool enable)
+        {
+            var devToolsHelper = MainWebBrowser.CoreWebView2.GetDevToolsProtocolHelper();
+            await devToolsHelper.Emulation.SetEmitTouchEventsForMouseAsync(enable);
         }
 
         private void ButtonViewXamlTree_Click(object sender, RoutedEventArgs e)
