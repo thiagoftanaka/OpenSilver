@@ -26,12 +26,10 @@ namespace Windows.UI.Xaml.Controls
             set;
         }
 
-        [OpenSilver.NotImplemented]
-        public string SafeFileName
-        {
-            get;
-            private set;
-        }
+        /// <summary>
+        /// Gets the file name for the selected file associated with the SaveFileDialog.
+        /// </summary>
+        public string SafeFileName => Path.GetFileName(GetFilename());
 
         // Summary:
         //     Gets or sets the default file name extension applied to files that are saved
@@ -40,7 +38,6 @@ namespace Windows.UI.Xaml.Controls
         // Returns:
         //     The default file name extension applied to files that are saved with the System.Windows.Controls.SaveFileDialog,
         //     which can optionally include the dot character (.).
-        [OpenSilver.NotImplemented]
         public string DefaultExt { get; set; }
 
         //
@@ -55,7 +52,6 @@ namespace Windows.UI.Xaml.Controls
         //     Occurs if the specified file name is null or contains invalid characters such
         //     as quotes ("), less than (<), greater than (>), pipe (|), backspace (\b), null
         //     (\0), tab (\t), colon (:), asterisk(*), question mark (?), and slashes (\\, /).
-        [OpenSilver.NotImplemented]
         public string DefaultFileName { get; set; }
 
         //
@@ -79,7 +75,16 @@ namespace Windows.UI.Xaml.Controls
 
         private void WriteCallback(byte[] bytes)
         {
-            SaveFile(bytes, Path.ChangeExtension(DefaultFileName ?? "data", DefaultExt ?? "dat"));
+            SaveFile(bytes, GetFilename());
+        }
+
+        private string GetFilename()
+        {
+            if (DefaultFileName != null && Path.HasExtension(DefaultFileName))
+            {
+                return DefaultFileName;
+            }
+            return Path.ChangeExtension(DefaultFileName ?? "data", DefaultExt ?? "dat");
         }
 
         //
