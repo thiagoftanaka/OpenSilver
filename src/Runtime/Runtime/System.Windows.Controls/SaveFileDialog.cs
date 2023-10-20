@@ -1,5 +1,7 @@
 using System;
+using System.Buffers.Text;
 using System.IO;
+using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
 using OpenSilver.IO;
@@ -112,19 +114,21 @@ namespace Windows.UI.Xaml.Controls
 
         public async void SaveFile(byte[] bytes, string filename)
         {
-            await FileSaver.SaveBase64ToFile(Convert.ToBase64String(bytes), filename);
+            await FileSaver.SaveToFile(bytes, filename);
         }
     }
 
     public static class FileSaver
     {
+        private const int BufferSize = 262144;
+
         static bool _jsLibraryWasLoaded;
 
-        public static async Task SaveBase64ToFile(string base64, string filename)
+        public static async Task SaveToFile(byte[] bytes, string filename)
         {
-            if (base64 == null)
+            if (bytes == null)
             {
-                throw new ArgumentNullException(nameof(base64));
+                throw new ArgumentNullException(nameof(bytes));
             }
             if (filename == null)
             {
@@ -133,19 +137,33 @@ namespace Windows.UI.Xaml.Controls
 
             if (await Initialize())
             {
-                OpenSilver.Interop.ExecuteJavaScript(@"const binaryString = atob($0);
-                    var uInt8 = new Uint8Array(binaryString.length);
-                    for (var i = 0; i < binaryString.length; i++) uInt8[i] = binaryString.charCodeAt(i);
+                var streamSaverWriter = OpenSilver.Interop.ExecuteJavaScript(@"
+                    streamSaver.createWriteStream($0, {
+                        size: $1
+                    }).getWriter()", filename, bytes.Length);
 
-                    const fileStream = streamSaver.createWriteStream($1, {
-                        size: uInt8.byteLength, // (optional filesize) Will show progress
-                        writableStrategy: undefined, // (optional)
-                        readableStrategy: undefined  // (optional)
-                    });
+                const int bufferSize = BufferSize;
+                int i = 0;
+                int bytesToWrite = bufferSize;
+                do
+                {
+                    if (i + bytesToWrite > bytes.Length)
+                    {
+                        bytesToWrite = bytes.Length - i;
+                    }
 
-                    const writer = fileStream.getWriter();
-                    writer.write(uInt8);
-                    writer.close();", base64, filename);
+                    string base64 = Convert.ToBase64String(bytes.Skip(i).Take(bytesToWrite).ToArray());
+                    OpenSilver.Interop.ExecuteJavaScript(@"const binaryString = atob($0);
+                        var uInt8 = new Uint8Array(binaryString.length);
+                        for (var i = 0; i < binaryString.length; i++) uInt8[i] = binaryString.charCodeAt(i);
+                        $1.write(uInt8);", base64, streamSaverWriter);
+
+                    await Task.Delay(1);
+
+                    i += bytesToWrite;
+                } while (i < bytes.Length - 1);
+
+                OpenSilver.Interop.ExecuteJavaScript(@"$0.close()", streamSaverWriter);
             }
         }
 
