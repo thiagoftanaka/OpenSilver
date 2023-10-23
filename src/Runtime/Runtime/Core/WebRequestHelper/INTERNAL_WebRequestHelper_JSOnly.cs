@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,28 +11,15 @@
 *  
 \*====================================================================================*/
 
-
-using CSHTML5;
-using CSHTML5.Internal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.ServiceModel;
-using System.ServiceModel.Channels;
-
-#if MIGRATION
 using System.Windows;
-using System.Xml;
-#else
-using Windows.UI.Xaml;
-#endif
-
-#if BRIDGE
-using Bridge;
-#endif
+using CSHTML5;
+using CSHTML5.Internal;
 
 namespace System
 {
@@ -349,16 +335,12 @@ namespace System
 
         internal static void SetResponseType(object xmlHttpRequest, string responseType)
         {
-#if BRIDGE || CSHTML5BLAZOR
             OpenSilver.Interop.ExecuteJavaScript("$0.responseType = $1", xmlHttpRequest, responseType);
-#endif
         }
 
         internal static string GetResponseType(object xmlHttpRequest)
         {
-#if BRIDGE || CSHTML5BLAZOR
             return Convert.ToString(OpenSilver.Interop.ExecuteJavaScript("$0.responseType", xmlHttpRequest));
-#endif
         }
 
         private static void CreateRequest(object xmlHttpRequest, string address, string method, bool isAsync)
@@ -488,27 +470,12 @@ namespace System
             return OpenSilver.Interop.ExecuteJavaScriptString($"{sRequest}.responseText");
         }
 
-#if !BRIDGE
-        [JSIL.Meta.JSReplacement(@"const bufView = new Uint8Array($xmlHttpRequest.response);
-                var binaryString = '';
-                for (let i = 0; i < bufView.byteLength; i++) binaryString += String.fromCharCode(bufView[i]);
-                btoa(binaryString)")]
-#else
-        [Template(@"const bufView = new Uint8Array({$xmlHttpRequest}.response);
-                var binaryString = '';
-                for (let i = 0; i < bufView.byteLength; i++) binaryString += String.fromCharCode(bufView[i]);
-                btoa(binaryString)")]
-#endif
         private static string GetBinaryResult(object xmlHttpRequest)
         {
-#if BRIDGE || CSHTML5BLAZOR
             return Convert.ToString(OpenSilver.Interop.ExecuteJavaScript(@"const bufView = new Uint8Array($0.response);
                 var binaryString = '';
                 for (let i = 0; i < bufView.byteLength; i++) binaryString += String.fromCharCode(bufView[i]);
                 btoa(binaryString);", xmlHttpRequest));
-#else
-            throw new InvalidOperationException(); //We should never arrive here.
-#endif
         }
 
         private static bool GetHasError(object xmlHttpRequest)

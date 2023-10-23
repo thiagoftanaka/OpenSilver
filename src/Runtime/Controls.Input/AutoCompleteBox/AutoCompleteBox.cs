@@ -3,7 +3,6 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,31 +12,14 @@ using System.Globalization;
 using System.Linq;
 using System.Windows.Markup;
 using System.Windows.Threading;
-using Properties = OpenSilver.Controls.Input.Properties;
-
-#if MIGRATION
 using System.Windows.Automation.Peers;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
-#else
-using Windows.Foundation;
-using Windows.System;
-using Windows.UI.Xaml.Automation.Peers;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Interop;
-using Windows.UI.Xaml.Media;
-#endif
+using Properties = OpenSilver.Controls.Input.Properties;
 
-#if MIGRATION
 namespace System.Windows.Controls
-#else
-namespace Windows.UI.Xaml.Controls
-#endif
 {
     /// <summary>
     /// Represents a control that provides a text box for user input and a
@@ -1283,11 +1265,7 @@ namespace Windows.UI.Xaml.Controls
         /// <see cref="T:System.Windows.Controls.AutoCompleteBox" /> control
         /// when a new template is applied.
         /// </summary>
-#if MIGRATION
         public override void OnApplyTemplate()
-#else
-        protected override void OnApplyTemplate()
-#endif
         {
             if (TextBox != null)
             {
@@ -1662,11 +1640,7 @@ namespace Windows.UI.Xaml.Controls
         /// </summary>
         /// <param name="sender">The source object.</param>
         /// <param name="e">The event arguments.</param>
-#if MIGRATION
         private void PopulateDropDown(object sender, EventArgs e)
-#else
-        private void PopulateDropDown(object sender, object e)
-#endif
         {
             if (_delayTimer != null)
             {
@@ -2506,11 +2480,7 @@ namespace Windows.UI.Xaml.Controls
         /// </summary>
         /// <param name="e">A <see cref="T:System.Windows.Input.KeyEventArgs" />
         /// that contains the event data.</param>
-#if MIGRATION
         protected override void OnKeyDown(KeyEventArgs e)
-#else
-        protected override void OnKeyDown(KeyRoutedEventArgs e)
-#endif
         {
             if (e == null)
             {
@@ -2539,11 +2509,7 @@ namespace Windows.UI.Xaml.Controls
                     }
                 }
 
-#if MIGRATION
                 if (e.Key == Key.Escape)
-#else
-                if (e.Key == VirtualKey.Escape)
-#endif
                 {
                     OnAdapterSelectionCanceled(this, new RoutedEventArgs());
                     e.Handled = true;
@@ -2552,11 +2518,7 @@ namespace Windows.UI.Xaml.Controls
             else
             {
                 // The drop down is not open, the Down key will toggle it open.
-#if MIGRATION
                 if (e.Key == Key.Down)
-#else
-                if (e.Key == VirtualKey.Down)
-#endif
                 {
                     IsDropDownOpen = true;
                     e.Handled = true;
@@ -2566,31 +2528,19 @@ namespace Windows.UI.Xaml.Controls
             // Standard drop down navigation
             switch (e.Key)
             {
-#if MIGRATION
                 case Key.F4:
-#else
-                case VirtualKey.F4:
-#endif
                     IsDropDownOpen = !IsDropDownOpen;
                     e.Handled = true;
                     break;
 
-#if MIGRATION
                 case Key.Enter:
-#else
-                case VirtualKey.Enter:
-#endif
                     OnAdapterSelectionComplete(this, new RoutedEventArgs());
                     e.Handled = true;
                     break;
 
                 // Until tabbing sets focus to next element outside of ACB (instead of to the first
                 // item inside the dropdown) and closes the dropdown, completion is manually called below.
-#if MIGRATION
                 case Key.Tab:
-#else
-                case VirtualKey.Tab:
-#endif
                     OnAdapterSelectionComplete(this, new RoutedEventArgs());
                     e.Handled = false;
                     break;

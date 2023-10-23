@@ -1,10 +1,5 @@
 ﻿using System;
-
-#if MIGRATION
 using System.Windows;
-#else
-using Windows.UI.Xaml;
-#endif
 
 namespace OpenSilver.Internal
 {
@@ -73,7 +68,7 @@ namespace OpenSilver.Internal
             }
         }
 
-#endregion Public Methods
+        #endregion Public Methods
 
         //------------------------------------------------------
         //
@@ -81,7 +76,7 @@ namespace OpenSilver.Internal
         //
         //------------------------------------------------------
 
-#region Protected Methods
+        #region Protected Methods
 
         /// <summary>
         ///     This method is called for every node touched during a walking of 
@@ -89,6 +84,7 @@ namespace OpenSilver.Internal
         ///     returns false - thereby preventing its subtree from being visited.
         /// </summary>
         /// <param name="d">the node to visit</param>
+        /// <param name="visitedViaVisualTree"></param>
         protected override void _VisitNode(DependencyObject d, bool visitedViaVisualTree)
         {
             try

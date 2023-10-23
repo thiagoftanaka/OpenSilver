@@ -18,17 +18,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using CSHTML5.Internal;
 using System.Windows.Markup;
-using CSHTML5.Native.Html.Input;
-#if MIGRATION
 using System.Windows;
 using System.Windows.Input;
-#else
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Input;
-using Windows.Foundation;
-#endif
+using CSHTML5.Internal;
+using CSHTML5.Native.Html.Input;
 
 namespace CSHTML5.Native.Html.Controls
 {
@@ -74,33 +68,18 @@ namespace CSHTML5.Native.Html.Controls
         {
             Children = new List<HtmlCanvasElement>();
 
-#if MIGRATION
             this.MouseMove += HtmlCanvas_MouseMove;
             this.MouseLeftButtonDown += HtmlCanvas_MouseLeftButtonDown;
             this.MouseLeftButtonUp += HtmlCanvas_MouseLeftButtonUp;
             this.MouseRightButtonUp += HtmlCanvas_MouseRightButtonUp;
-#else
-            this.PointerMoved += HtmlCanvas_PointerMoved;
-            this.PointerPressed += HtmlCanvas_PointerPressed;
-            this.PointerReleased += HtmlCanvas_PointerReleased;
-            this.RightTapped += HtmlCanvas_RightTapped;
-#endif
         }
 
         internal sealed override bool EnablePointerEventsCore => true;
 
-#if MIGRATION
         void HtmlCanvas_MouseMove(object sender, MouseEventArgs e)
-#else
-        void HtmlCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
-#endif
         {
             // Get the cursor position relative to this HtmlCanvas
-#if MIGRATION
             Point pos = e.GetPosition(this);
-#else
-            Point pos = e.GetCurrentPoint(this).Position;
-#endif
 
             // Get a stack of the HtmlCanvasElement directly under the cursor and all his parents
             // (Parent1, Parent2, ..., ElementDirectlyUnderTheCursor)
@@ -139,18 +118,10 @@ namespace CSHTML5.Native.Html.Controls
             _LastPointerMove = elements;
         }
 
-#if MIGRATION
         void HtmlCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-#else
-        void HtmlCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
-#endif
         {
             // Get the cursor position relative to this HtmlCanvas
-#if MIGRATION
             Point pos = e.GetPosition(this);
-#else
-            Point pos = e.GetCurrentPoint(this).Position;
-#endif
 
             // Get a stack of the HtmlCanvasElement directly under the cursor and all his parents
             // (Parent1, Parent2, ..., ElementDirectlyUnderTheCursor)
@@ -167,18 +138,10 @@ namespace CSHTML5.Native.Html.Controls
             }
         }
         
-#if MIGRATION
         void HtmlCanvas_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
-#else
-        void HtmlCanvas_RightTapped(object sender, RightTappedRoutedEventArgs e)
-#endif
         {
             // Get the cursor position relative to this HtmlCanvas
-#if MIGRATION
             Point pos = e.GetPosition(this);
-#else
-            Point pos = e.GetCurrentPoint(this).Position;
-#endif
 
             // Get a stack of the HtmlCanvasElement directly under the cursor and all his parents
             // (Parent1, Parent2, ..., ElementDirectlyUnderTheCursor)
@@ -195,18 +158,10 @@ namespace CSHTML5.Native.Html.Controls
             }
         }
 
-#if MIGRATION
         void HtmlCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-#else
-        void HtmlCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
-#endif
         {
             // Get the cursor position relative to this HtmlCanvas
-#if MIGRATION
             Point pos = e.GetPosition(this);
-#else
-            Point pos = e.GetCurrentPoint(this).Position;
-#endif
 
             // Get a stack of the HtmlCanvasElement directly under the cursor and all his parents
             // (Parent1, Parent2, ..., ElementDirectlyUnderTheCursor)
@@ -226,6 +181,8 @@ namespace CSHTML5.Native.Html.Controls
         /// Return the path to the topmost element that is under the pointer
         /// </summary>
         /// <param name="canvas">The container of the elements</param>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
         /// <returns>The path to the topmost element that is under the pointer</returns>
         static internal Stack<HtmlCanvasElement> GetPointedElements(HtmlCanvas canvas, double x, double y)
         {
@@ -361,9 +318,9 @@ namespace CSHTML5.Native.Html.Controls
 
             // Use the div2 as the js canvas object
             this._jsCanvas = div1;
-            this._jsContext2d = Interop.ExecuteJavaScriptAsync("$0.getContext('2d')", this._jsCanvas);
+            this._jsContext2d = OpenSilver.Interop.ExecuteJavaScriptAsync("$0.getContext('2d')", this._jsCanvas);
 
-            Interop.ExecuteJavaScriptAsync("$0.onselectstart = function() { return false; }", this._jsCanvas);
+            OpenSilver.Interop.ExecuteJavaScriptAsync("$0.onselectstart = function() { return false; }", this._jsCanvas);
 
             return div1;
         }
@@ -375,8 +332,8 @@ namespace CSHTML5.Native.Html.Controls
         {
             if (this.IsLoaded)
             {
-                Interop.ExecuteJavaScriptAsync("$0.width = $0.scrollWidth", this._jsCanvas);
-                Interop.ExecuteJavaScriptAsync("$0.height = $0.scrollHeight", this._jsCanvas);
+                OpenSilver.Interop.ExecuteJavaScriptAsync("$0.width = $0.scrollWidth", this._jsCanvas);
+                OpenSilver.Interop.ExecuteJavaScriptAsync("$0.height = $0.scrollHeight", this._jsCanvas);
                 foreach (HtmlCanvasElement elem in this.Children)
                 {
                     this._currentDrawingStyle = elem.Draw(this._currentDrawingStyle, this._jsContext2d);

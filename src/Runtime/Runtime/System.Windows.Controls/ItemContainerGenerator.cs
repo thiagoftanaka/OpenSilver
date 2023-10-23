@@ -11,33 +11,16 @@
 *  
 \*====================================================================================*/
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-
-using CSHTML5.Internals.Controls;
 using System.Diagnostics;
-
-#if MIGRATION
-using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Controls.Primitives;   // IItemContainerGenerator
 using System.Windows.Data;
 using System.Windows.Media;
-#else
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;   // IItemContainerGenerator
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Media;
-#endif
+using CSHTML5.Internals.Controls;
 
-#if MIGRATION
 namespace System.Windows.Controls
-#else
-namespace Windows.UI.Xaml.Controls
-#endif
 {
     /// <summary>
     /// An ItemContainerGenerator is responsible for generating the UI on behalf of
@@ -1016,9 +999,7 @@ namespace Windows.UI.Xaml.Controls
                     _factory = null;
                 }
 
-#if NETSTANDARD
                 GC.SuppressFinalize(this);
-#endif
             }
 
             //------------------------------------------------------
@@ -1061,14 +1042,8 @@ namespace Windows.UI.Xaml.Controls
                         _cachedState.Offset < offset + count)
                     {
                         _cachedState.Block = newBlock;
-#if OPENSILVER
                         _cachedState.Offset += newOffset - offset;
                         _cachedState.Count += deltaCount;
-#else
-                        //Note: below, we decomposed the += because Bridge creates a clone when trying to use += or similar on a struct, even if it is not a parameter of the method, which means the value is not actually updated.
-                        _cachedState.Offset = _cachedState.Offset + newOffset - offset;
-                        _cachedState.Count = _cachedState.Count + deltaCount;
-#endif
                     }
                 }
                 // Case B.  An item was inserted or deleted
@@ -1078,26 +1053,14 @@ namespace Windows.UI.Xaml.Controls
                     if (offset < _cachedState.Count ||
                         (offset == _cachedState.Count && newBlock != null && newBlock != _cachedState.Block))
                     {
-#if OPENSILVER
                         _cachedState.Count += count;
                         _cachedState.ItemIndex += count;
-#else
-                        //Note: below, we decomposed the += because Bridge creates a clone when trying to use += or similar on a struct, even if it is not a parameter of the method, which means the value is not actually updated.
-                        _cachedState.Count = _cachedState.Count + count;
-                        _cachedState.ItemIndex = _cachedState.ItemIndex + count;
-#endif
                     }
                     // if the item occurs within my block before my item, update my offset
                     else if (offset < _cachedState.Count + _cachedState.Offset)
                     {
-#if OPENSILVER
                         _cachedState.Offset += count;
                         _cachedState.ItemIndex += count;
-#else
-                        //Note: below, we decomposed the += because Bridge creates a clone when trying to use += or similar on a struct, even if it is not a parameter of the method, which means the value is not actually updated.
-                        _cachedState.Offset = _cachedState.Offset + count;
-                        _cachedState.ItemIndex = _cachedState.ItemIndex + count;
-#endif
                     }
                     // if the item occurs at my position, ...
                     else if (offset == _cachedState.Count + _cachedState.Offset)
@@ -1105,14 +1068,8 @@ namespace Windows.UI.Xaml.Controls
                         if (count > 0)
                         {
                             // for insert, update my offset
-#if OPENSILVER
                             _cachedState.Offset += count;
                             _cachedState.ItemIndex += count;
-#else
-                            //Note: below, we decomposed the += because Bridge creates a clone when trying to use += or similar on a struct, even if it is not a parameter of the method, which means the value is not actually updated.
-                            _cachedState.Offset = _cachedState.Offset + count;
-                            _cachedState.ItemIndex = _cachedState.ItemIndex + count;
-#endif
                         }
                         else if (_cachedState.Offset == _cachedState.Block.ItemCount)
                         {
@@ -1126,12 +1083,7 @@ namespace Windows.UI.Xaml.Controls
                 else
                 {
                     _cachedState.Block = newBlock;
-#if OPENSILVER
                     _cachedState.Offset += _cachedState.Count;
-#else
-                    //Note: below, we decomposed the += because Bridge creates a clone when trying to use += or similar on a struct, even if it is not a parameter of the method, which means the value is not actually updated.
-                    _cachedState.Offset = _cachedState.Offset + _cachedState.Count; 
-#endif
                     _cachedState.Count = 0;
                 }
             }

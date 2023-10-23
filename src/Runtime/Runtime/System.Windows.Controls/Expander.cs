@@ -3,30 +3,12 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
-using System;
 using System.Globalization;
-
-#if OPENSILVER
-#if MIGRATION
 using System.Windows.Automation.Peers;
-#else
-using Windows.UI.Xaml.Automation.Peers;
-#endif
-#endif
-
-#if MIGRATION
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-#else
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Input;
-#endif
 
-#if MIGRATION
 namespace System.Windows.Controls
-#else
-namespace Windows.UI.Xaml.Controls
-#endif
 {
     /// <summary>
     /// Represents a control that displays a header and has a collapsible
@@ -208,14 +190,12 @@ namespace Windows.UI.Xaml.Controls
             Expander ctrl = (Expander)d;
             bool isExpanded = (bool)e.NewValue;
 
-#if OPENSILVER
             // Notify any automation peers of the expansion change
             ExpanderAutomationPeer peer = FrameworkElementAutomationPeer.FromElement(ctrl) as ExpanderAutomationPeer;
             if (peer != null)
             {
                 peer.RaiseExpandCollapseAutomationEvent((bool)e.OldValue, isExpanded);
             }
-#endif
 
             if (isExpanded)
             {
@@ -259,18 +239,13 @@ namespace Windows.UI.Xaml.Controls
         /// <see cref="Expander" /> control when a new
         /// template is applied.
         /// </summary>
-#if MIGRATION
         public override void OnApplyTemplate()
-#else
-        protected override void OnApplyTemplate()
-#endif
         {
             base.OnApplyTemplate();
             ExpanderButton = GetTemplateChild(ElementExpanderButtonName) as ToggleButton;
             Interaction.OnApplyTemplateBase();
         }
 
-#if OPENSILVER
         /// <summary>
         /// Returns a
         /// <see cref="ExpanderAutomationPeer" />
@@ -285,18 +260,13 @@ namespace Windows.UI.Xaml.Controls
         {
             return new ExpanderAutomationPeer(this);
         }
-#endif
 
         /// <summary>
         /// Provides handling for the
         /// <see cref="UIElement.KeyDown" /> event.
         /// </summary>
         /// <param name="e">Key event args.</param>
-#if MIGRATION
         protected override void OnKeyDown(KeyEventArgs e)
-#else
-        protected override void OnKeyDown(KeyRoutedEventArgs e)
-#endif
         {
             base.OnKeyDown(e);
 
@@ -306,51 +276,31 @@ namespace Windows.UI.Xaml.Controls
             }
 
             // Some keys (e.g. Left/Right) need to be translated in RightToLeft mode
-#if MIGRATION
             Key invariantKey = InteractionHelper.GetLogicalKey(FlowDirection, e.Key);
-#else
-            System.VirtualKey invariantKey = InteractionHelper.GetLogicalKey(FlowDirection, e.Key);
-#endif
 
             bool isExpanded = IsExpanded;
             switch (ExpandDirection)
             {
                 case ExpandDirection.Down:
-#if MIGRATION
                     if ((isExpanded && invariantKey == Key.Up) || (!isExpanded && invariantKey == Key.Down))
-#else
-                    if ((isExpanded && invariantKey == System.VirtualKey.Up) || (!isExpanded && invariantKey == System.VirtualKey.Down))
-#endif
                     {
                         IsExpanded = !isExpanded;
                     }
                     break;
                 case ExpandDirection.Up:
-#if MIGRATION
                     if ((isExpanded && invariantKey == Key.Down) || (!isExpanded && invariantKey == Key.Up))
-#else
-                    if ((isExpanded && invariantKey == System.VirtualKey.Down) || (!isExpanded && invariantKey == System.VirtualKey.Up))
-#endif
                     {
                         IsExpanded = !isExpanded;
                     }
                     break;
                 case ExpandDirection.Left:
-#if MIGRATION
                     if ((isExpanded && invariantKey == Key.Right) || (!isExpanded && invariantKey == Key.Left))
-#else
-                    if ((isExpanded && invariantKey == System.VirtualKey.Right) || (!isExpanded && invariantKey == System.VirtualKey.Left))
-#endif
                     {
                         IsExpanded = !isExpanded;
                     }
                     break;
                 case ExpandDirection.Right:
-#if MIGRATION
                     if ((isExpanded && invariantKey == Key.Left) || (!isExpanded && invariantKey == Key.Right))
-#else
-                    if ((isExpanded && invariantKey == System.VirtualKey.Left) || (!isExpanded && invariantKey == System.VirtualKey.Right))
-#endif
                     {
                         IsExpanded = !isExpanded;
                     }

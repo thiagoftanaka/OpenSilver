@@ -20,11 +20,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Markup;
 using System.Diagnostics;
-#if MIGRATION
 using System.Windows;
-#else
-using Windows.UI.Xaml;
-#endif
 
 namespace CSHTML5.Native.Html.Controls
 {
@@ -95,8 +91,8 @@ namespace CSHTML5.Native.Html.Controls
             if (this.Visibility == Visibility.Visible)
             {
                 currentDrawingStyle = this.ApplyStyle(currentDrawingStyle, jsContext2d);
-                Interop.ExecuteJavaScriptAsync("$0.fillRect($1, $2, $3, $4)", jsContext2d, this.X + xParent, this.Y + yParent, this.Width, this.Height);
-                Interop.ExecuteJavaScriptAsync("$0.strokeRect($1, $2, $3, $4)", jsContext2d, this.X + xParent, this.Y + yParent, this.Width, this.Height);
+                OpenSilver.Interop.ExecuteJavaScriptAsync("$0.fillRect($1, $2, $3, $4)", jsContext2d, this.X + xParent, this.Y + yParent, this.Width, this.Height);
+                OpenSilver.Interop.ExecuteJavaScriptAsync("$0.strokeRect($1, $2, $3, $4)", jsContext2d, this.X + xParent, this.Y + yParent, this.Width, this.Height);
 
                 foreach (HtmlCanvasElement elem in this.Children)
                 {

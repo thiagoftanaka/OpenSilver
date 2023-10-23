@@ -11,19 +11,10 @@
 *  
 \*====================================================================================*/
 
-using CSHTML5.Internal;
-using System;
 using System.Globalization;
+using CSHTML5.Internal;
 
-#if !MIGRATION
-using Windows.Foundation;
-#endif
-
-#if MIGRATION
 namespace System.Windows.Media
-#else
-namespace Windows.UI.Xaml.Media
-#endif
 {
     /// <summary>
     /// Defines functionality that enables transformations in a two-dimensional plane.

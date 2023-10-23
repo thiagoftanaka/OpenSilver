@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,31 +11,13 @@
 *  
 \*====================================================================================*/
 
-
-using CSHTML5;
-using CSHTML5.Internal;
-using DotNetForHtml5.Core;
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-#if MIGRATION
 using System.Windows.Automation.Peers;
 using System.Windows.Media;
-#else
-using Windows.UI.Xaml.Automation.Peers;
-using Windows.UI.Xaml.Media;
-#endif
+using CSHTML5.Internal;
 
-
-#if MIGRATION
 namespace System.Windows.Controls
-#else
-namespace Windows.UI.Xaml.Controls
-#endif
 {
     /// <summary>
     /// Represents an object that contains audio, video, or both.
@@ -201,14 +182,7 @@ namespace Windows.UI.Xaml.Controls
             get { return (Uri)GetValue(SourceProperty); }
             set
             {
-#if ! BRIDGE
-                // Get the assembly name of the calling method: //IMPORTANT: the call to the "GetCallingAssembly" method must be done in the method that is executed immediately after the one where the URI is defined! Be careful when moving the following line of code.
                 string callerAssemblyName = Assembly.GetCallingAssembly().GetName().Name;
-#else
-                
-                // Get the assembly name of the calling method: //IMPORTANT: the call to the "GetCallingAssembly" method must be done in the method that is executed immediately after the one where the URI is defined! Be careful when moving the following line of code.
-                string callerAssemblyName = INTERNAL_UriHelper.GetJavaScriptCallingAssembly();
-#endif
                 this._nameOfAssemblyThatSetTheSourceUri = callerAssemblyName;
                 SetValue(SourceProperty, value);
             }

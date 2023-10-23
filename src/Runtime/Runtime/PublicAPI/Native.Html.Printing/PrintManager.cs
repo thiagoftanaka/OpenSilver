@@ -18,19 +18,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-#if MIGRATION
 using System.Windows.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-#else
-using Windows.UI.Core;
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using System.Windows;
-#endif
 
 namespace CSHTML5.Native.Html.Printing
 {
@@ -67,11 +58,7 @@ namespace CSHTML5.Native.Html.Printing
             {
                 if (element._isLoaded)
                 {
-#if CSHTML5BLAZOR
-                    if (!Interop.IsRunningInTheSimulator_WorkAround)
-#else
-                    if (!Interop.IsRunningInTheSimulator)
-#endif
+                    if (!OpenSilver.Interop.IsRunningInTheSimulator_WorkAround)
                     {
                         // Remove the class "section-to-print" from the previous print area:
                         if (CurrentPrintArea != null && CurrentPrintArea._isLoaded)
@@ -103,11 +90,7 @@ namespace CSHTML5.Native.Html.Printing
         /// </summary>
         public static void ResetPrintArea()
         {
-#if CSHTML5BLAZOR
-            if (!Interop.IsRunningInTheSimulator_WorkAround)
-#else
-            if (!Interop.IsRunningInTheSimulator)
-#endif
+            if (!OpenSilver.Interop.IsRunningInTheSimulator_WorkAround)
             {
                 // Set the print area to be the whole window (this is the default value, also called from the "setter" of "Window.Current.Content"):
                 var root = Window.Current.Content;
@@ -139,11 +122,7 @@ namespace CSHTML5.Native.Html.Printing
         /// <param name="element">The element to print.</param>
         public static void Print(UIElement element)
         {
-#if CSHTML5BLAZOR
-            if (!Interop.IsRunningInTheSimulator_WorkAround)
-#else
-            if (!Interop.IsRunningInTheSimulator)
-#endif
+            if (!OpenSilver.Interop.IsRunningInTheSimulator_WorkAround)
             {
                 // Remember the previous print area, if any:
                 var previousPrintArea = CurrentPrintArea;
@@ -185,12 +164,7 @@ namespace CSHTML5.Native.Html.Printing
                     // Listen to the "Loaded" event of the container, so that we are notified when the element becomes visible:
                     container.Loaded += (s2, e2) =>
                     {
-#if MIGRATION
-                        Dispatcher
-#else
-                        CoreDispatcher
-#endif
-                        .CurrentDispatcher.BeginInvoke(() =>
+                        Dispatcher.CurrentDispatcher.BeginInvoke(() =>
                         {
                             // Print the element:
                             PrintManager.Print(element);

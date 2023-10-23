@@ -19,23 +19,13 @@ using System.Text;
 using System.Linq;
 using System.Diagnostics;
 using System.Globalization;
-using OpenSilver.Internal;
-using OpenSilver.Internal.Controls;
-
-#if MIGRATION
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Shapes;
-#else
-using Windows.Foundation;
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Documents;
-using Windows.UI.Xaml.Shapes;
-#endif
+using OpenSilver.Internal;
+using OpenSilver.Internal.Controls;
 
 namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure to change the dynamic call from the Simulator as well.
 {
@@ -165,8 +155,6 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
             string uniqueIdentifier = ((INTERNAL_HtmlDomElementReference)domElement).UniqueIdentifier;
             string javaScriptCodeToExecute = $@"document.setContentString(""{ uniqueIdentifier}"",""{EscapeStringForUseInJavaScript(content)}"",{removeTextWrapping.ToString().ToLower()})";
             INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(javaScriptCodeToExecute);
-
-            INTERNAL_WorkaroundIE11IssuesWithScrollViewerInsideGrid.RefreshLayoutIfIE();
         }
 
         public static string GetTextBoxText(object domElementRef)
@@ -721,7 +709,6 @@ parentElement.appendChild(child);";
             int i;
             int len = s.Length;
             StringBuilder sb = StringBuilderFactory.Get();
-            string t;
 
             for (i = 0; i < len; i += 1)
             {

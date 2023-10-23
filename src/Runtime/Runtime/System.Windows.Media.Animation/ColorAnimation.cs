@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,31 +11,18 @@
 *  
 \*====================================================================================*/
 
-
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using CSHTML5;
-#if MIGRATION
 using System.Windows.Controls;
-#else
-using Windows.UI.Xaml.Controls;
-#endif
+using CSHTML5;
 
-#if MIGRATION
 namespace System.Windows.Media.Animation
-#else
-namespace Windows.UI.Xaml.Media.Animation
-#endif
 {
     /// <summary>
     /// Animates the value of a Color property between two target values using linear
     /// interpolation over a specified Duration.
     /// </summary>
-    public sealed partial class ColorAnimation : AnimationTimeline
+    public sealed class ColorAnimation : AnimationTimeline
     {
         /// <summary>
         /// Gets or sets the easing function applied to this animation.
@@ -82,7 +68,7 @@ namespace Windows.UI.Xaml.Media.Animation
 
         // This guid is used to specifically target a particular call to the animation. It prevents the callback which should be called when velocity's animation end 
         // to be called when the callback is called from a previous call to the animation. This could happen when the animation was started quickly multiples times in a row. 
-        private Guid _animationID;
+        private Guid _animationID = Guid.Empty;
 
         internal override void Apply(IterationParameters parameters, bool isLastLoop)
         {
@@ -334,7 +320,6 @@ namespace Windows.UI.Xaml.Media.Animation
                     //we make a specific name for this animation:
                     string specificGroupName = animationInstanceSpecificName;
 
-                    bool cssEquivalentExists = false;
                     if (propertyMetadata.GetCSSEquivalent != null)
                     {
                         CSSEquivalent cssEquivalent = propertyMetadata.GetCSSEquivalent(_propertyContainer);
@@ -352,7 +337,6 @@ namespace Windows.UI.Xaml.Media.Animation
                                 }
                                 if (cssEquivalent.DomElement != null)
                                 {
-                                    cssEquivalentExists = true;
                                     string sDomElement = INTERNAL_InteropImplementation.GetVariableStringForJS(cssEquivalent.DomElement);
                                     AnimationHelpers.StopVelocity(sDomElement, specificGroupName);
                                 }
@@ -367,7 +351,6 @@ namespace Windows.UI.Xaml.Media.Animation
                         {
                             if (equivalent.DomElement != null && equivalent.CallbackMethod == null)
                             {
-                                cssEquivalentExists = true;
                                 string sDomElement = INTERNAL_InteropImplementation.GetVariableStringForJS(equivalent.DomElement);
                                 AnimationHelpers.StopVelocity(sDomElement, specificGroupName);
                             }

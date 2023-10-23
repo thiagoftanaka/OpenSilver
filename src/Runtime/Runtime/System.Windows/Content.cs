@@ -16,16 +16,7 @@ using CSHTML5;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
 
-#if !MIGRATION
-using Windows.Foundation;
-using Windows.UI.Xaml.Interop;
-#endif
-
-#if MIGRATION
 namespace System.Windows.Interop
-#else
-namespace Windows.UI.Xaml
-#endif
 {
     public class Content
     {
@@ -69,14 +60,7 @@ namespace Windows.UI.Xaml
         /// </summary>
         public bool IsFullScreen
         {
-            get
-            {
-                return OpenSilver.Interop.ExecuteJavaScriptBoolean(
-@"(function() {
- if (window.IE_VERSION) return (window.screenTop == 0);
- else return (window.innerHeight == screen.height);
-}())");
-            }
+            get => OpenSilver.Interop.ExecuteJavaScriptBoolean("window.innerHeight == screen.height");
             set
             {
                 if (value)

@@ -3,34 +3,13 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-
-#if MIGRATION
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-#else
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Input;
-using Windows.System;
-#endif
-
-#if OPENSILVER
-#if MIGRATION
 using System.Windows.Automation.Peers;
-#else
-using Windows.UI.Xaml.Automation.Peers;
-#endif
-#endif
 
-#if MIGRATION
 namespace System.Windows.Controls
-#else
-namespace Windows.UI.Xaml.Controls
-#endif
 {
     /// <summary>
     /// Provides a selectable item for the
@@ -53,7 +32,7 @@ namespace Windows.UI.Xaml.Controls
     [TemplatePart(Name = ExpanderButtonName, Type = typeof(ToggleButton))]
     [TemplatePart(Name = HeaderName, Type = typeof(FrameworkElement))]
     [StyleTypedProperty(Property = "ItemContainerStyle", StyleTargetType = typeof(TreeViewItem))]
-    public partial class TreeViewItem : HeaderedItemsControl, IUpdateVisualState
+    public class TreeViewItem : HeaderedItemsControl, IUpdateVisualState
     {
         #region Template Parts
         /// <summary>
@@ -117,22 +96,14 @@ namespace Windows.UI.Xaml.Controls
                 // Detach from the old Header element
                 if (_headerElement != null)
                 {
-#if MIGRATION
                     _headerElement.MouseLeftButtonDown -= OnHeaderMouseLeftButtonDown;
-#else
-                    _headerElement.PointerPressed -= OnHeaderMouseLeftButtonDown;
-#endif
                 }
 
                 // Attach to the new Header element
                 _headerElement = value;
                 if (_headerElement != null)
                 {
-#if MIGRATION
                     _headerElement.MouseLeftButtonDown += OnHeaderMouseLeftButtonDown;
-#else
-                    _headerElement.PointerPressed += OnHeaderMouseLeftButtonDown;
-#endif
                 }
             }
         }
@@ -195,7 +166,7 @@ namespace Windows.UI.Xaml.Controls
         /// True if this <see cref="TreeViewItem" />
         /// contains items; otherwise, false. The default is false.
         /// </value>
-        public bool HasItems
+        public new bool HasItems
         {
             get { return (bool)GetValue(HasItemsProperty); }
             private set
@@ -311,14 +282,12 @@ namespace Windows.UI.Xaml.Controls
             TreeViewItem source = d as TreeViewItem;
             bool isExpanded = (bool)e.NewValue;
 
-#if OPENSILVER
             // Notify any automation peers of the expansion change
             TreeViewItemAutomationPeer peer = FrameworkElementAutomationPeer.FromElement(source) as TreeViewItemAutomationPeer;
             if (peer != null)
             {
                 peer.RaiseExpandCollapseAutomationEvent((bool)e.OldValue, isExpanded);
             }
-#endif // OPENSILVER
 
             // Raise the Expanded and Collapsed events
             RoutedEventArgs args = new RoutedEventArgs();
@@ -409,14 +378,12 @@ namespace Windows.UI.Xaml.Controls
 
             source.Select(isSelected);
 
-#if OPENSILVER
             // Notify any automation peers of the selection change
             TreeViewItemAutomationPeer peer = FrameworkElementAutomationPeer.FromElement(source) as TreeViewItemAutomationPeer;
             if (peer != null)
             {
                 peer.RaiseAutomationIsSelectedChanged(isSelected);
             }
-#endif // OPENSILVER
 
             RoutedEventArgs args = new RoutedEventArgs();
             if (isSelected)
@@ -669,7 +636,6 @@ namespace Windows.UI.Xaml.Controls
             Interaction = new InteractionHelper(this);
         }
 
-#if OPENSILVER
         /// <summary>
         /// Returns a
         /// <see cref="TreeViewItemAutomationPeer" />
@@ -685,7 +651,6 @@ namespace Windows.UI.Xaml.Controls
         {
             return new TreeViewItemAutomationPeer(this);
         }
-#endif // OPENSILVER
 
         #region Templating
         /// <summary>
@@ -693,11 +658,7 @@ namespace Windows.UI.Xaml.Controls
         /// <see cref="TreeViewItem" /> control when a
         /// new control template is applied.
         /// </summary>
-#if MIGRATION
         public override void OnApplyTemplate()
-#else
-        protected override void OnApplyTemplate()
-#endif
         {
             ItemsControlHelper.OnApplyTemplate();
 
@@ -1156,20 +1117,12 @@ namespace Windows.UI.Xaml.Controls
         /// A <see cref="MouseEventArgs" /> that contains
         /// the event data.
         /// </param>
-#if MIGRATION
         protected override void OnMouseEnter(MouseEventArgs e)
-#else
-        protected override void OnPointerEntered(PointerRoutedEventArgs e)        
-#endif
         {
             if (Interaction.AllowMouseEnter(e))
             {
                 Interaction.OnMouseEnterBase();
-#if MIGRATION
                 base.OnMouseEnter(e);
-#else
-                base.OnPointerEntered(e);
-#endif
             }
         }
 
@@ -1181,20 +1134,12 @@ namespace Windows.UI.Xaml.Controls
         /// A <see cref="MouseEventArgs" /> that contains
         /// the event data.
         /// </param>
-#if MIGRATION
         protected override void OnMouseLeave(MouseEventArgs e)
-#else
-        protected override void OnPointerExited(PointerRoutedEventArgs e)
-#endif
         {
             if (Interaction.AllowMouseLeave(e))
             {
                 Interaction.OnMouseLeaveBase();
-#if MIGRATION
                 base.OnMouseLeave(e);
-#else
-                base.OnPointerExited(e);
-#endif
             }
         }
 
@@ -1203,11 +1148,7 @@ namespace Windows.UI.Xaml.Controls
         /// </summary>
         /// <param name="sender">The Header template part.</param>
         /// <param name="e">Event arguments.</param>
-#if MIGRATION
         private void OnHeaderMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-#else
-        private void OnHeaderMouseLeftButtonDown(object sender, PointerRoutedEventArgs e)
-#endif
         {
             if (Interaction.AllowMouseLeftButtonDown(e))
             {
@@ -1233,11 +1174,7 @@ namespace Windows.UI.Xaml.Controls
                 }
 
                 Interaction.OnMouseLeftButtonDownBase();
-#if MIGRATION
                 OnMouseLeftButtonDown(e);
-#else
-                OnPointerPressed(e);
-#endif
             }
         }
 
@@ -1261,11 +1198,7 @@ namespace Windows.UI.Xaml.Controls
         /// A <see cref="MouseButtonEventArgs" /> that
         /// contains the event data.
         /// </param>
-#if MIGRATION
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
-#else
-        protected override void OnPointerPressed(PointerRoutedEventArgs e)
-#endif
         {
             if (e == null)
             {
@@ -1278,11 +1211,7 @@ namespace Windows.UI.Xaml.Controls
                 e.Handled = true;
             }
 
-#if MIGRATION
             base.OnMouseLeftButtonDown(e);
-#else
-            base.OnPointerPressed(e);
-#endif
         }
 
         /// <summary>
@@ -1293,20 +1222,12 @@ namespace Windows.UI.Xaml.Controls
         /// A <see cref="MouseButtonEventArgs" /> that
         /// contains the event data.
         /// </param>
-#if MIGRATION
         protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
-#else
-        protected override void OnPointerReleased(PointerRoutedEventArgs e)
-#endif
         {
             if (Interaction.AllowMouseLeftButtonUp(e))
             {
                 Interaction.OnMouseLeftButtonUpBase();
-#if MIGRATION
                 base.OnMouseLeftButtonUp(e);
-#else
-                base.OnPointerReleased(e);
-#endif
             }
         }
 
@@ -1319,12 +1240,7 @@ namespace Windows.UI.Xaml.Controls
         /// A <see cref="KeyEventArgs" /> that contains
         /// the event data.
         /// </param>
-        [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Complexity metric is inflated by the switch statements")]
-#if MIGRATION
         protected override void OnKeyDown(KeyEventArgs e)
-#else
-        protected override void OnKeyDown(KeyRoutedEventArgs e)
-#endif
         {
             base.OnKeyDown(e);
 
@@ -1336,11 +1252,7 @@ namespace Windows.UI.Xaml.Controls
                 }
 
                 // Some keys (e.g. Left/Right) need to be translated in RightToLeft mode
-#if MIGRATION
                 Key invariantKey = InteractionHelper.GetLogicalKey(FlowDirection, e.Key);
-#else
-                VirtualKey invariantKey = InteractionHelper.GetLogicalKey(FlowDirection, e.Key);                
-#endif
                 // We ignore the Control modifier key because it is used
                 // specifically for scrolling which is implemented in the
                 // TreeView. We do not mark the event handled if Control is
@@ -1348,21 +1260,13 @@ namespace Windows.UI.Xaml.Controls
                 // this item.
                 switch (invariantKey)
                 {
-#if MIGRATION
                     case Key.Left:
-#else
-                    case VirtualKey.Left:
-#endif
                         // The Left key will collapse an expanded item or
                         // move to the parent if the item is already
                         // collapsed.
                         if (!TreeView.IsControlKeyDown && CanExpandOnInput && IsExpanded)
                         {
-#if OPENSILVER
                             if (FocusManager.GetFocusedElement() != this)
-#else
-                            if (null != this)
-#endif
                             {
                                 Focus();
                             }
@@ -1373,11 +1277,7 @@ namespace Windows.UI.Xaml.Controls
                             e.Handled = true;
                         }
                         break;
-#if MIGRATION
                     case Key.Right:
-#else
-                    case VirtualKey.Right:
-#endif
                         // The Right key is only useful when the item has
                         // children
                         if (!TreeView.IsControlKeyDown && CanExpandOnInput)
@@ -1396,31 +1296,19 @@ namespace Windows.UI.Xaml.Controls
                             }
                         }
                         break;
-#if MIGRATION
                     case Key.Up:
-#else
-                    case VirtualKey.Up:
-#endif
                         if (!TreeView.IsControlKeyDown && HandleUpKey())
                         {
                             e.Handled = true;
                         }
                         break;
-#if MIGRATION
                     case Key.Down:
-#else
-                    case VirtualKey.Down:
-#endif
                         if (!TreeView.IsControlKeyDown && HandleDownKey())
                         {
                             e.Handled = true;
                         }
                         break;
-#if MIGRATION
                     case Key.Add:
-#else
-                    case VirtualKey.Add:
-#endif
                         if (CanExpandOnInput && !IsExpanded)
                         {
                             UserInitiatedExpansion = true;
@@ -1428,11 +1316,7 @@ namespace Windows.UI.Xaml.Controls
                             e.Handled = true;
                         }
                         break;
-#if MIGRATION
                     case Key.Subtract:
-#else
-                    case VirtualKey.Subtract:
-#endif
                         if (CanExpandOnInput && IsExpanded)
                         {
                             IsExpanded = false;
@@ -1477,11 +1361,7 @@ namespace Windows.UI.Xaml.Controls
         /// A <see cref="KeyEventArgs" /> that contains
         /// the event data.
         /// </param>
-#if MIGRATION
         protected override void OnKeyUp(KeyEventArgs e)
-#else
-        protected override void OnKeyUp(KeyRoutedEventArgs e)
-#endif
         {
             if (Interaction.AllowKeyUp(e))
             {

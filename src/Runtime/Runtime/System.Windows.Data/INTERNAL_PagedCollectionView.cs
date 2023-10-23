@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,27 +11,15 @@
 *  
 \*====================================================================================*/
 
-
-using CSHTML5.Internal;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
+using CSHTML5.Internal;
 
-#if MIGRATION
-using System.Windows.Controls;
-#else
-using Windows.UI.Xaml.Controls;
-#endif
-
-#if MIGRATION
 namespace System.Windows.Data
-#else
-namespace Windows.UI.Xaml.Data
-#endif
 {
     /// <summary>
     /// Allows to split a data source into multiple paged sources and to expose only the current page
@@ -40,11 +27,7 @@ namespace Windows.UI.Xaml.Data
     /// <remarks>
     /// <p>the order of the operations is: Filtering, Sorting, Grouping</p>
     /// </remarks>
-#if MIGRATION
-    public partial class INTERNAL_PagedCollectionView : IEnumerable, INotifyCollectionChanged, IPagedCollectionView, INotifyPropertyChanged
-#else
-    internal partial class INTERNAL_PagedCollectionView : IEnumerable, INotifyCollectionChanged, IPagedCollectionView, INotifyPropertyChanged
-#endif
+    public class INTERNAL_PagedCollectionView : IEnumerable, INotifyCollectionChanged, IPagedCollectionView, INotifyPropertyChanged
     {
         // the child views
         List<INTERNAL_CollectionViewGroupInternal> _views = new List<INTERNAL_CollectionViewGroupInternal>();
@@ -361,9 +344,6 @@ namespace Windows.UI.Xaml.Data
                 {
                     //Note: we make two calls because "replace" does not work in the DataGrid at the time of writing.
                     CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-#if BRIDGE
-                    this.OnPropertyChanged("Count");
-#endif
                 }
             }
         }
@@ -535,33 +515,11 @@ namespace Windows.UI.Xaml.Data
                 int newPageIndex = VerifyPageIndex(value);
                 if (newPageIndex != _PageIndex) // ChangeOutputColletion can take lot of time, because it refreshes the controls that use this as source
                 {
-#if BRIDGE
-                    OnPageChanging(newPageIndex);
-#endif
                     _PageIndex = newPageIndex;
-#if BRIDGE
-                    OnPropertyChanged("PageIndex");
-#endif
                     OnPageChanged();
-
-#if BRIDGE
-                   
-                    OnPropertyChanged("Count");
-#endif
                 }
             }
         }
-
-#if BRIDGE
-        private void OnPageChanging(int newPageIndex)
-        {
-            _isPageChanging = true;
-            if (PageChanging != null)
-            {
-                PageChanging(this, new PageChangingEventArgs(newPageIndex));
-            }
-        }
-#endif
 
         private void OnPageChanged()
         {
@@ -583,18 +541,8 @@ namespace Windows.UI.Xaml.Data
             {
                 int oldCount = this.Count;
                 _pageSize = value;
-#if BRIDGE
-                OnPropertyChanged("PageSize");
-#endif
                 if (_views.Count != 0)
                     CreatePages();
-#if BRIDGE
-                // if the count has changed
-                if (this.Count != oldCount)
-                {
-                    this.OnPropertyChanged("Count");
-                }
-#endif
             }
         }
 

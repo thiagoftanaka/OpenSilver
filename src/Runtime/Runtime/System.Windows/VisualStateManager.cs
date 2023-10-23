@@ -18,23 +18,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using OpenSilver.Internal;
-
-#if MIGRATION
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media.Animation;
-#else
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Media.Animation;
-#endif
+using OpenSilver.Internal;
 
-#if MIGRATION
 namespace System.Windows
-#else
-namespace Windows.UI.Xaml
-#endif
 {
     /// <summary>
     /// Manages states and the logic for transitioning between states for controls.
@@ -42,10 +31,10 @@ namespace Windows.UI.Xaml
     public class VisualStateManager : DependencyObject
     {
         /// <summary>
-        ///     Transitions a control's state.
+        /// Transitions a control's state.
         /// </summary>
         /// <param name="control">The control who's state is changing.</param>
-        /// <param name="stateGroupsRoot">The element to get the VSG & customer VSM from.</param>
+        /// <param name="stateGroupsRoot">The element to get the VSG &amp; customer VSM from.</param>
         /// <param name="stateName">The new state that the control is in.</param>
         /// <param name="useTransitions">Whether to use transition animations.</param>
         /// <returns>true if the state changed successfully, false otherwise.</returns>

@@ -13,14 +13,8 @@
 \*====================================================================================*/
 
 using System;
-
-#if MIGRATION
 using System.Windows;
 using System.Windows.Controls;
-#else
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-#endif
 
 namespace OpenSilver.Controls
 {
@@ -29,13 +23,11 @@ namespace OpenSilver.Controls
     /// </summary>
     public partial class TimePicker
     {
-#if MIGRATION
         /// <summary>
         /// Occurs when Value property has changed.
         /// </summary>
         [OpenSilver.NotImplemented]
         public event RoutedPropertyChangedEventHandler<DateTime?> ValueChanged;
-#endif
 
 #region public DateTime? Minimum
         /// <summary>
@@ -165,10 +157,6 @@ namespace OpenSilver.Controls
             throw new NotImplementedException();
         }
 
-        /// <summary>
-        /// BackingField for ActualFormat.
-        /// </summary>
-        private ITimeFormat _actualFormat;
 #endregion public ITimeFormat Format
 
 #region public TimePickerPopup Popup
@@ -246,10 +234,6 @@ namespace OpenSilver.Controls
         {
         }
 
-        /// <summary>
-        /// BackingField for InstantiatedPopupFromTemplate.
-        /// </summary>
-        private TimePickerPopup _instantiatedPopupFromTemplate;
 #endregion public TimePickerPopupTemplate PopupTemplate
 
 #region public PopupTimeSelectionMode PopupTimeSelectionMode

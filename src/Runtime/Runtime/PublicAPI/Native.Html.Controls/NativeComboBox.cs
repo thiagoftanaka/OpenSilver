@@ -14,15 +14,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using CSHTML5.Internal;
-
-#if MIGRATION
 using System.Windows;
 using System.Windows.Controls;
-#else
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-#endif
+using CSHTML5.Internal;
 
 namespace CSHTML5.Native.Html.Controls
 {
@@ -53,7 +47,6 @@ namespace CSHTML5.Native.Html.Controls
         /// </summary>
         public NativeComboBox()
         {
-            this.INTERNAL_DoNotApplyStyle = true;
         }
 
         #endregion Constructor
@@ -663,9 +656,9 @@ namespace CSHTML5.Native.Html.Controls
             // nothing selected when items are added to the ComboBox: 
             // See: http://stackoverflow.com/questions/8605516/default-select-option-as-blank
             var emptyOption = INTERNAL_HtmlDomManager.AddOptionToNativeComboBox(this._nativeComboBoxDomElement, "", 0);
-            CSHTML5.Interop.ExecuteJavaScriptAsync("$0.disabled = true", emptyOption);
-            CSHTML5.Interop.ExecuteJavaScriptAsync("$0.selected = true", emptyOption);
-            CSHTML5.Interop.ExecuteJavaScriptAsync("$0.style.display = 'hidden'", emptyOption);
+            OpenSilver.Interop.ExecuteJavaScriptAsync("$0.disabled = true", emptyOption);
+            OpenSilver.Interop.ExecuteJavaScriptAsync("$0.selected = true", emptyOption);
+            OpenSilver.Interop.ExecuteJavaScriptAsync("$0.style.display = 'hidden'", emptyOption);
         }
 
         private void OnItemsChanged(NotifyCollectionChangedEventArgs e)

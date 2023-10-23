@@ -18,18 +18,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-
-#if MIGRATION
 using System.Windows.Common;
-#else
-using Windows.UI.Xaml.Common;
-#endif
 
-#if MIGRATION
 namespace System.Windows.Data
-#else
-namespace Windows.UI.Xaml.Data
-#endif
 {
     /// <summary>
     /// PagedCollectionView view over an IEnumerable.
@@ -2835,11 +2826,7 @@ namespace Windows.UI.Xaml.Data
                 Type itemType = this.GetItemType(true);
                 if (itemType != null)
                 {
-#if NETSTANDARD
                     this._itemConstructor = itemType.GetConstructor(Type.EmptyTypes);
-#else
-                    this._itemConstructor = itemType.GetConstructor(TypeExtensions.EmptyTypes);
-#endif
                     this._itemConstructorIsValid = true;
                 }
             }
@@ -4141,9 +4128,7 @@ namespace Windows.UI.Xaml.Data
                     this.collectionView.EndDefer();
                     this.collectionView = null;
                 }
-#if NETSTANDARD
                 GC.SuppressFinalize(this);
-#endif
             }
         }
 
@@ -4186,9 +4171,7 @@ namespace Windows.UI.Xaml.Data
             public void Dispose()
             {
                 this.entered = false;
-#if NETSTANDARD
                 GC.SuppressFinalize(this);
-#endif
             }
         }
 
@@ -4392,12 +4375,7 @@ namespace Windows.UI.Xaml.Data
                     IComparer comparer = this._fields[k].Comparer;
                     if (propertyType != null && comparer == null)
                     {
-#if NETSTANDARD
                         this._fields[k].Comparer = (typeof(Comparer<>).MakeGenericType(propertyType).GetProperty("Default")).GetValue(null, null) as IComparer;
-#else // BRIDGE
-                        this._fields[k].Comparer = (typeof(CSHTML5.Internal.Helpers.ComparerHelper<>).MakeGenericType(propertyType)
-                            .GetProperty("Default")).GetValue(null, null) as IComparer;
-#endif
                         comparer = this._fields[k].Comparer;
                     }
 
@@ -4557,11 +4535,7 @@ namespace Windows.UI.Xaml.Data
             // at this point x and y are not null
             if (x.GetType() == typeof(string) && y.GetType() == typeof(string))
             {
-#if NETSTANDARD
                 return this._culture.CompareInfo.Compare((string)x, (string)y);
-#else
-                return string.Compare((string)x, (string)y, false, this._culture);
-#endif
             }
             else
             {
@@ -4581,213 +4555,3 @@ namespace Windows.UI.Xaml.Data
     /// <returns>The GroupDescription chosen based on the parent group and its level.</returns>
     public delegate GroupDescription GroupDescriptionSelectorCallback(CollectionViewGroup group, int level);
 }
-
-#if BRIDGE
-
-namespace System.Collections
-{
-    // Copyright (c) Microsoft Corporation.  All rights reserved.
-
-    public sealed class Comparer : IComparer
-    {
-        private CultureInfo m_culture;
-
-        public static readonly Comparer Default = new Comparer(CultureInfo.CurrentCulture);
-        public static readonly Comparer DefaultInvariant = new Comparer(CultureInfo.InvariantCulture);
-
-        public Comparer(CultureInfo culture)
-        {
-            if (culture == null)
-            {
-                throw new ArgumentNullException("culture");
-            }
-            m_culture = culture;
-        }
-
-        // Compares two Objects by calling CompareTo.  If a == 
-        // b,0 is returned.  If a implements 
-        // IComparable, a.CompareTo(b) is returned.  If a 
-        // doesn't implement IComparable and b does, 
-        // -(b.CompareTo(a)) is returned, otherwise an 
-        // exception is thrown.
-        // 
-        public int Compare(Object a, Object b)
-        {
-            if (a == b)
-                return 0;
-            if (a == null)
-                return -1;
-            if (b == null)
-                return 1;
-            if (m_culture != null)
-            {
-                String sa = a as String;
-                String sb = b as String;
-                if (sa != null && sb != null)
-                    return string.Compare(sa, sb, false, m_culture);
-            }
-
-            IComparable ia = a as IComparable;
-            if (ia != null)
-                return ia.CompareTo(b);
-
-            IComparable ib = b as IComparable;
-            if (ib != null)
-                return -ib.CompareTo(a);
-
-            throw new ArgumentException("At least one object must implement IComparable.");
-        }
-    }
-}
-
-namespace CSHTML5.Internal.Helpers
-{
-    // Copyright (c) Microsoft Corporation.  All rights reserved.
-
-    internal static class ComparerHelper<T>
-    {
-        static readonly Comparer<T> defaultComparer = CreateComparer();
-
-        public static Comparer<T> Default
-        {
-            get
-            {
-                return defaultComparer;
-            }
-        }
-
-        //
-        // Note that logic in this method is replicated in vm\compile.cpp to ensure that NGen
-        // saves the right instantiations
-        //
-        private static Comparer<T> CreateComparer()
-        {
-            Type t = typeof(T);
-
-            // If T implements IComparable<T> return a GenericComparer<T>
-            if (typeof(IComparable<T>).IsAssignableFrom(t))
-            {
-                return (Comparer<T>)Activator.CreateInstance(typeof(GenericComparer<>).MakeGenericType(t));
-            }
-
-            // If T is a Nullable<U> where U implements IComparable<U> return a NullableComparer<U>
-            if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Nullable<>))
-            {
-                Type u = t.GetGenericArguments()[0];
-                if (typeof(IComparable<>).MakeGenericType(u).IsAssignableFrom(u))
-                {
-                    return (Comparer<T>)Activator.CreateInstance(typeof(NullableComparer<>).MakeGenericType(u));
-                }
-            }
-            // Otherwise return an ObjectComparer<T>
-            return new ObjectComparer<T>();
-        }
-    }
-
-    internal class GenericComparer<T> : Comparer<T> where T : IComparable<T>
-    {
-        public override int Compare(T x, T y)
-        {
-            if (x != null)
-            {
-                if (y != null)
-                    return x.CompareTo(y);
-                return 1;
-            }
-            if (y != null)
-                return -1;
-            return 0;
-        }
-
-        // Equals method for the comparer itself. 
-        public override bool Equals(Object obj)
-        {
-            GenericComparer<T> comparer = obj as GenericComparer<T>;
-            return comparer != null;
-        }
-
-        public override int GetHashCode()
-        {
-            return this.GetType().Name.GetHashCode();
-        }
-    }
-
-    internal class NullableComparer<T> : Comparer<Nullable<T>> where T : struct, IComparable<T>
-    {
-        public override int Compare(Nullable<T> x, Nullable<T> y)
-        {
-            if (x.HasValue)
-            {
-                if (y.HasValue)
-                    return x.Value.CompareTo(y.Value);
-                return 1;
-            }
-            if (y.HasValue)
-                return -1;
-            return 0;
-        }
-
-        // Equals method for the comparer itself. 
-        public override bool Equals(Object obj)
-        {
-            NullableComparer<T> comparer = obj as NullableComparer<T>;
-            return comparer != null;
-        }
-
-
-        public override int GetHashCode()
-        {
-            return this.GetType().Name.GetHashCode();
-        }
-    }
-
-    internal class ObjectComparer<T> : Comparer<T>
-    {
-        public override int Compare(T x, T y)
-        {
-            return global::System.Collections.Comparer.Default.Compare(x, y);
-        }
-
-        // Equals method for the comparer itself. 
-        public override bool Equals(Object obj)
-        {
-            ObjectComparer<T> comparer = obj as ObjectComparer<T>;
-            return comparer != null;
-        }
-
-        public override int GetHashCode()
-        {
-            return this.GetType().Name.GetHashCode();
-        }
-    }
-}
-
-#endif // BRIDGE
-
-#if !NETSTANDARD
-
-namespace System.ComponentModel
-{
-    using System.Diagnostics;
-
-    /// <devdoc>
-    ///    <para>[To be supplied.]</para>
-    /// </devdoc>
-    public interface IEditableObject
-    {
-        /// <devdoc>
-        ///    <para>[To be supplied.]</para>
-        /// </devdoc>
-        void BeginEdit();
-        /// <devdoc>
-        ///    <para>[To be supplied.]</para>
-        /// </devdoc>
-        void EndEdit();
-        /// <devdoc>
-        ///    <para>[To be supplied.]</para>
-        /// </devdoc>
-        void CancelEdit();
-    }
-}
-
-#endif

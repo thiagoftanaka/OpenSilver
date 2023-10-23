@@ -1,30 +1,21 @@
 ﻿// -------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation. All Rights Reserved.
 // -------------------------------------------------------------------
+
+using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Reflection;
+using System.Windows.Interactivity;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using OpenSilver.Internal.Expression.Interactivity;
+
 namespace Microsoft.Expression.Interactivity.Core
 {
-    using System;
-    using System.ComponentModel;
-    using System.Diagnostics;
-    using System.Diagnostics.CodeAnalysis;
-    using System.Globalization;
-    using System.Reflection;
-    using System.Windows.Interactivity;
-    using OpenSilver.Internal.Expression.Interactivity;
-    using TypeConverterHelper = System.ComponentModel.TypeConverterHelper;
-
-#if MIGRATION
-    using System.Windows;
-    using System.Windows.Media;
-    using System.Windows.Media.Animation;
-#else
-    using Windows.Foundation;
-    using Windows.UI;
-    using Windows.UI.Xaml;
-    using Windows.UI.Xaml.Media;
-    using Windows.UI.Xaml.Media.Animation;
-#endif
-
     /// <summary>
     /// An action that will change a specified property to a specified value when invoked.
     /// </summary>
@@ -137,7 +128,7 @@ namespace Microsoft.Expression.Interactivity.Core
             this.ValidateProperty(propertyInfo);
 
             object newValue = this.Value;
-            TypeConverter converter = TypeConverterHelper.GetConverter(propertyInfo.PropertyType);
+            TypeConverter converter = System.ComponentModel.TypeConverterHelper.GetConverter(propertyInfo.PropertyType);
 
             Exception innerException = null;
             try
@@ -151,7 +142,7 @@ namespace Microsoft.Expression.Interactivity.Core
                     else
                     {
                         // Try asking the value if it can convert itself to the target property
-                        converter = TypeConverterHelper.GetConverter(this.Value.GetType());
+                        converter = System.ComponentModel.TypeConverterHelper.GetConverter(this.Value.GetType());
                         if (converter != null && converter.CanConvertTo(propertyInfo.PropertyType))
                         {
                             newValue = converter.ConvertTo(
@@ -390,7 +381,7 @@ namespace Microsoft.Expression.Interactivity.Core
             object returnValue = currentValue;
 
             Type propertyType = propertyInfo.PropertyType;
-            TypeConverter converter = TypeConverterHelper.GetConverter(propertyInfo.PropertyType);
+            TypeConverter converter = System.ComponentModel.TypeConverterHelper.GetConverter(propertyInfo.PropertyType);
             object value = this.Value;
 
             if (value == null || currentValue == null)
@@ -455,7 +446,7 @@ namespace Microsoft.Expression.Interactivity.Core
                 }
                 else if (!secondParameterType.IsAssignableFrom(valueType))
                 {
-                    TypeConverter additionConverter = TypeConverterHelper.GetConverter(secondParameterType);
+                    TypeConverter additionConverter = System.ComponentModel.TypeConverterHelper.GetConverter(secondParameterType);
                     if (additionConverter.CanConvertFrom(valueType))
                     {
                         convertedValue = additionConverter.ConvertFrom(value);

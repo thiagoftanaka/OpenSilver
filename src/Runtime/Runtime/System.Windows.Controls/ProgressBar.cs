@@ -11,24 +11,12 @@
 *  
 \*====================================================================================*/
 
-using System;
-using CSHTML5.Internal;
-
-#if MIGRATION
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Automation.Peers;
-#else
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Media;
-using Windows.UI.Xaml.Automation.Peers;
-#endif
+using CSHTML5.Internal;
 
-#if MIGRATION
 namespace System.Windows.Controls
-#else
-namespace Windows.UI.Xaml.Controls
-#endif
 {
     /// <summary>
     /// Represents a control that indicates the progress of an operation.
@@ -91,11 +79,7 @@ namespace Windows.UI.Xaml.Controls
         /// Builds the visual tree for the <see cref="ProgressBar"/> control when a new 
         /// template is applied.
         /// </summary>
-#if MIGRATION
         public override void OnApplyTemplate()
-#else
-        protected override void OnApplyTemplate()
-#endif
         {
             base.OnApplyTemplate();
 

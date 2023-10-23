@@ -12,7 +12,6 @@
 *  
 \*====================================================================================*/
 
-
 using CSHTML5.Internal;
 using DotNetForHtml5;
 using DotNetForHtml5.Core;
@@ -23,14 +22,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
-
-#if MIGRATION
 using System.Windows;
 using System.Windows.Controls;
-#else
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-#endif
 
 namespace Runtime.OpenSilver.Tests
 {
@@ -58,11 +51,6 @@ namespace Runtime.OpenSilver.Tests
                 return e.Result;
             }
 
-            // Mocks INTERNAL_GridHelpers isCSSGridSupported() and isMSGrid()
-            if (param == @"document.isGridSupported" || param == @"document.isMSGrid")
-            {
-                return false;
-            }
             // Mocks Simulator portion of UIElement.TransformToVisual
             // JS code example is:
             // document.callScriptSafe("154","(document.getElementByIdSafe(\"id31\").getBoundingClientRect().left -

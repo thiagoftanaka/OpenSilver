@@ -12,17 +12,6 @@
 *  
 \*====================================================================================*/
 
-
-#if (!FOR_DESIGN_TIME) && CORE
-extern alias ToBeReplacedAtRuntime;
-#endif
-
-#if BRIDGE
-using Bridge;
-#else
-using JSIL.Meta;
-#endif
-
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -40,24 +29,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using System.Xml;
+using System.Windows;
 using CSHTML5.Internal;
 using static System.ServiceModel.INTERNAL_WebMethodsCaller;
-using Binding = System.ServiceModel.Channels.Binding;
-
-#if MIGRATION
-using System.Windows;
-using System.Text;
-using System.Windows.Data;
-using System.Windows.Shapes;
-#else
-using Windows.UI.Xaml;
-#endif
-
-#if OPENSILVER
 using DataContractSerializerCustom = System.Runtime.Serialization.DataContractSerializer_CSHTML5Ver;
-#else // BRIDGE
-using DataContractSerializerCustom = System.Runtime.Serialization.DataContractSerializer;
-#endif
 
 namespace System.ServiceModel
 {
@@ -101,17 +76,11 @@ namespace System.ServiceModel
     /// await soapClient.AddOrUpdateToDoAsync(todo);
     /// </code>
     /// </example>
-#if BRIDGE
-    public abstract partial class CSHTML5_ClientBase<TChannel> : ICommunicationObject where TChannel : class
-#elif OPENSILVER
     public abstract partial class CSHTML5_ClientBase<TChannel> /*: ICommunicationObject, IDisposable*/ where TChannel : class
-#endif
     {
-#if OPENSILVER
         //Note: Adding this because they are in the file generated when adding a Service Reference through the "Add Connected Service" for OpenSilver.
         public System.ServiceModel.Description.ServiceEndpoint Endpoint => ChannelFactory?.Endpoint;
         public System.ServiceModel.Description.ClientCredentials ClientCredentials { get; } = new Description.ClientCredentials();
-#endif
         string _remoteAddressAsString;
 
         private TChannel channel;
@@ -258,13 +227,7 @@ namespace System.ServiceModel
             }
         }
 
-        public string INTERNAL_RemoteAddressAsString
-        {
-            get
-            {
-                return _remoteAddressAsString;
-            }
-        }
+        public string INTERNAL_RemoteAddressAsString { get; }
 
         public virtual string INTERNAL_SoapVersion
         {
@@ -333,7 +296,7 @@ namespace System.ServiceModel
                         out endpointAddress,
                         out binding))
                 {
-                    _remoteAddressAsString = endpointAddress;
+                    INTERNAL_RemoteAddressAsString = endpointAddress;
                 }
                 else
                 {
@@ -345,7 +308,7 @@ namespace System.ServiceModel
                                 out endpointAddress,
                                 out binding))
                         {
-                            _remoteAddressAsString = endpointAddress;
+                            INTERNAL_RemoteAddressAsString = endpointAddress;
                         }
                         else
                         {
@@ -487,7 +450,7 @@ namespace System.ServiceModel
                 throw new ArgumentNullException("remoteAddress");
             }
 
-            _remoteAddressAsString = remoteAddress.Uri.OriginalString;
+            INTERNAL_RemoteAddressAsString = remoteAddress.Uri.OriginalString;
 
             _channelFactory = new ChannelFactory<TChannel>(binding, remoteAddress);
         }
@@ -534,7 +497,6 @@ namespace System.ServiceModel
             //todo
         }
 
-#if !FOR_DESIGN_TIME
         /// <summary>
         /// Provides an API to call web methods defined in a WebService
         /// </summary>
@@ -569,7 +531,6 @@ namespace System.ServiceModel
                     callback, soapVersion, client);
             }
 
-#if OPENSILVER
             public void BeginCallWebMethod(
                 string webMethodName,
                 Type interfaceType,
@@ -584,7 +545,6 @@ namespace System.ServiceModel
                     GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), soapVersion), originalRequestObject,
                     callback, soapVersion, client);
             }
-#endif
 
             public void BeginCallWebMethod(
                 string webMethodName,
@@ -761,7 +721,6 @@ namespace System.ServiceModel
                 return tcs.Task;
             }
 
-#if OPENSILVER
             internal Task<(T, MessageHeaders)> CallWebMethodAsyncBeginEnd<T>(
                 string webMethodName,
                 Type interfaceType,
@@ -885,7 +844,6 @@ namespace System.ServiceModel
 
                 return tcs.Task;
             }
-#endif
 
             /// <summary>
             /// Asynchronously calls a WebMethod.
@@ -1047,7 +1005,6 @@ namespace System.ServiceModel
                     client);
             }
 
-#if OPENSILVER
             /// <summary>
             /// Calls a WebMethod
             /// </summary>
@@ -1149,7 +1106,6 @@ namespace System.ServiceModel
 
                 return (typedResponseBody, incomingMessageHeaders);
             }
-#endif
 
             public static MethodInfo ResolveMethod(Type interfaceType, string webMethodName, params string[] methodNames)
             {
@@ -1205,7 +1161,6 @@ namespace System.ServiceModel
                 return false;
             }
 
-#if OPENSILVER
             public static string GetEnvelopeHeaders(ICollection<MessageHeader> messageHeaders, string soapVersion)
             {
                 if (messageHeaders == null || !messageHeaders.Any())
@@ -1236,7 +1191,6 @@ namespace System.ServiceModel
                     return incomingMessage.Headers;
                 }
             }
-#endif
 
             private void ProcessNode(XElement node, Action<XElement> action)
             {
@@ -1601,7 +1555,6 @@ namespace System.ServiceModel
                 }
             }
 
-#if OPENSILVER
             private void ReadAndPrepareResponseGeneric_JSVersion<T>(
                 TaskCompletionSource<(T, MessageHeaders)> taskCompletionSource,
                 INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventArgs e,
@@ -1639,7 +1592,6 @@ namespace System.ServiceModel
                     taskCompletionSource.TrySetException(e.Error);
                 }
             }
-
 
             private FaultException GetFaultException(string response, bool useXmlSerializerFormat)
             {
@@ -1719,7 +1671,6 @@ namespace System.ServiceModel
 
                 throw new InvalidOperationException(string.Format("Could not resolve type {0}", name));
             }
-#endif
 
             private object ReadAndPrepareResponse(
                 string responseAsString,
@@ -1813,8 +1764,6 @@ namespace System.ServiceModel
                 XElement headerElement = envelopeElement.Element(XName.Get("Header", NS));
                 XElement bodyElement = envelopeElement.Element(XName.Get("Body", NS));
 
-
-#if OPENSILVER
                 // Error parsing, if applicable
                 if (soapVersion == "1.2")
                 {
@@ -1910,27 +1859,6 @@ namespace System.ServiceModel
                         return null;
                     }
                 }
-#else
-                int m = responseAsString.IndexOf(":Fault>");
-                if (m == -1)
-                {
-                    m = responseAsString.IndexOf("<Fault>");
-                }
-                if (m != -1)
-                {
-                    m = responseAsString.IndexOf("<faultstring", m);
-                    if (m != -1) //this might seem redundant but with that we have more chances to have an actual FaultException
-                    {
-                        m = responseAsString.IndexOf('>', m);
-                        responseAsString = responseAsString.Remove(0, m + 1);
-                        m = responseAsString.IndexOf("</faultstring");
-                        responseAsString = responseAsString.Remove(m);
-                        FaultException fe = new FaultException(responseAsString);
-                        raiseFaultException(fe);
-                        return null;
-                    }
-                }
-#endif
 
                 object requestResponse = null;
 
@@ -2154,7 +2082,6 @@ namespace System.ServiceModel
             }
 
         }
-#endif
 
         #region work in progress
 
@@ -2456,123 +2383,6 @@ namespace System.ServiceModel
 
 
         #endregion
-
-#if BRIDGE
-        #region ICommunicationObject methods
-
-		[OpenSilver.NotImplemented]
-        CommunicationState ICommunicationObject.State
-        {
-            get { return CommunicationState.Created; }
-        }
-
-		[OpenSilver.NotImplemented]
-        event EventHandler ICommunicationObject.Closed
-        {
-            add { }
-            remove { }
-        }
-
-		[OpenSilver.NotImplemented]
-        event EventHandler ICommunicationObject.Closing
-        {
-            add { }
-            remove { }
-        }
-
-		[OpenSilver.NotImplemented]
-        event EventHandler ICommunicationObject.Faulted
-        {
-            add { }
-            remove { }
-        }
-
-		[OpenSilver.NotImplemented]
-        event EventHandler ICommunicationObject.Opened
-        {
-            add { }
-            remove { }
-        }
-
-		[OpenSilver.NotImplemented]
-        event EventHandler ICommunicationObject.Opening
-        {
-            add { }
-            remove { }
-        }
-
-		[OpenSilver.NotImplemented]
-        void ICommunicationObject.Abort()
-        {
-
-        }
-
-		[OpenSilver.NotImplemented]
-        void ICommunicationObject.Close()
-        {
-
-        }
-
-		[OpenSilver.NotImplemented]
-        void ICommunicationObject.Close(TimeSpan timeout)
-        {
-
-        }
-
-		[OpenSilver.NotImplemented]
-        IAsyncResult ICommunicationObject.BeginClose(AsyncCallback callback, object state)
-        {
-            return null;
-        }
-
-		[OpenSilver.NotImplemented]
-        IAsyncResult ICommunicationObject.BeginClose(TimeSpan timeout, AsyncCallback callback, object state)
-        {
-            return null;
-        }
-
-		[OpenSilver.NotImplemented]
-        void ICommunicationObject.EndClose(IAsyncResult result)
-        {
-
-        }
-
-		[OpenSilver.NotImplemented]
-        void ICommunicationObject.Open()
-        {
-
-        }
-
-		[OpenSilver.NotImplemented]
-        void ICommunicationObject.Open(TimeSpan timeout)
-        {
-
-        }
-
-		[OpenSilver.NotImplemented]
-        IAsyncResult ICommunicationObject.BeginOpen(AsyncCallback callback, object state)
-        {
-            return null;
-        }
-
-		[OpenSilver.NotImplemented]
-        IAsyncResult ICommunicationObject.BeginOpen(TimeSpan timeout, AsyncCallback callback, object state)
-        {
-            return null;
-        }
-
-		[OpenSilver.NotImplemented]
-        void ICommunicationObject.EndOpen(IAsyncResult result)
-        {
-
-        }
-
-        //void ICommunicationObject.Dispose()
-        //{
-
-        //}
-        #endregion
-#endif
 
         #endregion work in progress
     }

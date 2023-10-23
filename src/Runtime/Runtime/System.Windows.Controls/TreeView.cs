@@ -3,35 +3,16 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
-using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Windows.Input;
-
-#if MIGRATION
 using System.Windows.Data;
-#else
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.System;
-#endif
-
-#if OPENSILVER
-#if MIGRATION
 using System.Windows.Automation.Peers;
-#else
-using Windows.UI.Xaml.Automation.Peers;
-#endif
-#endif
 
-#if MIGRATION
 namespace System.Windows.Controls
-#else
-namespace Windows.UI.Xaml.Controls
-#endif
 {
     /// <summary>
     /// Represents a control that displays hierarchical data in a tree structure
@@ -48,7 +29,7 @@ namespace Windows.UI.Xaml.Controls
     [TemplateVisualState(Name = VisualStates.StateInvalidFocused, GroupName = VisualStates.GroupValidation)]
     [TemplateVisualState(Name = VisualStates.StateInvalidUnfocused, GroupName = VisualStates.GroupValidation)]
     [StyleTypedProperty(Property = "ItemContainerStyle", StyleTargetType = typeof(TreeViewItem))]
-    public partial class TreeView : ItemsControl, IUpdateVisualState
+    public class TreeView : ItemsControl, IUpdateVisualState
     {
         /// <summary>
         /// A value indicating whether a read-only dependency property change
@@ -360,11 +341,7 @@ namespace Windows.UI.Xaml.Controls
         /// </summary>
         internal static bool IsControlKeyDown
         {
-#if MIGRATION
             get { return (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control; }
-#else
-            get { return (Keyboard.Modifiers & VirtualKeyModifiers.Control) == VirtualKeyModifiers.Control; }
-#endif
         }
 
         /// <summary>
@@ -372,11 +349,7 @@ namespace Windows.UI.Xaml.Controls
         /// </summary>
         internal static bool IsShiftKeyDown
         {
-#if MIGRATION
             get { return (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift; }
-#else
-            get { return (Keyboard.Modifiers & VirtualKeyModifiers.Shift) == VirtualKeyModifiers.Shift; }
-#endif
         }
 
         /// <summary>
@@ -397,7 +370,6 @@ namespace Windows.UI.Xaml.Controls
             Interaction = new InteractionHelper(this);
         }
 
-#if OPENSILVER
         /// <summary>
         /// Returns a
         /// <see cref="TreeViewAutomationPeer" />
@@ -412,18 +384,13 @@ namespace Windows.UI.Xaml.Controls
         {
             return new TreeViewAutomationPeer(this);
         }
-#endif
 
         /// <summary>
         /// Builds the visual tree for the
         /// <see cref="TreeView" /> control when a new
         /// control template is applied.
         /// </summary>
-#if MIGRATION
         public override void OnApplyTemplate()
-#else
-        protected override void OnApplyTemplate()
-#endif
         {
             ItemsControlHelper.OnApplyTemplate();
             Interaction.OnApplyTemplateBase();
@@ -641,11 +608,7 @@ namespace Windows.UI.Xaml.Controls
         /// an internal only variable in Silverlight), the root TreeViewItems
         /// explicitly propagate KeyDown events to their parent TreeView.
         /// </remarks>
-#if MIGRATION
         internal void PropagateKeyDown(KeyEventArgs e)
-#else
-        internal void PropagateKeyDown(KeyRoutedEventArgs e)
-#endif
         {
             OnKeyDown(e);
         }
@@ -662,12 +625,7 @@ namespace Windows.UI.Xaml.Controls
         /// <exception cref="ArgumentNullException">
         /// <paramref name="e " />is null.
         /// </exception>
-        [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Complexity metric is inflated by the switch statements")]
-#if MIGRATION
         protected override void OnKeyDown(KeyEventArgs e)
-#else
-        protected override void OnKeyDown(KeyRoutedEventArgs e)
-#endif
         {
             if (!Interaction.AllowKeyDown(e))
             {
@@ -687,7 +645,6 @@ namespace Windows.UI.Xaml.Controls
             {
                 switch (e.Key)
                 {
-#if MIGRATION
                     case Key.Home:
                     case Key.End:
                     case Key.PageUp:
@@ -696,16 +653,6 @@ namespace Windows.UI.Xaml.Controls
                     case Key.Right:
                     case Key.Up:
                     case Key.Down:
-#else
-                    case VirtualKey.Home:
-                    case VirtualKey.End:
-                    case VirtualKey.PageUp:
-                    case VirtualKey.PageDown:
-                    case VirtualKey.Left:
-                    case VirtualKey.Right:
-                    case VirtualKey.Up:
-                    case VirtualKey.Down:
-#endif
                         if (HandleScrollKeys(e.Key))
                         {
                             e.Handled = true;
@@ -717,20 +664,11 @@ namespace Windows.UI.Xaml.Controls
             {
                 switch (e.Key)
                 {
-#if MIGRATION
                     case Key.PageUp:
                     case Key.PageDown:
-#else
-                    case VirtualKey.PageUp:
-                    case VirtualKey.PageDown:
-#endif
                         if (SelectedContainer != null)
                         {
-#if MIGRATION
                             if (HandleScrollByPage(e.Key == Key.PageUp))
-#else
-                            if (HandleScrollByPage(e.Key == VirtualKey.PageUp))
-#endif
                             {
                                 e.Handled = true;
                             }
@@ -741,33 +679,20 @@ namespace Windows.UI.Xaml.Controls
                             e.Handled = true;
                         }
                         break;
-#if MIGRATION
                     case Key.Home:
-#else
-                    case VirtualKey.Home:
-#endif
                         if (FocusFirstItem())
                         {
                             e.Handled = true;
                         }
                         break;
-#if MIGRATION
                     case Key.End:
-#else
-                    case VirtualKey.End:
-#endif
                         if (FocusLastItem())
                         {
                             e.Handled = true;
                         }
                         break;
-#if MIGRATION
                     case Key.Up:
                     case Key.Down:
-#else
-                    case VirtualKey.Up:
-                    case VirtualKey.Down:
-#endif
                         if (SelectedContainer == null && FocusFirstItem())
                         {
                             e.Handled = true;
@@ -782,29 +707,17 @@ namespace Windows.UI.Xaml.Controls
         /// </summary>
         /// <param name="key">The key to handle.</param>
         /// <returns>A value indicating whether the key was handled.</returns>
-#if MIGRATION
         private bool HandleScrollKeys(Key key)
-#else
-        private bool HandleScrollKeys(VirtualKey key)
-#endif
         {
             ScrollViewer scrollHost = ItemsControlHelper.ScrollHost;
             if (scrollHost != null)
             {
                 // Some keys (e.g. Left/Right) need to be translated in RightToLeft mode
-#if MIGRATION
                 Key invariantKey = InteractionHelper.GetLogicalKey(FlowDirection, key);
-#else
-                VirtualKey invariantKey = InteractionHelper.GetLogicalKey(FlowDirection, key);
-#endif
 
                 switch (invariantKey)
                 {
-#if MIGRATION
                     case Key.PageUp:
-#else
-                    case VirtualKey.PageUp:
-#endif
                         // Move horizontally if we've run out of room vertically
                         if (!NumericExtensions.IsGreaterThan(scrollHost.ExtentHeight, scrollHost.ViewportHeight))
                         {
@@ -815,11 +728,7 @@ namespace Windows.UI.Xaml.Controls
                             scrollHost.PageUp();
                         }
                         return true;
-#if MIGRATION
                     case Key.PageDown:
-#else
-                    case VirtualKey.PageDown:
-#endif
                         // Move horizontally if we've run out of room vertically
                         if (!NumericExtensions.IsGreaterThan(scrollHost.ExtentHeight, scrollHost.ViewportHeight))
                         {
@@ -830,46 +739,22 @@ namespace Windows.UI.Xaml.Controls
                             scrollHost.PageDown();
                         }
                         return true;
-#if MIGRATION
                     case Key.Home:
-#else
-                    case VirtualKey.Home:
-#endif
                         scrollHost.ScrollToTop();
                         return true;
-#if MIGRATION
                     case Key.End:
-#else
-                    case VirtualKey.End:
-#endif
                         scrollHost.ScrollToBottom();
                         return true;
-#if MIGRATION
                     case Key.Left:
-#else
-                    case VirtualKey.Left:
-#endif
                         scrollHost.LineLeft();
                         return true;
-#if MIGRATION
                     case Key.Right:
-#else
-                    case VirtualKey.Right:
-#endif
                         scrollHost.LineRight();
                         return true;
-#if MIGRATION
                     case Key.Up:
-#else
-                    case VirtualKey.Up:
-#endif
                         scrollHost.LineUp();
                         return true;
-#if MIGRATION
                     case Key.Down:
-#else
-                    case VirtualKey.Down:
-#endif
                         scrollHost.LineDown();
                         return true;
                 }
@@ -1025,11 +910,7 @@ namespace Windows.UI.Xaml.Controls
         /// Provides handling for the KeyUp event.
         /// </summary>
         /// <param name="e">Event arguments.</param>
-#if MIGRATION
         protected override void OnKeyUp(KeyEventArgs e)
-#else
-        protected override void OnKeyUp(KeyRoutedEventArgs e)
-#endif
         {
             if (Interaction.AllowKeyUp(e))
             {
@@ -1041,20 +922,12 @@ namespace Windows.UI.Xaml.Controls
         /// Provides handling for the MouseEnter event.
         /// </summary>
         /// <param name="e">Event arguments.</param>
-#if MIGRATION
         protected override void OnMouseEnter(MouseEventArgs e)
-#else
-        protected override void OnPointerEntered(PointerRoutedEventArgs e)
-#endif
         {
             if (Interaction.AllowMouseEnter(e))
             {
                 Interaction.OnMouseEnterBase();
-#if MIGRATION
                 base.OnMouseEnter(e);
-#else
-                base.OnPointerEntered(e);
-#endif
             }
         }
 
@@ -1062,20 +935,12 @@ namespace Windows.UI.Xaml.Controls
         /// Provides handling for the MouseLeave event.
         /// </summary>
         /// <param name="e">Event arguments.</param>
-#if MIGRATION
         protected override void OnMouseLeave(MouseEventArgs e)
-#else
-        protected override void OnPointerExited(PointerRoutedEventArgs e)
-#endif
         {
             if (Interaction.AllowMouseLeave(e))
             {
                 Interaction.OnMouseLeaveBase();
-#if MIGRATION
                 base.OnMouseLeave(e);
-#else
-                base.OnPointerExited(e);
-#endif
             }
         }
 
@@ -1083,17 +948,9 @@ namespace Windows.UI.Xaml.Controls
         /// Provides handling for the MouseMove event.
         /// </summary>
         /// <param name="e">Event arguments.</param>
-#if MIGRATION
         protected override void OnMouseMove(MouseEventArgs e)
-#else
-        protected override void OnPointerMoved(PointerRoutedEventArgs e)
-#endif
         {
-#if MIGRATION
             base.OnMouseMove(e);
-#else
-            base.OnPointerMoved(e);
-#endif
         }
 
         /// <summary>
@@ -1105,11 +962,7 @@ namespace Windows.UI.Xaml.Controls
         /// A <see cref="MouseButtonEventArgs" /> that
         /// contains the event data.
         /// </param>
-#if MIGRATION
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
-#else
-        protected override void OnPointerPressed(PointerRoutedEventArgs e)
-#endif
         {
             if (Interaction.AllowMouseLeftButtonDown(e))
             {
@@ -1119,11 +972,7 @@ namespace Windows.UI.Xaml.Controls
                 }
 
                 Interaction.OnMouseLeftButtonDownBase();
-#if MIGRATION
                 base.OnMouseLeftButtonDown(e);
-#else
-                base.OnPointerPressed(e);
-#endif
             }
         }
 
@@ -1131,20 +980,12 @@ namespace Windows.UI.Xaml.Controls
         /// Provides handling for the MouseLeftButtonUp event.
         /// </summary>
         /// <param name="e">Event arguments.</param>
-#if MIGRATION
         protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
-#else
-        protected override void OnPointerReleased(PointerRoutedEventArgs e)
-#endif
         {
             if (Interaction.AllowMouseLeftButtonUp(e))
             {
                 Interaction.OnMouseLeftButtonUpBase();
-#if MIGRATION
                 base.OnMouseLeftButtonUp(e);
-#else
-                base.OnPointerReleased(e);
-#endif
             }
         }
 
@@ -1156,11 +997,7 @@ namespace Windows.UI.Xaml.Controls
         {
             if (SelectedContainer != null)
             {
-#if OPENSILVER
                 if (SelectedContainer != FocusManager.GetFocusedElement())
-#else
-                if (SelectedContainer != null)
-#endif
                 {
                     SelectedContainer.Focus();
                 }
@@ -1294,7 +1131,6 @@ namespace Windows.UI.Xaml.Controls
             // Notify when the selection changes
             if (raiseSelectionChanged)
             {
-#if OPENSILVER
                 if (SelectedContainer != null && AutomationPeer.ListenerExists(AutomationEvents.SelectionItemPatternOnElementSelected))
                 {
                     AutomationPeer peer = FrameworkElementAutomationPeer.CreatePeerForElement(SelectedContainer);
@@ -1311,7 +1147,6 @@ namespace Windows.UI.Xaml.Controls
                         peer.RaiseAutomationEvent(AutomationEvents.SelectionItemPatternOnElementRemovedFromSelection);
                     }
                 }
-#endif // OPENSILVER
 
                 OnSelectedItemChanged(new RoutedPropertyChangedEventArgs<object>(oldValue, newValue));
             }

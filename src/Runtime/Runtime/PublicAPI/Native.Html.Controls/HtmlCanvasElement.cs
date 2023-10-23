@@ -20,19 +20,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using CSHTML5.Native.Html.Input;
-#if MIGRATION
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-#else
-using Windows.Foundation;
-using Windows.UI;
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
-#endif
+using CSHTML5.Native.Html.Input;
 
 namespace CSHTML5.Native.Html.Controls
 {
@@ -365,11 +356,7 @@ namespace CSHTML5.Native.Html.Controls
             if (_toolTipContainer != null
                 && _toolTipContainer.IsOpen == false)
             {
-#if MIGRATION
                 Point absoluteCoordinates = e.GetPosition(null);
-#else
-                Point absoluteCoordinates = e.GetCurrentPoint(null).Position;
-#endif
                 Point absoluteCoordinatesShiftedToBeBelowThePointer = new Point(absoluteCoordinates.X, absoluteCoordinates.Y + 20);
                 ToolTipService.OpenToolTipAt(_toolTipContainer, absoluteCoordinatesShiftedToBeBelowThePointer);
             }
@@ -424,7 +411,7 @@ namespace CSHTML5.Native.Html.Controls
         {
             if (this._isStyleOverrided)
             {
-                Interop.ExecuteJavaScriptAsync(@"
+                OpenSilver.Interop.ExecuteJavaScriptAsync(@"
 $0.fillStyle = $1;
 $0.strokeStyle = $2;
 $0.shadowColor = $3;
@@ -445,7 +432,7 @@ $0.lineWidth = $9", jsContext2d,
                       this.LineWidth);
 
                 // Note: the following is done on a separate line because of a limitation of JSIL where $10 is understood as $1 followed by a 0.
-                Interop.ExecuteJavaScriptAsync(@"
+                OpenSilver.Interop.ExecuteJavaScriptAsync(@"
 $0.miterLimit = $1", jsContext2d,
                       this.MiterLimit);
 
@@ -573,11 +560,7 @@ $0.miterLimit = $1", jsContext2d,
             ContextMenu contextMenu = htmlCanvas.ContextMenu;
             if (contextMenu != null && !contextMenu.IsOpen)
             {
-#if MIGRATION
                 Point pointerPosition = e.GetPosition(null);
-#else
-                Point pointerPosition = e.GetCurrentPoint(null).Position;
-#endif
                 htmlCanvas.ContextMenuOpening?.Invoke(
                     htmlCanvas,
                     new ContextMenuEventArgs(pointerPosition.X, pointerPosition.Y));

@@ -11,21 +11,11 @@
 *  
 \*====================================================================================*/
 
-using CSHTML5.Internal;
-
-#if MIGRATION
 using System.Windows.Controls;
 using System.Windows.Media;
-#else
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Media;
-#endif
+using CSHTML5.Internal;
 
-#if MIGRATION
 namespace System.Windows.Documents
-#else
-namespace Windows.UI.Xaml.Documents
-#endif
 {
     /// <summary>
     /// An abstract class used as the base class for the also-abstract Block and Inline classes. 
@@ -77,7 +67,7 @@ namespace Windows.UI.Xaml.Documents
             => domElementWhereToPlaceChildren = INTERNAL_HtmlDomManager.CreateTextElementDomElementAndAppendIt(parentRef, this);
 
         [OpenSilver.NotImplemented]
-        public static readonly DependencyProperty CharacterSpacingProperty = 
+        public new static readonly DependencyProperty CharacterSpacingProperty = 
             DependencyProperty.Register(
                 nameof(CharacterSpacing), 
                 typeof(int), 
@@ -85,7 +75,7 @@ namespace Windows.UI.Xaml.Documents
                 null);
 
         [OpenSilver.NotImplemented]
-        public int CharacterSpacing
+        public new int CharacterSpacing
         {
             get { return (int)GetValue(CharacterSpacingProperty); }
             set { SetValue(CharacterSpacingProperty, value); }

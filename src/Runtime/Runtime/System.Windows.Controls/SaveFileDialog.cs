@@ -1,16 +1,10 @@
-using System;
-using System.Buffers.Text;
 using System.IO;
 using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
 using OpenSilver.IO;
 
-#if MIGRATION
 namespace System.Windows.Controls
-#else
-namespace Windows.UI.Xaml.Controls
-#endif
 {
     public sealed class SaveFileDialog
     {
@@ -158,6 +152,8 @@ namespace Windows.UI.Xaml.Controls
                         for (var i = 0; i < binaryString.length; i++) uInt8[i] = binaryString.charCodeAt(i);
                         $1.write(uInt8);", base64, streamSaverWriter);
 
+                    // This loop could be long running for large files, so the file is written in
+                    // chunks and Delay is called to give control back to UI so it does not freeze.
                     await Task.Delay(1);
 
                     i += bytesToWrite;

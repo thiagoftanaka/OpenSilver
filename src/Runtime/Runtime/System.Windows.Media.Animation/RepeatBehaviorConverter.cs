@@ -11,15 +11,10 @@
 *  
 \*====================================================================================*/
 
-using System;
 using System.ComponentModel;
 using System.Globalization;
 
-#if MIGRATION
 namespace System.Windows.Media.Animation
-#else
-namespace Windows.UI.Xaml.Media.Animation
-#endif
 {
     /// <summary>
     /// 
@@ -57,11 +52,7 @@ namespace Windows.UI.Xaml.Media.Animation
             if (stringValue != null)
             {
                 stringValue = stringValue.Trim();
-#if NETSTANDARD
                 stringValue = stringValue.ToLowerInvariant();
-#elif BRIDGE
-                stringValue = stringValue.ToLower();
-#endif
 
                 if (stringValue == "forever")
                 {

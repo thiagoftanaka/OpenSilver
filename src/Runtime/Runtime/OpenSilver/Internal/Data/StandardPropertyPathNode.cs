@@ -16,13 +16,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Windows.Markup;
-using CSHTML5.Internal;
-
-#if MIGRATION
 using System.Windows;
-#else
-using Windows.UI.Xaml;
-#endif
 
 namespace OpenSilver.Internal.Data
 {
@@ -99,23 +93,7 @@ namespace OpenSilver.Internal.Data
                 //this.ValueType = null; //todo: don't know what this is for
                 try
                 {
-#if BRIDGE
-                    //Bridge throws an exception when trying to call GetValue through PropertyInfo.GetValue on a Static Property while putting an instance as a parameter (which should not be the case in my opinion).
-                    //Because of that, we need to check whether the property is Static and then accordingly call GetValue with either null or the instance as a parameter.
-                    object propertyValue = null;
-                    MethodInfo methodInfo = _prop.GetMethod;
-                    if (INTERNAL_BridgeWorkarounds.MethodInfoIsStatic_SimulatorCompatible(methodInfo))
-                    {
-                        propertyValue = _prop.GetValue(null);
-                    }
-                    else
-                    {
-                        propertyValue = _prop.GetValue(this.Source);
-                    }
-                    UpdateValueAndIsBroken(propertyValue, CheckIsBroken());
-#else
                     UpdateValueAndIsBroken(_prop.GetValue(this.Source), CheckIsBroken());
-#endif
                 }
                 catch
                 {

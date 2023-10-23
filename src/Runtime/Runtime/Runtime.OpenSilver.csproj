@@ -1,36 +1,15 @@
 <Project>
-	<PropertyGroup>
-		<BaseIntermediateOutputPath>obj\OpenSilver</BaseIntermediateOutputPath>
-	</PropertyGroup>
-	<!-- We do this that way because otherwise the <BaseIntermediateOutputPath> directive will not work. This is a bug with .NET Standard 2.0 -->
 	<Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
-		<Configurations>SL;UWP</Configurations>
-		<Platforms>AnyCPU</Platforms>
 		<AssemblyName>OpenSilver</AssemblyName>
     <AssemblyVersion>2.0.1</AssemblyVersion>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<OutputPath>bin\OpenSilver\$(Configuration)\</OutputPath>
-		<NoWarn>1591</NoWarn>
-		<DebugType>full</DebugType>
-		<Optimize>true</Optimize>
+		<NoWarn>$(NoWarn);CS1591;CS0067</NoWarn>
 		<NoCSHTML5Reference>true</NoCSHTML5Reference>
 		<EnableDefaultItems>false</EnableDefaultItems>
-		<!-- This emluates the behavior of NET Framework, which excludes every files by default -->
-	</PropertyGroup>
-
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'SL|AnyCPU' ">
-		<DefineConstants>TRACE;CSHTML5BLAZOR;CSHTML5NETSTANDARD;MIGRATION;OPENSILVER;GD_WIP</DefineConstants>
-	</PropertyGroup>
-
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'UWP|AnyCPU' ">
-		<DefineConstants>TRACE;CSHTML5BLAZOR;CSHTML5NETSTANDARD;OPENSILVER</DefineConstants>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="$(Optimize) != true">
-		<DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
+    <DefineTrace>true</DefineTrace>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -521,7 +500,6 @@
 		<Compile Include="System.Windows\WORKINPROGRESS\LineStackingStrategy.cs" />
 		<Compile Include="System.Windows\FrameworkPropertyMetadata.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\UIElement.cs" />
-		<Compile Include="Empty Namespaces\WORKINPROGRESS\SystemXaml.cs" />
 		<Compile Include="System.Collections.Generic\WORKINPROGRESS\SynchronizedReadOnlyCollection.cs" />
 		<Compile Include="System.ComponentModel\ICollectionViewFactory.cs" />
 		<Compile Include="System.ComponentModel.Composition.Hosting\WORKINPROGRESS\ExportProvider.cs" />
@@ -646,11 +624,9 @@
 		<Compile Include="Core\Main\INTERNAL_Simulator.cs" />
 		<Compile Include="Core\Main\INTERNAL_ExecuteJavaScript.cs" />
 		<Compile Include="Core\Main\INTERNAL_UriHelper.cs" />
-		<Compile Include="Core\Main\NamespacesDocumentation.cs" />
 		<Compile Include="Core\Main\TypeFromStringConverters.cs" />
 		<Compile Include="Core\Other\HashSet2_1.cs" />
 		<Compile Include="Core\Other\INTERNAL_DispatcherHelpers.cs" />
-		<Compile Include="Core\Other\INTERNAL_WorkaroundIE11IssuesWithScrollViewerInsideGrid.cs" />
 		<Compile Include="Core\Other\INTERNAL_XamlResourcesHandler.cs" />
 		<Compile Include="Core\Other\ISet2_1.cs" />
 		<Compile Include="Core\Other\Performance.cs" />
@@ -663,27 +639,23 @@
 		<Compile Include="Core\Other\Tuple2_5.cs" />
 		<Compile Include="Core\Other\Tuple2_6.cs" />
 		<Compile Include="Core\Other\Windows.ApplicationModel.Activation.LaunchActivatedEventArgs.cs" />
-		<Compile Include="Core\Other\WorkaroundFixMe.cs" />
 		<Compile Include="Core\Other\INTERNAL_DispatcherQueueHandler.cs" />
 		<Compile Include="Core\Rendering\INTERNAL_Html2dContextReference.cs" />
 		<Compile Include="Core\Rendering\INTERNAL_HtmlDomElementReference.cs" />
 		<Compile Include="Core\Rendering\INTERNAL_HtmlDomManager.cs" />
 		<Compile Include="Core\Rendering\INTERNAL_HtmlDomStyleReference.cs" />
 		<Compile Include="Core\Rendering\INTERNAL_PopupsManager.cs" />
-		<Compile Include="Core\Rendering\INTERNAL_SimulatorPerformanceOptimizer.cs" />
 		<Compile Include="Core\Rendering\INTERNAL_VisualChildInformation.cs" />
 		<Compile Include="Core\Rendering\INTERNAL_VisualTreeManager.cs" />
 		<Compile Include="Core\WebRequestHelper\INTERNAL_WebRequestHelper_JSOnly.cs" />
 		<Compile Include="Core\WebRequestHelper\INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventArgs.cs" />
 		<Compile Include="Core\WebRequestHelper\INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventHandler.cs" />
-		<Compile Include="Core\WebRequestHelper\INTERNAL_WebRequestHelper_SimulatorOnly.cs" />
 		<Compile Include="Properties\AssemblyInfo.cs" />
 		<Compile Include="PublicAPI\CompilerIsSLMigrationAttribute.cs" />
 		<Compile Include="PublicAPI\CompilerVersionFriendlyNameAttribute.cs" />
 		<Compile Include="PublicAPI\CompilerVersionNumberAttribute.cs" />
 		<Compile Include="PublicAPI\CSharpXamlForHtml5_DomManagement.cs" />
 		<Compile Include="PublicAPI\CSharpXamlForHtml5_Environment.cs" />
-		<Compile Include="PublicAPI\Document.cs" />
 		<Compile Include="PublicAPI\DynamicDomElement.cs" />
 		<Compile Include="PublicAPI\DynamicDomElementChildrenCollection.cs" />
 		<Compile Include="PublicAPI\Internal\Attributes\IntermediateOutputPathAttribute.cs" />
@@ -720,7 +692,6 @@
 		<Compile Include="PublicAPI\Native.JavaScript.Networking\WebSocket\WebSocket.cs" />
 		<Compile Include="PublicAPI\Native.JavaScript.Networking\XMLHttpRequest.cs" />
 		<Compile Include="PublicAPI\Profiler\Profiler.cs" />
-		<Compile Include="System.ComponentModel\CancelEventArgs.cs" />
 		<Compile Include="System.ComponentModel\ClosingEventArgs.cs" />
 		<Compile Include="System.ComponentModel\DesignerProperties.cs" />
 		<Compile Include="System.ComponentModel\CurrentChangingEventArgs.cs" />
@@ -733,7 +704,6 @@
 		<Compile Include="System.IO.IsolatedStorage\IsolatedStorageSettingsForCSharp.cs" />
 		<Compile Include="System.IO.IsolatedStorage\WORKINPROGRESS\IsolatedStorageSettings.cs" />
 		<Compile Include="System.Net\CredentialsMode.cs" />
-		<Compile Include="System.Net\WebClientWithCredentials.cs" />
 		<Compile Include="System.Runtime.Serialization\CollectionDataContract2Attribute.cs" />
 		<Compile Include="System.Runtime.Serialization\DataContractSerializer.cs" />
 		<Compile Include="System.Runtime.Serialization\DataContractSerializer_Deserialization.cs" />
@@ -746,7 +716,6 @@
 		<Compile Include="System.Runtime.Serialization\INTERNAL_MemberInformation.cs" />
 		<Compile Include="System.Runtime.Serialization\INTERNAL_MemberInformationAndValue.cs" />
 		<Compile Include="System.Runtime.Serialization\INTERNAL_TypeInformation.cs" />
-		<Compile Include="System.Runtime.Serialization\InvalidDataContractException.cs" />
 		<Compile Include="System.Runtime.Serialization\Serializable2Attribute.cs" />
 		<Compile Include="System.Runtime.Serialization\SerializationType.cs" />
 		<Compile Include="System.ServiceModel\CSHTML5_ClientBase_1.cs" />
@@ -771,17 +740,6 @@
 		<Compile Include="System.Windows\IDataObject.cs" />
 		<Compile Include="System.Windows\RoutedPropertyChangedEventArgs_1.cs" />
 		<Compile Include="System.Windows\RoutedPropertyChangedEventHandler.cs" />
-		<Compile Include="System.Xml.Linq\XAttribute.cs" />
-		<Compile Include="System.Xml.Linq\XContainer.cs" />
-		<Compile Include="System.Xml.Linq\XDocument.cs" />
-		<Compile Include="System.Xml.Linq\XElement.cs" />
-		<Compile Include="System.Xml.Linq\XName.cs" />
-		<Compile Include="System.Xml.Linq\XNamespace.cs" />
-		<Compile Include="System.Xml.Linq\XNode.cs" />
-		<Compile Include="System.Xml.Linq\XObject.cs" />
-		<Compile Include="System.Xml.Linq\XText.cs" />
-		<Compile Include="System.Xml\Cshtml5_XmlReader.cs" />
-		<Compile Include="System.Xml\Cshtml5_XmlWriter.cs" />
 		<Compile Include="ToBeReviewed\GroupedEnumerable_3.cs" />
 		<Compile Include="ToBeReviewed\GroupedEnumerable_4.cs" />
 		<Compile Include="ToBeReviewed\Grouping_2.cs" />
@@ -800,12 +758,11 @@
 		<Compile Include="System.Windows\Point.cs" />
 		<Compile Include="System.Windows\Rect.cs" />
 		<Compile Include="System.Windows\Size.cs" />
-		<Compile Include="System.Windows.Input\VirtualKey.cs" />
-		<Compile Include="System.Windows.Input\VirtualKeyModifiers.cs" />
-		<Compile Include="System.Windows.Threading\CoreDispatcher.cs" />
+		<Compile Include="System.Windows.Input\Key.cs" />
+		<Compile Include="System.Windows.Input\ModifierKeys.cs" />
+		<Compile Include="System.Windows.Threading\Dispatcher.cs" />
 		<Compile Include="System.Windows\WindowSizeChangedEventArgs.cs" />
 		<Compile Include="System.Windows.Threading\DispatcherOperation.cs" />
-		<Compile Include="Windows.UI.Input\PointerPoint.cs" />
 		<Compile Include="System.Windows\FontStyles.cs" />
 		<Compile Include="System.Windows\FontWeight.cs" />
 		<Compile Include="System.Windows\FontWeights.cs" />
@@ -824,8 +781,6 @@
 		<Compile Include="System.Windows.Controls.Primitives\Popup.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\PopupRoot.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\RangeBase.cs" />
-		<Compile Include="System.Windows.Controls.Primitives\RangeBaseValueChangedEventArgs.cs" />
-		<Compile Include="System.Windows.Controls.Primitives\RangeBaseValueChangedEventHandler.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\RepeatButton.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\ScrollBar.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\ScrollEventArgs.cs" />
@@ -856,7 +811,6 @@
 		<Compile Include="System.Windows.Controls\ContextMenuService.cs" />
 		<Compile Include="System.Windows.Controls\Control.cs" />
 		<Compile Include="System.Windows.Controls\ControlTemplate.cs" />
-		<Compile Include="System.Windows.Controls\DataGridSelectionUnit.cs" />
 		<Compile Include="System.Windows.Controls\Dock.cs" />
 		<Compile Include="System.Windows.Controls\DockPanel.cs" />
 		<Compile Include="System.Windows.Controls\DragDropEffects.cs" />
@@ -889,7 +843,7 @@
 		<Compile Include="System.Windows.Controls\PanelDragDropTarget.cs" />
 		<Compile Include="System.Windows.Controls\PasswordBox.cs" />
 		<Compile Include="System.Windows.Controls\ProgressBar.cs" />
-		<Compile Include="System.Windows.Controls\RadioButton.OpenSilver.cs" />
+		<Compile Include="System.Windows.Controls\RadioButton.cs" />
 		<Compile Include="System.Windows.Controls\RowDefinition.cs" />
 		<Compile Include="System.Windows.Controls\RowDefinitionCollection.cs" />
 		<Compile Include="System.Windows.Controls\ScrollBarVisibility.cs" />
@@ -924,7 +878,7 @@
 		<Compile Include="System.Windows.Controls\ValidationErrorEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\Viewbox.cs" />
 		<Compile Include="System.Windows.Controls\VisualStates.cs" />
-		<Compile Include="System.Windows.Controls\WebView.cs" />
+		<Compile Include="System.Windows.Controls\WebBrowser.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\VirtualizationMode.cs" />
 		<Compile Include="System.Windows.Controls\WrapPanel.cs" />
 		<Compile Include="System.Windows.Data\Binding.cs" />
@@ -934,7 +888,6 @@
 		<Compile Include="System.Windows.Data\BindingOperations.cs" />
 		<Compile Include="System.Windows.Data\INTERNAL_CollectionViewGroupInternal.cs" />
 		<Compile Include="System.Windows.Data\FilterEventArgs.cs" />
-		<Compile Include="System.Windows.Data\IIsAttachedMonitor.cs" />
 		<Compile Include="System.Windows.Data\INTERNAL_DataOperations.cs" />
 		<Compile Include="System.Windows.Data\IValueConverter.cs" />
 		<Compile Include="System.Windows.Data\RelativeSource.cs" />
@@ -954,10 +907,10 @@
 		<Compile Include="System.Windows.Documents\TextElementCollection_1.cs" />
 		<Compile Include="System.Windows.Documents\Underline.cs" />
 		<Compile Include="System.Windows.Input\KeyEventHandler.cs" />
-		<Compile Include="System.Windows.Input\KeyRoutedEventArgs.cs" />
+		<Compile Include="System.Windows.Input\KeyEventArgs.cs" />
 		<Compile Include="System.Windows.Input\Pointer.cs" />
 		<Compile Include="System.Windows.Input\PointerEventHandler.cs" />
-		<Compile Include="System.Windows.Input\PointerRoutedEventArgs.cs" />
+		<Compile Include="System.Windows.Input\MouseEventArgs.cs" />
 		<Compile Include="System.Windows.Input\RightTappedEventHandler.cs" />
 		<Compile Include="System.Windows.Input\RightTappedRoutedEventArgs.cs" />
 		<Compile Include="System.Windows.Input\TappedEventHandler.cs" />
@@ -1166,19 +1119,16 @@
 		<Compile Include="System.Windows\WORKINPROGRESS\AssemblyPart.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\AssemblyPartCollection.cs" />
 		<Compile Include="System.Windows.Media\Colors.cs" />
-		<Compile Include="Windows.UI.Input\PointerPointProperties.cs" />
 		<Compile Include="__COMPATIBILITY__\JSIL.Meta.dll ASSEMBLY\JSIL.Meta\JSIgnoreAttribute.cs" />
 		<Compile Include="__COMPATIBILITY__\JSIL.Meta.dll ASSEMBLY\JSIL.Meta\JSReplacementAttribute.cs" />
 		<Compile Include="__COMPATIBILITY__\JSIL.Meta.dll ASSEMBLY\JSIL\Verbatim.cs" />
 		<Compile Include="__SPECIFIC__\IJavaScriptExecutionHandler.cs" />
 	</ItemGroup>
 	<ItemGroup>
-		<Content Include="..\Themes\Runtime\OpenSilver\generic.xaml" Link="Themes\generic.xaml">
-			<SubType>Designer</SubType>
-			<Generator>MSBuild:Compile</Generator>
-		</Content>
-	</ItemGroup>
-	<ItemGroup>
+    <Content Include="Themes\generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Content>
 		<Content Include="DefaultStyles\INTERNAL_DefaultButtonSpinnerStyle.xaml">
 			<Generator>MSBuild:Compile</Generator>
 			<SubType>Designer</SubType>
@@ -1294,6 +1244,9 @@
     <Content Include="DefaultStyles\INTERNAL_DefaultDatePickerStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Content>
+    <Content Include="DefaultStyles\INTERNAL_DefaultDatePickerStyle.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Content>
 	</ItemGroup>
   <ItemGroup>
 	  <None Include="System.Windows.Controls\ListTimePickerPopup.xaml">
@@ -1326,12 +1279,7 @@
 	<Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 	<Import Project="$(OpenSilverTargets)" />
 	<ItemGroup>
-	  <UpToDateCheckInput Remove="defaultstyles\INTERNAL_DefaultDatePickerStyle.xaml" />
-	</ItemGroup>
-	<ItemGroup>
-	  <Page Include="defaultstyles\INTERNAL_DefaultDatePickerStyle.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </Page>
+	  <UpToDateCheckInput Remove="Windows.UI.Input\**" />
 	</ItemGroup>
 
 </Project>

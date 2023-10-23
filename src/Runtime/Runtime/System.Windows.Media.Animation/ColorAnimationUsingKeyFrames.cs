@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,31 +11,20 @@
 *  
 \*====================================================================================*/
 
-
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Markup;
-using CSHTML5;
 using System.Linq;
-
-#if MIGRATION
 using System.Windows.Controls;
-#else 
-using Windows.UI.Xaml.Controls;
-#endif
+using CSHTML5;
 
-#if MIGRATION
 namespace System.Windows.Media.Animation
-#else
-namespace Windows.UI.Xaml.Media.Animation
-#endif
 {
     /// <summary>
     /// This class is used to animate a Color property value along a set of key frames.
     /// </summary>
-    [ContentProperty("KeyFrames")]
-    public partial class ColorAnimationUsingKeyFrames : AnimationTimeline
+    [ContentProperty(nameof(KeyFrames))]
+    public class ColorAnimationUsingKeyFrames : AnimationTimeline
     {
         private ColorKeyFrameCollection _keyFrames;
 
@@ -416,7 +404,6 @@ namespace Windows.UI.Xaml.Media.Animation
                 //we make a specific name for this animation:
                 string specificGroupName = animationInstanceSpecificName;
 
-                bool cssEquivalentExists = false;
                 if (propertyMetadata.GetCSSEquivalent != null)
                 {
                     CSSEquivalent cssEquivalent = propertyMetadata.GetCSSEquivalent(_propertyContainer);
@@ -434,7 +421,6 @@ namespace Windows.UI.Xaml.Media.Animation
                             }
                             if (cssEquivalent.DomElement != null)
                             {
-                                cssEquivalentExists = true;
                                 string sDomElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(cssEquivalent.DomElement);
                                 AnimationHelpers.StopVelocity(sDomElement, specificGroupName);
                             }
@@ -449,7 +435,6 @@ namespace Windows.UI.Xaml.Media.Animation
                     {
                         if (equivalent.DomElement != null && equivalent.CallbackMethod == null)
                         {
-                            cssEquivalentExists = true;
                             string sDomElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(equivalent.DomElement);
                             AnimationHelpers.StopVelocity(sDomElement, specificGroupName);
                         }

@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,23 +11,12 @@
 *  
 \*====================================================================================*/
 
-
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-#if MIGRATION
 namespace System.Windows.Data
-#else
-namespace Windows.UI.Xaml.Data
-#endif
 {
     /// <summary>
     /// The class that creates a tree results based on the operations requested by a PagedCollectionView.
@@ -158,50 +146,10 @@ namespace Windows.UI.Xaml.Data
             {
                 if (Items.Count != 0)
                 {
-#if OPENSILVER
-                    if (true)
-#elif BRIDGE
-                    if(CSHTML5.Interop.IsRunningInTheSimulator)
-#endif
-                    {
-                        Type type = GetValue(Items.ElementAt(0), operation).GetType();
+                    Type type = GetValue(Items.ElementAt(0), operation).GetType();
 
-                        if (typeof(IComparable).IsAssignableFrom(type))
-                            return true;
-                    }
-                    else
-                    {
-                        //--------------------
-                        // HACK: in JavaScript, since Comparer does not work properly in JSIL, we attempt to compare dynamic values and see if it passes the try/catch.
-                        //--------------------
-
-                        // We try to do a comparaison between the same object to see if js allows comparison (fail has not been tested...)
-                        try 
-                        {
-                            // basics types
-                            dynamic value1ToCompare = GetValue(Items.ElementAt(0), operation);
-                            dynamic value2ToCompare = value1ToCompare;
-
-                            if (value1ToCompare > value2ToCompare) { }
-
-                            return true;
-                        }
-                        catch
-                        {
-                            /*
-                            // custom types (see also __comparer__ in jsil)
-                            Type type = GetValue(Items.ElementAt(0), operation).GetType();
-
-                            foreach (MethodInfo method in type.GetMethods())
-                            {
-                                if (method.Name == "CompareTo")
-                                    return true;
-                            }
-                            */
-                             
-                            return false;
-                        }
-                    }
+                    if (typeof(IComparable).IsAssignableFrom(type))
+                        return true;
                 }   
                 return false;
             }
@@ -229,26 +177,10 @@ namespace Windows.UI.Xaml.Data
 
                 foreach (object item in Items)
                 {
-                    int index;
-
                     // we get the value of the sorting property on this item to allow comparison (if we are here, we know that data is comparable)
                     // then we get the position where we need to insert this item
-#if OPENSILVER
-                    if (true)
-#elif BRIDGE
-                    if (CSHTML5.Interop.IsRunningInTheSimulator)
-#endif
-                    {
-                        IComparable value = (IComparable)GetValue(item, operation);
-
-                        index = GetPosIndex_SimulatorOnly(operation, value, 0, childItems.Count, childItems);
-                    }
-                    else
-                    {
-                        dynamic value = GetValue(item, operation);
-
-                        index = GetPosIndex_JSOnly(operation, value, 0, childItems.Count, childItems);
-                    }
+                    IComparable value = (IComparable)GetValue(item, operation);
+                    int index = GetPosIndex_SimulatorOnly(operation, value, 0, childItems.Count, childItems);
 
                     childItems.Insert(index, item);
                 }

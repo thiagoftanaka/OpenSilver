@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,48 +11,15 @@
 *  
 \*====================================================================================*/
 
-
-using CSHTML5.Internal;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.Serialization;
-#if !BRIDGE
-//BRIDGETODO:
-//Apparently, using below is useless
-using System.Runtime.Serialization.Formatters.Binary;
-using JSIL.Meta;
-#else
-using Bridge;
-#endif
-using System.Text;
-using System.Threading.Tasks;
-#if MIGRATION
-using System.Runtime.CompilerServices;
 using System.Windows;
 using CSHTML5.Types;
-using System.Windows.Input;
-#else
-using Windows.UI.Xaml;
-#endif
-#if OPENSILVER
 using OpenSilver;
-#else
-using CSHTML5;
-#endif
 
 namespace System.IO.IsolatedStorage
 {
-    //Note: we remove the interfaces because they are useless for now.
-    //
-    // Exceptions:
-    //   System.ArgumentNullException:
-    //     key is null. This exception is thrown when you attempt to reference an instance
-    //     of the class by using an indexer and the variable you pass in for the key
-    //     value is null.
-
     /// <summary>
     /// Provides a System.Collections.Generic.Dictionary&lt;TKey,TValue&gt; that stores
     /// key-value pairs in isolated storage.
@@ -68,73 +34,15 @@ namespace System.IO.IsolatedStorage
     /// string myString = IsolatedStorageSettings.ApplicationSettings.TryGetValue("someKey", out value);
     /// </code>
     /// </example>
-    public sealed partial class IsolatedStorageSettings : IEnumerable, IEnumerable<KeyValuePair<string, object>> // : IDictionary<string, object>, ICollection<KeyValuePair<string, object>>, IDictionary, ICollection
+    public sealed partial class IsolatedStorageSettings : IEnumerable, IEnumerable<KeyValuePair<string, object>>
     {
         string _fullApplicationName = null;
         private AppDomain _appDomain;
 
-#if !BRIDGE
-        [JSReplacement("true")]
-#else
-        [Template("true")]
-#endif
-        static bool IsRunningInJavascript() //must be static to work properly
-        {
-            return false;
-        }
-
-#if !BRIDGE
-        [JSReplacement("undefined")]
-#else
-        [Template("undefined")]
-#endif
-        static dynamic GetUndefined() { return null; } //must be static to work properly
-
-        //[JSIL.Meta.JSReplacement("window.localStorage")]
         dynamic GetLocalStorage()
         {
-#if !OPENSILVER
-            if (IsRunningInJavascript())
-            {
-#if !BRIDGE
-                dynamic localStorage = JSIL.Verbatim.Expression(@"
-function(){
-    return window.localStorage;
-}()
-");
-#else
-                object localStorage = Script.Write<object>(@"
-(function(){
-    return window.localStorage;
-}());
-");
-#endif
-                if (localStorage == null || localStorage == GetUndefined())
-                {
-#if !BRIDGE
-                    JSIL.Verbatim.Expression(@"
-if(window.IE_VERSION && document.location.protocol === ""file:"") {
-    JSIL.RuntimeError(""The local storage - used to persist data - is not available on Internet Explorer or Edge when running the website from the local file system (ie. the URL starts with 'c:\' or 'file:///'). To solve the problem, please run the website from a web server instead (ie. the URL must start with 'http://' or 'https://') or test the local storage using a different browser."")
-}");
-                    return null;
-#else
-                    throw new Exception("The local storage - used to persist data - is not available on Internet Explorer or Edge when running the website from the local file system (ie. the URL starts with 'c:\' or 'file:///'). To solve the problem, please run the website from a web server instead (ie. the URL must start with 'http://' or 'https://') or test the local storage using a different browser.");
-#endif
-                }
-                else
-                {
-                    return localStorage;
-                }
-            }
-            else
-            { 
-#endif
-            //Note: The whole part in the #if !OPENSILVER above only serves to throw an exception when in IE or Edge if we are on a local file system (ie url starts with c:\ or similar). It should be useless in OpenSilver and can most definitely be simplified in Bridge.
             return Interop.ExecuteJavaScript("window.localStorage");
-#if !OPENSILVER
         } 
-#endif
-    }
 
         string GetKeysFirstPart()
         {
@@ -181,22 +89,8 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
             {
                 if (!Interop.IsRunningInTheSimulator)
                 {
-#if MIGRATION
                     return Interop.ExecuteJavaScriptInt32(
                             $"Object.keys(window.localStorage).filter(k => k.startsWith('{GetKeysFirstPart()}')).length");
-#else
-                    dynamic localStorage = GetLocalStorage();
-                    int length = localStorage.length;
-                    int count = 0;
-                    for (int i = 0; i < length; ++i)
-                    {
-                        if (localStorage.key(i).startsWith(GetKeysFirstPart()))
-                        {
-                            ++count;
-                        }
-                    }
-                    return count;
-#endif
                 }
                 else
                 {
@@ -221,24 +115,9 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
             {
                 if (!Interop.IsRunningInTheSimulator)
                 {
-#if MIGRATION
                     string keys = Interop.ExecuteJavaScriptString(
                             $"Object.keys(window.localStorage).filter(k => k.startsWith('{GetKeysFirstPart()}')).join(';')");
                     return keys?.Replace(GetKeysFirstPart(), "").Split(';');
-#else
-                    dynamic localStorage = GetLocalStorage();
-                    List<string> keysList = new List<string>();
-                    int length = localStorage.length;
-                    int lengthOfPartToRemoveFromKey = (GetKeysFirstPart()).Length;
-                    for (int i = 0; i < length; ++i)
-                    {
-                        if (localStorage.key(i).startsWith(GetKeysFirstPart()))
-                        {
-                            keysList.Add(localStorage.key(i).substring(lengthOfPartToRemoveFromKey));
-                        }
-                    }
-                    return keysList;
-#endif
                 }
                 else
                 {
@@ -271,32 +150,13 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
             {
                 if (!Interop.IsRunningInTheSimulator)
                 {
-#if MIGRATION
                     string keys = Interop.ExecuteJavaScriptString(
                             $"Object.entries(window.localStorage).filter(([k, v], index) => k.startsWith('{GetKeysFirstPart()}')).map(([k, v], index) => v).join(';')");
                     return keys.Split(';');
-#else
-                    dynamic localStorage = GetLocalStorage();
-                    List<object> valuesList = new List<object>();
-                    int length = localStorage.length;
-                    for (int i = 0; i < length; ++i)
-                    {
-                        string str = localStorage.key(i);
-                        if (str.StartsWith(GetKeysFirstPart()))
-                        {
-                            valuesList.Add(localStorage[str]);
-                        }
-                    }
-                    return valuesList;
-#endif
                 }
                 else
                 {
-#if BRIDGE
-                    return (ICollection)(INTERNAL_BridgeWorkarounds.GetDictionaryValues_SimulatorCompatible<string, Object>(GetSettingsForCSharpForApplicationOrSite()).ToList<object>());
-#else
-                    return GetSettingsForCSharpForApplicationOrSite().Values.ToList<object>();
-#endif
+                    return IsolatedStorageSettingsForCSharp.Instance.Values.ToList();
                 }
             }
         }
@@ -316,14 +176,9 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
             {
                 if (!Interop.IsRunningInTheSimulator)
                 {
-#if MIGRATION
                     var result = Interop.ExecuteJavaScript("window.localStorage[$0]", GetKeysFirstPart() + key)
                         as INTERNAL_JSObjectReference;
                     return result?.GetActualValue();
-#else
-                    dynamic localStorage = GetLocalStorage();
-                    return Convert.ChangeType((Interop.ExecuteJavaScript("$0[$1]", localStorage, GetKeysFirstPart() + key)), typeof(object));
-#endif
                 }
                 else
                 {
@@ -334,13 +189,7 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
             {
                 if (!Interop.IsRunningInTheSimulator)
                 {
-#if MIGRATION
                     Interop.ExecuteJavaScriptVoidAsync("window.localStorage[$0] = $1", GetKeysFirstPart() + key, value);
-#else
-                    dynamic localStorage = GetLocalStorage();
-                    string applicationSpecificKey = GetKeysFirstPart() + key;
-                    Interop.ExecuteJavaScriptVoid("$0[$1] = $2", false,  localStorage, applicationSpecificKey, value);
-#endif
                 }
                 else
                 {
@@ -358,12 +207,7 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
         {
             if (!Interop.IsRunningInTheSimulator)
             {
-#if MIGRATION
                 Interop.ExecuteJavaScriptVoidAsync("window.localStorage[$0] = $1", GetKeysFirstPart() + key, value);
-#else
-                dynamic localStorage = GetLocalStorage();
-                localStorage[GetKeysFirstPart() + key] = value;
-#endif
             }
             else
             {
@@ -380,19 +224,10 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
         {
             if (!Interop.IsRunningInTheSimulator)
             {
-#if MIGRATION
                 foreach (string key in Keys)
                 {
                     Interop.ExecuteJavaScriptVoidAsync("delete window.localStorage[$0]", GetKeysFirstPart() + key);
                 }
-#else
-                dynamic localStorage = GetLocalStorage();
-                List<string> keys = (List<string>)Keys;
-                foreach (string key in keys)
-                {
-                    localStorage.removeItem(GetKeysFirstPart() + key);
-                }
-#endif
             }
             else
             {
@@ -410,14 +245,9 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
         {
             if (!Interop.IsRunningInTheSimulator)
             {
-#if MIGRATION
                 var result = Interop.ExecuteJavaScript("window.localStorage[$0]", GetKeysFirstPart() + key)
                     as INTERNAL_JSObjectReference;
                 return result?.GetActualValue() != null;
-#else
-                dynamic localStorage = GetLocalStorage();
-                return (localStorage.getItem(GetKeysFirstPart() + key) != null);
-#endif
             }
             else
             {
@@ -434,21 +264,10 @@ if(window.IE_VERSION && document.location.protocol === ""file:"") {
         {
             if (!Interop.IsRunningInTheSimulator)
             {
-#if MIGRATION
                 return Interop.ExecuteJavaScriptBoolean(
                     $@"let existedBefore = Object.keys(window.localStorage).includes('{GetKeysFirstPart() + key}');
 delete window.localStorage['{GetKeysFirstPart() + key}'];
 existedBefore && !Object.keys(window.localStorage).includes('{GetKeysFirstPart() + key}');");
-#else
-                dynamic localStorage = GetLocalStorage();
-                bool result = Convert.ToBoolean(Interop.ExecuteJavaScript(@"(function() {
-var res = $0.getItem($1) != null;
-$0.removeItem($1);
-return res;
-})()", localStorage, GetKeysFirstPart() + key)
-                    );
-                return result;
-#endif
             }
             else
             {
@@ -484,7 +303,6 @@ return res;
         {
             if (!Interop.IsRunningInTheSimulator)
             {
-#if MIGRATION
                 object valueAttempt = this[key];
                 if (valueAttempt != null)
                 {
@@ -493,20 +311,6 @@ return res;
                 }
                 value = default;
                 return false;
-#else
-                dynamic localStorage = GetLocalStorage();
-                using(var temp = Interop.ExecuteJavaScript("$0.getItem($1)", localStorage, GetKeysFirstPart() + key))
-                    if (Convert.ToBoolean(Interop.ExecuteJavaScript("$0 == null",temp)))
-                    {
-                        value = default(T);
-                        return false;
-                    }
-                    else
-                    {
-                        value = Convert.ChangeType(temp, typeof(T));
-                        return true;
-                    }
-#endif
             }
             else
             {
@@ -537,21 +341,11 @@ return res;
         {
             if (!Interop.IsRunningInTheSimulator)
             {
-#if MIGRATION
                 foreach (var keyValuePair in ((IEnumerable<string>)Keys).Zip((IEnumerable<object>)Values,
                              (key, value) => new KeyValuePair<string, object>(key, value)))
                 {
                     yield return keyValuePair;
                 }
-#else
-                dynamic localStorage = GetLocalStorage();
-                List<string> keys = (List<string>)Keys;
-                foreach (string key in keys)
-                {
-                    string item = localStorage.getItem(GetKeysFirstPart() + key);
-                    yield return new KeyValuePair<string, object>(key, item);
-                }
-#endif
             }
             else
             {

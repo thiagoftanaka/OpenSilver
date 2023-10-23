@@ -1,6 +1,5 @@
 ﻿// Copyright (C) 2003 by Microsoft Corporation.  All rights reserved.
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -9,20 +8,11 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
 using System.Threading;
+using System.Windows.Controls;
 using OpenSilver.Internal;
 using OpenSilver.Internal.Data;
 
-#if MIGRATION
-using System.Windows.Controls;
-#else
-using Windows.UI.Xaml.Controls;
-#endif
-
-#if MIGRATION
 namespace System.Windows.Data
-#else
-namespace Windows.UI.Xaml.Data
-#endif
 {
     internal class CollectionView : ICollectionView, INotifyCollectionChanged, INotifyPropertyChanged
     {
@@ -325,11 +315,6 @@ namespace Windows.UI.Xaml.Data
         /// </summary>
         public virtual IDisposable DeferRefresh()
         {
-#if false
-            if (AllowsCrossThreadChanges)
-                VerifyAccess();
-#endif
-
             IEditableCollectionView ecv = this as IEditableCollectionView;
             if (ecv != null && (ecv.IsAddingNew || ecv.IsEditingItem))
                 throw new InvalidOperationException(string.Format("'{0}' is not allowed during an AddNew or EditItem transaction.", "DeferRefresh"));
@@ -528,11 +513,6 @@ namespace Windows.UI.Xaml.Data
 
         internal void RefreshInternal()
         {
-#if false
-            if (AllowsCrossThreadChanges)
-                VerifyAccess();
-#endif
-
             RefreshOverride();
 
             SetFlag(CollectionViewFlags.NeedsRefresh, false);
@@ -1071,10 +1051,6 @@ namespace Windows.UI.Xaml.Data
             {
                 if (!AllowsCrossThreadChanges)
                 {
-#if false
-                    if (!CheckAccess())
-                        throw new NotSupportedException("This type of CollectionView does not support changes to its SourceCollection from a thread different from the Dispatcher thread.");
-#endif
                     ProcessCollectionChanged(args);
                 }
             }
@@ -1153,11 +1129,6 @@ namespace Windows.UI.Xaml.Data
         // and throw if that is the case.
         internal void VerifyRefreshNotDeferred()
         {
-#if false
-            if (AllowsCrossThreadChanges)
-                VerifyAccess();
-#endif
-
             // If the Refresh is being deferred to change filtering or sorting of the
             // data by this CollectionView, then CollectionView will not reflect the correct
             // state of the underlying data.
@@ -1168,12 +1139,7 @@ namespace Windows.UI.Xaml.Data
 
         internal void InvalidateEnumerableWrapper()
         {
-#if NETSTANDARD
             IndexedEnumerable wrapper = (IndexedEnumerable)Interlocked.Exchange(ref _enumerableWrapper, null);
-#else // BRIDGE
-            IndexedEnumerable wrapper = _enumerableWrapper;
-            _enumerableWrapper = null;
-#endif
             if (wrapper != null)
             {
                 wrapper.Invalidate();
@@ -1181,8 +1147,6 @@ namespace Windows.UI.Xaml.Data
         }
 
 #if WPF
-
-#if NETSTANDARD
         internal ReadOnlyCollection<ItemPropertyInfo> GetItemProperties()
         {
             IEnumerable collection = SourceCollection;
@@ -1247,62 +1211,6 @@ namespace Windows.UI.Xaml.Data
             // return the result as a read-only collection
             return new ReadOnlyCollection<ItemPropertyInfo>(list);
         }
-#else
-        internal ReadOnlyCollection<ItemPropertyInfo> GetItemProperties()
-        {
-            IEnumerable collection = SourceCollection;
-            if (collection == null)
-                return null;
-
-            IEnumerable properties = null;
-
-            Type itemType;
-            object item;
-
-            if ((itemType = GetItemType(false)) != null)
-            {
-                // If we know the item type, use its properties.
-                properties = itemType.GetProperties();
-            }
-            else if ((item = GetRepresentativeItem()) != null)
-            {
-                // If we have a representative item, use its properties.
-                // It's cheaper to use the item type, but we cannot do that
-                // when all we know is a representative item.  If the item
-                // has synthetic properties (via ICustomTypeDescriptor or
-                // TypeDescriptorProvider), they don't show up on the type -
-                // only on the item.
-                ICustomTypeProvider ictp = item as ICustomTypeProvider;
-                if (ictp == null)
-                {
-                    properties = item.GetType().GetProperties();
-                }
-                else
-                {
-                    properties = ictp.GetCustomType().GetProperties();
-                }
-            }
-
-            if (properties == null)
-                return null;
-
-            // convert the properties to ItemPropertyInfo
-            List<ItemPropertyInfo> list = new List<ItemPropertyInfo>();
-            foreach (object property in properties)
-            {
-                PropertyInfo pi;
-
-                if ((pi = property as PropertyInfo) != null)
-                {
-                    list.Add(new ItemPropertyInfo(pi.Name, pi.PropertyType, pi));
-                }
-            }
-
-            // return the result as a read-only collection
-            return new ReadOnlyCollection<ItemPropertyInfo>(list);
-        }
-#endif
-
 #endif // WPF
 
         internal Type GetItemType(bool useRepresentativeItem)
@@ -1539,14 +1447,7 @@ namespace Windows.UI.Xaml.Data
                 if (_enumerableWrapper == null)
                 {
                     IndexedEnumerable newWrapper = new IndexedEnumerable(SourceCollection, new Predicate<object>(this.PassesFilter));
-#if NETSTANDARD
                     Interlocked.CompareExchange(ref _enumerableWrapper, newWrapper, null);
-#else // BRIDGE
-                    if (_enumerableWrapper == null)
-                    {
-                        _enumerableWrapper = newWrapper;
-                    }
-#endif
                 }
 
                 return _enumerableWrapper;
@@ -1739,9 +1640,7 @@ namespace Windows.UI.Xaml.Data
                     _collectionView = null;
                 }
 
-#if NETSTANDARD
                 GC.SuppressFinalize(this);
-#endif
             }
 
             private CollectionView _collectionView;
@@ -1763,9 +1662,7 @@ namespace Windows.UI.Xaml.Data
             public void Dispose()
             {
                 _entered = false;
-#if NETSTANDARD
                 GC.SuppressFinalize(this);
-#endif
             }
 
             public bool Busy { get { return _entered; } }

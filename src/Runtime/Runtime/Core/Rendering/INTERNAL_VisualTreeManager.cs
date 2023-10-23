@@ -16,25 +16,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-#if OPENSILVER
-using OpenSilver; 
-#endif
-
-#if MIGRATION
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-#else
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Media;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Documents;
-using Windows.UI.Xaml.Input;
-#endif
+using OpenSilver;
 
 namespace CSHTML5.Internal
 {
@@ -69,8 +57,6 @@ namespace CSHTML5.Internal
 
                         //Detach Element  
                         DetachVisualChildren(child);
-
-                        INTERNAL_WorkaroundIE11IssuesWithScrollViewerInsideGrid.RefreshLayoutIfIE();
                     }
                     else
                     {
@@ -188,25 +174,25 @@ namespace CSHTML5.Internal
                 {
                     object domElementWhereToPlaceChildStuff = (parent.GetDomElementWhereToPlaceChild(child) ?? parent.INTERNAL_InnerDomElement);
 
-                    object movedChild = CSHTML5.Interop.ExecuteJavaScript(
+                    object movedChild = OpenSilver.Interop.ExecuteJavaScript(
                         "$0.children[$1]",
                         domElementWhereToPlaceChildStuff,
                         oldIndex);
 
 
-                    if (!Convert.ToBoolean(CSHTML5.Interop.ExecuteJavaScript("$0 == $1", movedChild, domElementToMove)))
+                    if (!Convert.ToBoolean(OpenSilver.Interop.ExecuteJavaScript("$0 == $1", movedChild, domElementToMove)))
                     {
                         throw new InvalidOperationException(string.Format("index '{0}' does match index of the element about to be moved.", oldIndex));
                     }
 
-                    object nextSibling = CSHTML5.Interop.ExecuteJavaScript(
+                    object nextSibling = OpenSilver.Interop.ExecuteJavaScript(
                         "$0.children[$1]",
                         domElementWhereToPlaceChildStuff,
                         newIndex);
 
                     if (nextSibling != null)
                     {
-                        CSHTML5.Interop.ExecuteJavaScript(
+                        OpenSilver.Interop.ExecuteJavaScript(
                             "$0.insertBefore($1, $2)",
                             domElementWhereToPlaceChildStuff,
                             domElementToMove,
@@ -214,7 +200,7 @@ namespace CSHTML5.Internal
                     }
                     else
                     {
-                        CSHTML5.Interop.ExecuteJavaScript(
+                        OpenSilver.Interop.ExecuteJavaScript(
                             "$0.appendChild($1)",
                             domElementWhereToPlaceChildStuff,
                             domElementToMove);
@@ -236,7 +222,7 @@ namespace CSHTML5.Internal
                 {
                     object domElementWhereToPlaceChildStuff = (parent.GetDomElementWhereToPlaceChild(child) ?? parent.INTERNAL_InnerDomElement);
                     //todo: see if there is a way to know the index of the domElement in its parent without looping through the list (where we find i in the js below).
-                    Interop.ExecuteJavaScript(@"
+                    OpenSilver.Interop.ExecuteJavaScript(@"
 var actualIndex = $1;
 var i = 0;
 while (i < actualIndex && $0.children[i]!=$2) { 
@@ -287,33 +273,8 @@ if(nextSibling != undefined) {
                     // Nothing to do: the element is already attached to the specified parent.
                     return; //prevent from useless call to INTERNAL_WorkaroundIE11IssuesWithScrollViewerInsideGrid.RefreshLayoutIfIE().
                 }
-
-                INTERNAL_WorkaroundIE11IssuesWithScrollViewerInsideGrid.RefreshLayoutIfIE();
             }
         }
-
-#if OLD_CODE_TO_OPTIMIZE_SIMULATOR_PERFORMANCE // Obsolete since Beta 13.4 on 2018.01.31 because we now use the Dispatcher instead (cf. the class "INTERNAL_SimulatorExecuteJavaScript")
-
-#if !BRIDGE
-        [JSReplacement("")]
-#else
-        [External]
-#endif
-        static void StartTransactionToOptimizeSimulatorPerformance()
-        {
-            INTERNAL_SimulatorPerformanceOptimizer.StartTransaction();
-        }
-
-#if !BRIDGE
-        [JSReplacement("")]
-#else
-        [External]
-#endif
-        static void EndTransactionToOptimizeSimulatorPerformance()
-        {
-            INTERNAL_SimulatorPerformanceOptimizer.EndTransaction();
-        }
-#endif
 
         static void AttachVisualChild_Private(UIElement child, UIElement parent, int index)
         {
@@ -632,14 +593,6 @@ if(nextSibling != undefined) {
                 Performance.Counter("VisualTreeManager: RaisePropertyChanged for property '" + property.Name + "'", t1);
 #endif
             }
-        }
-
-#if BRIDGE
-        [Bridge.Template("true")]
-#endif
-        static bool IsRunningInJavaScript()
-        {
-            return false;
         }
 
         /// <summary>

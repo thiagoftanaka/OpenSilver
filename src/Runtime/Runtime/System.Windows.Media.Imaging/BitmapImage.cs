@@ -11,21 +11,16 @@
 *  
 \*====================================================================================*/
 
-using System;
 using System.Reflection;
 using System.Threading.Tasks;
 using CSHTML5.Internal;
 
-#if MIGRATION
 namespace System.Windows.Media.Imaging
-#else
-namespace Windows.UI.Xaml.Media.Imaging
-#endif
 {
     /// <summary>
     /// Provides the practical object source type for the Source and ImageSource properties.
     /// </summary>
-    public sealed partial class BitmapImage : BitmapSource
+    public sealed class BitmapImage : BitmapSource
     {
         /// <summary>
         /// Initializes a new instance of the BitmapImage class.
@@ -56,64 +51,6 @@ namespace Windows.UI.Xaml.Media.Imaging
 
         public string INTERNAL_NameOfAssemblyThatSetTheSourceUri; // Useful to convert relative URI to absolute URI.
 
-
-        // Summary:
-        //     Gets or sets the BitmapCreateOptions for a BitmapImage.
-        //
-        // Returns:
-        //     The BitmapCreateOptions used for this BitmapImage.
-        //public BitmapCreateOptions CreateOptions { get; set; }
-        //
-        // Summary:
-        //     Identifies the CreateOptions dependency property.
-        //
-        // Returns:
-        //     The identifier for the CreateOptions dependency property.
-        //public static DependencyProperty CreateOptionsProperty { get; }
-
-        //// <summary>
-        //// Gets or sets the height to use for image decoding operations.
-        //// </summary>
-        /*
-        public int DecodePixelHeight
-        {
-            get { return (int)GetValue(DecodePixelHeightProperty); }
-            set { SetValue(DecodePixelHeightProperty, value); }
-        }
-        public static readonly DependencyProperty DecodePixelHeightProperty =
-            DependencyProperty.Register("DecodePixelHeight", typeof(int), typeof(BitmapImage), new PropertyMetadata(null, DecodePixelHeight_Changed));
-
-
-        static void DecodePixelHeight_Changed(DependencyObject i, DependencyPropertyChangedEventArgs e)
-        {
-            var image = (Image)i;
-            int newValue = (int)e.NewValue;
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(image))
-            {
-                if (newValue is BitmapImage)
-                {
-                    //todo.
-                }
-                INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(image).src = newValue; //translate the element to a html version.
-                INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(image).alt = ""; //the text displayed when the image cannot be found. We set it as an empty string since there is nothing in Xaml
-            }
-        }
-        //
-        // Summary:
-        //     Gets or sets the width to use for image decoding operations.
-        //
-        // Returns:
-        //     The width (in pixels) to use for image decoding operations.
-        public int DecodePixelWidth { get; set; }
-        //
-        // Summary:
-        //     Identifies the DecodePixelWidth dependency property.
-        //
-        // Returns:
-        //     The identifier for the DecodePixelWidth dependency property.
-        public static DependencyProperty DecodePixelWidthProperty { get; }
-         * */
-
         /// <summary>
         /// Gets or sets the Uniform Resource Identifier (URI) of the graphics source
         /// file that generated this BitmapImage.
@@ -125,15 +62,8 @@ namespace Windows.UI.Xaml.Media.Imaging
             get { return (Uri)GetValue(UriSourceProperty); }
             set
             {
-#if !BRIDGE
-                // Get the assembly name of the calling method: //IMPORTANT: the call to the "GetCallingAssembly" method must be done in the method that is executed immediately after the one where the URI is defined! Be careful when moving the following line of code.
                 string callerAssemblyName = Assembly.GetCallingAssembly().GetName().Name;
-#else
-                // Get the assembly name of the calling method: //IMPORTANT: the call to the "GetCallingAssembly" method must be done in the method that is executed immediately after the one where the URI is defined! Be careful when moving the following line of code.
-                string callerAssemblyName = INTERNAL_UriHelper.GetJavaScriptCallingAssembly();
-
-#endif
-                this.INTERNAL_NameOfAssemblyThatSetTheSourceUri = callerAssemblyName;
+                INTERNAL_NameOfAssemblyThatSetTheSourceUri = callerAssemblyName;
                 SetValue(UriSourceProperty, value);
             }
         }
@@ -146,83 +76,37 @@ namespace Windows.UI.Xaml.Media.Imaging
         static void UriSource_Changed(DependencyObject i, DependencyPropertyChangedEventArgs e)
         {
             var bitmapImage = (BitmapImage)i;
-            Uri newValue = (Uri)e.NewValue;
             bitmapImage.OnUriSourceChanged();
-
-            //if (INTERNAL_VisualTreeManager.IsElementInVisualTree(bitmapImage))
-            //{
-
-            //    INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(bitmapImage).src = newValue; //translate the element to a html version.
-            //    INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(bitmapImage).alt = ""; //the text displayed when the image cannot be found. We set it as an empty string since there is nothing in Xaml
-            //}
         }
-
-
-
-        // Summary:
-        //     Occurs when a significant change has occurred in the download progress of
-        //     the BitmapImage content.
-        //public event DownloadProgressEventHandler DownloadProgress;
 
         /// <summary>
         /// Occurs when there is an error associated with image retrieval or format.
         /// </summary>
         public event ExceptionRoutedEventHandler ImageFailed;
-        protected void OnImageFailed()
+        
+        internal void OnImageFailed()
         {
-            if (ImageFailed != null)
-            {
-                ImageFailed(this, new ExceptionRoutedEventArgs()
-                {
-                    OriginalSource = this
-                });
-            }
+            ImageFailed?.Invoke(this, new ExceptionRoutedEventArgs { OriginalSource = this });
         }
 
         /// <summary>
         /// Occurs when the image source is downloaded and decoded with no failure. You can use this event to determine the size of an image before rendering it.
         /// </summary>
         public event RoutedEventHandler ImageOpened;
-        protected void OnImageOpened()
+        
+        internal void OnImageOpened()
         {
-            if (ImageOpened != null)
-            {
-                ImageOpened(this, new RoutedEventArgs
-                {
-                    OriginalSource = this
-                });
-            }
+            ImageOpened?.Invoke(this, new RoutedEventArgs { OriginalSource = this });
         }
-
-        //internal override void INTERNAL_AttachToDomEvents()
-        //{
-        //    PrivateAttachToDomEvents("load", e =>
-        //    {
-        //        OnImageOpened();
-        //    });
-
-        //    PrivateAttachToDomEvents("error", e =>
-        //    {
-        //        OnImageFailed();
-        //    });
-        //}
-
-        //[JSReplacement("$this.INTERNAL_OuterDomElement.addEventListener($name, $handler)")]
-        //void PrivateAttachToDomEvents(string name, Action<object> handler)
-        //{
-        //    HtmlEventProxy.Create("on" + name, this.INTERNAL_OuterDomElement, (EventHandler)((s, e) => { handler(e); }));
-        //}
 
         /// <summary>
         /// Occurs when the UriSource is changed
         /// </summary>
         public event EventHandler UriSourceChanged;
-        protected void OnUriSourceChanged()
+        
+        internal void OnUriSourceChanged()
         {
-            if (UriSourceChanged != null)
-            {
-                UriSourceChanged(this, new EventArgs());
-            }
+            UriSourceChanged?.Invoke(this, new EventArgs());
         }
 
         [OpenSilver.NotImplemented]

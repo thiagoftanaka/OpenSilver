@@ -3,25 +3,12 @@
 // Please see http://go.microsoft.com/fwlink/?LinkID=131993 for details.
 // All other rights reserved.
 
-using System;
 using System.Linq;
 using System.Globalization;
-
-#if MIGRATION
 using System.Windows.Media.Animation;
-#else
-using Windows.UI.Xaml.Media.Animation;
-#endif
-
-#if OPENSILVER
 using Properties = OpenSilver.Controls.Properties;
-#endif
 
-#if MIGRATION
 namespace System.Windows.Controls
-#else
-namespace Windows.UI.Xaml.Controls
-#endif
 {
     /// <summary>
     /// Represents a control with a single piece of content and when that content 
@@ -124,11 +111,7 @@ namespace Windows.UI.Xaml.Controls
             if (!source._allowIsTransitioningWrite)
             {
                 source.IsTransitioning = (bool)e.OldValue;
-#if OPENSILVER
                 throw new InvalidOperationException(Properties.Resources.TransitiotioningContentControl_IsTransitioningReadOnly);
-#elif BRIDGE
-                throw new InvalidOperationException("IsTransitioning property is read-only.");
-#endif
             }
         }
         #endregion public bool IsTransitioning
@@ -215,13 +198,8 @@ namespace Windows.UI.Xaml.Controls
                     // revert to old value
                     source.SetValue(TransitionProperty, oldTransition);
 
-#if OPENSILVER
                     throw new ArgumentException(
                         string.Format(CultureInfo.CurrentCulture, Properties.Resources.TransitioningContentControl_TransitionNotFound, newTransition));
-#elif BRIDGE
-                    throw new ArgumentException(
-                        string.Format(CultureInfo.CurrentCulture, "Transition '{0}' was not defined.", newTransition));
-#endif
                 }
             }
             else
@@ -291,11 +269,7 @@ namespace Windows.UI.Xaml.Controls
         /// Builds the visual tree for the TransitioningContentControl control 
         /// when a new template is applied.
         /// </summary>
-#if MIGRATION
         public override void OnApplyTemplate()
-#else
-        protected override void OnApplyTemplate()
-#endif
         {
             if (IsTransitioning)
             {
@@ -321,13 +295,8 @@ namespace Windows.UI.Xaml.Controls
                 // revert to default
                 Transition = DefaultTransitionState;
 
-#if OPENSILVER
                 throw new ArgumentException(
                     string.Format(CultureInfo.CurrentCulture, Properties.Resources.TransitioningContentControl_TransitionNotFound, invalidTransition));
-#elif BRIDGE
-                throw new ArgumentException(
-                    string.Format(CultureInfo.CurrentCulture, "Transition '{0}' was not defined.", invalidTransition));
-#endif
             }
 
             VisualStateManager.GoToState(this, NormalState, false);

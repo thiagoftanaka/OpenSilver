@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,25 +11,14 @@
 *  
 \*====================================================================================*/
 
-
-using CSHTML5.Internal;
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.IO.IsolatedStorage;
-using System.Linq;
 using System.Runtime.Serialization;
-#if !BRIDGE
 using System.Runtime.Serialization.Formatters.Binary;
-using OpenSilver;
-#endif
-using System.Text;
-using System.Threading.Tasks;
 
 namespace System.IO.IsolatedStorage
 {
-    internal partial class IsolatedStorageSettingsForCSharp : IDictionary<string, Object>
+    internal sealed class IsolatedStorageSettingsForCSharp : IDictionary<string, object>
     {
         #region Constants/Variables
 
@@ -39,21 +27,15 @@ namespace System.IO.IsolatedStorage
 
         private static readonly IsolatedStorageSettingsForCSharp StaticIsolatedStorageSettings;
 
-        //TODO implemente bellow with BRIDGE (seems long)
-#if !BRIDGE
         private static readonly IFormatter Formatter;
 
         private static readonly IsolatedStorageSettingsForCSharp StaticDomainIsolatedStorageSettings;
-#endif
-
 
         static IsolatedStorageSettingsForCSharp()
         {
-#if !BRIDGE
             // Formatter has to be instantiated first because it is used during the instance constructor execution
             Formatter = new BinaryFormatter();
             StaticIsolatedStorageSettings = new IsolatedStorageSettingsForCSharp();
-#endif
             StaticDomainIsolatedStorageSettings = new IsolatedStorageSettingsForCSharp(isForDomain: true);
         }
 
@@ -61,21 +43,12 @@ namespace System.IO.IsolatedStorage
 
         #region Singleton Implementation
 
-#if !BRIDGE
         private IsolatedStorageSettingsForCSharp(bool isForDomain)
         {
             LoadData(isForDomain);
         }
 
         private IsolatedStorageSettingsForCSharp() : this(false) { }
-#else
-        /// <summary>
-        ///     Its a private constructor.
-        /// </summary>
-        private IsolatedStorageSettingsForCSharp()
-        {
-        }
-#endif
 
         /// <summary>
         ///     Its a static singleton instance.
@@ -85,8 +58,6 @@ namespace System.IO.IsolatedStorage
             get { return StaticIsolatedStorageSettings; }
         }
 
-
-#if !BRIDGE
         public static IsolatedStorageSettingsForCSharp DomainInstance => StaticDomainIsolatedStorageSettings;
 
         //TODO : verify we don't need the method below using Bridge
@@ -95,7 +66,7 @@ namespace System.IO.IsolatedStorage
         {
             // IsolatedStorageFile isoStore = IsolatedStorageFile.GetStore(IsolatedStorageScope.User | IsolatedStorageScope.Assembly, null, null);
             IsolatedStorageFile isoStore;
-            if (!Interop.IsRunningInTheSimulator)
+            if (!OpenSilver.Interop.IsRunningInTheSimulator)
             {
                 isoStore = isForDomain
                     ? IsolatedStorageFile.GetUserStoreForDomain()
@@ -134,7 +105,6 @@ namespace System.IO.IsolatedStorage
                 stream.Close();
             }
         }
-#endif
 
         #endregion
 
@@ -158,9 +128,7 @@ namespace System.IO.IsolatedStorage
             set
             {
                 _appDictionary[key] = value;
-#if !BRIDGE
                 Save();
-#endif
             }
         }
 
@@ -169,9 +137,6 @@ namespace System.IO.IsolatedStorage
         /// </summary>
         public void Save()
         {
-            //BRIDGETODO : implemente the code below
-#if !BRIDGE
-            // IsolatedStorageFile isoStore = IsolatedStorageFile.GetStore(IsolatedStorageScope.User | IsolatedStorageScope.Assembly, null, null);
             IsolatedStorageFile isoStore = IsolatedStorageFile.GetUserStoreForAssembly();
 
             Stream stream = new IsolatedStorageFileStream(Filename, FileMode.Create, isoStore);
@@ -184,7 +149,6 @@ namespace System.IO.IsolatedStorage
             {
                 stream.Close();
             }      
-#endif
         }
 
         #endregion
@@ -194,9 +158,7 @@ namespace System.IO.IsolatedStorage
         public void Add(string key, object value)
         {
             _appDictionary.Add(key, value);
-#if !BRIDGE
             Save();
-#endif
         }
 
         public bool ContainsKey(string key)
@@ -213,9 +175,7 @@ namespace System.IO.IsolatedStorage
         {
             try
             {
-#if !BRIDGE
                 Save();
-#endif
                 _appDictionary.Remove(key);
                 return true;
             }
@@ -234,11 +194,7 @@ namespace System.IO.IsolatedStorage
         {
             get
             {
-#if BRIDGE
-                return INTERNAL_BridgeWorkarounds.GetDictionaryValues_SimulatorCompatible(_appDictionary).ToList();
-#else
                 return _appDictionary.Values;
-#endif
             }
         }
 
@@ -248,9 +204,7 @@ namespace System.IO.IsolatedStorage
             set
             {
                 _appDictionary[key] = value;
-#if !BRIDGE
                 Save();
-#endif
             }
         }
 
@@ -263,9 +217,7 @@ namespace System.IO.IsolatedStorage
         public void Clear()
         {
             _appDictionary.Clear();
-#if !BRIDGE
             Save();
-#endif
         }
 
         public bool Contains(KeyValuePair<string, object> item)

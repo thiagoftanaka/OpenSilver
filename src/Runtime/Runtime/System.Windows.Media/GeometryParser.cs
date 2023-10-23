@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,26 +11,14 @@
 *  
 \*====================================================================================*/
 
-
 //credits : https://github.com/dotnet/wpf/blob/master/src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Media/ParsersCommon.cs
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-#if !MIGRATION
-using Windows.Foundation;
-#endif
 
-#if MIGRATION
 namespace System.Windows.Media
-#else
-namespace Windows.UI.Xaml.Media
-#endif
 {
-    internal partial class GeometryParser
+    internal static class GeometryParser
     {
         internal static Geometry ParseGeometry(string pathString/*, IFormatProvider formatProvider*/)
         {
@@ -594,14 +581,9 @@ namespace Windows.UI.Xaml.Media
                                 new Size(w, h),
                                 rotation,
                                 large,
-#if PBTCOMPILER
-                            sweep,
-#else
-                            sweep ? SweepDirection.Clockwise : SweepDirection.Counterclockwise,
-#endif
-                            IsStroked,
-                                !IsSmoothJoin
-                                );
+                                sweep ? SweepDirection.Clockwise : SweepDirection.Counterclockwise,
+                                IsStroked,
+                                !IsSmoothJoin);
                         }
                         while (this.IsNumber(AllowComma));
 
@@ -1119,10 +1101,6 @@ namespace Windows.UI.Xaml.Media
         private static bool s_defaultValueForPathFigureIsClosed;
         private static bool s_defaultValueForPathFigureIsFilled;
         private static Point s_defaultValueForPathFigureStartPoint;
-
-        // This code assumes that sub-classes of PathSegment don't override the default value for these properties
-        private static bool s_defaultValueForPathSegmentIsStroked;
-        private static bool s_defaultValueForPathSegmentIsSmoothJoin;
 
         private static bool s_defaultValueForArcSegmentIsLargeArc;
         private static SweepDirection s_defaultValueForArcSegmentSweepDirection;

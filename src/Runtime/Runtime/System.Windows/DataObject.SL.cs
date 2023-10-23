@@ -14,11 +14,7 @@
 using System;
 using System.Security;
 
-#if MIGRATION
 namespace System.Windows
-#else
-namespace Windows.UI.Xaml
-#endif
 {
     /// <summary>
     /// Provides a basic implementation of the <see cref="IDataObject"/> interface,
@@ -26,7 +22,9 @@ namespace Windows.UI.Xaml
     /// </summary>
     public class DataObject : IDataObject
     {
+#pragma warning disable CS0649
         private bool _isDropMode;
+#pragma warning restore CS0649
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DataObject"/> class.

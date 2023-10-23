@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,25 +11,10 @@
 *  
 \*====================================================================================*/
 
-
-#if !BRIDGE
-using JSIL.Meta;
-#else
-using Bridge;
-#endif
-
 using CSHTML5.Internal;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using OpenSilver.Internal;
-#if MIGRATION
 using System.Windows;
-#else
-using Windows.UI.Xaml;
-#endif
 
 public static partial class CSharpXamlForHtml5
 {
@@ -77,34 +61,5 @@ public static partial class CSharpXamlForHtml5
         {
             control.INTERNAL_HtmlRepresentation = htmlRepresentation;
         }
-
-#if PUBLIC_API_THAT_REQUIRES_SUPPORT_OF_DYNAMIC
-        public static dynamic Document
-        {
-            get
-            {
-                return GetDocument();
-            }
-        }
-
-#if !BRIDGE
-        [JSReplacement("window.document")]
-#else
-        [Template("window.document")]
-#endif
-        static dynamic GetDocument()
-        {
-            if (_document == null)
-                _document = new Types.Document();
-            return _document;
-        }
-
-#if !BRIDGE
-        [JSIgnore]
-#else
-        [External]
-#endif
-        static Types.Document _document;
-#endif
     }
 }

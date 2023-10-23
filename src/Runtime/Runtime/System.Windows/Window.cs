@@ -18,22 +18,11 @@ using System.Diagnostics;
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Markup;
+using System.Windows.Input;
 using CSHTML5.Internal;
 using CSHTML5;
 
-#if MIGRATION
-using System.Windows.Input;
-#else
-using Windows.UI.Core;
-using Windows.Foundation;
-using Windows.UI.Xaml.Input;
-#endif
-
-#if MIGRATION
 namespace System.Windows
-#else
-namespace Windows.UI.Xaml
-#endif
 {
     /// <summary>
     /// Represents an application window.
@@ -342,7 +331,7 @@ namespace Windows.UI.Xaml
         [OpenSilver.NotImplemented]
         public bool IsActive { get; private set; }
         [OpenSilver.NotImplemented]
-        public bool IsVisible { get; private set; }
+        public new bool IsVisible { get; private set; }
 
         [OpenSilver.NotImplemented]
         public WindowStyle WindowStyle { get; set; }
