@@ -456,17 +456,77 @@ namespace System.Windows.Controls
             // code responds harmlessly.
             //Debug.Assert(_itemContainerGenerator != null, "Encountered a null _itemContainerGenerator while being asked to generate children.");
 
-            IItemContainerGenerator generator = (IItemContainerGenerator)_itemContainerGenerator;
+            ItemContainerGenerator generator = _itemContainerGenerator;
             if (generator != null)
             {
+                int chunkSize = ProgressiveRenderingChunkSize;
+                if (chunkSize > 0 && chunkSize < _itemContainerGenerator.ItemsInternal.Count)
+                {
+                    GenerateChildrenAsync();
+                }
+                else
+                {
+                    GenerateChildrenSync();
+                }
+            }
+        }
+
+        private void GenerateChildrenSync()
+        {
+            IItemContainerGenerator generator = _itemContainerGenerator;
+            using (generator.StartAt(new GeneratorPosition(-1, 0), GeneratorDirection.Forward, true))
+            {
+                while (generator.GenerateNext(out _) is UIElement child)
+                {
+                    _uiElementCollection.Add(child);
+                    generator.PrepareItemContainer(child);
+                }
+            }
+        }
+
+        private async void GenerateChildrenAsync()
+        {
+            IItemContainerGenerator generator = _itemContainerGenerator;
+            if (generator != null)
+            {
+                int chunkSize = ProgressiveRenderingChunkSize;
+                int from = 0;
+                // here, chunksize can go further than the amount of elements because of the
+                // test on generator.GenerateNext != null
+                int to = chunkSize;
+
                 using (generator.StartAt(new GeneratorPosition(-1, 0), GeneratorDirection.Forward, true))
                 {
-                    UIElement child;
-                    bool isNewlyRealized;
-                    while ((child = generator.GenerateNext(out isNewlyRealized) as UIElement) != null)
+                    while (true)
                     {
-                        _uiElementCollection.Add(child);
-                        generator.PrepareItemContainer(child);
+                        await Task.Delay(1);
+                        if (!INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
+                        {
+                            //this can happen if the Panel is detached during the delay.
+                            break;
+                        }
+
+                        bool done = false;
+
+                        for (int i = from; i < to; ++i)
+                        {
+                            if (generator.GenerateNext(out _) is not UIElement child)
+                            {
+                                done = true;
+                                break;
+                            }
+
+                            _uiElementCollection.Add(child);
+                            generator.PrepareItemContainer(child);
+                        }
+
+                        if (done)
+                        {
+                            break;
+                        }
+
+                        from = to;
+                        to += chunkSize;
                     }
                 }
             }
