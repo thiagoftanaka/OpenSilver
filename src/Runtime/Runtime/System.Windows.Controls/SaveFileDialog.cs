@@ -1,6 +1,5 @@
 using System.IO;
 using System.Linq;
-using System.Security;
 using System.Threading.Tasks;
 using OpenSilver.IO;
 
@@ -62,16 +61,12 @@ namespace System.Windows.Controls
         // Exceptions:
         //   T:System.InvalidOperationException:
         //     No file was selected in the dialog box.
-        [SecuritySafeCritical]
         public Stream OpenFile()
         {
-            MemoryFileStream memoryFileStream = new MemoryFileStream(WriteCallback);
-            return memoryFileStream;
-        }
+            var fileSaver = new FileSaver(GetFilename());
 
-        private void WriteCallback(byte[] bytes)
-        {
-            SaveFile(bytes, GetFilename());
+            MemoryFileStream memoryFileStream = new MemoryFileStream(bytes => fileSaver.Write(bytes));
+            return memoryFileStream;
         }
 
         private string GetFilename()
@@ -105,65 +100,88 @@ namespace System.Windows.Controls
         {
             return true;
         }
-
-        public async void SaveFile(byte[] bytes, string filename)
-        {
-            await FileSaver.SaveToFile(bytes, filename);
-        }
     }
 
-    public static class FileSaver
+    public class FileSaver
     {
         private const int BufferSize = 262144;
 
-        static bool _jsLibraryWasLoaded;
+        private static bool _jsLibraryWasLoaded;
 
-        public static async Task SaveToFile(byte[] bytes, string filename)
+        private readonly string _filename;
+
+        private IDisposable _streamSaverWriter;
+
+        public FileSaver(string filename)
+        {
+            _filename = filename;
+        }
+
+        ~FileSaver()
+        {
+            Close();
+        }
+
+        internal async Task OpenFile(long size)
+        {
+            if (await Initialize())
+            {
+                _streamSaverWriter = OpenSilver.Interop.ExecuteJavaScript(@"
+                    streamSaver.createWriteStream($0, { size: $1 }).getWriter()", _filename, size);
+            }
+        }
+
+        internal async Task Write(byte[] bytes)
         {
             if (bytes == null)
             {
                 throw new ArgumentNullException(nameof(bytes));
             }
-            if (filename == null)
+
+            if (string.IsNullOrEmpty(_filename))
             {
-                throw new ArgumentNullException(nameof(filename));
+                throw new InvalidOperationException("Filename is empty");
             }
 
-            if (await Initialize())
+            if (_streamSaverWriter == null)
             {
-                var streamSaverWriter = OpenSilver.Interop.ExecuteJavaScript(@"
-                    streamSaver.createWriteStream($0, {
-                        size: $1
-                    }).getWriter()", filename, bytes.Length);
+                await OpenFile(bytes.Length);
+            }
 
-                const int bufferSize = BufferSize;
-                int i = 0;
-                int bytesToWrite = bufferSize;
-                do
+            int bytesToWrite = BufferSize;
+            int i = 0;
+            do
+            {
+                if (i + bytesToWrite > bytes.Length)
                 {
-                    if (i + bytesToWrite > bytes.Length)
-                    {
-                        bytesToWrite = bytes.Length - i;
-                    }
+                    bytesToWrite = bytes.Length - i;
+                }
 
-                    string base64 = Convert.ToBase64String(bytes.Skip(i).Take(bytesToWrite).ToArray());
-                    OpenSilver.Interop.ExecuteJavaScript(@"const binaryString = atob($0);
-                        var uInt8 = new Uint8Array(binaryString.length);
-                        for (var i = 0; i < binaryString.length; i++) uInt8[i] = binaryString.charCodeAt(i);
-                        $1.write(uInt8);", base64, streamSaverWriter);
+                string base64 = Convert.ToBase64String(bytes.Skip(i).Take(bytesToWrite).ToArray());
+                OpenSilver.Interop.ExecuteJavaScriptVoid(@"const binaryString = atob($0);
+                    var uInt8 = new Uint8Array(binaryString.length);
+                    for (var i = 0; i < binaryString.length; i++) uInt8[i] = binaryString.charCodeAt(i);
+                    $1.write(uInt8);", base64, _streamSaverWriter);
 
-                    // This loop could be long running for large files, so the file is written in
-                    // chunks and Delay is called to give control back to UI so it does not freeze.
-                    await Task.Delay(1);
+                // This loop could be long running for large files, so the file is written in
+                // chunks and Delay is called to give control back to UI so it does not freeze.
+                await Task.Delay(1);
 
-                    i += bytesToWrite;
-                } while (i < bytes.Length - 1);
+                i += bytesToWrite;
+            } while (i < bytes.Length - 1);
+        }
 
-                OpenSilver.Interop.ExecuteJavaScript(@"$0.close()", streamSaverWriter);
+        internal void Close()
+        {
+            if (_streamSaverWriter != null)
+            {
+                OpenSilver.Interop.ExecuteJavaScriptVoid(@"$0.close()", _streamSaverWriter);
+                _streamSaverWriter.Dispose();
+                _streamSaverWriter = null;
             }
         }
 
-        static async Task<bool> Initialize()
+        internal static async Task<bool> Initialize()
         {
             if (!_jsLibraryWasLoaded)
             {

@@ -1,41 +1,34 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace OpenSilver.IO
 {
     public class MemoryFileStream : MemoryStream
     {
-        private readonly List<byte> _bytes = new List<byte>();
-        private readonly Action<byte[]> _writeCallback;
-        private bool _isFlushed = true;
+        private readonly Func<byte[], Task> _writeCallback;
 
-        public MemoryFileStream(Action<byte[]> writeCallback)
+        public MemoryFileStream(Func<byte[], Task> writeCallback)
         {
             _writeCallback = writeCallback;
         }
 
-        public override void Flush()
+        public override async void Write(byte[] buffer, int offset, int count)
         {
-            _writeCallback?.Invoke(_bytes.ToArray());
-            _isFlushed = true;
-        }
-
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            _bytes.AddRange(buffer.Skip(offset).Take(count));
-            _isFlushed = false;
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (!_isFlushed)
+            if (_writeCallback != null)
             {
-                Flush();
+                await _writeCallback.Invoke(buffer.Skip(offset).Take(count).ToArray());
             }
+        }
 
-            base.Dispose(disposing);
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            if (_writeCallback != null)
+            {
+                await _writeCallback.Invoke(buffer.Skip(offset).Take(count).ToArray());
+            }
         }
     }
 }
