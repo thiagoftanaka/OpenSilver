@@ -681,7 +681,7 @@ namespace System.Windows.Controls
 
             if (e.Handled)
             {
-                e.PreventDefault = true;
+                e.Cancel = true;
                 return;
             }
 
@@ -689,7 +689,7 @@ namespace System.Windows.Controls
                 (!AcceptsReturn && (e.Text == "\r" || e.Text == "\n")) ||
                 (MaxLength != 0 && Text.Length - SelectionLength >= MaxLength))
             {
-                e.PreventDefault = true;
+                e.Cancel = true;
                 return;
             }
 
