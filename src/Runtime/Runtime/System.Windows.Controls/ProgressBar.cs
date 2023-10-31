@@ -72,7 +72,9 @@ namespace System.Windows.Controls
 
         private static void IsIndeterminatePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            ((ProgressBar)d).UpdateVisualStates();
+            var progressBar = (ProgressBar)d;
+            progressBar.SetProgressBarIndicatorLength();
+            progressBar.UpdateVisualStates();
         }
 
         /// <summary>
