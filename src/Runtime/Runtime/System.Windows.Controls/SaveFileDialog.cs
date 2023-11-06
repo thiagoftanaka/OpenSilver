@@ -65,7 +65,8 @@ namespace System.Windows.Controls
         {
             var fileSaver = new FileSaver(GetFilename());
 
-            MemoryFileStream memoryFileStream = new MemoryFileStream(bytes => fileSaver.Write(bytes));
+            MemoryFileStream memoryFileStream = new MemoryFileStream(bytes => fileSaver.Write(bytes),
+                () => fileSaver.Close());
             return memoryFileStream;
         }
 
@@ -111,6 +112,7 @@ namespace System.Windows.Controls
         private readonly string _filename;
 
         private IDisposable _streamSaverWriter;
+        private bool _isClosed = false;
 
         public FileSaver(string filename)
         {
@@ -127,7 +129,12 @@ namespace System.Windows.Controls
             if (await Initialize())
             {
                 _streamSaverWriter = OpenSilver.Interop.ExecuteJavaScript(@"
-                    streamSaver.createWriteStream($0, { size: $1 }).getWriter()", _filename, size);
+                    let streamSaverWriter = streamSaver.createWriteStream($0, { size: $1 }).getWriter();
+
+                    // If the download has been canceled, the closed Promise will go call the rejected callback.
+                    streamSaverWriter.closed.then(() => { },
+                    (error) => { $2() });
+                    streamSaverWriter;", _filename, size, () => _isClosed = true);
             }
         }
 
@@ -152,6 +159,11 @@ namespace System.Windows.Controls
             int i = 0;
             do
             {
+                if (_isClosed)
+                {
+                    break;
+                }
+
                 if (i + bytesToWrite > bytes.Length)
                 {
                     bytesToWrite = bytes.Length - i;
@@ -173,11 +185,12 @@ namespace System.Windows.Controls
 
         internal void Close()
         {
-            if (_streamSaverWriter != null)
+            if (_streamSaverWriter != null && !_isClosed)
             {
                 OpenSilver.Interop.ExecuteJavaScriptVoid(@"$0.close()", _streamSaverWriter);
                 _streamSaverWriter.Dispose();
                 _streamSaverWriter = null;
+                _isClosed = true;
             }
         }
 
