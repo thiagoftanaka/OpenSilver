@@ -30,10 +30,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{CBAC
 		Runtime\Scripts\flatpickr.css = Runtime\Scripts\flatpickr.css
 		Runtime\Scripts\flatpickr.js = Runtime\Scripts\flatpickr.js
 		Runtime\Scripts\html2canvas.js = Runtime\Scripts\html2canvas.js
+		Runtime\Scripts\mitm.html = Runtime\Scripts\mitm.html
 		Runtime\Scripts\OpenSilver.js = Runtime\Scripts\OpenSilver.js
 		Runtime\Scripts\quill.core.css = Runtime\Scripts\quill.core.css
 		Runtime\Scripts\quill.min.js = Runtime\Scripts\quill.min.js
 		Runtime\Scripts\ResizeObserver.js = Runtime\Scripts\ResizeObserver.js
+		Runtime\Scripts\sw.js = Runtime\Scripts\sw.js
 		Runtime\Scripts\velocity.js = Runtime\Scripts\velocity.js
 	EndProjectSection
 EndProject

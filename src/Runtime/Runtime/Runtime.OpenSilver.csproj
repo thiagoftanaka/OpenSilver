@@ -38,6 +38,7 @@
 		<Compile Include="OpenSilver\Controls\DatePicker\DatePicker.cs" />
 		<Compile Include="OpenSilver\Controls\DatePicker\DatePicker.NotImplemented.cs" />
 		<Compile Include="OpenSilver\Controls\DatePicker\SelectedDatesCollection.cs" />
+		<Compile Include="OpenSilver\Controls\SaveFileDialog.cs" />
 		<Compile Include="OpenSilver\Internal\Documents\TextContainerRichTextBox.cs" />
 		<Compile Include="OpenSilver\Internal\Documents\TextContainerParagraph.cs" />
 		<Compile Include="OpenSilver\Internal\Documents\TextContainerRichTextBlock.cs" />
