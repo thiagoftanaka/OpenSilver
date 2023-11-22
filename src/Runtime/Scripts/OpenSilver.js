@@ -55,7 +55,8 @@ promises = [];
     'libs/flatpickr.js',
     'libs/ResizeObserver.js',
     'libs/quill.min.js',
-    'libs/html2canvas.js']));
+    'libs/html2canvas.js',
+    'libs/FileSaver.min.js']));
 
 //the function defined below returns a promise that can be awaited so we know the js files above have all been loaded (or failed, but we went through all of them).
 window.getOSFilesLoadedPromise = () => { return Promise.allSettled(promises); };

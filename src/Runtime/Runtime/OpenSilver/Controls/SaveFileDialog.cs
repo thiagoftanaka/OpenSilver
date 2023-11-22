@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using OpenSilver.IO;
 
 namespace OpenSilver.Controls
@@ -34,10 +33,7 @@ namespace OpenSilver.Controls
                 }
                 return _isFileSystemApiAvailable.GetValueOrDefault();
             }
-            set
-            {
-                _isFileSystemApiAvailable = value;
-            }
+            set => _isFileSystemApiAvailable = value;
         }
 
         public string Filter { get; set; }
@@ -130,26 +126,32 @@ namespace OpenSilver.Controls
         {
             if (!IsFileSystemApiAvailable)
             {
-                MessageBox.Show("The download will start once the data is fetched from the server.");
-
                 return true;
             }
 
             TaskCompletionSource<IDisposable> taskCompletionSource = new TaskCompletionSource<IDisposable>();
 
             _handle = Interop.ExecuteJavaScript(@"
-                (async () => {
-                    const opts = {
-                        startIn: 'downloads',
-                        suggestedName: $2
-                    };
-                    return await window.showSaveFilePicker(opts);
-                })().then(handle => { $0(); return handle; }, error => $1(error.toString()));",
+                try {
+                    (async () => {
+                        const opts = {
+                            startIn: 'downloads',
+                            suggestedName: $2
+                        };
+                        return await window.showSaveFilePicker(opts);
+                    })().then(handle => { $0(); return handle; }, error => { $1(error.toString()) });
+                } catch (error) {
+                    console.error(error);
+                    throw error;
+                }",
                 () => taskCompletionSource.SetResult(null),
-                (Action<string>)((error) =>
+                (Action<string>)(error =>
                 {
-                    taskCompletionSource.SetException(
-                    error.StartsWith("AbortError") ? new OperationCanceledException(error) : new Exception(error));
+                    // Errors thrown when dialogs are canceled are suppressed
+                    if (!error.StartsWith("AbortError"))
+                    {
+                        taskCompletionSource.SetException(new Exception(error));
+                    }
                 }),
                 SafeFileName);
 
@@ -166,8 +168,6 @@ namespace OpenSilver.Controls
             }
             catch (Exception)
             {
-                MessageBox.Show("The download will start once the data is fetched from the server.");
-
                 // Falling back to not using File System API as it might not be supported on this browser
                 IsFileSystemApiAvailable = false;
                 return true;
@@ -177,12 +177,12 @@ namespace OpenSilver.Controls
 
     public class FileSaver
     {
-        private const int BufferSize = 262144;
-
-        private static bool _jsLibraryWasLoaded;
+        // This is the size in which writes don't seem to block for too long
+        private const int BufferSize = 131072;
 
         private IDisposable _writableStream;
         private bool _isClosed = false;
+        private string _filename;
 
         ~FileSaver()
         {
@@ -202,25 +202,23 @@ namespace OpenSilver.Controls
                 TaskCompletionSource<object> taskCompletionSource = new TaskCompletionSource<object>();
 
                 _writableStream = Interop.ExecuteJavaScript(@"
-                $0.then(async handle => await handle.createWritable())
-                .then(stream => { $1(); return stream; }, error => $2(error.toString()));",
+                    try {
+                        $0.then(async handle => await handle.createWritable())
+                        .then(stream => { $1(); return stream; }, error => { console.error(error); $2(error.toString()) });
+                    } catch (error) {
+                        console.error(error);
+                        throw error;
+                    }",
                     handle,
                     () => taskCompletionSource.SetResult(null),
-                    (Action<string>)((error) => taskCompletionSource.SetException(new Exception(error))));
+                    (Action<string>)(error => taskCompletionSource.SetException(new Exception(error))));
 
                 await taskCompletionSource.Task;
             }
             else
             {
-                if (await Initialize())
-                {
-                    _writableStream = Interop.ExecuteJavaScript($@"
-                    let streamSaverWriter = streamSaver.createWriteStream($0 {(fallbackSize != null ? ", { size: $1 }" : "")}).getWriter();
- 
-                    // If the download has been canceled, the closed Promise will go call the rejected callback.
-                    streamSaverWriter.closed.then(() => {{ }}, (error) => $2());
-                    streamSaverWriter;", fallbackFilename, fallbackSize, () => _isClosed = true);
-                }
+                _writableStream = Interop.ExecuteJavaScript(@"[];");
+                _filename = fallbackFilename;
             }
         }
 
@@ -257,25 +255,36 @@ namespace OpenSilver.Controls
                 if (SaveFileDialog.IsFileSystemApiAvailable)
                 {
                     Interop.ExecuteJavaScriptVoid(@"
-                    $1.then(async writableStream => {
-                        const binaryString = atob($0);
-                        var uInt8 = new Uint8Array(binaryString.length);
-                        for (var i = 0; i < binaryString.length; i++) uInt8[i] = binaryString.charCodeAt(i);
-                        await writableStream.write(uInt8);
-                    }).then(() => $2(), error => $3(error.toString()));",
+                        try {
+                            $1.then(async writableStream => {
+                                const binaryString = atob($0);
+                                let uint8 = new Uint8Array(binaryString.length);
+                                for (let i = 0; i < binaryString.length; i++) uint8[i] = binaryString.charCodeAt(i);
+                                await writableStream.write(uint8);
+                            }).then(() => $2(), error => { console.error(error); $3(error.toString()) });
+                        } catch (error) {
+                            console.error(error);
+                            throw error;
+                        }",
                         base64,
                         _writableStream,
                         () => taskCompletionSource.SetResult(null),
-                        (Action<string>)((error) => taskCompletionSource.SetException(new Exception(error))));
+                        (Action<string>)(error => taskCompletionSource.SetException(new Exception(error))));
 
                     await taskCompletionSource.Task;
                 }
                 else
                 {
-                    OpenSilver.Interop.ExecuteJavaScriptVoid(@"const binaryString = atob($0);
-                    var uInt8 = new Uint8Array(binaryString.length);
-                    for (var i = 0; i < binaryString.length; i++) uInt8[i] = binaryString.charCodeAt(i);
-                    $1.write(uInt8);", base64, _writableStream);
+                    Interop.ExecuteJavaScriptVoid(@"
+                        try {
+                            const binaryString = atob($0);
+                            for (let i in binaryString) {
+                                $1.push(binaryString[i]);
+                            }
+                        } catch (error) {
+                            console.error(error);
+                            throw error;
+                        }", base64, _writableStream);
                 }
 
                 // This loop could be long running for large files, so the file is written in
@@ -294,34 +303,42 @@ namespace OpenSilver.Controls
                 {
                     TaskCompletionSource<object> taskCompletionSource = new TaskCompletionSource<object>();
 
-                    Interop.ExecuteJavaScriptVoid(@"$0.then(async writableStream => await writableStream.close())
-                    .then(() => $1(), error => $2(error.toString()));",
+                    Interop.ExecuteJavaScriptVoid(@"
+                        try {
+                            $0.then(async writableStream => await writableStream.close())
+                            .then(() => $1(), error => { $2(error.toString()) });
+                        } catch (error) {
+                            console.error(error);
+                            throw error;
+                        }",
                         _writableStream,
                         () => taskCompletionSource.SetResult(null),
-                        (Action<string>)((error) => taskCompletionSource.SetException(new Exception(error))));
+                        (Action<string>)(error =>
+                        {
+                            /* Errors are suppressed because it could just be that downloads were canceled */
+                        }));
 
                     await taskCompletionSource.Task;
                 }
                 else
                 {
-                    Interop.ExecuteJavaScriptVoid(@"$0.close()", _writableStream);
+                    Interop.ExecuteJavaScriptVoid(@"
+                        try {
+                            let uint8Array = new Uint8Array($0.length);
+                            for (let i = 0; i < $0.length; i++) uint8Array[i] = $0[i].charCodeAt(0);
+
+                            // Must pass TypedArray as regular Array to Blob constructor, that's why it's wrapped in []
+                            saveAs(new Blob([uint8Array]), $1);
+                        } catch (error) {
+                            console.error(error);
+                            throw error;
+                        }", _writableStream, _filename);
                 }
 
                 _writableStream.Dispose();
                 _writableStream = null;
                 _isClosed = true;
             }
-        }
-
-        internal static async Task<bool> Initialize()
-        {
-            if (!_jsLibraryWasLoaded)
-            {
-                await Interop.LoadJavaScriptFile("https://cdn.jsdelivr.net/npm/streamsaver@2.0.6/StreamSaver.min.js");
-                Interop.ExecuteJavaScriptVoid("streamSaver.mitm = './libs/mitm.html'");
-                _jsLibraryWasLoaded = true;
-            }
-            return true;
         }
     }
 }
