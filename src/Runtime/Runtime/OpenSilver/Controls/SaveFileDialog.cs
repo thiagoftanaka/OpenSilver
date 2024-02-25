@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using OpenSilver.IO;
+using System.Web;
+using System.Windows;
 
 namespace OpenSilver.Controls
 {
@@ -36,14 +39,49 @@ namespace OpenSilver.Controls
             set => _isFileSystemApiAvailable = value;
         }
 
-        public string Filter { get; set; }
+        private string _filter;
+        public string Filter
+        {
+            get => _filter;
+            set
+            {
+                if (!string.IsNullOrEmpty(value))
+                {
+                    FilterEntries = new List<Tuple<string, string[]>>();
 
-        [OpenSilver.NotImplemented]
+                    // Example of a filter: "Text Files (*.txt)|*.txt|All Files (*.*)|*.*"
+                    string[] filterTokens = value.Split('|');
+                    string description = string.Empty;
+                    for (int i = 0; i < filterTokens.Length; i++)
+                    {
+                        // Even indices are for file descriptions
+                        if (i % 2 == 0)
+                        {
+                            description = filterTokens[i].Trim();
+                        }
+                        else // Odd indices are for file extensions
+                        {
+                            string[] filterPatterns = filterTokens[i].Split(';').Select(p => p.Trim()).ToArray();
+                            FilterEntries.Add(new Tuple<string, string[]>(description, filterPatterns));
+                            description = string.Empty;
+                        }
+                    }
+                }
+                else
+                {
+                    FilterEntries = null;
+                }
+                _filter = value;
+            }
+        }
+
+        private IList<Tuple<string, string[]>> FilterEntries { get; set; }
+
         public int FilterIndex
         {
             get;
             set;
-        }
+        } = 1;
 
         /// <summary>
         /// Gets the file name for the selected file associated with the SaveFileDialog.
@@ -97,11 +135,45 @@ namespace OpenSilver.Controls
 
         private string GetFilename()
         {
-            if (DefaultFileName != null && Path.HasExtension(DefaultFileName))
+            if (FilterEntries.Count <= FilterIndex - 1)
             {
-                return DefaultFileName;
+                throw new InvalidOperationException("FilterIndex is out of bounds of Filter");
             }
-            return Path.ChangeExtension(DefaultFileName ?? "data", DefaultExt ?? "dat");
+
+            // The default file name extension is applied when the selected filter does not specify an extension
+            // (or the Filter property is not set) and the user does not specify an extension.
+            if ((string.IsNullOrEmpty(Filter) || FilterEntries[FilterIndex - 1].Item2.Contains("*.*")) &&
+                    !string.IsNullOrEmpty(DefaultFileName) && !Path.HasExtension(DefaultFileName))
+            {
+                return Path.ChangeExtension(DefaultFileName, DefaultExt);
+            }
+
+            // In Firefox, is there is no default filename but there is a default extension, it is used.
+            if (!IsFileSystemApiAvailable && (string.IsNullOrEmpty(DefaultFileName) || !Path.HasExtension(DefaultFileName)))
+            {
+                string filename = !string.IsNullOrEmpty(DefaultFileName) ? DefaultFileName : "download";
+
+                if (!string.IsNullOrEmpty(Filter))
+                {
+                    string firstFilterPattern = FilterEntries[FilterIndex - 1].Item2.FirstOrDefault();
+                    string firstFilterExtension = null;
+                    if (!string.IsNullOrEmpty(firstFilterPattern))
+                    {
+                        firstFilterExtension = Path.GetExtension(firstFilterPattern);
+                    }
+                    if (string.IsNullOrEmpty(firstFilterExtension))
+                    {
+                        throw new InvalidOperationException("Unable to parse Filter extension pattern");
+                    }
+                    return Path.ChangeExtension(filename, firstFilterExtension);
+                }
+
+                if (!string.IsNullOrEmpty(DefaultExt))
+                {
+                    return Path.ChangeExtension(filename, DefaultExt);
+                }
+            }
+            return DefaultFileName;
         }
 
         //
@@ -124,6 +196,17 @@ namespace OpenSilver.Controls
         //     user-initiation and the display of the dialog.
         public async Task<bool?> ShowDialog()
         {
+            // In Silverlight, when DefaultFileName is set, a security warning MessageBox is shown before the dialog.
+            if (!string.IsNullOrEmpty(DefaultFileName))
+            {
+                var messageBoxResult = MessageBox.Show($"Do you want to save {DefaultFileName}?", "File Download - Security Warning",
+                    MessageBoxButton.OKCancel);
+                if (messageBoxResult == MessageBoxResult.Cancel)
+                {
+                    return false;
+                }
+            }
+
             if (!IsFileSystemApiAvailable)
             {
                 return true;
@@ -131,19 +214,20 @@ namespace OpenSilver.Controls
 
             TaskCompletionSource<IDisposable> taskCompletionSource = new TaskCompletionSource<IDisposable>();
 
-            _handle = Interop.ExecuteJavaScript(@"
-                try {
-                    (async () => {
-                        const opts = {
+            _handle = Interop.ExecuteJavaScript($@"
+                try {{
+                    (async () => {{
+                        const opts = {{
                             startIn: 'downloads',
-                            suggestedName: $2
-                        };
+                            suggestedName: $2,
+                            types: {TranslateFilterToTypes()}
+                        }};
                         return await window.showSaveFilePicker(opts);
-                    })().then(handle => { $0(); return handle; }, error => { $1(error.toString()) });
-                } catch (error) {
+                    }})().then(handle => {{ $0(); return handle; }}, error => {{ $1(error.toString()) }});
+                }} catch (error) {{
                     console.error(error);
                     throw error;
-                }",
+                }}",
                 () => taskCompletionSource.SetResult(null),
                 (Action<string>)(error =>
                 {
@@ -166,12 +250,70 @@ namespace OpenSilver.Controls
                 // Cancel button was hit on file dialog
                 return false;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.WriteLine(ex);
                 // Falling back to not using File System API as it might not be supported on this browser
                 IsFileSystemApiAvailable = false;
                 return true;
             }
+        }
+
+        /// <summary>
+        /// Translates the legacy Filter member of Silverlight SaveFileDialog into the types option member of showSaveFilePicker().
+        /// </summary>
+        /// <returns>A string that defines the types option of showSaveFilePicker() to apply filters in the dialog.</returns>
+        private string TranslateFilterToTypes()
+        {
+            // Example of a types option for showSaveFilePicker:
+            // const opts = {
+            //      types: [
+            //          {
+            //              description: "Text file",
+            //              accept: { "text/plain": [".txt"] },
+            //          },
+            //      ],
+            //  };
+
+            IList<string> types = new List<string>();
+
+            if (FilterEntries != null)
+            {
+                foreach (var entry in FilterEntries)
+                {
+                    var acceptTypes = new Dictionary<string, IList<string>>();
+                    foreach (string filterPattern in entry.Item2)
+                    {
+                        // Using .* on "accept" throws ("Extension '.*' contains invalid characters").
+                        if (!string.IsNullOrEmpty(filterPattern) && !Path.GetExtension(filterPattern.Trim()).Contains("*"))
+                        {
+                            string mimeType = MimeMapping.GetMimeMapping(filterPattern.Trim());
+                            if (!acceptTypes.ContainsKey(mimeType))
+                            {
+                                acceptTypes[mimeType] = new List<string>();
+                            }
+
+                            acceptTypes[mimeType].Add($"'{Path.GetExtension(filterPattern.Trim())}'");
+                        }
+                    }
+
+                    types.Add($"{{ description: '{entry.Item1}', accept: {{ {string.Join(",", acceptTypes.Select(kv => $"'{kv.Key}' : [{string.Join(",", kv.Value)}]"))} }} }}");
+                }
+
+                if (FilterIndex > 1)
+                {
+                    if (FilterEntries.Count <= FilterIndex - 1)
+                    {
+                        throw new InvalidOperationException("FilterIndex is out of bounds of Filter");
+                    }
+
+                    var type = types[FilterIndex - 1];
+                    types.RemoveAt(FilterIndex - 1);
+                    types.Insert(0, type);
+                }
+                return $"[{string.Join(",", types)}]";
+            }
+            return "[]";
         }
     }
 
