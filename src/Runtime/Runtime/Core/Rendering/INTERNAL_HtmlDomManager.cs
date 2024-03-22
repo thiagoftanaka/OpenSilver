@@ -713,6 +713,14 @@ parentElement.appendChild(child);";
             for (i = 0; i < len; i += 1)
             {
                 char c = s[i];
+
+                // Soft hyphen (dec 173 in Unicode) does not display a visible symbol on modern browsers, but
+                // shows a regular hyphen in Silverlight.
+                if (c == 173)
+                {
+                    c = '-';
+                }
+
                 switch (c)
                 {
                     case '\\':
