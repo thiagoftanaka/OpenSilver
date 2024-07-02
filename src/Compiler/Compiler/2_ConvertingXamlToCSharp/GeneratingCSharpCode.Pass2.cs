@@ -865,40 +865,7 @@ namespace OpenSilver.Compiler
                             }
                             else
                             {
-                                bool isApplication = parentElement != null &&
-                                                     _reflectionOnSeparateAppDomain.IsAssignableFrom(
-                                                        _settings.Metadata.SystemWindowsNS, "Application",
-                                                        parentElement.Name.NamespaceName, parentElement.Name.LocalName);
-                                // If Application.Resources is being set, new and current collections should be merged,
-                                // because the current collection could already have items by here.
-                                if (isApplication && propertyName == "Resources")
-                                {
-                                    // Add items to Resources
-                                    parameters.StringBuilder.AppendLine(string.Format(
-                                        @"foreach (global::System.Collections.DictionaryEntry entry in (global::System.Collections.IDictionary){2}) if (!{0}.{1}.Contains(entry.Key)) {0}.{1}.Add(entry.Key, entry.Value);",
-                                        parentElementUniqueNameOrThisKeyword, propertyName, childUniqueName));
-
-                                    // Add items to Resources.MergedDictionaries. Items cannot be in two dictionaries,
-                                    // so they are removed before added to the other collection.
-                                    parameters.StringBuilder.AppendLine(string.Format(
-@"var existingMergedDictionaries = (global::System.Windows.PresentationFrameworkCollection<global::System.Windows.ResourceDictionary>){0}.{1}.MergedDictionaries;
-var incomingMergedDictionaries = (global::System.Windows.PresentationFrameworkCollection<global::System.Windows.ResourceDictionary>){2}.MergedDictionaries;
-for (int i = 0; i < incomingMergedDictionaries.Count; ++i)
-{{
-    global::System.Windows.ResourceDictionary dict = incomingMergedDictionaries[i];
-    incomingMergedDictionaries.Remove(dict);
-    if (!existingMergedDictionaries.Contains(dict))
-    {{
-        existingMergedDictionaries.Add(dict);
-    }}
-}}",
-            parentElementUniqueNameOrThisKeyword, propertyName, childUniqueName));
-                                }
-                                else
-                                {
-                                    parameters.StringBuilder.AppendLine(string.Format("{0}.{1} = {2};",
-                                        parentElementUniqueNameOrThisKeyword, propertyName, childUniqueName));
-                                }
+                                parameters.StringBuilder.AppendLine(string.Format("{0}.{1} = {2};", parentElementUniqueNameOrThisKeyword, propertyName, childUniqueName));
                             }
                         }
                         else
