@@ -183,25 +183,11 @@ namespace System.Windows
             }
         }
 
-        // SourceChanged was created for the Compiler to only call the user XAML ResourceDictionary Factory
-        // at the time Source is set, so that users could do things like caching (by interrupting Source being set
-        // in an ResourceDictionary inherited class).
-        public event EventHandler SourceChanged;
-
         /// <summary>
         /// Gets or sets a Uniform Resource Identifier (URI) that provides the source
         /// location of a merged resource dictionary.
         /// </summary>
-        private Uri _source;
-        public Uri Source
-        {
-            get => _source;
-            set
-            {
-                _source = value;
-                SourceChanged?.Invoke(this, EventArgs.Empty);
-            }
-        }  // NOTE: This is used during COMPILE-TIME only.
+        public Uri Source { get; set; }  // NOTE: This is used during COMPILE-TIME only.
 
         /// <summary>
         /// Gets an <see cref="ICollection"/> object containing the values of the <see cref="ResourceDictionary"/>.

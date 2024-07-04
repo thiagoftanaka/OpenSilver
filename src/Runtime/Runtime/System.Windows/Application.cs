@@ -455,7 +455,7 @@ namespace System.Windows
             int index = uri.IndexOf(';');
             if (index > -1)
             {
-                return uri.Substring(index).StartsWith(";component/");
+                return uri.AsSpan(index).StartsWith(";component/".AsSpan(), StringComparison.OrdinalIgnoreCase);
             }
 
             return false;

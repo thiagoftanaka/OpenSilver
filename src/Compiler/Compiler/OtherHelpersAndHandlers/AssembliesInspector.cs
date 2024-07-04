@@ -120,6 +120,9 @@ namespace OpenSilver.Compiler
         public bool IsAssignableFrom(string namespaceName, string typeName, string fromNamespaceName, string fromTypeName)
             => _monoCecilVersion.IsAssignableFrom(namespaceName, typeName, fromNamespaceName, fromTypeName);
 
+        public bool IsResourceDictionarySourcePropertyVisible(string namespaceName, string typeName)
+            => _monoCecilVersion.IsResourceDictionarySourcePropertyVisible(namespaceName, typeName);
+
         public string GetField(string fieldName, string namespaceName, string typeName, string assemblyName)
             => _monoCecilVersion.GetField(fieldName, namespaceName, typeName, assemblyName);
     }

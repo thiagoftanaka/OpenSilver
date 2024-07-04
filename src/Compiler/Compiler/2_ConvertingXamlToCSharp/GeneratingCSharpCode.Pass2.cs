@@ -400,42 +400,6 @@ namespace OpenSilver.Compiler
                                 parameters.CurrentXamlContext
                             )
                         );
-
-                    }
-                    else if (element.Attribute("Source") != null && _reflectionOnSeparateAppDomain.IsAssignableFrom(
-                        _settings.Metadata.SystemWindowsNS, "ResourceDictionary", element.Name.NamespaceName, element.Name.LocalName))
-                    {
-                        //------------------------------------------------
-                        // Add the type initialization from "Source" URI:
-                        //------------------------------------------------
-                        string sourceUri = element.Attribute("Source").Value; // Note: this attribute exists because we have checked earlier.
-                        string absoluteSourceUri = PathsHelper.ConvertToAbsolutePathWithComponentSyntax(
-                            sourceUri,
-                            _fileNameWithPathRelativeToProjectRoot,
-                            _assemblyNameWithoutExtension);
-
-                        // Initially, ResourceDictionary (or subclass) is instantiated and remains empty.
-                        parameters.StringBuilder.AppendLine(
-                            string.Format(
-                                "var {0} = {1}.XamlContext_WriteStartObject({2}, new {3}());",
-                                elementUniqueNameOrThisKeyword,
-                                RuntimeHelperClass,
-                                parameters.CurrentXamlContext,
-                                elementTypeInCSharp
-                            )
-                        );
-
-                        // The ResourceDictionary content is only loaded at the time Source is set,
-                        // so that users could do things like caching (by interrupting Source being set
-                        // in an ResourceDictionary inherited class).
-                        parameters.StringBuilder.AppendLine(
-                            string.Format(
-                                "{0}.SourceChanged += (s, e) => {{ (({1})new {2}()).LoadComponent({0}); }};",
-                                elementUniqueNameOrThisKeyword,
-                                IXamlComponentLoaderClass,
-                                XamlResourcesHelper.GenerateClassNameFromComponentUri(absoluteSourceUri)
-                            )
-                        );
                     }
                     else
                     {
@@ -447,6 +411,21 @@ namespace OpenSilver.Compiler
                             elementTypeInCSharp,
                             RuntimeHelperClass,
                             parameters.CurrentXamlContext));
+
+                        if (IsResourceDictionaryCreatedFromSource(element))
+                        {
+                            //------------------------------------------------
+                            // Add the type initialization from "Source" URI:
+                            //------------------------------------------------
+                            string absoluteSourceUri = PathsHelper.ConvertToAbsolutePathWithComponentSyntax(
+                                element.Attribute("Source").Value,
+                                _fileNameWithPathRelativeToProjectRoot,
+                                _assemblyNameWithoutExtension);
+                            string loadTypeFullName = XamlResourcesHelper.GenerateClassNameFromComponentUri(absoluteSourceUri);
+
+                            parameters.StringBuilder.AppendLine(
+                                $"(({IXamlComponentLoaderClass})new {loadTypeFullName}()).LoadComponent({elementUniqueNameOrThisKeyword});");
+                        }
                     }
                 }
                 
@@ -1270,6 +1249,17 @@ else
             private bool IsClassTheApplicationClass(string className)
             {
                 return className == $"global::{_settings.Metadata.SystemWindowsNS}.Application";
+            }
+
+            private bool IsResourceDictionaryCreatedFromSource(XElement element)
+            {
+                if (element.Attribute("Source") != null)
+                {
+                    return _reflectionOnSeparateAppDomain.IsResourceDictionarySourcePropertyVisible(
+                        element.Name.NamespaceName, element.Name.LocalName);
+                }
+
+                return false;
             }
 
             private string GenerateCodeForSetterProperty(XElement styleElement, string attributeValue)
