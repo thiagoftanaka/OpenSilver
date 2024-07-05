@@ -30,9 +30,9 @@ namespace TestApplication.Tests
             {
                 Source = new Uri(
 #if OPENSILVER
-                    "/TestApplication.OpenSilver;component/Tests/ResourceDictionary/CachedResourceDictionary/SomeResourceDictionary.xaml",
+                    "/TestApplication.OpenSilver;component/Tests/ResourceDictionary/CachedResourceDictionary/CountableResourceDictionary.xaml",
 #else
-                    "/TestApplication.Silverlight;component/Tests/ResourceDictionary/CachedResourceDictionary/SomeResourceDictionary.xaml",
+                    "/TestApplication.Silverlight;component/Tests/ResourceDictionary/CachedResourceDictionary/CountableResourceDictionary.xaml",
 #endif
                     UriKind.Relative)
             };

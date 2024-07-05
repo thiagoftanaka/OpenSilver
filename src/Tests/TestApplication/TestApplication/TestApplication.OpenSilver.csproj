@@ -667,10 +667,13 @@
     <Page Include="Tests\PopupZIndexTest.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Tests\ResourceDictionary\CachedResourceDictionary\SomeResourceDictionary.xaml">
+    <Page Include="Tests\ResourceDictionary\CachedResourceDictionary\CountableResourceDictionary.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Tests\ResourceDictionary\ResourceDictionaryTest.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Tests\ResourceDictionary\SomeResourceDictionary.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Tests\RightToLeftTest.xaml">
@@ -688,6 +691,12 @@
     <Page Include="Tests\ValidationSummaryTest.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Tests\ResourceDictionary\CachedResourceDictionary\CountableResourceDictionary.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Tests\ResourceDictionary\SomeResourceDictionary.xaml" />
   </ItemGroup>
 
 </Project>

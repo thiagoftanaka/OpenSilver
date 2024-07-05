@@ -10,12 +10,12 @@
     <sdk:Page.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <crd:CachedResourceDictionary Source="/Tests/ResourceDictionary/CachedResourceDictionary/SomeResourceDictionary.xaml"/>
-                <crd:CachedResourceDictionary Source="/Tests/ResourceDictionary/CachedResourceDictionary/SomeResourceDictionary.xaml"/>
-                <crd:CachedResourceDictionary Source="/Tests/ResourceDictionary/CachedResourceDictionary/SomeResourceDictionary.xaml"/>
+                <crd:CachedResourceDictionary Source="/Tests/ResourceDictionary/CachedResourceDictionary/CountableResourceDictionary.xaml"/>
+                <crd:CachedResourceDictionary Source="/Tests/ResourceDictionary/CachedResourceDictionary/CountableResourceDictionary.xaml"/>
+                <crd:CachedResourceDictionary Source="/Tests/ResourceDictionary/CachedResourceDictionary/CountableResourceDictionary.xaml"/>
 
                 <!-- This tests whether Compiler handles a ResourceDictionary subclass that defines a custom property. -->
-                <rd:CustomPropertyResourceDictionary CustomProperty="Test" Source="CachedResourceDictionary/SomeResourceDictionary.xaml"/>
+                <rd:CustomPropertyResourceDictionary CustomProperty="Test" Source="SomeResourceDictionary.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </sdk:Page.Resources>

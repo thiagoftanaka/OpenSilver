@@ -730,13 +730,17 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Tests\ResourceDictionary\CachedResourceDictionary\SomeResourceDictionary.xaml">
+    <Page Include="Tests\ResourceDictionary\CachedResourceDictionary\CountableResourceDictionary.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Tests\ResourceDictionary\ResourceDictionaryTest.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Tests\ResourceDictionary\SomeResourceDictionary.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Tests\Right ClickTest.xaml">
       <SubType>Designer</SubType>
