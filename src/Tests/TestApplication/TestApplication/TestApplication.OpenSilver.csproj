@@ -7,17 +7,25 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="OpenSilver" Version="3.0.0" />
+    <PackageReference Include="OpenSilver" Version="3.0.1-private-2024-08-12-develop-wcf" />
+    <PackageReference Include="System.ServiceModel.Duplex" Version="4.4.*" />
+    <PackageReference Include="System.ServiceModel.Http" Version="4.10.3" />
+    <PackageReference Include="System.ServiceModel.NetTcp" Version="4.4.*" />
+    <PackageReference Include="System.ServiceModel.Security" Version="4.4.*" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Connected Services\BasicHttpServiceReference\Reference.cs" />
+    <Compile Include="Connected Services\BinaryServiceReference\Reference.cs" />
     <Compile Include="Converters\BooleanVisibilityConverter.cs" />
     <Compile Include="HintBehavior.cs" />
     <Compile Include="LinqSamples.cs" />
     <Compile Include="NotifyPropertyChanged.cs" />
+    <Compile Include="Service References\LegacyBasicHttpServiceReference\Reference.cs" />
+    <Compile Include="Service References\LegacyBinaryServiceReference\Reference.cs" />
     <Compile Include="Tests\AccordionTest.xaml.cs" />
     <Compile Include="Tests\DragDropTarget\ListBoxDragDropTargetTest.xaml.cs" />
     <Compile Include="Tests\DragDropTarget\PanelDragDropTargetTest.xaml.cs" />
@@ -237,6 +245,8 @@
     <Compile Include="Tests\ScrollViewerTest.xaml.cs">
       <DependentUpon>ScrollViewerTest.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Tests\ServiceReference\CustomLegacyBasicHttpServiceReferenceClient.cs" />
+    <Compile Include="Tests\ServiceReference\ServiceReferenceTest.xaml.cs" />
     <Compile Include="Tests\ShadowDropEffectTest.xaml.cs">
       <DependentUpon>ShadowDropEffectTest.xaml</DependentUpon>
     </Compile>
@@ -672,6 +682,9 @@
     <Page Include="Tests\RightToLeftTest.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Tests\ServiceReference\ServiceReferenceTest.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Tests\TextBlockTest.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -687,6 +700,39 @@
   </ItemGroup>
   <ItemGroup>
     <UpToDateCheckInput Remove="Tests\ResourceDictionary\SomeResourceDictionary.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="ServiceReferences.ClientConfig">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Service References\BasicHttpServiceReference\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Service References\BinaryServiceReference\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService.disco" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService.wsdl" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService.xsd" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService1.wsdl" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService1.xsd" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\configuration.svcinfo" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\configuration91.svcinfo" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\Reference.svcmap">
+      <Generator>WCF Proxy Generator</Generator>
+    </None>
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService.disco" />
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService.wsdl" />
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService.xsd" />
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService1.wsdl" />
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService1.xsd" />
+    <None Include="Service References\LegacyBinaryServiceReference\configuration.svcinfo" />
+    <None Include="Service References\LegacyBinaryServiceReference\configuration91.svcinfo" />
+    <None Include="Service References\LegacyBinaryServiceReference\Reference.svcmap">
+      <Generator>WCF Proxy Generator</Generator>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -72,7 +72,7 @@ namespace CSHTML5.Internal
         //---------------------------------------------------------------------------------------
         // This code follows the architecture drawn by DotNetBrowser
         // (cf https://dotnetbrowser.support.teamdev.com/support/solutions/articles/9000109868-calling-javascript-from-net)
-        // For an example of implementation, go to INTERNAL_InteropImplementation.cs and
+        // For an example of implementation, go to OpenSilver.Interop.cs and
         // ExecuteJavaScript_Implementation method, in the first "if".
         //---------------------------------------------------------------------------------------
 

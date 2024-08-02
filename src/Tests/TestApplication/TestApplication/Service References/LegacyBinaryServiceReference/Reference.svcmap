@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ReferenceGroup xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" ID="ebdbff9e-4782-48a9-8129-5b854c61d346" xmlns="urn:schemas-microsoft-com:xml-wcfservicemap">
+  <ClientOptions>
+    <GenerateAsynchronousMethods>true</GenerateAsynchronousMethods>
+    <EnableDataBinding>true</EnableDataBinding>
+    <ExcludedTypes />
+    <ImportXmlTypes>false</ImportXmlTypes>
+    <GenerateInternalTypes>false</GenerateInternalTypes>
+    <GenerateMessageContracts>false</GenerateMessageContracts>
+    <NamespaceMappings />
+    <CollectionMappings>
+      <CollectionMapping TypeName="System.Collections.ObjectModel.ObservableCollection`1" Category="List" />
+    </CollectionMappings>
+    <GenerateSerializableTypes>false</GenerateSerializableTypes>
+    <Serializer>Auto</Serializer>
+    <UseSerializerForFaults>true</UseSerializerForFaults>
+    <ReferenceAllAssemblies>true</ReferenceAllAssemblies>
+    <ReferencedAssemblies />
+    <ReferencedDataContractTypes />
+    <ServiceContractMappings />
+  </ClientOptions>
+  <MetadataSources>
+    <MetadataSource Address="http://localhost:50506/BinaryService.svc" Protocol="http" SourceId="1" />
+  </MetadataSources>
+  <Metadata>
+    <MetadataFile FileName="BinaryService.xsd" MetadataType="Schema" ID="84eb7ede-edc0-41b6-887b-6f346938efde" SourceId="1" SourceUrl="http://localhost:50506/BinaryService.svc?xsd=xsd1" />
+    <MetadataFile FileName="BinaryService.disco" MetadataType="Disco" ID="8380488c-30ff-47d6-8f24-42b67914cdce" SourceId="1" SourceUrl="http://localhost:50506/BinaryService.svc?disco" />
+    <MetadataFile FileName="BinaryService1.xsd" MetadataType="Schema" ID="1a5b2496-0479-4018-ab18-e7abfc88bc90" SourceId="1" SourceUrl="http://localhost:50506/BinaryService.svc?xsd=xsd0" />
+    <MetadataFile FileName="BinaryService.wsdl" MetadataType="Wsdl" ID="2b3f76ef-a768-4bb6-8495-a10c62ef5380" SourceId="1" SourceUrl="http://localhost:50506/BinaryService.svc?wsdl" />
+    <MetadataFile FileName="BinaryService1.wsdl" MetadataType="Wsdl" ID="3ca541be-b465-4592-8fbc-b17a05b807dc" SourceId="1" SourceUrl="http://localhost:50506/BinaryService.svc?wsdl=wsdl0" />
+  </Metadata>
+  <Extensions>
+    <ExtensionFile FileName="configuration91.svcinfo" Name="configuration91.svcinfo" />
+    <ExtensionFile FileName="configuration.svcinfo" Name="configuration.svcinfo" />
+  </Extensions>
+</ReferenceGroup>

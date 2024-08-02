@@ -56,6 +56,7 @@
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Windows" />
     <Reference Include="system" />
     <Reference Include="System.Core">
@@ -124,6 +125,16 @@
     <Compile Include="MyCustomImageControl.cs" />
     <Compile Include="SampleHeaderedContainer.xaml.cs">
       <DependentUpon>SampleHeaderedContainer.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Service References\LegacyBasicHttpServiceReference\Reference.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Reference.svcmap</DependentUpon>
+    </Compile>
+    <Compile Include="Service References\LegacyBinaryServiceReference\Reference.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Reference.svcmap</DependentUpon>
     </Compile>
     <Compile Include="TestingChildWindow\LoginWindow.xaml.cs">
       <DependentUpon>LoginWindow.xaml</DependentUpon>
@@ -345,6 +356,10 @@
     <Compile Include="Tests\ScrollViewerTest.xaml.cs">
       <DependentUpon>ScrollViewerTest.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Tests\ServiceReference\CustomLegacyBasicHttpServiceReferenceClient.cs" />
+    <Compile Include="Tests\ServiceReference\ServiceReferenceTest.xaml.cs">
+      <DependentUpon>ServiceReferenceTest.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Tests\ShadowDropEffectTest.xaml.cs">
       <DependentUpon>ShadowDropEffectTest.xaml</DependentUpon>
     </Compile>
@@ -411,6 +426,37 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </ApplicationDefinition>
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService.disco" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\configuration91.svcinfo" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\configuration.svcinfo" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\Reference.svcmap">
+      <Generator>WCF Proxy Generator</Generator>
+      <LastGenOutput>Reference.cs</LastGenOutput>
+    </None>
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService.disco" />
+    <None Include="Service References\LegacyBinaryServiceReference\configuration91.svcinfo" />
+    <None Include="Service References\LegacyBinaryServiceReference\configuration.svcinfo" />
+    <None Include="Service References\LegacyBinaryServiceReference\Reference.svcmap">
+      <Generator>WCF Proxy Generator</Generator>
+      <LastGenOutput>Reference.cs</LastGenOutput>
+    </None>
+    <Content Include="ServiceReferences.ClientConfig" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService.wsdl" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService1.wsdl" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService1.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService.wsdl" />
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService1.wsdl" />
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService1.xsd">
+      <SubType>Designer</SubType>
+    </None>
     <Page Include="MainPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -707,6 +753,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Tests\ServiceReference\ServiceReferenceTest.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Tests\ShadowDropEffectTest.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -792,7 +842,13 @@
     <Compile Include="Properties_Silverlight\AssemblyInfo.cs" />
     <None Include="Properties_Silverlight\AppManifest.xml" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadataStorage Include="Service References\LegacyBasicHttpServiceReference\" />
+    <WCFMetadataStorage Include="Service References\LegacyBinaryServiceReference\" />
+  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
 	Other similar extension points exist, see Microsoft.Common.targets.
