@@ -1,0 +1,58 @@
+{
+  "ExtendedData": {
+    "inputs": [
+      "http://localhost:50506/BasicHttpService.svc"
+    ],
+    "collectionTypes": [
+      "System.Array",
+      "System.Collections.Generic.Dictionary`2"
+    ],
+    "namespaceMappings": [
+      "*, BasicHttpServiceReference"
+    ],
+    "references": [
+      "Microsoft.Bcl.AsyncInterfaces, {Microsoft.Bcl.AsyncInterfaces, 5.0.0}",
+      "Microsoft.CSharp, {Microsoft.CSharp, 4.7.0}",
+      "Microsoft.Extensions.ObjectPool, {Microsoft.Extensions.ObjectPool, 5.0.10}",
+      "Microsoft.JSInterop, {Microsoft.JSInterop, 3.1.28}",
+      "OpenSilver, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "OpenSilver.Controls.Data, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "OpenSilver.Controls.Data.DataForm.Toolkit, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "OpenSilver.Controls.Data.Input, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "OpenSilver.Controls.Data.Toolkit, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "OpenSilver.Controls.DataVisualization.Toolkit, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "OpenSilver.Controls.Input, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "OpenSilver.Controls.Layout.Toolkit, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "OpenSilver.Controls.Navigation, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "OpenSilver.Controls.Theming.Toolkit, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "OpenSilver.Expression.Effects, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "OpenSilver.Expression.Interactions, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "OpenSilver.Interactivity, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "System.Buffers, {System.Buffers, 4.5.1}",
+      "System.ComponentModel.Annotations, {System.ComponentModel.Annotations, 5.0.0}",
+      "System.ComponentModel.Composition, {System.ComponentModel.Composition, 6.0.0}",
+      "System.ComponentModel.Composition.Initialization, {OpenSilver, 3.0.1-private-2024-07-31-develop}",
+      "System.Formats.Asn1, {System.Formats.Asn1, 6.0.0}",
+      "System.Memory, {System.Memory, 4.5.4}",
+      "System.Numerics.Vectors, {System.Numerics.Vectors, 4.5.0}",
+      "System.Reflection.DispatchProxy, {System.Reflection.DispatchProxy, 4.7.1}",
+      "System.Runtime.CompilerServices.Unsafe, {System.Runtime.CompilerServices.Unsafe, 4.7.1}",
+      "System.Security.AccessControl, {System.Security.AccessControl, 6.0.0}",
+      "System.Security.Cryptography.Cng, {System.Security.Cryptography.Cng, 5.0.0}",
+      "System.Security.Cryptography.Pkcs, {System.Security.Cryptography.Pkcs, 6.0.1}",
+      "System.Security.Cryptography.Xml, {System.Security.Cryptography.Xml, 6.0.1}",
+      "System.Security.Principal.Windows, {System.Security.Principal.Windows, 5.0.0}",
+      "System.ServiceModel, {System.ServiceModel.Primitives, 4.10.3}",
+      "System.ServiceModel.Duplex, {System.ServiceModel.Duplex, 4.4.4}",
+      "System.ServiceModel.Http, {System.ServiceModel.Http, 4.10.3}",
+      "System.ServiceModel.NetTcp, {System.ServiceModel.NetTcp, 4.4.4}",
+      "System.ServiceModel.Primitives, {System.ServiceModel.Primitives, 4.10.3}",
+      "System.ServiceModel.Security, {System.ServiceModel.Security, 4.4.4}",
+      "System.Text.Encodings.Web, {System.Text.Encodings.Web, 4.7.2}",
+      "System.Text.Json, {System.Text.Json, 4.7.2}",
+      "System.Threading.Tasks.Extensions, {System.Threading.Tasks.Extensions, 4.5.4}"
+    ],
+    "targetFramework": "netstandard2.0",
+    "typeReuseMode": "All"
+  }
+}

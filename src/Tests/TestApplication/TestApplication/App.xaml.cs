@@ -15,9 +15,8 @@ namespace TestApplication
             // Enter construction logic here...
 
 #if OPENSILVER
-            // OpenSilver change: importing ServiceReferences.ClientConfig for OpenSilver ClientBase use
             var resourceStream = System.Reflection.Assembly.GetExecutingAssembly()
-                .GetManifestResourceStream("ServiceReferences.ClientConfig");
+                .GetManifestResourceStream("TestApplication.OpenSilver.ServiceReferences.ClientConfig");
             using (var sr = new StreamReader(resourceStream))
             {
                 var sourceCode = sr.ReadToEnd();

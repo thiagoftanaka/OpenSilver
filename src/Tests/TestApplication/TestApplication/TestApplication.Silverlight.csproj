@@ -126,12 +126,12 @@
     <Compile Include="SampleHeaderedContainer.xaml.cs">
       <DependentUpon>SampleHeaderedContainer.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Service References\BasicHttpServiceReference\Reference.cs">
+    <Compile Include="Service References\LegacyBasicHttpServiceReference\Reference.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Reference.svcmap</DependentUpon>
     </Compile>
-    <Compile Include="Service References\BinaryServiceReference\Reference.cs">
+    <Compile Include="Service References\LegacyBinaryServiceReference\Reference.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Reference.svcmap</DependentUpon>
@@ -356,7 +356,7 @@
     <Compile Include="Tests\ScrollViewerTest.xaml.cs">
       <DependentUpon>ScrollViewerTest.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Tests\ServiceReferenceTest.xaml.cs">
+    <Compile Include="Tests\ServiceReference\ServiceReferenceTest.xaml.cs">
       <DependentUpon>ServiceReferenceTest.xaml</DependentUpon>
     </Compile>
     <Compile Include="Tests\ShadowDropEffectTest.xaml.cs">
@@ -425,37 +425,35 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </ApplicationDefinition>
-    <None Include="Service References\BasicHttpServiceReference\BasicHttpService.disco" />
-    <None Include="Service References\BasicHttpServiceReference\configuration91.svcinfo" />
-    <None Include="Service References\BasicHttpServiceReference\configuration.svcinfo" />
-    <None Include="Service References\BasicHttpServiceReference\Reference.svcmap">
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService.disco" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\configuration91.svcinfo" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\configuration.svcinfo" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\Reference.svcmap">
       <Generator>WCF Proxy Generator</Generator>
       <LastGenOutput>Reference.cs</LastGenOutput>
     </None>
-    <None Include="Service References\BinaryServiceReference\BinaryService.disco" />
-    <None Include="Service References\BinaryServiceReference\configuration91.svcinfo" />
-    <None Include="Service References\BinaryServiceReference\configuration.svcinfo" />
-    <None Include="Service References\BinaryServiceReference\Reference.svcmap">
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService.disco" />
+    <None Include="Service References\LegacyBinaryServiceReference\configuration91.svcinfo" />
+    <None Include="Service References\LegacyBinaryServiceReference\configuration.svcinfo" />
+    <None Include="Service References\LegacyBinaryServiceReference\Reference.svcmap">
       <Generator>WCF Proxy Generator</Generator>
       <LastGenOutput>Reference.cs</LastGenOutput>
     </None>
-    <Content Include="ServiceReferences.ClientConfig">
-      <SubType>Designer</SubType>
-    </Content>
-    <None Include="Service References\BasicHttpServiceReference\BasicHttpService.wsdl" />
-    <None Include="Service References\BasicHttpServiceReference\BasicHttpService.xsd">
+    <Content Include="ServiceReferences.ClientConfig" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService.wsdl" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\BasicHttpServiceReference\BasicHttpService1.wsdl" />
-    <None Include="Service References\BasicHttpServiceReference\BasicHttpService1.xsd">
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService1.wsdl" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService1.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\BinaryServiceReference\BinaryService.wsdl" />
-    <None Include="Service References\BinaryServiceReference\BinaryService.xsd">
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService.wsdl" />
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Service References\BinaryServiceReference\BinaryService1.wsdl" />
-    <None Include="Service References\BinaryServiceReference\BinaryService1.xsd">
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService1.wsdl" />
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService1.xsd">
       <SubType>Designer</SubType>
     </None>
     <Page Include="MainPage.xaml">
@@ -758,6 +756,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Tests\ServiceReference\ServiceReferenceTest.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Tests\ShadowDropEffectTest.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -847,8 +849,8 @@
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <ItemGroup>
-    <WCFMetadataStorage Include="Service References\BasicHttpServiceReference\" />
-    <WCFMetadataStorage Include="Service References\BinaryServiceReference\" />
+    <WCFMetadataStorage Include="Service References\LegacyBasicHttpServiceReference\" />
+    <WCFMetadataStorage Include="Service References\LegacyBinaryServiceReference\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

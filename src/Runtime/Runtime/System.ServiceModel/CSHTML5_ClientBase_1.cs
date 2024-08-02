@@ -19,7 +19,6 @@ using System.Net;
 using System.Diagnostics;
 using System.Reflection;
 using System.ComponentModel;
-using System.Configuration;
 using System.Threading;
 using System.ServiceModel.Channels;
 using System.IO;
@@ -33,6 +32,8 @@ using System.Windows;
 using CSHTML5.Internal;
 using static System.ServiceModel.INTERNAL_WebMethodsCaller;
 using DataContractSerializerCustom = System.Runtime.Serialization.DataContractSerializer_CSHTML5Ver;
+using System.Globalization;
+using CSHTML5;
 
 namespace System.ServiceModel
 {
@@ -79,8 +80,8 @@ namespace System.ServiceModel
     public abstract partial class CSHTML5_ClientBase<TChannel> /*: ICommunicationObject, IDisposable*/ where TChannel : class
     {
         //Note: Adding this because they are in the file generated when adding a Service Reference through the "Add Connected Service" for OpenSilver.
-        public System.ServiceModel.Description.ServiceEndpoint Endpoint => ChannelFactory?.Endpoint;
-        public System.ServiceModel.Description.ClientCredentials ClientCredentials { get; } = new Description.ClientCredentials();
+        public Description.ServiceEndpoint Endpoint => ChannelFactory?.Endpoint;
+        public Description.ClientCredentials ClientCredentials { get; } = new Description.ClientCredentials();
         string _remoteAddressAsString;
 
         private TChannel channel;
@@ -250,11 +251,6 @@ namespace System.ServiceModel
 
         public IList<MessageHeader> MessageHeaders => (Channel as ChannelBase<TChannel>)?.MessageHeaders;
 
-        //#if !FOR_DESIGN_TIME && CORE
-        //        [JSIgnore]
-        //        INTERNAL_RealClientBaseImplementation<TChannel> _realClientBase;
-        //#endif
-
         /// <summary>
         /// Initializes a new instance of the System.ServiceModel.ClientBase`1
         /// class using the default target endpoint from the application configuration
@@ -332,7 +328,7 @@ namespace System.ServiceModel
             out Binding binding)
         {
             bool isNullOrUndefined = OpenSilver.Interop.ExecuteJavaScriptBoolean(
-                $"!{CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(configFileContent)}");
+                $"!{INTERNAL_InteropImplementation.GetVariableStringForJS(configFileContent)}");
             if (!isNullOrUndefined)
             {
                 string fileContentAsString = Convert.ToString(configFileContent);
@@ -502,8 +498,8 @@ namespace System.ServiceModel
         /// </summary>
         public partial class WebMethodsCaller
         {
-            protected const string SoapVersion11 = "1.1";
-            protected const string SoapVersion12 = "1.2";
+            private const string XMLSCHEMA_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance"; // Usually associated to the "xsi:" prefix.
+            private const string DATACONTRACTSERIALIZER_OBJECT_DEFAULT_NAMESPACE = "http://schemas.datacontract.org/2004/07/";
 
             string _addressOfService;
 
@@ -1217,21 +1213,13 @@ namespace System.ServiceModel
             {
                 soapVersion = client?.INTERNAL_SoapVersion ?? soapVersion;
                 headers = new Dictionary<string, string>();
-                string requestFormat = null;
 
                 string interfaceTypeName = interfaceType.Name; // default value
                 string interfaceTypeNamespace = "http://tempuri.org/"; // default value
-                string soapAction = string.Empty;
 
-
-                ServiceContractAttribute serviceContractAttr =
-                    (ServiceContractAttribute)interfaceType.GetCustomAttributes(typeof(ServiceContractAttribute), false)
-                                                           .FirstOrDefault(); // note: there should never be more than one.
-
-                if (serviceContractAttr != null)
+                if (interfaceType.GetCustomAttributes<ServiceContractAttribute>(false).FirstOrDefault() is ServiceContractAttribute serviceContractAttr)
                 {
-                    if (serviceContractAttr.Namespace != null &&
-                        serviceContractAttr.Namespace != "http://tempuri.org") // default value if namespace is not set explicitly.
+                    if (serviceContractAttr.Namespace is not null)
                     {
                         interfaceTypeNamespace = serviceContractAttr.Namespace;
                     }
@@ -1241,60 +1229,12 @@ namespace System.ServiceModel
                     }
                 }
                 
-                // Look for the soapAction.
-                OperationContractAttribute operationContractAttr =
-                    (OperationContractAttribute)method.GetCustomAttributes(typeof(OperationContractAttribute), false)
-                                                        .FirstOrDefault(); // note: there should never be more than one.
-
-                if (operationContractAttr != null)
-                {
-                    soapAction = operationContractAttr.Action;
-                }
-
-                if (string.IsNullOrEmpty(soapAction))
-                {
-                    soapAction = string.Format("{0}/{1}/{2}",
-                                                interfaceTypeNamespace.Trim('/'),
-                                                interfaceTypeName.Trim('/'),
-                                                webMethodName);
-                }
-
                 BinaryMessageEncodingBindingElement binaryBindingElement = client?.ChannelFactory?.Endpoint?.Binding?
                     .CreateBindingElements().Find<BinaryMessageEncodingBindingElement>();
                 bool isBinaryBinding = binaryBindingElement != null;
 
-                switch (soapVersion)
-                {
-                    case SoapVersion11:
-                        headers.Add("Content-Type", @"text/xml; charset=utf-8");
-                        headers.Add("SOAPAction", soapAction);
-
-                        requestFormat = "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">{0}{1}</s:Envelope>";
-                        break;
-
-                    case SoapVersion12:
-                        if (isBinaryBinding)
-                        {
-                            headers.Add("Content-Type", @"application/soap+msbin1");
-                        }
-                        else
-                        {
-                            headers.Add("Content-Type", @"application/soap+xml; charset=utf-8");
-                        }
-
-                        requestFormat = "<s:Envelope xmlns:a=\"http://www.w3.org/2005/08/addressing\" xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\">{0}{1}</s:Envelope>";
-                        break;
-
-                    default:
-                        throw new InvalidOperationException(
-                            string.Format("SOAP version not supported: {0}",
-                                          soapVersion));
-                }
-
                 // in every case, we want the name of the method as a XElement
-                XElement methodNameElement =
-                    new XElement(XNamespace.Get(interfaceTypeNamespace)
-                                           .GetName(webMethodName));
+                var methodNameElement = new XElement(XNamespace.Get(interfaceTypeNamespace).GetName(webMethodName));
 
                 request = null;
 
@@ -1415,13 +1355,8 @@ namespace System.ServiceModel
                         else
                         {
                             // the value is null so we simply need to put the parameter name with i:nil="true" and we're good
-                            XElement paramNameElement =
-                                new XElement(XNamespace.Get(interfaceTypeNamespace)
-                                                       .GetName(parameterInfos[i].Name));
-                            XAttribute attribute =
-                                new XAttribute(XNamespace.Get(DataContractSerializer_Helpers.XMLSCHEMA_NAMESPACE)
-                                                         .GetName("nil"),
-                                               "true");
+                            var paramNameElement = new XElement(XNamespace.Get(interfaceTypeNamespace).GetName(parameterInfos[i].Name));
+                            var attribute = new XAttribute(XNamespace.Get(XMLSCHEMA_NAMESPACE).GetName("nil"), "true");
                             paramNameElement.Add(attribute);
                             methodNameElement.Add(paramNameElement);
                         }
@@ -1429,18 +1364,56 @@ namespace System.ServiceModel
                 }
 
 #if OPENSILVER
+                string elementAsString = DataContractSerializerCustom.XElementToString(methodNameElement);
+
+                // Look for the soapAction.
+                string soapAction = string.Empty;
+
+                if (method.GetCustomAttributes<OperationContractAttribute>(false).FirstOrDefault() is OperationContractAttribute operationContractAttr)
+                {
+                    soapAction = operationContractAttr.Action;
+                }
+
+                if (string.IsNullOrEmpty(soapAction))
+                {
+                    soapAction = $"{interfaceTypeNamespace.Trim('/')}/{interfaceTypeName.Trim('/')}/{webMethodName}";
+                }
+
+                string requestFormat = null;
+                switch (soapVersion)
+                {
+                    case "1.1":
+                        headers.Add("Content-Type", "text/xml; charset=utf-8");
+                        headers.Add("SOAPAction", soapAction);
+
+                        if (!string.IsNullOrEmpty(envelopeHeaders))
+                        {
+                            envelopeHeaders = "<s:Header>" + envelopeHeaders + "</s:Header>";
+                        }
+
+                        requestFormat = $"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">{(envelopeHeaders ?? string.Empty)}<s:Body>{{0}}</s:Body></s:Envelope>";
+                        break;
+
+                    case "1.2":
+                        if (isBinaryBinding)
+                        {
+                            headers.Add("Content-Type", "application/soap+msbin1");
+                        }
+                        else
+                        {
+                            headers.Add("Content-Type", "application/soap+xml; charset=utf-8");
+                        }
+
+                        requestFormat = $"<s:Envelope xmlns:a=\"http://www.w3.org/2005/08/addressing\" xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Header><a:Action>{soapAction}</a:Action>{(envelopeHeaders ?? string.Empty)}<a:To>{_addressOfService}</a:To>{{1}}</s:Header><s:Body>{{0}}</s:Body></s:Envelope>";
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"SOAP version not supported: {soapVersion}");
+                }
+
                 if (message == null)
                 {
-                    if (soapVersion == SoapVersion12)
-                    {
-                        envelopeHeaders = string.Format("<a:Action>{0}</a:Action>", soapAction) + (envelopeHeaders ?? "");
-                    }
-                    request = string.Format(requestFormat,
-                                            !string.IsNullOrEmpty(envelopeHeaders) ?
-                                                string.Format("<s:Header>{0}</s:Header>", envelopeHeaders) :
-                                                "",
-                                            string.Format("<s:Body>{0}</s:Body>",
-                                            methodNameElement.ToString(SaveOptions.DisableFormatting)));
+                    request = string.Format(requestFormat, elementAsString, string.Empty);
                 }
                 else
                 {
@@ -1471,9 +1444,7 @@ namespace System.ServiceModel
                         }
                     }
 
-                    request = string.Format(requestFormat,
-                                    string.Format("<s:Header>{0}</s:Header>", messageHeaders.ToString() + envelopeHeaders),
-                                    body);
+                    request = string.Format(requestFormat, body, messageHeaders);
                 }
 
                 if (isBinaryBinding)
@@ -1488,12 +1459,7 @@ namespace System.ServiceModel
                         binaryMessage = Message.CreateMessage(client.ChannelFactory.Endpoint.Binding.MessageVersion,
                             soapAction, methodNameElement);
 
-                        string xmlMessage = string.Format(requestFormat,
-                                        !string.IsNullOrEmpty(envelopeHeaders) ?
-                                            string.Format("<s:Header>{0}</s:Header>", envelopeHeaders) :
-                                            "",
-                                        string.Format("<s:Body>{0}</s:Body>",
-                                        methodNameElement.ToString(SaveOptions.DisableFormatting)));
+                        string xmlMessage = string.Format(requestFormat, elementAsString, string.Empty);
                         MessageHeaders messageHeaders = GetEnvelopeHeaders(xmlMessage, soapVersion);
 
                         binaryMessage.Headers.Clear();
@@ -1517,7 +1483,7 @@ namespace System.ServiceModel
 #endif
         }
 
-        private void ReadAndPrepareResponseGeneric_JSVersion<T>(
+            private void ReadAndPrepareResponseGeneric_JSVersion<T>(
                 TaskCompletionSource<T> taskCompletionSource,
                 INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventArgs e,
                 Type interfaceType,
@@ -1660,7 +1626,7 @@ namespace System.ServiceModel
                             {
                                 bool namespaceMatch = attr.IsNamespaceSetExplicitly ?
                                     attr.Namespace == name.NamespaceName :
-                                    DataContractSerializer_Helpers.GetDefaultNamespace(type.Namespace, useXmlSerializerFormat) == name.NamespaceName;
+                                    GetDefaultNamespace(type.Namespace, useXmlSerializerFormat) == name.NamespaceName;
 
                                 if (namespaceMatch)
                                     return type;
@@ -1669,7 +1635,7 @@ namespace System.ServiceModel
                     }
                 }
 
-                throw new InvalidOperationException(string.Format("Could not resolve type {0}", name));
+                throw new InvalidOperationException($"Could not resolve type {name}");
             }
 
             private object ReadAndPrepareResponse(
@@ -1729,8 +1695,7 @@ namespace System.ServiceModel
                 }
                 else
                 {
-                    Debug.Assert(soapVersion == "1.2",
-                                    string.Format("Unexpected soap version ({0}) !", soapVersion));
+                    Debug.Assert(soapVersion == "1.2", $"Unexpected soap version ({soapVersion}) !");
                     NS = "http://www.w3.org/2003/05/soap-envelope";
                 }
 
@@ -1800,7 +1765,7 @@ namespace System.ServiceModel
                         return null;
                     }
 
-                    object ParseException(XElement exceptionElement, string exceptionTypeName)
+                    static object ParseException(XElement exceptionElement, string exceptionTypeName)
                     {
                         Type exceptionType = ResolveType(exceptionTypeName);
 
@@ -1827,7 +1792,7 @@ namespace System.ServiceModel
                         return exception;
                     }
 
-                    Type ResolveType(string name)
+                    static Type ResolveType(string name)
                     {
                         Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
                         int asemblyCount = assemblies.Length;
@@ -1842,7 +1807,7 @@ namespace System.ServiceModel
                             }
                         }
 
-                        throw new InvalidOperationException(string.Format("Could not resolve type {0}", name));
+                        throw new InvalidOperationException($"Could not resolve type {name}");
                     }
                 }
                 else
@@ -1876,7 +1841,7 @@ namespace System.ServiceModel
                     // to allow passing it as Generic type argument when calling CallWebMethod.
                     if (requestResponseType == typeof(object))
                     {
-                        if (bodyElement != null && bodyElement.Nodes().Count() == 0)
+                        if (bodyElement != null && !bodyElement.Nodes().Any())
                         {
                             // Note: there might be a more efficient way of checking if the method has a return 
                             // type (possibly through a smart use of responseAsString.IndexOf but it seems 
@@ -1925,7 +1890,7 @@ namespace System.ServiceModel
                         types.Add(t);
                     }
 
-                    DataContractSerializerCustom deSerializer = new DataContractSerializerCustom(typeToDeserialize, types);
+                    var deSerializer = new DataContractSerializerCustom(typeToDeserialize, types);
                     XElement xElement = envelopeElement;
 
                     //exclude the parts that are <Enveloppe><Body>... since they are useless 
@@ -1971,7 +1936,7 @@ namespace System.ServiceModel
                         if (typeToDeserialize.GetCustomAttribute<MessageContractAttribute>() != null)
                         {
                             // DataContractSerializer needs correct namespace instead of http://tempuri.org/
-                            XNamespace ns = DataContractSerializer_Helpers.GetDefaultNamespace(typeToDeserialize.Namespace, false);
+                            XNamespace ns = GetDefaultNamespace(typeToDeserialize.Namespace, false);
                             xElement.Name = ns + xElement.Name.LocalName;
                             xElement.Attributes("xmlns").Remove();
                             foreach (var childElement in xElement.Elements())
@@ -2045,7 +2010,7 @@ namespace System.ServiceModel
                         else if (requestResponseType == typeof(char) || requestResponseType == typeof(char?))
                             requestResponse = (char)(int.Parse(responseAsString)); //todo: support encodings
                         else if (requestResponseType == typeof(DateTime) || requestResponseType == typeof(DateTime?))
-                            requestResponse = INTERNAL_DateTimeHelpers.ToDateTime(responseAsString); //todo: ensure this is the culture-invariant parsing!
+                            requestResponse = DateTime.Parse(responseAsString, CultureInfo.InvariantCulture);
                         else if (requestResponseType.IsEnum)
                             requestResponse = Enum.Parse(requestResponseType, responseAsString);
                         else if (requestResponseType == typeof(void))
@@ -2053,8 +2018,10 @@ namespace System.ServiceModel
                             // Do nothing so null object will be returned
                         }
                         else
-                            throw new NotSupportedException($"The following type is not supported in the current WCF implementation: '{requestResponseType}', string value is {responseAsString}. " +
-                                $"\nPlease report this issue to support@cshtml5.com");
+                        {
+                            throw new NotSupportedException(
+                                $"The type '{requestResponseType}' is not supported in the current WCF implementation, string value is {responseAsString}.");
+                        }
                     }
                     else
                     {
@@ -2081,6 +2048,13 @@ namespace System.ServiceModel
                 }
             }
 
+            private static string GetDefaultNamespace(string typeNamespace, bool useXmlSerializerFormat)
+            {
+                if (useXmlSerializerFormat)
+                    return null;
+                else
+                    return DATACONTRACTSERIALIZER_OBJECT_DEFAULT_NAMESPACE + typeNamespace;
+            }
         }
 
         #region work in progress
