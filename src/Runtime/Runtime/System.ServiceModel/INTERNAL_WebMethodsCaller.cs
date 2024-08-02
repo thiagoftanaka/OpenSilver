@@ -52,7 +52,8 @@ namespace System.ServiceModel
             string endpointAddress,
             string webMethodName,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             // Call the web method
             var webMethodsCaller = new CSHTML5_ClientBase<INTERFACE_TYPE>.WebMethodsCaller(endpointAddress);
@@ -65,7 +66,8 @@ namespace System.ServiceModel
                     typeof(INTERFACE_TYPE),
                     typeof(RETURN_TYPE),
                     requestParameters,
-                    soapVersion);
+                    soapVersion,
+                    client);
             }
             catch (MissingMethodException)
             {
@@ -74,7 +76,8 @@ namespace System.ServiceModel
                     typeof(INTERFACE_TYPE),
                     typeof(RETURN_TYPE),
                     requestParameters,
-                    soapVersion);
+                    soapVersion,
+                    client);
             }
 
             return task;
@@ -85,7 +88,8 @@ namespace System.ServiceModel
             string webMethodName,
             IEnumerable<Channels.MessageHeader> outgoingMessageHeaders,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             var webMethodsCaller = new CSHTML5_ClientBase<INTERFACE_TYPE>.WebMethodsCaller(endpointAddress);
 
@@ -95,7 +99,8 @@ namespace System.ServiceModel
                 typeof(RETURN_TYPE),
                 outgoingMessageHeaders,
                 requestParameters,
-                soapVersion);
+                soapVersion,
+                client);
 
             return ((RETURN_TYPE)typedResponseBody, incommingMessageHeaders);
         }
@@ -105,7 +110,8 @@ namespace System.ServiceModel
             string webMethodName,
             IEnumerable<Channels.MessageHeader> outgoingMessageHeaders,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             // Call the web method
             var webMethodsCaller = new CSHTML5_ClientBase<INTERFACE_TYPE>.WebMethodsCaller(endpointAddress);
@@ -119,7 +125,8 @@ namespace System.ServiceModel
                     typeof(RETURN_TYPE),
                     outgoingMessageHeaders,
                     requestParameters,
-                    soapVersion);
+                    soapVersion,
+                    client);
             }
             catch (MissingMethodException)
             {
@@ -129,7 +136,8 @@ namespace System.ServiceModel
                     typeof(RETURN_TYPE),
                     outgoingMessageHeaders,
                     requestParameters,
-                    soapVersion);
+                    soapVersion,
+                    client);
             }
 
             return task;
@@ -139,7 +147,8 @@ namespace System.ServiceModel
             string endpointAddress,
             string webMethodName,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             var webMethodsCaller = new CSHTML5_ClientBase<INTERFACE_TYPE>.WebMethodsCaller(endpointAddress);
 
@@ -148,7 +157,8 @@ namespace System.ServiceModel
                 typeof(INTERFACE_TYPE),
                 typeof(RETURN_TYPE),
                 requestParameters,
-                soapVersion);
+                soapVersion,
+                client);
         }
 
         public static IAsyncResult BeginCallWebMethod<INTERFACE_TYPE>(
@@ -158,7 +168,8 @@ namespace System.ServiceModel
             IReadOnlyList<Type> knownTypes,
             string messageHeaders,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             // Read the parameters
             AsyncCallback callback = (AsyncCallback)requestParameters[CallbackParameterName];
@@ -200,7 +211,8 @@ namespace System.ServiceModel
                     // This causes a call to "EndCallWebMethod" which will deserialize the response.
                     webMethodAsyncResult.Completed();
                 },
-                soapVersion);
+                soapVersion,
+                client);
 
             return webMethodAsyncResult;
         }
@@ -211,7 +223,8 @@ namespace System.ServiceModel
             Type methodReturnType,
             string messageHeaders,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             return BeginCallWebMethod<INTERFACE_TYPE>(
                 endpointAddress,
@@ -220,7 +233,8 @@ namespace System.ServiceModel
                 null,
                 messageHeaders,
                 requestParameters,
-                soapVersion);
+                soapVersion,
+                client);
         }
 
         public static IAsyncResult BeginCallWebMethod<INTERFACE_TYPE>(
@@ -228,32 +242,36 @@ namespace System.ServiceModel
            string webMethodName,
            Type methodReturnType,
            IDictionary<string, object> requestParameters,
-           string soapVersion) where INTERFACE_TYPE : class
+           string soapVersion,
+           CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             return BeginCallWebMethod<INTERFACE_TYPE>(
                 endpointAddress,
                 webMethodName,
                 methodReturnType,
                 null,
-                "",
+                CSHTML5_ClientBase<INTERFACE_TYPE>.WebMethodsCaller.GetEnvelopeHeaders(client.MessageHeaders, client.INTERNAL_SoapVersion),
                 requestParameters,
-                soapVersion);
+                soapVersion,
+                client);
         }
 
         public static IAsyncResult BeginCallWebMethod<RETURN_TYPE, INTERFACE_TYPE>(
             string endpointAddress,
             string webMethodName,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             return BeginCallWebMethod<INTERFACE_TYPE>(
                 endpointAddress,
                 webMethodName,
                 typeof(RETURN_TYPE),
                 null,
-                "",
+                CSHTML5_ClientBase<INTERFACE_TYPE>.WebMethodsCaller.GetEnvelopeHeaders(client.MessageHeaders, client.INTERNAL_SoapVersion),
                 requestParameters,
-                soapVersion);
+                soapVersion,
+                client);
         }
 
         public static object EndCallWebMethod<INTERFACE_TYPE>(string endpointAddress,
@@ -261,7 +279,8 @@ namespace System.ServiceModel
             Type methodReturnType,
             IReadOnlyList<Type> knownTypes,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             // Read the XML result from the parameters
             IAsyncResult asyncResult = (IAsyncResult)requestParameters[ResultParameterName];
@@ -277,7 +296,8 @@ namespace System.ServiceModel
                 methodReturnType,
                 knownTypes,
                 xmlReturnedFromTheServer,
-                soapVersion);
+                soapVersion,
+                client);
 
             // Return the deserialized result
             return result;
@@ -288,28 +308,32 @@ namespace System.ServiceModel
             string webMethodName,
             Type methodReturnType,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
-            return EndCallWebMethod<INTERFACE_TYPE>(endpointAddress,
+            return EndCallWebMethod(endpointAddress,
                webMethodName,
                methodReturnType,
                null,
                requestParameters,
-               soapVersion);
+               soapVersion,
+               client);
         }
 
         public static RETURN_TYPE EndCallWebMethod<RETURN_TYPE, INTERFACE_TYPE>(
             string endpointAddress,
             string webMethodName,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             return (RETURN_TYPE)EndCallWebMethod<INTERFACE_TYPE>(
                 endpointAddress,
                 webMethodName,
                 typeof(RETURN_TYPE),
                 requestParameters,
-                soapVersion);
+                soapVersion,
+                client);
         }
 
         //------------------------------------------
@@ -320,14 +344,16 @@ namespace System.ServiceModel
             string endpointAddress,
             string webMethodName,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             // The following call works fine because "Task<object>" inherits from "Task".
             return CallWebMethodAsync<object, INTERFACE_TYPE>(
                 endpointAddress,
                 webMethodName,
                 requestParameters,
-                soapVersion);
+                soapVersion,
+                client);
         }
 
         public static (object, Channels.MessageHeaders) CallWebMethod_WithoutReturnValue<INTERFACE_TYPE>(
@@ -335,14 +361,16 @@ namespace System.ServiceModel
             string webMethodName,
             IEnumerable<Channels.MessageHeader> outgoingMessageHeaders,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             return CallWebMethod<object, INTERFACE_TYPE>(
                 endpointAddress,
                 webMethodName,
                 outgoingMessageHeaders,
                 requestParameters,
-                soapVersion);
+                soapVersion,
+                client);
         }
 
         public static Task<(object, Channels.MessageHeaders)> CallWebMethodAsync_WithoutReturnValue<INTERFACE_TYPE>(
@@ -350,7 +378,8 @@ namespace System.ServiceModel
             string webMethodName,
             IEnumerable<Channels.MessageHeader> outgoingMessageHeaders,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             // The following call works fine because "Task<object>" inherits from "Task".
             return CallWebMethodAsync<object, INTERFACE_TYPE>(
@@ -358,33 +387,38 @@ namespace System.ServiceModel
                 webMethodName,
                 outgoingMessageHeaders,
                 requestParameters,
-                soapVersion);
+                soapVersion,
+                client);
         }
 
         public static void CallWebMethod_WithoutReturnValue<INTERFACE_TYPE>(
             string endpointAddress,
             string webMethodName,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             CallWebMethod<object, INTERFACE_TYPE>(
                 endpointAddress,
                 webMethodName,
                 requestParameters,
-                soapVersion);
+                soapVersion,
+                client);
         }
 
         public static void EndCallWebMethod_WithoutReturnValue<INTERFACE_TYPE>(
             string endpointAddress,
             string webMethodName,
             IDictionary<string, object> requestParameters,
-            string soapVersion) where INTERFACE_TYPE : class
+            string soapVersion,
+            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             EndCallWebMethod<object, INTERFACE_TYPE>(
                 endpointAddress,
                 webMethodName,
                 requestParameters,
-                soapVersion);
+                soapVersion,
+                client);
         }
 
         internal partial class WebMethodAsyncResult : INTERNAL_AsyncResult

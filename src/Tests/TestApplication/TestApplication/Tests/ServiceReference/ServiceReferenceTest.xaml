@@ -1,0 +1,26 @@
+﻿<sdk:Page
+    x:Class="TestApplication.Tests.ServiceReferenceTest"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
+
+    <StackPanel Orientation="Vertical">
+        <TextBlock Text="Legacy Service References (Add Service Reference... in Visual Studio 2015/Silverlight)"/>
+        <Button Content="Legacy BasicHttp GetTestString() - Event Based" Click="LegacyBasicHttpGetTestStringButton_OnClick" Width="300"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="LegacyBasicHttpGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
+
+        <Button Content="Legacy Binary GetTestString() - Event Based" Click="LegacyBinaryGetTestStringButton_OnClick" Width="300" Margin="0,20,0,0"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="LegacyBinaryGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
+
+        <TextBlock Margin="0,30,0,0" Text="Modern Service References (Add Service Reference... in Visual Studio 2022+)"/>
+        <Button Content="BasicHttp GetTestString() - async await" Click="BasicHttpGetTestStringButton_OnClick" Width="300"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="BasicHttpGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
+
+        <Button Content="Binary GetTestString() - async await" Click="BinaryGetTestStringButton_OnClick" Width="300" Margin="0,20,0,0"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="BinaryGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
+    </StackPanel>
+</sdk:Page>
