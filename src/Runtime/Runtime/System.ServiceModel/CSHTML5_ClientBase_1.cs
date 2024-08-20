@@ -12,7 +12,6 @@
 *  
 \*====================================================================================*/
 
-using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Net;
@@ -81,7 +80,6 @@ namespace System.ServiceModel
         //Note: Adding this because they are in the file generated when adding a Service Reference through the "Add Connected Service" for OpenSilver.
         public Description.ServiceEndpoint Endpoint => ChannelFactory?.Endpoint;
         public Description.ClientCredentials ClientCredentials { get; } = new Description.ClientCredentials();
-        string _remoteAddressAsString;
 
         private TChannel channel;
         public TChannel Channel
@@ -229,22 +227,16 @@ namespace System.ServiceModel
 
         public string INTERNAL_RemoteAddressAsString { get; }
 
-        public virtual string INTERNAL_SoapVersion
+        internal MessageVersion GetMessageVersion(string forceSoapVersion)
         {
-            get
+            switch (forceSoapVersion)
             {
-                MessageVersion messageVersion = _channelFactory?.Endpoint?.Binding?.MessageVersion;
-                if (messageVersion == MessageVersion.Soap11 ||
-                    messageVersion == MessageVersion.Soap11WSAddressingAugust2004)
-                {
-                    return "1.1";
-                }
-                else if (messageVersion == MessageVersion.Soap12WSAddressing10 ||
-                    messageVersion == MessageVersion.Soap12WSAddressing10)
-                {
-                    return "1.2";
-                }
-                return null;
+                case "1.1":
+                    return MessageVersion.Soap11;
+                case "1.2":
+                    return MessageVersion.Soap12WSAddressing10;
+                default:
+                    return ChannelFactory?.Endpoint?.Binding?.MessageVersion ?? MessageVersion.Soap11;
             }
         }
 
@@ -537,8 +529,8 @@ namespace System.ServiceModel
                 CSHTML5_ClientBase<TChannel> client)
             {
                 BeginCallWebMethod(webMethodName, interfaceType, methodReturnType, null,
-                    GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), soapVersion), originalRequestObject,
-                    callback, soapVersion, client);
+                    GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), client.GetMessageVersion(soapVersion)),
+                    originalRequestObject, callback, soapVersion, client);
             }
 
             public void BeginCallWebMethod(
@@ -738,7 +730,8 @@ namespace System.ServiceModel
                             soapVersion,
                             client);
 
-                        var messageHeaders = GetEnvelopeHeaders(((WebMethodAsyncResult)asyncResponseResult).XmlReturnedFromTheServer, soapVersion);
+                        var messageHeaders = GetEnvelopeHeaders(((WebMethodAsyncResult)asyncResponseResult).XmlReturnedFromTheServer,
+                            client.GetMessageVersion(soapVersion));
 
                         tcs.SetResult((result, messageHeaders));
                     }
@@ -795,7 +788,8 @@ namespace System.ServiceModel
                 // (if possible) and change the parameterName to a string[].
                 MethodInfo method = ResolveMethod(interfaceType, webMethodName, webMethodName + "Async");
                 bool isXmlSerializer = IsXmlSerializer(webMethodName, methodReturnType, method);
-                string outgoingMessageHeadersString = GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), soapVersion);
+                string outgoingMessageHeadersString = GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(),
+                    client.GetMessageVersion(soapVersion));
 
                 Dictionary<string, string> headers;
                 object request;
@@ -1056,7 +1050,8 @@ namespace System.ServiceModel
 
                 MethodInfo method = ResolveMethod(interfaceType, webMethodName, webMethodName, "Begin" + webMethodName);
                 bool isXmlSerializer = IsXmlSerializer(webMethodName, methodReturnType, method);
-                var outgoingMessageHeadersString = GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), soapVersion);
+                var outgoingMessageHeadersString = GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(),
+                    client.GetMessageVersion(soapVersion));
 
                 Dictionary<string, string> headers;
                 object request;
@@ -1097,7 +1092,7 @@ namespace System.ServiceModel
                     soapVersion,
                     client);
 
-                var incomingMessageHeaders = GetEnvelopeHeaders(response, soapVersion);
+                var incomingMessageHeaders = GetEnvelopeHeaders(response, client.GetMessageVersion(soapVersion));
 
                 return (typedResponseBody, incomingMessageHeaders);
             }
@@ -1156,7 +1151,7 @@ namespace System.ServiceModel
                 return false;
             }
 
-            public static string GetEnvelopeHeaders(ICollection<MessageHeader> messageHeaders, string soapVersion)
+            public static string GetEnvelopeHeaders(ICollection<MessageHeader> messageHeaders, MessageVersion messageVersion)
             {
                 if (messageHeaders == null || !messageHeaders.Any())
                 {
@@ -1170,7 +1165,7 @@ namespace System.ServiceModel
                     using (var sw = new StringWriter())
                     using (var xw = XmlWriter.Create(sw, settings))
                     {
-                        mh.WriteHeader(xw, soapVersion == "1.1" ? MessageVersion.Soap11 : MessageVersion.Soap12WSAddressing10);
+                        mh.WriteHeader(xw, messageVersion);
 
                         xw.Flush();
                         return sw.ToString();
@@ -1178,11 +1173,11 @@ namespace System.ServiceModel
                 }));
             }
 
-            private static MessageHeaders GetEnvelopeHeaders(string incomingMessageString, string soapVersion)
+            private static MessageHeaders GetEnvelopeHeaders(string incomingMessageString, MessageVersion messageVersion)
             {
                 using (var reader = XmlReader.Create(new StringReader(incomingMessageString)))
                 {
-                    var incomingMessage = Message.CreateMessage(reader, int.MaxValue, soapVersion == "1.1" ? MessageVersion.Soap11 : MessageVersion.Soap12WSAddressing10);
+                    var incomingMessage = Message.CreateMessage(reader, int.MaxValue, messageVersion);
                     return incomingMessage.Headers;
                 }
             }
@@ -1210,9 +1205,7 @@ namespace System.ServiceModel
                 out object request,
                 CSHTML5_ClientBase<TChannel> client)
             {
-                soapVersion = client?.INTERNAL_SoapVersion ?? soapVersion;
                 headers = new Dictionary<string, string>();
-
                 string interfaceTypeName = interfaceType.Name; // default value
                 string interfaceTypeNamespace = "http://tempuri.org/"; // default value
 
@@ -1379,40 +1372,69 @@ namespace System.ServiceModel
                 }
 
                 string requestFormat = null;
-                switch (soapVersion)
+                IDictionary<string, MessageHeader> allHeaders = new Dictionary<string, MessageHeader>();
+                MessageVersion messageVersion = client.GetMessageVersion(soapVersion);
+                if (Equals(messageVersion, MessageVersion.Soap11) ||
+                    Equals(messageVersion, MessageVersion.Soap11WSAddressingAugust2004))
                 {
-                    case "1.1":
-                        headers.Add("Content-Type", "text/xml; charset=utf-8");
-                        headers.Add("SOAPAction", soapAction);
+                    headers.Add("Content-Type", "text/xml; charset=utf-8");
+                    headers.Add("SOAPAction", soapAction);
 
-                        if (!string.IsNullOrEmpty(envelopeHeaders))
-                        {
-                            envelopeHeaders = "<s:Header>" + envelopeHeaders + "</s:Header>";
-                        }
+                    if (!string.IsNullOrEmpty(envelopeHeaders))
+                    {
+                        envelopeHeaders = "<s:Header>" + envelopeHeaders + "</s:Header>";
+                    }
 
-                        requestFormat = $"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">{(envelopeHeaders ?? string.Empty)}<s:Body>{{0}}</s:Body></s:Envelope>";
-                        break;
+                    requestFormat = $"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">{(envelopeHeaders ?? string.Empty)}<s:Body>{{0}}</s:Body></s:Envelope>";
+                }
+                else if (Equals(messageVersion, MessageVersion.Soap12WSAddressing10) ||
+                         Equals(messageVersion, MessageVersion.Soap12WSAddressingAugust2004))
+                {
+                    if (isBinaryBinding)
+                    {
+                        headers.Add("Content-Type", "application/soap+msbin1");
+                    }
+                    else
+                    {
+                        headers.Add("Content-Type", "application/soap+xml; charset=utf-8");
+                    }
 
-                    case "1.2":
-                        if (isBinaryBinding)
-                        {
-                            headers.Add("Content-Type", "application/soap+msbin1");
-                        }
-                        else
-                        {
-                            headers.Add("Content-Type", "application/soap+xml; charset=utf-8");
-                        }
+                    //requestFormat = $"<s:Envelope xmlns:a=\"http://www.w3.org/2005/08/addressing\" xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Header><a:Action>{soapAction}</a:Action>{(envelopeHeaders ?? string.Empty)}<a:To>{_addressOfService}</a:To>{{1}}</s:Header><s:Body>{{0}}</s:Body></s:Envelope>";
+                    requestFormat = $"<s:Envelope xmlns:a=\"http://www.w3.org/2005/08/addressing\" xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Header>{(envelopeHeaders ?? string.Empty)}{{1}}</s:Header><s:Body>{{0}}</s:Body></s:Envelope>";
+                    allHeaders["Action"] = MessageHeader.CreateHeader("Action", "http://www.w3.org/2005/08/addressing", soapAction);
+                    allHeaders["To"] = MessageHeader.CreateHeader("To", "http://www.w3.org/2005/08/addressing", _addressOfService);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"SOAP version not supported: {soapVersion}");
+                }
 
-                        requestFormat = $"<s:Envelope xmlns:a=\"http://www.w3.org/2005/08/addressing\" xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Header><a:Action>{soapAction}</a:Action>{(envelopeHeaders ?? string.Empty)}<a:To>{_addressOfService}</a:To>{{1}}</s:Header><s:Body>{{0}}</s:Body></s:Envelope>";
-                        break;
+                if (message != null)
+                {
+                    foreach (MessageHeader header in message.Headers)
+                    {
+                        allHeaders[header.Name] = header;
+                    }
+                }
 
-                    default:
-                        throw new InvalidOperationException($"SOAP version not supported: {soapVersion}");
+                StringBuilder messageHeaders = new StringBuilder();
+                foreach (MessageHeader header in allHeaders.Values)
+                {
+                    using (MemoryStream memoryStream = new MemoryStream())
+                    using (XmlDictionaryWriter xmlDictionaryWriter =
+                           XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
+                    using (StreamReader streamReader = new StreamReader(memoryStream))
+                    {
+                        header.WriteHeader(xmlDictionaryWriter, MessageVersion.Default);
+                        xmlDictionaryWriter.Flush();
+                        memoryStream.Position = 0;
+                        messageHeaders.Append(streamReader.ReadToEnd());
+                    }
                 }
 
                 if (message == null)
                 {
-                    request = string.Format(requestFormat, elementAsString, string.Empty);
+                    request = string.Format(requestFormat, elementAsString, messageHeaders);
                 }
                 else
                 {
@@ -1426,21 +1448,6 @@ namespace System.ServiceModel
                         xmlDictionaryWriter.Flush();
                         memoryStream.Position = 0;
                         body = streamReader.ReadToEnd();
-                    }
-
-                    StringBuilder messageHeaders = new StringBuilder();
-                    foreach (MessageHeader header in message.Headers)
-                    {
-                        using (MemoryStream memoryStream = new MemoryStream())
-                        using (XmlDictionaryWriter xmlDictionaryWriter =
-                            XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
-                        using (StreamReader streamReader = new StreamReader(memoryStream))
-                        {
-                            header.WriteHeader(xmlDictionaryWriter, MessageVersion.Default);
-                            xmlDictionaryWriter.Flush();
-                            memoryStream.Position = 0;
-                            messageHeaders.Append(streamReader.ReadToEnd());
-                        }
                     }
 
                     request = string.Format(requestFormat, body, messageHeaders);
@@ -1458,11 +1465,12 @@ namespace System.ServiceModel
                         binaryMessage = Message.CreateMessage(client.ChannelFactory.Endpoint.Binding.MessageVersion,
                             soapAction, methodNameElement);
 
-                        string xmlMessage = string.Format(requestFormat, elementAsString, string.Empty);
-                        MessageHeaders messageHeaders = GetEnvelopeHeaders(xmlMessage, soapVersion);
+                        string xmlMessage = string.Format(requestFormat, elementAsString, messageHeaders);
+                        MessageHeaders messageEnvelopeHeaders = GetEnvelopeHeaders(xmlMessage,
+                            client.GetMessageVersion(soapVersion));
 
                         binaryMessage.Headers.Clear();
-                        foreach (MessageHeader messageHeader in messageHeaders)
+                        foreach (MessageHeader messageHeader in messageEnvelopeHeaders)
                         {
                             binaryMessage.Headers.Add(messageHeader);
                         }
@@ -1549,7 +1557,8 @@ namespace System.ServiceModel
                     // which triggered a call to TrySetException (above).
                     if (!taskCompletionSource.Task.IsCompleted)
                     {
-                        taskCompletionSource.SetResult((requestResponse, GetEnvelopeHeaders(e.Result, soapVersion)));
+                        taskCompletionSource.SetResult((requestResponse, GetEnvelopeHeaders(e.Result,
+                            client.GetMessageVersion(soapVersion))));
                     }
                 }
                 else
@@ -1684,11 +1693,11 @@ namespace System.ServiceModel
                 // require an actual deserialization of the users' FaultException later on, to 
                 // be able to support their custom ones).
 
-                soapVersion = client?.INTERNAL_SoapVersion ?? soapVersion;
-
                 VerifyThatResponseIsNotNullOrEmpty(responseAsString);
                 string NS;
-                if (soapVersion == "1.1")
+                MessageVersion messageVersion = client.GetMessageVersion(soapVersion);
+                if (messageVersion.Equals(MessageVersion.Soap11) ||
+                    messageVersion.Equals(MessageVersion.Soap11WSAddressingAugust2004))
                 {
                     NS = "http://schemas.xmlsoap.org/soap/envelope/";
                 }
@@ -2164,9 +2173,10 @@ namespace System.ServiceModel
                     methodName,
                     typeof(IAsyncResult),
                     null,
-                    CSHTML5_ClientBase<T>.WebMethodsCaller.GetEnvelopeHeaders(MessageHeaders, _client.INTERNAL_SoapVersion),
+                    CSHTML5_ClientBase<T>.WebMethodsCaller.GetEnvelopeHeaders(MessageHeaders,
+                        _client.GetMessageVersion(null)),
                     parameters,
-                    _client.INTERNAL_SoapVersion,
+                    null,
                     _client);
             }
 
@@ -2190,7 +2200,7 @@ namespace System.ServiceModel
                     {
                         { "result", result },
                     },
-                    _client.INTERNAL_SoapVersion,
+                    null,
                     _client);
             }
 

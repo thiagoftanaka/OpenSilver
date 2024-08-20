@@ -356,6 +356,7 @@
     <Compile Include="Tests\ScrollViewerTest.xaml.cs">
       <DependentUpon>ScrollViewerTest.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Tests\ServiceReference\CustomLegacyBasicHttpServiceReferenceClient.cs" />
     <Compile Include="Tests\ServiceReference\ServiceReferenceTest.xaml.cs">
       <DependentUpon>ServiceReferenceTest.xaml</DependentUpon>
     </Compile>

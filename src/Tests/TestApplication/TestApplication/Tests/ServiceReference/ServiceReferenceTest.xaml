@@ -22,5 +22,14 @@
         <Button Content="Binary GetTestString() - async await" Click="BinaryGetTestStringButton_OnClick" Width="300" Margin="0,20,0,0"/>
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="BinaryGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
+
+        <TextBlock Margin="0,30,0,0" Text="Custom clients that use Message:"/>
+        <Button Content="CustomClient Legacy BasicHttp GetTestString()" Click="CustomClientBasicHttpGetTestStringButton_OnClick" Width="300"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="CustomClientBasicHttpGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
+
+        <Button Content="CustomClient Legacy Binary GetTestString()" Click="CustomClientBinaryGetTestStringButton_OnClick" Width="300" Margin="0,20,0,0"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="CustomClientBinaryGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
     </StackPanel>
 </sdk:Page>

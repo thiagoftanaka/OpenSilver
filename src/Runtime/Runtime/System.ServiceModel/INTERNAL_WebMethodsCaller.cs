@@ -250,7 +250,8 @@ namespace System.ServiceModel
                 webMethodName,
                 methodReturnType,
                 null,
-                CSHTML5_ClientBase<INTERFACE_TYPE>.WebMethodsCaller.GetEnvelopeHeaders(client.MessageHeaders, client.INTERNAL_SoapVersion),
+                CSHTML5_ClientBase<INTERFACE_TYPE>.WebMethodsCaller.GetEnvelopeHeaders(client.MessageHeaders,
+                    client.GetMessageVersion(soapVersion)),
                 requestParameters,
                 soapVersion,
                 client);
@@ -268,7 +269,8 @@ namespace System.ServiceModel
                 webMethodName,
                 typeof(RETURN_TYPE),
                 null,
-                CSHTML5_ClientBase<INTERFACE_TYPE>.WebMethodsCaller.GetEnvelopeHeaders(client.MessageHeaders, client.INTERNAL_SoapVersion),
+                CSHTML5_ClientBase<INTERFACE_TYPE>.WebMethodsCaller.GetEnvelopeHeaders(client.MessageHeaders,
+                    client.GetMessageVersion(soapVersion)),
                 requestParameters,
                 soapVersion,
                 client);
