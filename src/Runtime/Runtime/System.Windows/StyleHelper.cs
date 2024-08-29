@@ -11,9 +11,9 @@
 *  
 \*====================================================================================*/
 
-using System;
 using System.Collections.Generic;
 using System.Windows.Data;
+using OpenSilver.Internal;
 
 namespace System.Windows
 {
@@ -75,7 +75,7 @@ namespace System.Windows
         //
         private static void UpdateInstanceData(FrameworkElement fe, Style oldStyle, Style newStyle, SetStyleValueDelegate setValue)
         {
-            Dictionary<DependencyProperty, object> newStyleValues = newStyle?.EffectiveValues;
+            Dictionary<int, object> newStyleValues = newStyle?.EffectiveValues;
 
             if (oldStyle != null)
             {
@@ -83,13 +83,14 @@ namespace System.Windows
                 // if a property is about to be set again in the new theme style
                 // we don't unset the value directly to prevent from potientially
                 // firing the DependencyPropertyChanged callback twice.
-                foreach (DependencyProperty dp in oldStyle.EffectiveValues.Keys)
+                foreach (int propertyIndex in oldStyle.EffectiveValues.Keys)
                 {
-                    if (newStyleValues?.ContainsKey(dp) ?? false)
+                    if (newStyleValues?.ContainsKey(propertyIndex) ?? false)
                     {
                         continue;
                     }
 
+                    DependencyProperty dp = DependencyProperty.RegisteredPropertyList[propertyIndex];
                     setValue(fe, dp, DependencyProperty.UnsetValue);
                 }
             }
@@ -98,11 +99,12 @@ namespace System.Windows
             {
                 foreach (var pValue in newStyleValues)
                 {
+                    DependencyProperty dp = DependencyProperty.RegisteredPropertyList[pValue.Key];
                     object value = pValue.Value is Binding binding ?
-                        new BindingExpression(binding, pValue.Key) :
+                        binding.CreateBindingExpression(fe, dp) :
                         pValue.Value;
 
-                    setValue(fe, pValue.Key, value);
+                    setValue(fe, dp, value);
                 }
             }
         }
@@ -130,7 +132,7 @@ namespace System.Windows
 
                 if (themeStyleKey is Type typeKey)
                 {
-                    styleLookup = Application.Current?.XamlResourcesHandler.FindStyleResourceInGenericXaml(typeKey);
+                    styleLookup = XamlResources.FindStyleResourceInGenericXaml(typeKey);
                 }
                 else
                 {

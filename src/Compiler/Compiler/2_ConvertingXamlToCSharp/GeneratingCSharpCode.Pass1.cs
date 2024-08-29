@@ -109,8 +109,7 @@ namespace OpenSilver.Compiler
                                                                resultingFieldsForNamedElements,
                                                                className,
                                                                namespaceStringIfAny,
-                                                               baseType,
-                                                               addApplicationEntryPoint: false);
+                                                               baseType);
 
                     string componentTypeFullName = GetFullTypeName(namespaceStringIfAny, className);
 
@@ -146,12 +145,14 @@ namespace OpenSilver.Compiler
                 }
             }
 
-            private static XElement GetRootOfCurrentNamescopeForCompilation(XElement element)
+            private XElement GetRootOfCurrentNamescopeForCompilation(XElement element)
             {
                 while (element.Parent != null)
                 {
                     XElement parent = element.Parent;
-                    if (GeneratingCode.IsDataTemplate(parent) || GeneratingCode.IsItemsPanelTemplate(parent) || GeneratingCode.IsControlTemplate(parent))
+                    if (GeneratingCode.IsDataTemplate(parent, _settings) ||
+                        GeneratingCode.IsItemsPanelTemplate(parent, _settings) ||
+                        GeneratingCode.IsControlTemplate(parent, _settings))
                     {
                         return parent;
                     }

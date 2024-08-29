@@ -11,16 +11,13 @@
 *  
 \*====================================================================================*/
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Markup;
 using System.Windows.Input;
 using CSHTML5.Internal;
-using CSHTML5;
+using OpenSilver.Internal;
 
 namespace System.Windows
 {
@@ -57,7 +54,7 @@ namespace System.Windows
             GotFocus += new RoutedEventHandler(OnGotFocus);
         }
 
-        internal ITextMeasurementService TextMeasurementService { get; private set; }
+        internal TextMeasurementService TextMeasurementService { get; private set; }
 
         internal override int VisualChildrenCount
         {
@@ -105,39 +102,35 @@ namespace System.Windows
         public string Title { get; set; }
         #endregion
 
-        internal object INTERNAL_RootDomElement;
+        internal INTERNAL_HtmlDomElementReference RootDomElement { get; private set; }
 
         /// <summary>
         /// Set the DOM element that will host the window. This can be set only to new windows. The MainWindow looks for a DIV that has the ID "cshtml5-root" or "opensilver-root".
         /// </summary>
         /// <param name="rootDomElement">The DOM element that will host the window</param>
-        public void AttachToDomElement(object rootDomElement)
+        public void AttachToDomElement(INTERNAL_HtmlDomElementReference rootDomElement)
         {
-            if (INTERNAL_OuterDomElement != null || INTERNAL_RootDomElement != null)
+            if (OuterDiv != null || RootDomElement != null)
             {
                 throw new InvalidOperationException("The method 'Window.AttachToDomElement' can be called only once.");
             }
 
             //Note: The "rootDomElement" will contain one DIV for the root of the window visual tree, and other DIVs to host the popups.
-            INTERNAL_RootDomElement = rootDomElement ?? throw new ArgumentNullException(nameof(rootDomElement));
+            RootDomElement = rootDomElement ?? throw new ArgumentNullException(nameof(rootDomElement));
 
             // In case of XAML view hosted inside an HTML app, we usually set the "position" of the window root to "relative" rather than "absolute" (via external JavaScript code) in order to display it inside a specific DIV. However, in this case, the layers that contain the Popups are placed under the window DIV instead of over it. To work around this issue, we set the root element display to "grid". See the sample app "IntegratingACshtml5AppInAnSPA".
-            string sRootElement = INTERNAL_InteropImplementation.GetVariableStringForJS(rootDomElement);
-            OpenSilver.Interop.ExecuteJavaScriptFastAsync($"{sRootElement}.style.display = 'grid'");
-            OpenSilver.Interop.ExecuteJavaScriptFastAsync($"{sRootElement}.style.overflow = 'clip'");
+            RootDomElement.Style.display = "grid";
+            RootDomElement.Style.overflow = "clip";
 
             // Create the DIV that will correspond to the root of the window visual tree:
-            var windowRootDivStyle = INTERNAL_HtmlDomManager.CreateDomElementAppendItAndGetStyle("div", rootDomElement, this, out object windowRootDiv);
+            OuterDiv = INTERNAL_HtmlDomManager.AppendDomElement("div", RootDomElement, this);
 
-            windowRootDivStyle.width = "100%";
-            windowRootDivStyle.height = "100%";
-            windowRootDivStyle.overflowX = "hidden";
-            windowRootDivStyle.overflowY = "hidden";
-
-            INTERNAL_OuterDomElement = windowRootDiv;
-            INTERNAL_InnerDomElement = windowRootDiv;
-
-            INTERNAL_AttachToDomEvents();
+            OuterDiv.Style.width = "100%";
+            OuterDiv.Style.height = "100%";
+            OuterDiv.Style.overflowX = "hidden";
+            OuterDiv.Style.overflowY = "hidden";
+            
+            InputManager.Current.RegisterRoot(RootDomElement);
 
             // Set the window as "loaded":
             _isLoaded = true;
@@ -178,7 +171,7 @@ namespace System.Windows
         {
             double width;
             double height;
-            string sElement = INTERNAL_InteropImplementation.GetVariableStringForJS(this.INTERNAL_OuterDomElement);
+            string sElement = OpenSilver.Interop.GetVariableStringForJS(this.OuterDiv);
             // Hack to improve the Simulator performance by making only one interop call rather than two:
             string concatenated = OpenSilver.Interop.ExecuteJavaScriptString($"{sElement}.offsetWidth + '|' + {sElement}.offsetHeight");
             int sepIndex = concatenated.IndexOf('|');
@@ -206,9 +199,9 @@ namespace System.Windows
         {
             get
             {
-                if (INTERNAL_OuterDomElement is not null)
+                if (OuterDiv is not null)
                 {
-                    string sDiv = INTERNAL_InteropImplementation.GetVariableStringForJS(INTERNAL_OuterDomElement);
+                    string sDiv = OpenSilver.Interop.GetVariableStringForJS(OuterDiv);
                     double width = OpenSilver.Interop.ExecuteJavaScriptDouble($"{sDiv}.offsetWidth");
                     double height = OpenSilver.Interop.ExecuteJavaScriptDouble($"{sDiv}.offsetHeight");
                     return new Rect(0, 0, width, height);
@@ -229,7 +222,7 @@ namespace System.Windows
                 // of their parent, we need to temporarily set it to be equal
                 // to "this" before calling "base.OnContentChanged", so that it
                 // then gets passed to the children recursively:
-                this.INTERNAL_ParentWindow = this;
+                this.ParentWindow = this;
 
                 // Attach the child UI element:
                 UIElement newChild = newContent as UIElement;
@@ -241,7 +234,7 @@ namespace System.Windows
                 INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(newChild, this);
 
                 // We can now revert the "ParentWindow" to null (cf. comment above):
-                this.INTERNAL_ParentWindow = null;
+                this.ParentWindow = null;
             }
         }
 
@@ -251,7 +244,7 @@ namespace System.Windows
         public FrameworkElement Content
         {
             get { return (FrameworkElement)GetValue(ContentProperty); }
-            set { SetValue(ContentProperty, value); }
+            set { SetValueInternal(ContentProperty, value); }
         }
 
         /// <summary>
@@ -294,12 +287,6 @@ namespace System.Windows
             throw new InvalidOperationException("\"CreateDomElement\" should not be called for the Window object.");
         }
 
-        public override void INTERNAL_AttachToDomEvents()
-        {
-            InputManager.Current.RegisterRoot(INTERNAL_RootDomElement);
-            base.INTERNAL_AttachToDomEvents();
-        }
-
         #region Closing event
 
         /// <summary>
@@ -312,9 +299,7 @@ namespace System.Windows
         /// </summary>
         void ProcessOnClosing(object jsEventArg)
         {
-            var eventArgs = new ClosingEventArgs(true);
-            eventArgs.INTERNAL_JSArgs = jsEventArg;
-            OnClosing(eventArgs);
+            OnClosing(new ClosingEventArgs(true));
         }
 
         /// <summary>
@@ -361,7 +346,7 @@ namespace System.Windows
         internal static Window GetWindow(UIElement uie)
         {
             Debug.Assert(uie is not null);
-            return uie.INTERNAL_ParentWindow;
+            return uie.ParentWindow;
         }
 
         [OpenSilver.NotImplemented]

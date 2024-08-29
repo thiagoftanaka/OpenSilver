@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,15 +11,13 @@
 *  
 \*====================================================================================*/
 
-
-using System;
 using System.ComponentModel;
 using System.Net;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
 using CSHTML5.Internal;
-using OpenSilver.Internal;
 
 namespace System
 {
@@ -67,7 +64,11 @@ namespace System
 
         public InheritanceBehavior DefaultResourceLookupMode { get; set; }
 
-        public TimeSpan ScrollDebounce { get; set; }
+        public TimeSpan ScrollDebounce
+        {
+            get => ScrollBar.DefaultDebounceInterval;
+            set => ScrollBar.DefaultDebounceInterval = value;
+        }
 
         public CredentialsMode DefaultSoapCredentialsMode { get; set; }
 
@@ -86,8 +87,8 @@ namespace System
 
         public bool EnableInteropLogging
         {
-            get { return INTERNAL_ExecuteJavaScript.EnableInteropLogging; }
-            set { INTERNAL_ExecuteJavaScript.EnableInteropLogging = value; }
+            get { return OpenSilver.Interop.EnableInteropLogging; }
+            set { OpenSilver.Interop.EnableInteropLogging = value; }
         }
 
         public bool EnablePerformanceLogging
@@ -108,24 +109,6 @@ namespace System
         }
 
         /// <summary>
-        /// When True, do not create the DOM elements for the UI elements that are not visible.
-        /// The DOM elements are created later, when the control becomes visible.
-        /// Enabling this option results in significantly improved performance if there are many hidden elements.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool EnableOptimizationWhereCollapsedControlsAreNotLoaded { get; set; }
-
-        /// <summary>
-        /// Wait a few moments before creating the DOM elements for the UI elements that are not visible.
-        /// The goal is to give the time to the browser engine to draw the visible ones, in order to improve the perceived performance.
-        /// The DOM elements are created immediately after the browser engine has finished drawing (when the UI thread is available).
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool EnableOptimizationWhereCollapsedControlsAreLoadedLast { get; set; }
-
-        /// <summary>
         /// Gets or sets the number of children in a Panel to render progressively in a batch.
         /// Setting this option can improve performance.
         /// Value of 0 or less means progressive rendering is disabled.
@@ -138,14 +121,6 @@ namespace System
         {
             get { return Panel.GlobalProgressiveRenderingChunkSize; }
             set { Panel.GlobalProgressiveRenderingChunkSize = value; }
-        }
-
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        [Obsolete(Helper.ObsoleteMemberMessage + " Use ProgressiveRenderingChunkSize instead.")]
-        public bool EnableProgressiveRendering
-        {
-            get => Panel.GlobalProgressiveRenderingChunkSize > 0;
-            set => Panel.GlobalProgressiveRenderingChunkSize = 1;
         }
 
         public bool EnableInvalidPropertyMetadataDefaultValueExceptions { get; set; }
@@ -175,6 +150,28 @@ namespace System
         /// </summary>
         [EditorBrowsable(EditorBrowsableState.Never)]
         public bool IsRunningOutOfBrowser { get; set; }
+
+        /// <summary>
+        /// Gets a value that indicates whether the Silverlight plug-in allows hosted content
+        /// or its runtime to access the HTML DOM.
+        /// </summary>
+        /// <returns>
+        /// true if hosted content can access the browser DOM; otherwise, false.
+        /// </returns>
+        public bool EnableHTMLAccess => _enableHTMLAccess.Value;
+
+        /// <summary>
+        /// Gets or sets the maximum number of frames to render per second.
+        /// </summary>
+        /// <returns>
+        /// An integer value that specifies the maximum number of frames to render per second.
+        /// The default value is 60.
+        /// </returns>
+        public int MaxFrameRate
+        {
+            get => Dispatcher.CurrentDispatcher.TickRate;
+            set => Dispatcher.CurrentDispatcher.TickRate = value;
+        }
 
         /// <summary>
         /// Gets or sets a value that indicates whether the Silverlight plug-in will resize
@@ -221,15 +218,6 @@ namespace System
         public bool EnableGPUAcceleration { get; }
 
         /// <summary>
-        /// Gets a value that indicates whether the Silverlight plug-in allows hosted content
-        /// or its runtime to access the HTML DOM.
-        /// </summary>
-        /// <returns>
-        /// true if hosted content can access the browser DOM; otherwise, false.
-        /// </returns>
-        public bool EnableHTMLAccess => _enableHTMLAccess.Value;
-
-        /// <summary>
         /// Gets or sets a value that indicates whether to show the areas of the Silverlight
         /// plug-in that are being redrawn each frame.
         /// </summary>
@@ -239,15 +227,5 @@ namespace System
         /// </returns>
         [OpenSilver.NotImplemented]
         public bool EnableRedrawRegions { get; set; }
-
-        /// <summary>
-        /// Gets or sets the maximum number of frames to render per second.
-        /// </summary>
-        /// <returns>
-        /// An integer value that specifies the maximum number of frames to render per second.
-        /// The default value is 60.
-        /// </returns>
-        [OpenSilver.NotImplemented]
-        public int MaxFrameRate { get; set; }
     }
 }

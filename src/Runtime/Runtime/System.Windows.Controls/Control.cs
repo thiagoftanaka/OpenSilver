@@ -11,12 +11,10 @@
 *  
 \*====================================================================================*/
 
-using System.Collections.Generic;
 using System.Windows.Input;
 using System.ComponentModel;
 using System.Windows.Media;
 using System.Windows.Documents;
-using CSHTML5.Internal;
 using OpenSilver.Internal;
 
 namespace System.Windows.Controls
@@ -27,23 +25,6 @@ namespace System.Windows.Controls
     /// </summary>
     public partial class Control : FrameworkElement, IInternalControl
     {
-        //COMMENT 26.03.2020:
-        // ERROR DESCRIPTION:
-        //  see Ticket #1711, problem about icons not appearing:
-        //    In the project that was sent to us on the 26th of March 2020:
-        //    BasePage.xaml -> ItemsControl named "icSubNavigation" -> ItemTemplate Property -> DataTemplate with the key: dtSubNavigationIcon:
-        //      Properly generated in C# but when translated into js, the first letter of the methods that are called is lowercased.
-        //  I could not find the conditions nor the reasons for such a case to appear so I settled with the following workaround:
-        // WORKAROUND:
-        //  Create an additional private method with the same signature except with the first character of its name lowercased, that calls the original one.
-        // NOTE:
-        //  This workaround was used only for the methods that were in that specific case, so we might need to use it for other methods if other cases appear.
-        //  Workaround currently used on:
-        //      - INTERNAL_GetVisualStateGroups
-        //      - RegisterName
-        //END OF COMMENT
-
-        // Note: this should be protected and the Control class should be abstract.
         /// <summary>
         /// Represents the base class for UI elements that use a <see cref="ControlTemplate"/>
         /// to define their appearance.
@@ -60,12 +41,6 @@ namespace System.Windows.Controls
             }
         }
 
-        /// <summary>
-        /// Derived classes can set this flag in their constructor to prevent the "Template" property from being applied.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        protected bool INTERNAL_DoNotApplyControlTemplate = false;
-
         //-----------------------
         // ISENABLED (OVERRIDE)
         //-----------------------
@@ -75,11 +50,6 @@ namespace System.Windows.Controls
             base.ManageIsEnabled(isEnabled); // Useful for setting the "disabled" attribute on the DOM element.
 
             UpdateVisualStates();
-        }
-
-        internal override void AddEventListeners()
-        {
-            InputManager.Current.AddEventListeners(this, true);
         }
 
         //-----------------------
@@ -92,7 +62,7 @@ namespace System.Windows.Controls
         public Brush Background
         {
             get { return (Brush)GetValue(BackgroundProperty); }
-            set { SetValue(BackgroundProperty, value); }
+            set { SetValueInternal(BackgroundProperty, value); }
         }
 
         /// <summary>
@@ -115,11 +85,11 @@ namespace System.Windows.Controls
         public Brush BorderBrush
         {
             get { return (Brush)GetValue(BorderBrushProperty); }
-            set { SetValue(BorderBrushProperty, value); }
+            set { SetValueInternal(BorderBrushProperty, value); }
         }
 
         /// <summary>
-        /// Identifies the <see cref="Control.BorderBrush"/> dependency property.
+        /// Identifies the <see cref="BorderBrush"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty BorderBrushProperty =
             DependencyProperty.Register(
@@ -137,11 +107,11 @@ namespace System.Windows.Controls
         public Thickness BorderThickness
         {
             get { return (Thickness)GetValue(BorderThicknessProperty); }
-            set { SetValue(BorderThicknessProperty, value); }
+            set { SetValueInternal(BorderThicknessProperty, value); }
         }
 
         /// <summary>
-        /// Identifies the <see cref="Control.BorderThickness"/> dependency property.
+        /// Identifies the <see cref="BorderThickness"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty BorderThicknessProperty =
             DependencyProperty.Register(
@@ -160,24 +130,14 @@ namespace System.Windows.Controls
         public FontWeight FontWeight
         {
             get { return (FontWeight)GetValue(FontWeightProperty); }
-            set { SetValue(FontWeightProperty, value); }
+            set { SetValueInternal(FontWeightProperty, value); }
         }
 
         /// <summary>
         /// Identifies the <see cref="FontWeight"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty FontWeightProperty =
-            TextElementProperties.FontWeightProperty.AddOwner(
-                typeof(Control),
-                new FrameworkPropertyMetadata(FontWeights.Normal, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.Inherits)
-                {
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
-                    {
-                        var c = (Control)d;
-                        var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(c.INTERNAL_OuterDomElement);
-                        style.fontWeight = ((FontWeight)newValue).ToOpenTypeWeight().ToInvariantString();
-                    },
-                });
+            TextElement.FontWeightProperty.AddOwner(typeof(Control));
 
         /// <summary>
         /// Gets or sets the style in which the text is rendered.
@@ -185,26 +145,14 @@ namespace System.Windows.Controls
         public FontStyle FontStyle
         {
             get { return (FontStyle)GetValue(FontStyleProperty); }
-            set { SetValue(FontStyleProperty, value); }
+            set { SetValueInternal(FontStyleProperty, value); }
         }
 
         /// <summary>
         /// Identifies the <see cref="FontStyle"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty FontStyleProperty =
-            DependencyProperty.Register(
-                nameof(FontStyle),
-                typeof(FontStyle),
-                typeof(Control),
-                new FrameworkPropertyMetadata(FontStyles.Normal, FrameworkPropertyMetadataOptions.AffectsMeasure)
-                {
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
-                    {
-                        var c = (Control)d;
-                        var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(c.INTERNAL_OuterDomElement);
-                        style.fontStyle = ((FontStyle)newValue).ToString().ToLower();
-                    },
-                });
+            TextElement.FontStyleProperty.AddOwner(typeof(Control));
 
         //-----------------------
         // FOREGROUND
@@ -213,45 +161,21 @@ namespace System.Windows.Controls
         /// <summary>
         /// Gets or sets a brush that describes the foreground color.
         /// </summary>
+        /// <returns>
+        /// The brush that paints the foreground of the control. The default value 
+        /// is <see cref="Colors.Black"/>.
+        /// </returns>
         public Brush Foreground
         {
-            get { return (Brush)GetValue(ForegroundProperty); }
-            set { SetValue(ForegroundProperty, value); }
+            get => (Brush)GetValue(ForegroundProperty);
+            set => SetValueInternal(ForegroundProperty, value);
         }
 
         /// <summary>
-        /// Identifies the <see cref="Control.Foreground"/> dependency property.
+        /// Identifies the <see cref="Foreground"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty ForegroundProperty =
-            DependencyProperty.Register(
-                nameof(Foreground), 
-                typeof(Brush), 
-                typeof(Control), 
-                new PropertyMetadata(new SolidColorBrush(Colors.Black))
-                {
-                    MethodToUpdateDom2 = UpdateDomOnForegroundChanged,
-                });
-
-        private static void UpdateDomOnForegroundChanged(DependencyObject d, object oldValue, object newValue)
-        {
-            var control = (Control)d;
-            var cssStyle = INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(control);
-            switch (newValue)
-            {
-                case SolidColorBrush solid:
-                    cssStyle.color = solid.INTERNAL_ToHtmlString();
-                    break;
-
-                case null:
-                    cssStyle.color = string.Empty;
-                    break;
-
-                default:
-                    // GradientBrush, ImageBrush and custom brushes are not supported.
-                    // Keep using old brush.
-                    break;
-            }
-        }
+            TextElement.ForegroundProperty.AddOwner(typeof(Control));
 
         //-----------------------
         // FONTFAMILY
@@ -263,14 +187,14 @@ namespace System.Windows.Controls
         public FontFamily FontFamily
         {
             get { return (FontFamily)GetValue(FontFamilyProperty); }
-            set { SetValue(FontFamilyProperty, value); }
+            set { SetValueInternal(FontFamilyProperty, value); }
         }
 
         /// <summary>
         /// Identifies the <see cref="FontFamily"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty FontFamilyProperty =
-            TextElementProperties.FontFamilyProperty.AddOwner(typeof(Control));
+            TextElement.FontFamilyProperty.AddOwner(typeof(Control));
 
         //-----------------------
         // FONTSIZE
@@ -279,32 +203,20 @@ namespace System.Windows.Controls
         /// <summary>
         /// Gets or sets the size of the text in this control.
         /// </summary>
+        /// <returns>
+        /// The size of the text in the <see cref="Control"/>. The default is 11 (in pixels).
+        /// </returns>
         public double FontSize
         {
-            get { return (double)GetValue(FontSizeProperty); }
-            set { SetValue(FontSizeProperty, value); }
+            get => (double)GetValue(FontSizeProperty);
+            set => SetValueInternal(FontSizeProperty, value);
         }
 
         /// <summary>
         /// Identifies the <see cref="FontSize"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty FontSizeProperty =
-            TextElementProperties.FontSizeProperty.AddOwner(
-                typeof(Control),
-                new FrameworkPropertyMetadata(11d, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.Inherits)
-                {
-                    GetCSSEquivalent = (instance) => new CSSEquivalent
-                    {
-                        Value = (inst, value) =>
-                        {
-                            // Note: We multiply by 1000 and then divide by 1000 so as to only keep 3 
-                            // decimals at the most.
-                            return (Math.Floor(Convert.ToDouble(value) * 1000) / 1000).ToInvariantString() + "px";
-                        },
-                        Name = new List<string> { "fontSize" },
-                        ApplyAlsoWhenThereIsAControlTemplate = true // (See comment where this property is defined)
-                    },
-                });
+            TextElement.FontSizeProperty.AddOwner(typeof(Control));
 
         //-----------------------
         // TEXTDECORATION
@@ -316,25 +228,14 @@ namespace System.Windows.Controls
         public TextDecorationCollection TextDecorations
         {
             get { return (TextDecorationCollection)GetValue(TextDecorationsProperty); }
-            set { SetValue(TextDecorationsProperty, value); }
+            set { SetValueInternal(TextDecorationsProperty, value); }
         }
 
         /// <summary>
         /// Identifies the <see cref="TextDecorations"/> dependency property.
         /// </summary>
-        public static readonly DependencyProperty TextDecorationsProperty = 
-            DependencyProperty.Register(
-                nameof(TextDecorations),
-                typeof(TextDecorationCollection),
-                typeof(Control),
-                new FrameworkPropertyMetadata((object)null)
-                {
-                    MethodToUpdateDom = static (d, newValue) =>
-                    {
-                        var domStyle = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(((Control)d).INTERNAL_OuterDomElement);
-                        domStyle.textDecoration = ((TextDecorationCollection)newValue)?.ToHtmlString() ?? string.Empty;
-                    },
-                });
+        public static readonly DependencyProperty TextDecorationsProperty =
+            Inline.TextDecorationsProperty.AddOwner(typeof(Control));
 
         //-----------------------
         // PADDING
@@ -346,7 +247,7 @@ namespace System.Windows.Controls
         public Thickness Padding
         {
             get { return (Thickness)GetValue(PaddingProperty); }
-            set { SetValue(PaddingProperty, value); }
+            set { SetValueInternal(PaddingProperty, value); }
         }
 
         /// <summary>
@@ -369,7 +270,7 @@ namespace System.Windows.Controls
         public HorizontalAlignment HorizontalContentAlignment
         {
             get { return (HorizontalAlignment)GetValue(HorizontalContentAlignmentProperty); }
-            set { SetValue(HorizontalContentAlignmentProperty, value); }
+            set { SetValueInternal(HorizontalContentAlignmentProperty, value); }
         }
 
         /// <summary>
@@ -392,7 +293,7 @@ namespace System.Windows.Controls
         public VerticalAlignment VerticalContentAlignment
         {
             get { return (VerticalAlignment)GetValue(VerticalContentAlignmentProperty); }
-            set { SetValue(VerticalContentAlignmentProperty, value); }
+            set { SetValueInternal(VerticalContentAlignmentProperty, value); }
         }
 
         /// <summary>
@@ -417,7 +318,7 @@ namespace System.Windows.Controls
         public int TabIndex
         {
             get => (int)GetValue(TabIndexProperty);
-            set => SetValue(TabIndexProperty, value);
+            set => SetValueInternal(TabIndexProperty, value);
         }
 
         /// <summary>
@@ -441,7 +342,7 @@ namespace System.Windows.Controls
         public bool IsTabStop
         {
             get => (bool)GetValue(IsTabStopProperty);
-            set => SetValue(IsTabStopProperty, value);
+            set => SetValueInternal(IsTabStopProperty, value);
         }
 
         /// <summary>
@@ -464,7 +365,7 @@ namespace System.Windows.Controls
         public KeyboardNavigationMode TabNavigation
         {
             get => (KeyboardNavigationMode)GetValue(TabNavigationProperty);
-            set => SetValue(TabNavigationProperty, value);
+            set => SetValueInternal(TabNavigationProperty, value);
         }
 
         /// <summary>
@@ -489,7 +390,7 @@ namespace System.Windows.Controls
         public ControlTemplate Template
         {
             get { return this._templateCache; }
-            set { SetValue(TemplateProperty, value); }
+            set { SetValueInternal(TemplateProperty, value); }
         }
 
         // Internal Helper so the FrameworkElement could see this property
@@ -563,33 +464,12 @@ namespace System.Windows.Controls
             KeyboardNavigation.Current.Focus(this) is UIElement uie &&
             InputManager.Current.SetFocus(uie);
 
-        private bool _useSystemFocusVisuals;
-
         [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool UseSystemFocusVisuals
+        public new bool UseSystemFocusVisuals
         {
-            get => _useSystemFocusVisuals;
-            set
-            {
-                if (_useSystemFocusVisuals != value)
-                {
-                    _useSystemFocusVisuals = value;
-                    UpdateSystemFocusVisuals();
-                }
-            }
-        }
-
-        internal void UpdateSystemFocusVisuals()
-        {
-            object focusTarget = GetFocusTarget();
-            if (focusTarget != null)
-            {
-                INTERNAL_HtmlDomManager.SetCSSStyleProperty(
-                    focusTarget,
-                    "outline",
-                    _useSystemFocusVisuals ? string.Empty : "none");
-            }
+            get => base.UseSystemFocusVisuals;
+            set => base.UseSystemFocusVisuals = value;
         }
 
         /// <summary>
@@ -650,36 +530,16 @@ namespace System.Windows.Controls
             }
         }
 
-        /// <summary>
-        /// This method is here to avoid creating the dom for a control which has a Template.
-        /// It creates the basic dom elements in which we will be able to add the template.
-        /// </summary>
-        /// <param name="parentRef">The parent of the FrameworkElement</param>
-        /// <param name="domElementWhereToPlaceChildren">The dom element where the FrameworkElement's template constructed children will be added.</param>
-        /// <returns>The "root" dom element of the FrameworkElement.</returns>
-        internal object CreateDomElementForControlTemplate(object parentRef, out object domElementWhereToPlaceChildren)
+        public sealed override object CreateDomElement(object parentRef, out object domElementWhereToPlaceChildren)
         {
-            return CreateDomElementInternal(parentRef, out domElementWhereToPlaceChildren);
-        }
-
-        /// <summary>
-        /// Returns a value that indicates whether the control is to be rendered with a ControlTemplate.
-        /// </summary>
-        internal bool HasTemplate
-        {
-            get
-            {
-                return this.TemplateCache != null;
-            }
+            return CreateDomElementInternal(parentRef, true, out domElementWhereToPlaceChildren);
         }
 
         /// <summary>
         /// Identifies the <see cref="CharacterSpacing"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty CharacterSpacingProperty =
-            TextElementProperties.CharacterSpacingProperty.AddOwner(
-                typeof(Control),
-                new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.Inherits));
+            TextElement.CharacterSpacingProperty.AddOwner(typeof(Control));
 
         /// <summary>
         /// Gets or sets the distance between characters of text in the control measured
@@ -692,27 +552,28 @@ namespace System.Windows.Controls
         public int CharacterSpacing
         {
             get => (int)GetValue(CharacterSpacingProperty);
-            set => SetValue(CharacterSpacingProperty, value);
+            set => SetValueInternal(CharacterSpacingProperty, value);
         }
 
+        /// <summary>
+        /// Identifies the <see cref="FontStretch"/> dependency property.
+        /// </summary>
         [OpenSilver.NotImplemented]
-        public static readonly DependencyProperty FontStretchProperty = 
-            DependencyProperty.Register(
-                nameof(FontStretch), 
-                typeof(FontStretch), 
-                typeof(Control),
-                new FrameworkPropertyMetadata(new FontStretch(), FrameworkPropertyMetadataOptions.AffectsMeasure));
+        public static readonly DependencyProperty FontStretchProperty =
+            TextElement.FontStretchProperty.AddOwner(typeof(Control));
 
         /// <summary>
-        ///     The stretch of the desired font.
-        ///     This will only affect controls whose template uses the property
-        ///     as a parameter. On other controls, the property will do nothing.
+        /// Gets or sets the degree to which a font is condensed or expanded on the screen.
         /// </summary>
+        /// <returns>
+        /// One of the values that specifies the degree to which a font is condensed or expanded
+        /// on the screen. The default is <see cref="FontStretches.Normal"/>.
+        /// </returns>
         [OpenSilver.NotImplemented]
         public FontStretch FontStretch
         {
             get { return (FontStretch)GetValue(FontStretchProperty); }
-            set { SetValue(FontStretchProperty, value); }
+            set { SetValueInternal(FontStretchProperty, value); }
         }
 
         [OpenSilver.NotImplemented]
@@ -729,12 +590,6 @@ namespace System.Windows.Controls
 
         [OpenSilver.NotImplemented]
         protected virtual void OnDragLeave(DragEventArgs e)
-        {
-
-        }
-
-        [OpenSilver.NotImplemented]
-        protected virtual void OnTextInputStart(TextCompositionEventArgs e)
         {
 
         }

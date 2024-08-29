@@ -17,15 +17,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
-using OpenSilver.Compiler.Common;
 
 namespace OpenSilver.Compiler
 {
-    internal static class CoreTypesConvertersVB
-    {
-        public static ICoreTypesConverter Silverlight { get; } = new SLCoreTypesConverterVB();
-    }
-
     internal sealed class SLCoreTypesConverterVB : CoreTypesConverterBase
     {
         protected override Dictionary<string, Func<string, string>> SupportedCoreTypes { get; }
@@ -48,11 +42,12 @@ namespace OpenSilver.Compiler
         //
         private static Dictionary<string, Func<string, string>> GetSupportedCoreTypes()
         {
-            return new Dictionary<string, Func<string, string>>(27)
+            return new Dictionary<string, Func<string, string>>(28)
             {
                 ["system.windows.input.cursor"] = (s => CoreTypesHelperVB.ConvertToCursor(s, "Global.System.Windows.Input.Cursor", "Global.System.Windows.Input.Cursors")),
                 ["system.windows.media.animation.keytime"] = (s => CoreTypesHelperVB.ConvertToKeyTime(s, "Global.System.Windows.Media.Animation.KeyTime")),
                 ["system.windows.media.animation.repeatbehavior"] = (s => CoreTypesHelperVB.ConvertToRepeatBehavior(s, "Global.System.Windows.Media.Animation.RepeatBehavior")),
+                ["system.windows.media.animation.keyspline"] = (s => CoreTypesHelperVB.ConvertToKeySpline(s, "Global.System.Windows.Media.Animation.KeySpline", "Global.System.Windows.Point")),
                 ["system.windows.media.brush"] = (s => CoreTypesHelperVB.ConvertToBrush(s, "Global.System.Windows.Media.SolidColorBrush", "Global.System.Windows.Media.Color")),
                 ["system.windows.media.solidcolorbrush"] = (s => CoreTypesHelperVB.ConvertToBrush(s, "Global.System.Windows.Media.SolidColorBrush", "Global.System.Windows.Media.Color")),
                 ["system.windows.media.color"] = (s => CoreTypesHelperVB.ConvertToColor(s, "Global.System.Windows.Media.Color")),
@@ -84,16 +79,11 @@ namespace OpenSilver.Compiler
 
     internal static class CoreTypesHelperVB
     {
-        public const string TypeFromStringConvertersFullName = "Global.DotNetForHtml5.Core.TypeFromStringConverters";
-
-        private static SystemTypesHelper SystemTypesHelperVB = new SystemTypesHelperVB();
+        public const string RuntimeHelperClass = "Global.OpenSilver.Internal.Xaml.RuntimeHelpers";
 
         public static string ConvertFromInvariantStringHelper(string source, string destinationType)
         {
-            return string.Format(
-                "CType({1}.ConvertFromInvariantString(GetType({0}), {2}), {0})",
-                destinationType, TypeFromStringConvertersFullName, Escape(source)
-            );
+            return $"{RuntimeHelperClass}.ConvertFromInvariantString(Of {destinationType})({Escape(source)})";
         }
 
         internal static string ConvertToCursor(string source, string destinationType, string cursorsTypeFullName)
@@ -105,7 +95,7 @@ namespace OpenSilver.Compiler
         {
             string stringValue = source.Trim();
 
-            if (stringValue == "Uniform" || stringValue == "Paced")
+            if (stringValue == "Paced")
             {
                 throw new XamlParseException(
                     $"The '{destinationType}.{stringValue}' property is not supported yet."
@@ -118,9 +108,13 @@ namespace OpenSilver.Compiler
                     $"Percentage values for '{destinationType}' are not supported yet."
                 );
             }
+            else if (stringValue == "Uniform")
+            {
+                return $"{destinationType}.Uniform";
+            }
             else
             {
-                return SystemTypesHelperVB.ConvertFromInvariantString(stringValue, "system.timespan");
+                return $"{destinationType}.FromTimeSpan({SystemTypesHelper.VisualBasic.ConvertFromInvariantString(stringValue, "system.timespan")})";
             }
         }
 
@@ -142,7 +136,23 @@ namespace OpenSilver.Compiler
                 return $"New {destinationType}({stringDoubleValue.TrimEnd()})";
             }
 
-            return SystemTypesHelperVB.ConvertFromInvariantString(stringValue, "system.timespan");
+            return SystemTypesHelper.VisualBasic.ConvertFromInvariantString(stringValue, "system.timespan");
+        }
+
+        internal static string ConvertToKeySpline(string source, string destinationType, string pointTypeName)
+        {
+            if (string.IsNullOrEmpty(source))
+            {
+                return $"New {destinationType}()";
+            }
+
+            string[] split = source.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (split.Length == 4)
+            {
+                return $"New {destinationType} With {{.ControlPoint1 = New {pointTypeName}({split[0]}, {split[1]}), .ControlPoint2 = New {pointTypeName}({split[2]}, {split[3]})}}";
+            }
+
+            throw GetConvertException(source, destinationType);
         }
 
         internal static string ConvertToBrush(string source, string destinationType, string colorTypeName)
@@ -393,15 +403,21 @@ namespace OpenSilver.Compiler
                 throw GetConvertException(source, destinationType);
             }
 
+            if (split.Length == 0)
+            {
+                return $"New {destinationType}()";
+            }
+
             var sb = new StringBuilder();
 
-            sb.Append($"New {destinationType}()");
+            sb.Append($"New {destinationType}() From ");
             sb.Append("{");
 
-            for (int i = 0; i < split.Length; i += 2)
+            sb.Append(ConvertPointHelper(split[0], split[1], pointTypeFullName));
+            for (int i = 2; i < split.Length; i += 2)
             {
-                sb.Append(ConvertPointHelper(split[i], split[i + 1], pointTypeFullName))
-                  .Append(", ");
+                sb.Append(", ")
+                  .Append(ConvertPointHelper(split[i], split[i + 1], pointTypeFullName));
             }
 
             sb.Append("}");
@@ -455,7 +471,7 @@ namespace OpenSilver.Compiler
             }
             else
             {
-                return SystemTypesHelperVB.ConvertFromInvariantString(stringValue, "system.timespan");
+                return SystemTypesHelper.VisualBasic.ConvertFromInvariantString(stringValue, "system.timespan");
             }
         }
 

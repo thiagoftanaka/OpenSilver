@@ -13,7 +13,6 @@
 
 using System;
 using System.ComponentModel;
-using OpenSilver.Internal;
 
 //
 // IMPORTANT: Be very careful when editing this class.
@@ -30,6 +29,7 @@ namespace DotNetForHtml5.Core
     /// code into the correct type for the properties setted
     /// </summary>
     /// <exclude/>
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public static class TypeFromStringConverters
     {
         private static readonly Type _objectType = typeof(object);
@@ -58,14 +58,6 @@ namespace DotNetForHtml5.Core
             }
 
             return false;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage + " Use System.ComponentModel.TypeConverterAttribute instead.")]
-        public static void RegisterConverter(Type type, Func<string, object> converter)
-        {
         }
 
         /// <summary>

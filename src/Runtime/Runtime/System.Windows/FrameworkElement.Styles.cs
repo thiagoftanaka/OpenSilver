@@ -78,7 +78,7 @@ namespace System.Windows
         public Style Style
         {
             get { return _styleCache; }
-            set { SetValue(StyleProperty, value); }
+            set { SetValueInternal(StyleProperty, value); }
         }
 
         private static void OnStyleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -109,7 +109,7 @@ namespace System.Windows
         protected object DefaultStyleKey
         {
             get { return GetValue(DefaultStyleKeyProperty); }
-            set { SetValue(DefaultStyleKeyProperty, value); }
+            set { SetValueInternal(DefaultStyleKeyProperty, value); }
         }
 
         private static void OnThemeStyleKeyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -195,7 +195,7 @@ namespace System.Windows
                 // For non-controls the implicit StyleResource lookup must stop at
                 // the templated parent.
                 DependencyObject boundaryElement = null;
-                if (!(fe is Control) || fe is TextBlock)
+                if (fe is not Control)
                 {
                     boundaryElement = fe.TemplatedParent;
                 }
@@ -279,6 +279,13 @@ namespace System.Windows
         {
             get { return ReadInternalFlag(InternalFlags.ShouldLookupImplicitStyles); }
             set { WriteInternalFlag(InternalFlags.ShouldLookupImplicitStyles, value); }
+        }
+
+        // Indicates if this instance has a style set by a generator
+        internal bool IsStyleSetFromGenerator
+        {
+            get { return ReadInternalFlag(InternalFlags.IsStyleSetFromGenerator); }
+            set { WriteInternalFlag(InternalFlags.IsStyleSetFromGenerator, value); }
         }
 
         // Note: this is used to be able to tell whether the style applied on 

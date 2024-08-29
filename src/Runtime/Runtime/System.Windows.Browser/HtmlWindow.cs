@@ -11,22 +11,12 @@
 *  
 \*====================================================================================*/
 
-using System;
-using System.ComponentModel;
 using System.Windows.Browser.Internal;
-using OpenSilver.Internal;
 
 namespace System.Windows.Browser
 {
     public sealed class HtmlWindow : HtmlObject
     {
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        [Obsolete(Helper.ObsoleteMemberMessage + " Use System.Windows.Browser.HtmlPage.Window instead.")]
-        public HtmlWindow()
-            : this(new WindowRef())
-        {
-        }
-
         internal HtmlWindow(IJSObjectRef jsObject)
             : base(jsObject)
         {
@@ -49,10 +39,10 @@ namespace System.Windows.Browser
                         target = "_self";
                     }
 
-                    string sUri = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(navigateToUri.ToString());
-                    string sTarget = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(target);
-                    string sTargetFeatures = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(targetFeatures);
-                    OpenSilver.Interop.ExecuteJavaScriptFastAsync($"window.open({sUri}, {sTarget}, {sTargetFeatures})");
+                    string sUri = OpenSilver.Interop.GetVariableStringForJS(navigateToUri.ToString());
+                    string sTarget = OpenSilver.Interop.GetVariableStringForJS(target);
+                    string sTargetFeatures = OpenSilver.Interop.GetVariableStringForJS(targetFeatures);
+                    OpenSilver.Interop.ExecuteJavaScriptVoidAsync($"window.open({sUri}, {sTarget}, {sTargetFeatures})");
                 }
                 else
                 {
@@ -93,7 +83,7 @@ namespace System.Windows.Browser
             }
             else
             {
-                OpenSilver.Interop.ExecuteJavaScriptVoid($"alert({CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(alertText)})");
+                OpenSilver.Interop.ExecuteJavaScriptVoid($"alert({OpenSilver.Interop.GetVariableStringForJS(alertText)})");
             }
         }
 
@@ -115,7 +105,7 @@ namespace System.Windows.Browser
             }
             else
             {
-                return OpenSilver.Interop.ExecuteJavaScriptBoolean($"confirm({CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(confirmText)})");
+                return OpenSilver.Interop.ExecuteJavaScriptBoolean($"confirm({OpenSilver.Interop.GetVariableStringForJS(confirmText)})");
             }
         }
     }

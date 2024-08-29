@@ -11,11 +11,21 @@
     <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
     <AssemblyName>OpenSilver.Simulator</AssemblyName>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <NoWarn>1701;1702;1591</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MahApps.Metro" Version="2.4.9" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1905-prerelease" />
+    <PackageReference Include="Microsoft.Web.WebView2.DevToolsProtocolExtension" Version="1.0.824" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Runtime\Runtime\Runtime.OpenSilver.csproj">
+      <Aliases>opensilver</Aliases>
+    </ProjectReference>
+  </ItemGroup>
 
   <ItemGroup>
     <None Remove="App.xaml" />
@@ -27,8 +37,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\..\Compiler\Compiler.Common\Helpers\PathsHelper.cs" Link="SupportClasses\PathsHelper.cs" />
-    <Compile Include="..\..\Compiler\Compiler\OtherHelpersAndHandlers\ActivationHelpers_SharedWithOtherProjects.cs" Link="ActivationHelpers_SharedWithOtherProjects.cs" />
     <Compile Include="..\..\Compiler\Compiler\OtherHelpersAndHandlers\Constants.cs" Link="Constants.cs" />
     <Compile Include="..\..\Compiler\Compiler\OtherHelpersAndHandlers\RegistryHelpers_SharedWithOtherProjects.cs" Link="RegistryHelpers_SharedWithOtherProjects.cs" />
     <Compile Include="..\..\Compiler\Compiler\OtherHelpersAndHandlers\TrialHelpers_SharedWithOtherProjects.cs" Link="TrialHelpers_SharedWithOtherProjects.cs" />
@@ -43,19 +51,6 @@
     <Content Include="simulator_root_opensilver.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="MahApps.Metro" Version="2.4.9" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1905-prerelease" />
-    <PackageReference Include="Microsoft.Web.WebView2.DevToolsProtocolExtension" Version="1.0.824" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="System.ServiceModel">
-      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.2\System.ServiceModel.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>

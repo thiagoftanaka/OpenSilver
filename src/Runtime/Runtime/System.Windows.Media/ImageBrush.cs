@@ -11,8 +11,6 @@
 *  
 \*====================================================================================*/
 
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Threading.Tasks;
 using OpenSilver.Internal;
 
@@ -47,7 +45,7 @@ namespace System.Windows.Media
 		public ImageSource ImageSource
         {
             get => (ImageSource)GetValue(ImageSourceProperty);
-            set => SetValue(ImageSourceProperty, value);
+            set => SetValueInternal(ImageSourceProperty, value);
         }
 
         /// <summary>
@@ -63,7 +61,7 @@ namespace System.Windows.Media
         [OpenSilver.NotImplemented]
         public event EventHandler<RoutedEventArgs> ImageOpened;
 
-        internal async override Task<string> GetDataStringAsync(UIElement parent)
+        internal async override ValueTask<string> GetDataStringAsync(UIElement parent)
         {
             ImageSource source = ImageSource;
             if (source != null)
@@ -106,23 +104,5 @@ namespace System.Windows.Media
                 Stretch.UniformToFill => "cover",
                 _ => "100% 100%",
             };
-
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public List<object> ConvertToCSSValues(DependencyObject parent)
-        {
-            var task = GetDataStringAsync(parent as UIElement);
-
-            // For any source except WriteableBitmap, the url is retrieved
-            // synchronously. In case we are dealing with a WriteableBitmap,
-            // we can only return the source if the WriteableBitmap has already
-            // been fully loaded.
-            if (task.IsCompleted)
-            {
-                return new List<object>(1) { task.Result };
-            }
-
-            return new List<object>();
-        }
     }
 }

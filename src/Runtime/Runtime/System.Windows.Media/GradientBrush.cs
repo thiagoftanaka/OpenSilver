@@ -12,10 +12,11 @@
 \*====================================================================================*/
 
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Linq;
 using System.Windows.Markup;
 using OpenSilver.Internal;
+using Stop = (double Offset, System.Windows.Media.Color Color);
 
 namespace System.Windows.Media
 {
@@ -27,6 +28,8 @@ namespace System.Windows.Media
     [ContentProperty(nameof(GradientStops))]
     public class GradientBrush : Brush
     {
+        private WeakEventListener<GradientBrush, GradientStopCollection, NotifyCollectionChangedEventArgs> _collectionChangedListener;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="GradientBrush"/> class.
         /// </summary>
@@ -38,7 +41,7 @@ namespace System.Windows.Media
             MappingMode = original.MappingMode;
             SpreadMethod = original.SpreadMethod;
             ColorInterpolationMode = original.ColorInterpolationMode;
-            foreach (GradientStop stop in original.GradientStops)
+            foreach (GradientStop stop in original.GradientStops.InternalItems)
             {
                 GradientStops.Add(new GradientStop { Offset = stop.Offset, Color = stop.Color });
             }
@@ -59,7 +62,7 @@ namespace System.Windows.Media
                         {
                             GradientBrush gb = (GradientBrush)d;
                             var collection = new GradientStopCollection();
-                            collection.SetParentBrush(gb);
+                            gb.OnGradientStopsChanged(null, collection);
                             return collection;
                         }),
                     OnGradientStopsChanged,
@@ -76,19 +79,38 @@ namespace System.Windows.Media
         public GradientStopCollection GradientStops
         {
             get => (GradientStopCollection)GetValue(GradientStopsProperty);
-            set => SetValue(GradientStopsProperty, value);
+            set => SetValueInternal(GradientStopsProperty, value);
         }
 
         private static void OnGradientStopsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            GradientBrush gradientBrush = (GradientBrush)d;
-            if (null != e.OldValue)
+            GradientBrush brush = (GradientBrush)d;
+            brush.OnGradientStopsChanged((GradientStopCollection)e.OldValue, (GradientStopCollection)e.NewValue);
+            brush.RaiseChanged();
+        }
+
+        private void OnGradientStopCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) => RaiseChanged();
+
+        private void OnGradientStopsChanged(GradientStopCollection oldStops, GradientStopCollection newStops)
+        {
+            oldStops?.SetOwner(null);
+
+            if (_collectionChangedListener != null)
             {
-                ((GradientStopCollection)e.OldValue).SetParentBrush(null);
+                _collectionChangedListener.Detach();
+                _collectionChangedListener = null;
             }
-            if (null != e.NewValue)
+
+            if (newStops is not null)
             {
-                ((GradientStopCollection)e.NewValue).SetParentBrush(gradientBrush);
+                newStops.SetOwner(this);
+
+                _collectionChangedListener = new(this, newStops)
+                {
+                    OnEventAction = static (instance, sender, args) => instance.OnGradientStopCollectionChanged(sender, args),
+                    OnDetachAction = static (listener, source) => source.CollectionChanged -= listener.OnEvent,
+                };
+                newStops.CollectionChanged += _collectionChangedListener.OnEvent;
             }
         }
 
@@ -119,7 +141,7 @@ namespace System.Windows.Media
         public BrushMappingMode MappingMode
         {
             get => (BrushMappingMode)GetValue(MappingModeProperty);
-            set => SetValue(MappingModeProperty, value);
+            set => SetValueInternal(MappingModeProperty, value);
         }
 
         /// <summary>
@@ -143,7 +165,7 @@ namespace System.Windows.Media
         public GradientSpreadMethod SpreadMethod
         {
             get => (GradientSpreadMethod)GetValue(SpreadMethodProperty);
-            set => SetValue(SpreadMethodProperty, value);
+            set => SetValueInternal(SpreadMethodProperty, value);
         }
 
         /// <summary>
@@ -169,60 +191,57 @@ namespace System.Windows.Media
         public ColorInterpolationMode ColorInterpolationMode
         {
             get => (ColorInterpolationMode)GetValue(ColorInterpolationModeProperty);
-            set => SetValue(ColorInterpolationModeProperty, value);
+            set => SetValueInternal(ColorInterpolationModeProperty, value);
         }
 
-        internal IEnumerable<(double Offset, Color Color)> GetGradientStops()
+        internal IEnumerable<Stop> GetGradientStops()
         {
-            GradientStopCollection stops = GradientStops;
-            if (stops.Count == 0)
+            Stop[] stops = GradientStops.GetSortedCollection();
+            if (stops.Length == 0)
             {
                 yield break;
             }
 
-            if (stops.Count == 1)
+            if (stops.Length == 1)
             {
-                GradientStop stop = stops[0];
-                yield return (stop.Offset, stop.Color);
+                yield return stops[0];
                 yield break;
             }
-
-            var orderedStops = GradientStops.OrderBy(gs => gs.Offset).ToArray();
 
             int i = 0;
-            GradientStop firstStop = null;
-            while (i < orderedStops.Length)
+            int firstStop = -1;
+            while (i < stops.Length)
             {
-                GradientStop stop = orderedStops[i];
+                var stop = stops[i];
                 if (stop.Offset >= 0) break;
 
-                firstStop = stop;
+                firstStop = i;
                 i++;
             }
 
-            if (firstStop is not null)
+            if (firstStop >= 0)
             {
-                if (i == orderedStops.Length)
+                if (i == stops.Length)
                 {
                     // All stops have negative offset
-                    yield return (firstStop.Offset, firstStop.Color);
+                    yield return stops[firstStop];
                     yield break;
                 }
 
-                yield return (0, InterpolateGradientStopsArgbColor(firstStop, orderedStops[i], 0.0));
+                yield return (0, InterpolateGradientStopsArgbColor(stops[firstStop], stops[i], 0.0));
             }
 
-            while (i < orderedStops.Length)
+            while (i < stops.Length)
             {
-                GradientStop stop = orderedStops[i];
+                var stop = stops[i];
                 if (stop.Offset > 1) break;
 
-                yield return (stop.Offset, stop.Color);
+                yield return stop;
                 i++;
             }
 
             // No more stops, exit
-            if (i == orderedStops.Length)
+            if (i == stops.Length)
             {
                 yield break;
             }
@@ -231,17 +250,17 @@ namespace System.Windows.Media
             // We just want to take the first one and interpolate the Color
             // if it is not the first stop.
 
-            GradientStop finalStop = orderedStops[i];
+            var finalStop = stops[i];
             if (i == 0)
             {
                 // First relevant stop, no need to interpolate
-                yield return (finalStop.Offset, finalStop.Color);
+                yield return finalStop;
                 yield break;
             }
 
-            yield return (1.0, InterpolateGradientStopsArgbColor(orderedStops[i - 1], finalStop, 1.0));
+            yield return (1.0, InterpolateGradientStopsArgbColor(stops[i - 1], finalStop, 1.0));
 
-            static Color InterpolateGradientStopsArgbColor(GradientStop from, GradientStop to, double midPoint)
+            static Color InterpolateGradientStopsArgbColor(Stop from, Stop to, double midPoint)
             {
                 Debug.Assert(from.Offset <= midPoint && to.Offset >= midPoint);
 

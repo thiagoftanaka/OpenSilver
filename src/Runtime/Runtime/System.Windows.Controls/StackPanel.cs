@@ -11,6 +11,8 @@
 *  
 \*====================================================================================*/
 
+using System.Collections.Generic;
+
 namespace System.Windows.Controls
 {
     /// <summary>
@@ -42,7 +44,7 @@ namespace System.Windows.Controls
         public Orientation Orientation
         {
             get { return (Orientation)GetValue(OrientationProperty); }
-            set { SetValue(OrientationProperty, value); }
+            set { SetValueInternal(OrientationProperty, value); }
         }
 
         /// <summary>
@@ -58,7 +60,7 @@ namespace System.Windows.Controls
         protected override Size MeasureOverride(Size constraint)
         {
             Size stackDesiredSize = new Size();
-            UIElementCollection children = Children;
+            List<UIElement> children = InternalChildren;
             Size layoutSlotSize = constraint;
             bool fHorizontal = Orientation == Orientation.Horizontal;
 
@@ -106,7 +108,7 @@ namespace System.Windows.Controls
 
         protected override Size ArrangeOverride(Size arrangeSize)
         {
-            UIElementCollection children = Children;
+            List<UIElement> children = InternalChildren;
             bool fHorizontal = Orientation == Orientation.Horizontal;
             Rect rcChild = new Rect(arrangeSize);
             double previousChildSize = 0.0;

@@ -11,10 +11,8 @@
 *  
 \*====================================================================================*/
 
-using System;
 using System.Collections;
 using System.Diagnostics;
-using System.Linq;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.ComponentModel;
@@ -24,6 +22,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
+using OpenSilver;
 
 namespace System.Windows
 {
@@ -32,6 +31,7 @@ namespace System.Windows
     /// programmatic layout. FrameworkElement also defines APIs related to data binding,
     /// object tree, and object lifetime feature areas.
     /// </summary>
+    [RuntimeNameProperty(nameof(Name))]
     public abstract partial class FrameworkElement : UIElement
     {
         #region Inheritance Context
@@ -254,32 +254,6 @@ namespace System.Windows
             InvalidateInheritedProperties(this, parent);
         }
 
-        internal static void InvalidateInheritedProperties(FrameworkElement fe, DependencyObject newParent)
-        {
-            if (newParent == null)
-            {
-                fe.ResetInheritedProperties();
-            }
-            else
-            {
-                foreach (var kvp in newParent.INTERNAL_AllInheritedProperties.ToArray())
-                {
-                    DependencyProperty dp = kvp.Key;
-                    INTERNAL_PropertyStorage storage = kvp.Value;
-
-                    PropertyMetadata metadata = dp.GetMetadata(fe.DependencyObjectType);
-                    if (TreeWalkHelper.IsInheritanceNode(metadata))
-                    {
-                        fe.SetInheritedValue(
-                            dp,
-                            metadata,
-                            INTERNAL_PropertyStore.GetEffectiveValue(storage.Entry),
-                            true);
-                    }
-                }
-            }
-        }
-
         /// <summary>
         /// Returns enumerator to logical children
         /// </summary>
@@ -347,13 +321,6 @@ namespace System.Windows
         internal virtual FrameworkElement StateGroupsRoot => TemplateChild;
 
         private ResourceDictionary _resources;
-
-        /// <summary>
-        /// Derived classes can set this flag in their constructor to prevent the "Style" property from being applied.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        protected bool INTERNAL_DoNotApplyStyle = false;
 
         /// <summary>
         /// Provides base class initialization behavior for FrameworkElement-derived
@@ -481,14 +448,13 @@ namespace System.Windows
         /// <returns>The "root" dom element of the FrameworkElement.</returns>
         public override object CreateDomElement(object parentRef, out object domElementWhereToPlaceChildren)
         {
-            return CreateDomElementInternal(parentRef, out domElementWhereToPlaceChildren);
+            return CreateDomElementInternal(parentRef, false, out domElementWhereToPlaceChildren);
         }
 
-        internal object CreateDomElementInternal(object parentRef, out object domElementWhereToPlaceChildren)
+        internal object CreateDomElementInternal(object parentRef, bool isKeyboardFocusable, out object domElementWhereToPlaceChildren)
         {
-            object div = INTERNAL_HtmlDomManager.CreateDomLayoutElementAndAppendIt("div", parentRef, this);
-            domElementWhereToPlaceChildren = div;
-            return div;
+            domElementWhereToPlaceChildren = null;
+            return INTERNAL_HtmlDomManager.CreateDomLayoutElementAndAppendIt("div", parentRef, this, isKeyboardFocusable);
         }
 
         // Internal helper so the FrameworkElement could see the
@@ -611,12 +577,11 @@ namespace System.Windows
         public Cursor Cursor
         {
             get { return (Cursor)GetValue(CursorProperty); }
-            set { SetValue(CursorProperty, value); }
+            set { SetValueInternal(CursorProperty, value); }
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.Cursor"/> dependency
-        /// property.
+        /// Identifies the <see cref="Cursor"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty CursorProperty =
             DependencyProperty.Register(
@@ -625,139 +590,27 @@ namespace System.Windows
                 typeof(FrameworkElement), 
                 new PropertyMetadata((object)null)
                 {
-                    MethodToUpdateDom = Cursor_MethodToUpdateDom,
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((FrameworkElement)d).SetCursor((Cursor)newValue),
                 });
-
-        private static void Cursor_MethodToUpdateDom(DependencyObject d, object newValue)
-        {
-            var fe = (FrameworkElement)d;
-            var styleOfOuterDomElement = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(fe.INTERNAL_OuterDomElement);
-            styleOfOuterDomElement.cursor = ((Cursor)newValue)?.ToHtmlString() ?? "inherit";
-        }
 
         #endregion
 
-        #region IsEnabled
-
-        /// <summary>
-        ///     Fetches the value that IsEnabled should be coerced to.
-        /// </summary>
-        /// <remarks>
-        ///     This method is virtual is so that controls derived from UIElement
-        ///     can combine additional requirements into the coersion logic.
-        ///     <P/>
-        ///     It is important for anyone overriding this property to also
-        ///     call CoerceValue when any of their dependencies change.
-        /// </remarks>
-        internal virtual bool IsEnabledCore
+        protected internal override void ManageIsEnabled(bool isEnabled)
         {
-            get
-            {
-                // ButtonBase.IsEnabledCore: CanExecute
-                return true;
-            }
-        }
+            base.ManageIsEnabled(isEnabled);
 
-        /// <summary>
-        /// Gets or sets a value indicating whether the user can interact with the control.
-        /// </summary>
-        public bool IsEnabled
-        {
-            get { return (bool)GetValue(IsEnabledProperty); }
-            set { SetValue(IsEnabledProperty, value); }
-        }
-
-        /// <summary>
-        /// Identifies the <see cref="FrameworkElement.IsEnabled"/> dependency
-        /// property.
-        /// </summary>
-        public static readonly DependencyProperty IsEnabledProperty =
-            DependencyProperty.Register(
-                nameof(IsEnabled),
-                typeof(bool),
-                typeof(FrameworkElement),
-                new PropertyMetadata(true, IsEnabled_Changed, CoerceIsEnabled)
-                {
-                    MethodToUpdateDom = IsEnabled_MethodToUpdateDom,
-                });
-
-        private static void IsEnabled_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            FrameworkElement fe = (FrameworkElement)d;
-            if (fe.IsEnabledChanged != null)
-            {
-                fe.IsEnabledChanged(fe, e);
-            }
-            fe.InvalidateForceInheritPropertyOnChildren(e.Property);
-        }
-
-        private static object CoerceIsEnabled(DependencyObject d, object baseValue)
-        {
-            FrameworkElement fe = (FrameworkElement)d;
-
-            if (!(baseValue is bool)) //todo: this is a temporary workaround to avoid an invalid cast exception. Fix this by investigating why sometimes baseValue is not a bool, such as a Binding (eg. Client_GD).
-                return true;
-
-            // We must be false if our parent is false, but we can be
-            // either true or false if our parent is true.
-            //
-            // Another way of saying this is that we can only be true
-            // if our parent is true, but we can always be false.
-            if ((bool)baseValue)
-            {
-                // Our parent can constrain us.  We can be plugged into either
-                // a "visual" or "content" tree.  If we are plugged into a
-                // "content" tree, the visual tree is just considered a
-                // visual representation, and is normally composed of raw
-                // visuals, not UIElements, so we prefer the content tree.
-                //
-                // The content tree uses the "logical" links.  But not all
-                // "logical" links lead to a content tree.
-                //
-                DependencyObject parent = fe.Parent ?? VisualTreeHelper.GetParent(fe);
-                if (parent == null || (bool)parent.GetValue(IsEnabledProperty))
-                {
-                    return fe.IsEnabledCore;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Occurs when the IsEnabled property changes.
-        /// </summary>
-        public event DependencyPropertyChangedEventHandler IsEnabledChanged;
-
-        private static void IsEnabled_MethodToUpdateDom(DependencyObject d, object newValue)
-        {
-            var element = (FrameworkElement)d;
-            SetPointerEvents(element);
-            element.ManageIsEnabled((bool)newValue);
-        }
-
-        protected internal virtual void ManageIsEnabled(bool isEnabled)
-        {
             if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
             {
                 if (isEnabled)
                 {
-                    INTERNAL_HtmlDomManager.RemoveDomElementAttribute(INTERNAL_OuterDomElement, "disabled", forceSimulatorExecuteImmediately: true);
+                    INTERNAL_HtmlDomManager.RemoveAttribute(OuterDiv, "disabled");
                 }
                 else
                 {
-                    INTERNAL_HtmlDomManager.SetDomElementAttribute(INTERNAL_OuterDomElement, "disabled", "true");
+                    INTERNAL_HtmlDomManager.SetDomElementAttribute(OuterDiv, "disabled", string.Empty);
                 }
             }
         }
-
-        #endregion
 
         #region Names handling
 
@@ -861,7 +714,7 @@ namespace System.Windows
         public string Name
         {
             get { return (string)GetValue(NameProperty); }
-            set { SetValue(NameProperty, value); }
+            set { SetValueInternal(NameProperty, value); }
         }
 
         /// <summary>
@@ -874,18 +727,17 @@ namespace System.Windows
                 typeof(FrameworkElement),
                 new PropertyMetadata(string.Empty, null, OnCoerceName)
                 {
-                    MethodToUpdateDom = OnNameChanged_MethodToUpdateDom,
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
+                    {
+                        if (Features.DOM.AssignName && d is FrameworkElement fe)
+                        {
+                            INTERNAL_HtmlDomManager.SetDomElementAttribute(
+                                fe.OuterDiv, "dataId", (string)newValue ?? string.Empty);
+                        }
+                    },
                 });
 
         private static object OnCoerceName(DependencyObject d, object baseValue) => baseValue ?? string.Empty;
-
-        private static void OnNameChanged_MethodToUpdateDom(DependencyObject d, object value)
-        {
-            if (d is FrameworkElement fe)
-            {
-                INTERNAL_HtmlDomManager.SetDomElementAttribute(fe.INTERNAL_OuterDomElement, "dataId", (value ?? string.Empty).ToString());
-            }
-        }
 
 #endregion
 
@@ -897,22 +749,19 @@ namespace System.Windows
         /// </summary>
         public object DataContext
         {
-            get { return (object)GetValue(DataContextProperty); }
-            set { SetValue(DataContextProperty, value); }
+            get { return GetValue(DataContextProperty); }
+            set { SetValueInternal(DataContextProperty, value); }
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.DataContext"/> dependency property.
+        /// Identifies the <see cref="DataContext"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty DataContextProperty = 
             DependencyProperty.Register(
                 nameof(DataContext),
                 typeof(object),
                 typeof(FrameworkElement),
-                new PropertyMetadata(null, OnDataContextPropertyChanged)
-                {
-                    Inherits = true
-                });
+                new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.Inherits, OnDataContextPropertyChanged));
 
         private static void OnDataContextPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -921,10 +770,7 @@ namespace System.Windows
 
         private void RaiseDataContextChangedEvent(DependencyPropertyChangedEventArgs e)
         {
-            if (this.DataContextChanged != null)
-            {
-                this.DataContextChanged(this, e);
-            }
+            DataContextChanged?.Invoke(this, e);
         }
 
         /// <summary>Occurs when the data context for this element changes. </summary>
@@ -948,7 +794,7 @@ namespace System.Windows
                 if (triggers == null)
                 {
                     triggers = new TriggerCollection(this);
-                    SetValue(TriggersProperty, triggers);
+                    SetValueInternal(TriggersProperty, triggers);
                 }
 
                 return triggers;
@@ -973,7 +819,7 @@ namespace System.Windows
         /// Identifies the <see cref="FlowDirection"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty FlowDirectionProperty =
-            DependencyProperty.Register(
+            DependencyProperty.RegisterAttached(
                 nameof(FlowDirection),
                 typeof(FlowDirection),
                 typeof(FrameworkElement),
@@ -989,18 +835,18 @@ namespace System.Windows
                         const string RTL = "rtl";
                         const string LTR = "ltr";
 
-                        var fe = (FrameworkElement)d;
+                        var uie = (UIElement)d;
                         var direction = (FlowDirection)newValue;
 
-                        if (VisualTreeHelper.GetParent(fe) is FrameworkElement parent
-                            && parent.FlowDirection == direction)
+                        if (VisualTreeHelper.GetParent(uie) is UIElement parent
+                            && (FlowDirection)parent.GetValue(FlowDirectionProperty) == direction)
                         {
-                            INTERNAL_HtmlDomManager.RemoveAttribute(fe.INTERNAL_OuterDomElement, DIR);
+                            INTERNAL_HtmlDomManager.RemoveAttribute(uie.OuterDiv, DIR);
                             return;
                         }
 
                         INTERNAL_HtmlDomManager.SetDomElementAttribute(
-                            fe.INTERNAL_OuterDomElement,
+                            uie.OuterDiv,
                             DIR,
                             direction == FlowDirection.LeftToRight ? LTR : RTL);
                     },
@@ -1018,14 +864,18 @@ namespace System.Windows
         public FlowDirection FlowDirection
         {
             get => IsRightToLeft ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
-            set => SetValue(FlowDirectionProperty, value);
+            set => SetValueInternal(FlowDirectionProperty, value);
         }
 
         private static void OnFlowDirectionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            var fe = (FrameworkElement)d;
-            // Cache the new value as a bit to optimize accessing the FlowDirection property's CLR accessor
-            fe.IsRightToLeft = ((FlowDirection)e.NewValue) == FlowDirection.RightToLeft;
+            // Check that d is a FrameworkElement since the property inherits and this can be called
+            // on non-FEs.
+            if (d is FrameworkElement fe)
+            {
+                // Cache the new value as a bit to optimize accessing the FlowDirection property's CLR accessor
+                fe.IsRightToLeft = ((FlowDirection)e.NewValue) == FlowDirection.RightToLeft;
+            }
         }
 
         private static object CoerceFlowDirection(DependencyObject d, object baseValue)
@@ -1052,7 +902,7 @@ namespace System.Windows
                 nameof(Language),
                 typeof(XmlLanguage),
                 typeof(FrameworkElement),
-                new PropertyMetadata(XmlLanguage.GetLanguage("en-US")));
+                new FrameworkPropertyMetadata(XmlLanguage.GetLanguage("en-US"), FrameworkPropertyMetadataOptions.Inherits));
 
         /// <summary>
         /// Gets or sets localization/globalization language information that applies to
@@ -1066,8 +916,8 @@ namespace System.Windows
         [TypeConverter(typeof(XmlLanguageConverter))]
         public XmlLanguage Language
         {
-            get { return (XmlLanguage)this.GetValue(LanguageProperty); }
-            set { this.SetValue(LanguageProperty, value); }
+            get { return (XmlLanguage)GetValue(LanguageProperty); }
+            set { SetValueInternal(LanguageProperty, value); }
         }
 
         internal override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
@@ -1096,6 +946,22 @@ namespace System.Windows
                     InvalidateParentArrange();
                 }
             }
+
+            if (e.Metadata.Inherits)
+            {
+                var info = new InheritablePropertyChangeInfo(
+                    this,
+                    e.Property,
+                    e.OldValue,
+                    e.NewValue);
+
+                if (e.OperationType != OperationType.Inherit)
+                {
+                    TreeWalkHelper.InvalidateOnInheritablePropertyChange(this, info, true);
+                }
+
+                OnInheritedPropertyChanged(this, info);
+            }
         }
 
 #endregion Work in progress
@@ -1108,12 +974,12 @@ namespace System.Windows
         /// </summary>
         public object Tag
         {
-            get { return (object)GetValue(TagProperty); }
-            set { SetValue(TagProperty, value); }
+            get { return GetValue(TagProperty); }
+            set { SetValueInternal(TagProperty, value); }
         }
 
         /// <summary>
-        /// Identifies the <see cref="FrameworkElement.Tag"/> dependency property.
+        /// Identifies the <see cref="Tag"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty TagProperty =
             DependencyProperty.Register(
@@ -1123,11 +989,6 @@ namespace System.Windows
                 new PropertyMetadata((object)null));
 
 #endregion
-
-        [Obsolete(Helper.ObsoleteMemberMessage + " Use DefaultStyleKey instead.")]
-        protected void INTERNAL_SetDefaultStyle(Style defaultStyle)
-        {
-        }
 
         #region Loaded/Unloaded events
 
@@ -1279,7 +1140,7 @@ namespace System.Windows
         //InitPending = 0x00010000,
 
         //IsResourceParentValid = 0x00020000,
-        // free bit                     0x00040000,
+        IsStyleSetFromGenerator = 0x00040000, // free bit
 
         // This flag is set to true when this FrameworkElement is in the middle
         //  of an invalidation storm caused by InvalidateTree for ancestor change,

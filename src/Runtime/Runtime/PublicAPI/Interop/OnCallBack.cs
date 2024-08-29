@@ -49,7 +49,7 @@ namespace CSHTML5.Internal
             object[] callbackArgsObject,
             bool returnValue)
         {
-            object result = null;
+            object result;
 
             try
             {
@@ -63,8 +63,6 @@ namespace CSHTML5.Internal
                 Console.Error.WriteLine("DEBUG: OnCallBack: OnCallBackFromJavascript: " + ex);
                 throw;
             }
-
-            INTERNAL_ExecuteJavaScript.ExecutePendingJavaScriptCode();
 
             return returnValue ? result : null;
         }

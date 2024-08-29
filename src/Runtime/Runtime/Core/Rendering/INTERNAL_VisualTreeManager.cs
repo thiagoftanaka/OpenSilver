@@ -12,17 +12,14 @@
 \*====================================================================================*/
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using OpenSilver;
+using OpenSilver.Internal;
 
 namespace CSHTML5.Internal
 {
@@ -41,22 +38,16 @@ namespace CSHTML5.Internal
                 if (IsElementInVisualTree(child))
                 {
                     // Verify that the child is really a child of the specified control:
-                    if (parent.INTERNAL_VisualChildrenInformation != null
-                        && parent.INTERNAL_VisualChildrenInformation.ContainsKey(child))
+                    if (parent.VisualChildrenInformation != null && parent.VisualChildrenInformation.Contains(child))
                     {
                         // Remove the element from the DOM:
-                        INTERNAL_HtmlDomManager.RemoveFromDom(child.INTERNAL_OuterDomElement);
-
-                        // Remove the parent-specific wrapper around the child in the DOM (if any):
-                        var optionalChildWrapper_OuterDomElement = parent.INTERNAL_VisualChildrenInformation[child].INTERNAL_OptionalChildWrapper_OuterDomElement;
-                        if (optionalChildWrapper_OuterDomElement != null)
-                            INTERNAL_HtmlDomManager.RemoveFromDom(optionalChildWrapper_OuterDomElement);
+                        INTERNAL_HtmlDomManager.RemoveFromDom(child.OuterDiv);
 
                         // Remove the element from the parent's children collection:
-                        parent.INTERNAL_VisualChildrenInformation.Remove(child);
+                        parent.VisualChildrenInformation.Remove(child);
 
                         //Detach Element  
-                        DetachVisualChildren(child);
+                        UnloadSubTree(child);
                     }
                     else
                     {
@@ -66,12 +57,11 @@ namespace CSHTML5.Internal
                                           parent.GetType().ToString()));
                     }
                 }
-                else if (parent.INTERNAL_VisualChildrenInformation != null
-                        && parent.INTERNAL_VisualChildrenInformation.ContainsKey(child))
+                else if (parent.VisualChildrenInformation != null && parent.VisualChildrenInformation.Contains(child))
                 {
                     // Remove the element from the parent's children collection:
-                    parent.INTERNAL_VisualChildrenInformation.Remove(child);
-                    DetachElement(child);
+                    parent.VisualChildrenInformation.Remove(child);
+                    UnloadVisual(child);
                 }
             }
 #if PERFSTAT
@@ -79,41 +69,38 @@ namespace CSHTML5.Internal
 #endif
         }
 
-        private static void DetachVisualChildren(UIElement element)
+        private static void UnloadSubTree(UIElement element)
         {
             PropagateIsUnloading(element);
-
-            var queue = new Queue<UIElement>();
-            queue.Enqueue(element);
-
-            while (queue.Count > 0)
-            {
-                UIElement e = queue.Dequeue();
-                if (e.INTERNAL_VisualChildrenInformation is not null)
-                {
-                    foreach (UIElement child in e.INTERNAL_VisualChildrenInformation.Keys)
-                    {
-                        queue.Enqueue(child);
-                    }
-                }
-
-                DetachElement(e);
-            }
+            UnloadVisualRec(element);
 
             static void PropagateIsUnloading(UIElement element)
             {
                 element.IsUnloading = true;
-                if (element.INTERNAL_VisualChildrenInformation is not null)
+                if (element.VisualChildrenInformation is not null)
                 {
-                    foreach (UIElement child in element.INTERNAL_VisualChildrenInformation.Keys)
+                    foreach (UIElement child in element.VisualChildrenInformation)
                     {
                         PropagateIsUnloading(child);
                     }
                 }
             }
+
+            static void UnloadVisualRec(UIElement element)
+            {
+                var children = element.VisualChildrenInformation;
+                UnloadVisual(element);
+                if (children is not null)
+                {
+                    foreach (UIElement child in children)
+                    {
+                        UnloadVisualRec(child);
+                    }
+                }
+            }
         }
 
-        private static void DetachElement(UIElement element)
+        private static void UnloadVisual(UIElement element)
         {
             element.IsUnloading = true;
 
@@ -139,108 +126,16 @@ namespace CSHTML5.Internal
                     fe.UnloadResources();
                 }
 
-                INTERNAL_HtmlDomManager.RemoveFromGlobalStore(element.INTERNAL_OuterDomElement as INTERNAL_HtmlDomElementReference);
-                INTERNAL_HtmlDomManager.RemoveFromGlobalStore(element.INTERNAL_InnerDomElement as INTERNAL_HtmlDomElementReference);
+                INTERNAL_HtmlDomManager.RemoveFromGlobalStore(element.OuterDiv);
             }
 
             // Reset all visual-tree related information:
             element.IsConnectedToLiveTree = false;
             element.IsUnloading = false;
-            element.INTERNAL_OuterDomElement = null;
-            element.INTERNAL_InnerDomElement = null;
-            element.INTERNAL_VisualChildrenInformation = null;
+            element.OuterDiv = null;
+            element.VisualChildrenInformation = null;
             element.RenderingIsDeferred = false;
         }
-
-        public static void MoveVisualChildInSameParent(UIElement child, UIElement parent, int newIndex, int oldIndex)
-        {
-            if (oldIndex < 0)
-            {
-                // setting oldIndex to -1 means we don't know the previous
-                // position of the child. We have to iterate through all the
-                // child to find it.
-                MoveVisualChildInSameParent(child, parent, newIndex);
-                return;
-            }
-
-            if (parent.INTERNAL_VisualChildrenInformation.ContainsKey(child))
-            {
-                INTERNAL_VisualChildInformation visualChildInformation = parent.INTERNAL_VisualChildrenInformation[child];
-                var domElementToMove = visualChildInformation.INTERNAL_OptionalChildWrapper_OuterDomElement ?? child.INTERNAL_OuterDomElement;
-
-                //Not sure if this test is needed but at least we won't 
-                // break anything if the element is not in the Visual tree
-                if (domElementToMove != null)
-                {
-                    object domElementWhereToPlaceChildStuff = (parent.GetDomElementWhereToPlaceChild(child) ?? parent.INTERNAL_InnerDomElement);
-
-                    object movedChild = OpenSilver.Interop.ExecuteJavaScript(
-                        "$0.children[$1]",
-                        domElementWhereToPlaceChildStuff,
-                        oldIndex);
-
-
-                    if (!Convert.ToBoolean(OpenSilver.Interop.ExecuteJavaScript("$0 == $1", movedChild, domElementToMove)))
-                    {
-                        throw new InvalidOperationException(string.Format("index '{0}' does match index of the element about to be moved.", oldIndex));
-                    }
-
-                    object nextSibling = OpenSilver.Interop.ExecuteJavaScript(
-                        "$0.children[$1]",
-                        domElementWhereToPlaceChildStuff,
-                        newIndex);
-
-                    if (nextSibling != null)
-                    {
-                        OpenSilver.Interop.ExecuteJavaScript(
-                            "$0.insertBefore($1, $2)",
-                            domElementWhereToPlaceChildStuff,
-                            domElementToMove,
-                            nextSibling);
-                    }
-                    else
-                    {
-                        OpenSilver.Interop.ExecuteJavaScript(
-                            "$0.appendChild($1)",
-                            domElementWhereToPlaceChildStuff,
-                            domElementToMove);
-                    }
-                }
-            }
-        }
-
-        public static void MoveVisualChildInSameParent(UIElement child, UIElement parent, int index)
-        {
-            if (parent.INTERNAL_VisualChildrenInformation.ContainsKey(child))
-            {
-                INTERNAL_VisualChildInformation visualChildInformation = parent.INTERNAL_VisualChildrenInformation[child];
-                var domElementToMove = visualChildInformation.INTERNAL_OptionalChildWrapper_OuterDomElement;
-                if (domElementToMove == null)
-                    domElementToMove = child.INTERNAL_OuterDomElement;
-
-                if (domElementToMove != null) //Not sure if this test is needed but at least we won't break anything if the element is not in the Visual tree
-                {
-                    object domElementWhereToPlaceChildStuff = (parent.GetDomElementWhereToPlaceChild(child) ?? parent.INTERNAL_InnerDomElement);
-                    //todo: see if there is a way to know the index of the domElement in its parent without looping through the list (where we find i in the js below).
-                    OpenSilver.Interop.ExecuteJavaScript(@"
-var actualIndex = $1;
-var i = 0;
-while (i < actualIndex && $0.children[i]!=$2) { 
-    ++i;
-}
-if(i < actualIndex) {
-    ++actualIndex; //to compensate the fact that the item that will be moved was before the next sibling
-}
-var nextSibling = $0.children[$1];
-if(nextSibling != undefined) {
-    $0.insertBefore($2, nextSibling);
-} else {
-    $0.appendChild($2);
-}", domElementWhereToPlaceChildStuff, index, domElementToMove);
-                }
-            }
-        }
-
 
         public static void AttachVisualChildIfNotAlreadyAttached(UIElement child, UIElement parent, int index = -1)
         {
@@ -257,14 +152,14 @@ if(nextSibling != undefined) {
                         Profiler.ConsoleTime(label);
                     }
 
-                    AttachVisualChild_Private(child, parent, index);
+                    AttachVisualChild_Private(child, parent);
 
                     if (EnablePerformanceLogging)
                     {
                         Profiler.ConsoleTimeEnd(label);
                     }
                 }
-                else if (child.INTERNAL_VisualParent is not null && !ReferenceEquals(child.INTERNAL_VisualParent, parent))
+                else if (child.VisualParent is not null && !ReferenceEquals(child.VisualParent, parent))
                 {
                     throw new InvalidOperationException("The element already has a parent. An element cannot appear in multiple locations in the Visual Tree. Remove the element from the Visual Tree before adding it elsewhere.");
                 }
@@ -276,48 +171,15 @@ if(nextSibling != undefined) {
             }
         }
 
-        static void AttachVisualChild_Private(UIElement child, UIElement parent, int index)
+        static void AttachVisualChild_Private(UIElement child, UIElement parent)
         {
-            //
-            // THIS IS WHAT THE FINAL STRUCTURE IN THE DOM TREE WILL LOOK LIKE:
-            //
-            //     domElementWhereToPlaceChildStuff
-            //     --- [wrapperForChild]
-            //     --- --- [innerDivOfWrapperForChild]
-            //     --- --- --- [additionalOutsideDivForMargins, aka BoxSizing]
-            //     --- --- --- --- outerDomElement
-            //
-
             //--------------------------------------------------------
             // PREPARE THE PARENT:
             //--------------------------------------------------------
 
-#if PERFSTAT
-            var t0 = Performance.now();
-#endif
-
-            // Prepare the parent DOM structure so that it is ready to contain the child (for example, in case of a grid, we need to (re)create the rows and columns where to place the elements).
-            //parent.INTERNAL_UpdateDomStructureIfNecessary();
-
-            object domElementWhereToPlaceChildStuff = (parent.GetDomElementWhereToPlaceChild(child) ?? parent.INTERNAL_InnerDomElement);
-
-            // A "wrapper for child" is sometimes needed between the child and the parent (for example in case of a grid).
-            // It is usually one or more DIVs that fit in-between the child and the parent, and that are used to position
-            // the child within the parent.
-            object wrapperForChild = parent.CreateDomChildWrapper(domElementWhereToPlaceChildStuff, out object innerDivOfWrapperForChild, index);
-            bool doesParentRequireToCreateAWrapperForEachChild = wrapperForChild is not null && innerDivOfWrapperForChild is not null;
-
             // Remember the information about the "VisualChildren"
-            parent.INTERNAL_VisualChildrenInformation ??= new Dictionary<UIElement, INTERNAL_VisualChildInformation>();
-            parent.INTERNAL_VisualChildrenInformation.Add(child,
-                new INTERNAL_VisualChildInformation()
-                {
-                    INTERNAL_OptionalChildWrapper_OuterDomElement = wrapperForChild,
-                });
-
-#if PERFSTAT
-            Performance.Counter("VisualTreeManager: Prepare the parent", t0);
-#endif
+            parent.VisualChildrenInformation ??= new HashSet<UIElement>();
+            parent.VisualChildrenInformation.Add(child);
 
             //--------------------------------------------------------
             // CONTINUE WITH THE OTHER STEPS
@@ -325,85 +187,36 @@ if(nextSibling != undefined) {
             
             AttachVisualChild_Private_MainSteps(
                 child,
-                parent,
-                index,
-                doesParentRequireToCreateAWrapperForEachChild,
-                innerDivOfWrapperForChild,
-                domElementWhereToPlaceChildStuff,
-                wrapperForChild);
+                parent);
         }
 
-        static void AttachVisualChild_Private_MainSteps(UIElement child,
-            UIElement parent,
-            int index,
-            bool doesParentRequireToCreateAWrapperForEachChild,
-            object innerDivOfWrapperForChild,
-            object domElementWhereToPlaceChildStuff,
-            object wrapperForChild)
+        static void AttachVisualChild_Private_MainSteps(UIElement child, UIElement parent)
         {
             //--------------------------------------------------------
             // PREPARE THE CHILD:
             //--------------------------------------------------------
 
-#if PERFSTAT
-            var t2 = Performance.now();
-#endif
-
-            // Determine where to place the child:
-            object whereToPlaceTheChild = (doesParentRequireToCreateAWrapperForEachChild
-                    ? innerDivOfWrapperForChild
-                    : domElementWhereToPlaceChildStuff);
-
             child.IsConnectedToLiveTree = true;
 
             // Set the "ParentWindow" property so that the element knows where to display popups:
-            child.INTERNAL_ParentWindow = parent.INTERNAL_ParentWindow;
+            child.ParentWindow = parent.ParentWindow;
 
             // Create and append the DOM structure of the Child:
-            object domElementWhereToPlaceGrandChildren = null;
-            object outerDomElement;
-            bool isChildAControl = child is Control;
-            if (child.INTERNAL_HtmlRepresentation == null)
-            {
-                bool hasTemplate = isChildAControl && ((Control)child).HasTemplate;
-                if (hasTemplate)
-                {
-                    outerDomElement = ((Control)child).CreateDomElementForControlTemplate(whereToPlaceTheChild, out domElementWhereToPlaceGrandChildren);
-                }
-                else
-                {
-                    outerDomElement = child.CreateDomElement(whereToPlaceTheChild, out domElementWhereToPlaceGrandChildren);
-                }
-            }
-            else
-            {
-                outerDomElement = INTERNAL_HtmlDomManager.CreateDomFromStringAndAppendIt(child.INTERNAL_HtmlRepresentation, whereToPlaceTheChild, child);
-            }
+            var outerDomElement = (INTERNAL_HtmlDomElementReference)child.CreateDomElement(parent.OuterDiv, out _);
 
             // For debugging purposes (to better read the output html), add a class to the outer DIV
             // that tells us the corresponding type of the element (Border, StackPanel, etc.):
-            INTERNAL_HtmlDomManager.AddCSSClass(outerDomElement, child.GetType().ToString());
-
-#if PERFSTAT
-            Performance.Counter("VisualTreeManager: Prepare the child", t2);
-#endif
+            if (Features.DOM.AssignClass)
+            {
+                INTERNAL_HtmlDomManager.AddCSSClass(outerDomElement, child.GetType().ToString());
+            }
 
             //--------------------------------------------------------
             // REMEMBER ALL INFORMATION FOR FUTURE USE:
             //--------------------------------------------------------
 
             // Remember the DIVs:
-            child.INTERNAL_OuterDomElement = outerDomElement;
-            child.INTERNAL_InnerDomElement = domElementWhereToPlaceGrandChildren;
-
-            //--------------------------------------------------------
-            // HANDLE SPECIAL CASES:
-            //--------------------------------------------------------
-
-            UIElement.SetPointerEvents(child);
-
-            // Reset the flag that tells if we have already applied the RenderTransformOrigin (this is useful to ensure that the default RenderTransformOrigin is (0,0) like in normal XAML, instead of (0.5,0.5) like in CSS):
-            child.INTERNAL_RenderTransformOriginHasBeenApplied = false;
+            child.OuterDiv = outerDomElement;
 
             //--------------------------------------------------------
             // HANDLE EVENTS:
@@ -427,6 +240,15 @@ if(nextSibling != undefined) {
             // Raise the "OnAttached" event:
             child.INTERNAL_OnAttachedToVisualTree(); // IMPORTANT: Must be done BEFORE "RaiseChangedEventOnAllDependencyProperties" (for example, the ItemsControl uses this to initialize its visual)
 
+            // INTERNAL_OnAttachedToVisualTree will fire the Loaded event on children, so we need to make
+            // sure that 'child' has not been disconnected from the visual tree in the process.
+            // We check outer div rather than _isLoaded because 'child' may have been removed and added back,
+            // in which case the code below would run twice.
+            if (child.OuterDiv != outerDomElement)
+            {
+                return;
+            }
+
             //--------------------------------------------------------
             // RENDER THE ELEMENTS BY APPLYING THE CSS PROPERTIES:
             //--------------------------------------------------------
@@ -439,7 +261,7 @@ if(nextSibling != undefined) {
                 child.RenderingIsDeferred = true;
                 if (child.Visibility == Visibility.Collapsed)
                 {
-                    INTERNAL_HtmlDomManager.AddCSSClass(child.INTERNAL_OuterDomElement, "uielement-collapsed");
+                    INTERNAL_HtmlDomManager.SetVisible(child.OuterDiv, false);
                 }
             }
             else
@@ -447,31 +269,20 @@ if(nextSibling != undefined) {
                 RenderElementsAndRaiseChangedEventOnAllDependencyProperties(child);
             }
 
-            if (isChildAControl && child is not TextBlock && child is not TextElement)
-            {
-                ((Control)child).UpdateSystemFocusVisuals();
-            }
-
             //--------------------------------------------------------
             // RAISE THE "LOADED" EVENT:
             //--------------------------------------------------------
-#if PERFSTAT
-            var t11 = Performance.now();
-#endif
-
+            
             // Raise the "Loaded" event: (note: in XAML, the "loaded" event of the children is called before the "loaded" event of the parent)
             if (child is FrameworkElement fe)
             {
                 fe.RaiseLoadedEvent();
             }
-
-#if PERFSTAT
-            Performance.Counter("VisualTreeManager: Raise Loaded event", t11);
-#endif
         }
+
         public static bool IsElementInVisualTree(UIElement element) => element.IsConnectedToLiveTree && !element.IsUnloading;
 
-        internal static void RenderElementsAndRaiseChangedEventOnAllDependencyProperties(DependencyObject dependencyObject)
+        internal static void RenderElementsAndRaiseChangedEventOnAllDependencyProperties(UIElement uie)
         {
             //--------------------------------------------------------------
             // RAISE "PROPERTYCHANGED" FOR ALL THE PROPERTIES THAT HAVE 
@@ -486,112 +297,107 @@ if(nextSibling != undefined) {
             // no value set by the user are not concerned (their default 
             // state is rendered elsewhere).
 
-#if PERFSTAT
-            var t0 = Performance.now();
-#endif
-            // we copy the Dictionary so that the foreach doesn't break when 
-            // we modify a DependencyProperty inside the Changed of another 
-            // one (which causes it to be added to the Dictionary).
-            // we exclude properties where source is set to default because
-            // it means they have been set at some point, and unset afterward,
-            // so we should not call the PropertyChanged callback.
-            var list = dependencyObject.INTERNAL_PropertyStorageDictionary
-                .Where(s => s.Value.Entry.BaseValueSourceInternal > BaseValueSourceInternal.Default)
-                .ToList();
-#if PERFSTAT
-            Performance.Counter("VisualTreeManager: Copy list of properties", t0);
-#endif
-
-            foreach (KeyValuePair<DependencyProperty, INTERNAL_PropertyStorage> propertiesAndTheirStorage in list)
+            if (uie.EffectiveValuesCount > 0)
             {
-                // Read the value:
-                DependencyProperty property = propertiesAndTheirStorage.Key;
+                // we copy the Dictionary so that the foreach doesn't break when 
+                // we modify a DependencyProperty inside the Changed of another 
+                // one (which causes it to be added to the Dictionary).
+                // we exclude properties where source is set to default because
+                // it means they have been set at some point, and unset afterward,
+                // so we should not call the PropertyChanged callback.
 
-#if PERFSTAT
-                var t1 = Performance.now();
-#endif
-
-                PropertyMetadata propertyMetadata = property.GetMetadata(dependencyObject.DependencyObjectType);
-
-                if (propertyMetadata != null)
+                Storage[] storages = ArrayPool<Storage>.Shared.Rent(uie.EffectiveValuesCount);
+                int length = 0;
+                foreach (KeyValuePair<int, Storage> kvp in uie.EffectiveValues)
                 {
-                    INTERNAL_PropertyStorage storage = propertiesAndTheirStorage.Value;
-                    object value = null;
-                    bool valueWasRetrieved = false;
-
-                    //--------------------------------------------------
-                    // Call "Apply CSS", which uses "GetCSSEquivalent/s"
-                    //--------------------------------------------------
-
-                    if (propertyMetadata.GetCSSEquivalent != null || propertyMetadata.GetCSSEquivalents != null)
+                    if (kvp.Value.Entry.FullValueSource == (FullValueSource)BaseValueSourceInternal.Default)
                     {
-                        if (!valueWasRetrieved)
-                        {
-                            value = INTERNAL_PropertyStore.GetEffectiveValue(storage.Entry);
-                            valueWasRetrieved = true;
-                        }
-
-                        INTERNAL_PropertyStore.ApplyCssChanges(value, value, propertyMetadata, dependencyObject);
+                        continue;
                     }
 
-                    //--------------------------------------------------
-                    // Call "MethodToUpdateDom"
-                    //--------------------------------------------------
-                    if (propertyMetadata.MethodToUpdateDom != null)
+                    storages[length++] = kvp.Value;
+                }
+
+                Span<Storage> span = storages.AsSpan(0, length);
+                try
+                {
+                    foreach (Storage storage in span)
                     {
-                        if (!valueWasRetrieved)
+                        DependencyProperty dp = DependencyProperty.RegisteredPropertyList[storage.PropertyIndex];
+                        if (dp.GetMetadata(uie.DependencyObjectType) is not PropertyMetadata metadata)
                         {
-                            value = INTERNAL_PropertyStore.GetEffectiveValue(storage.Entry);
-                            valueWasRetrieved = true;
+                            continue;
+                        }
+                        
+                        object value = null;
+                        bool valueWasRetrieved = false;
+
+                        //--------------------------------------------------
+                        // Call "MethodToUpdateDom"
+                        //--------------------------------------------------
+                        if (metadata.MethodToUpdateDom != null)
+                        {
+                            if (!valueWasRetrieved)
+                            {
+                                value = DependencyObjectStore.GetEffectiveValue(storage.Entry, RequestFlags.FullyResolved);
+                                valueWasRetrieved = true;
+                            }
+
+                            // Call the "Method to update DOM"
+                            metadata.MethodToUpdateDom(uie, value);
                         }
 
-                        // Call the "Method to update DOM"
-                        propertyMetadata.MethodToUpdateDom(dependencyObject, value);
-                    }
-
-                    if (propertyMetadata.MethodToUpdateDom2 != null)
-                    {
-                        if (!valueWasRetrieved)
+                        if (metadata.MethodToUpdateDom2 != null)
                         {
-                            value = INTERNAL_PropertyStore.GetEffectiveValue(storage.Entry);
-                            valueWasRetrieved = true;
+                            if (!valueWasRetrieved)
+                            {
+                                value = DependencyObjectStore.GetEffectiveValue(storage.Entry, RequestFlags.FullyResolved);
+                                valueWasRetrieved = true;
+                            }
+
+                            // DependencyProperty.UnsetValue for the old value signify that
+                            // the old value should be ignored.
+                            metadata.MethodToUpdateDom2(
+                                uie,
+                                DependencyProperty.UnsetValue,
+                                value);
                         }
 
-                        // DependencyProperty.UnsetValue for the old value signify that
-                        // the old value should be ignored.
-                        propertyMetadata.MethodToUpdateDom2(
-                            dependencyObject,
-                            DependencyProperty.UnsetValue,
-                            value);
-                    }
+                        //--------------------------------------------------
+                        // Call PropertyChanged
+                        //--------------------------------------------------
 
-                    //--------------------------------------------------
-                    // Call PropertyChanged
-                    //--------------------------------------------------
-
-                    if (propertyMetadata.PropertyChangedCallback != null
-                        && propertyMetadata.CallPropertyChangedWhenLoadedIntoVisualTree != WhenToCallPropertyChangedEnum.Never)
-                    {
-                        if (!valueWasRetrieved)
+                        if (metadata.PropertyChangedCallback != null
+#pragma warning disable CS0618 // Type or member is obsolete
+                            && metadata.CallPropertyChangedWhenLoadedIntoVisualTree != WhenToCallPropertyChangedEnum.Never)
+#pragma warning restore CS0618 // Type or member is obsolete
                         {
-                            value = INTERNAL_PropertyStore.GetEffectiveValue(storage.Entry);
-                            valueWasRetrieved = true;
-                        }
+                            if (!valueWasRetrieved)
+                            {
+                                value = DependencyObjectStore.GetEffectiveValue(storage.Entry, RequestFlags.FullyResolved);
+                                valueWasRetrieved = true;
+                            }
 
-                        if (value?.Equals(propertyMetadata.DefaultValue) == false)
-                        {
-                            // Raise the "PropertyChanged" event
-                            propertyMetadata.PropertyChangedCallback(
-                                dependencyObject,
-                                new DependencyPropertyChangedEventArgs(value, value, property, propertyMetadata));
+                            if (value?.Equals(metadata.DefaultValue) == false)
+                            {
+                                // Raise the "PropertyChanged" event
+                                metadata.PropertyChangedCallback(
+                                uie,
+                                new DependencyPropertyChangedEventArgs(value, value, dp, metadata));
+                            }
                         }
                     }
                 }
+                finally
+                {
+                    ArrayPool<Storage>.Shared.Return(storages, false);
+                    span.Clear();
+                }
+            }
 
-
-#if PERFSTAT
-                Performance.Counter("VisualTreeManager: RaisePropertyChanged for property '" + property.Name + "'", t1);
-#endif
+            if (uie.IsHitTestable)
+            {
+                uie.SetPointerEvents(true);
             }
         }
 

@@ -49,17 +49,14 @@ namespace System.Windows.Controls.Primitives
             return Content;
         }
 
-        internal string INTERNAL_UniqueIndentifier { get; set; }
+        internal Popup ParentPopup { get; set; }
 
-        internal Popup INTERNAL_LinkedPopup { get; set; }
-
-        internal PopupRoot(string uniqueIdentifier, Window parentWindow, Popup popup)
+        internal PopupRoot(Window parentWindow, Popup popup)
         {
             BypassLayoutPolicies = true;
 
-            INTERNAL_UniqueIndentifier = uniqueIdentifier;
-            INTERNAL_ParentWindow = parentWindow;
-            INTERNAL_LinkedPopup = popup;
+            ParentWindow = parentWindow;
+            ParentPopup = popup;
         }
 
         /// <summary>
@@ -68,7 +65,7 @@ namespace System.Windows.Controls.Primitives
         public UIElement Content
         {
             get { return (UIElement)GetValue(ContentProperty); }
-            set { SetValue(ContentProperty, value); }
+            set { SetValueInternal(ContentProperty, value); }
         }
 
         /// <summary>
@@ -113,28 +110,28 @@ namespace System.Windows.Controls.Primitives
             HashSet<Popup> listOfPopupThatMustBeClosed = new HashSet<Popup>();
             List<PopupRoot> popupRootList = new List<PopupRoot>();
 
-            foreach (object obj in INTERNAL_PopupsManager.GetAllRootUIElements())
+            foreach (object obj in PopupsManager.GetAllRootUIElements())
             {
                 if (obj is PopupRoot)
                 {
                     PopupRoot root = (PopupRoot)obj;
                     popupRootList.Add(root);
 
-                    if (root.INTERNAL_LinkedPopup != null)
-                        listOfPopupThatMustBeClosed.Add(root.INTERNAL_LinkedPopup);
+                    if (root.ParentPopup != null)
+                        listOfPopupThatMustBeClosed.Add(root.ParentPopup);
                 }
             }
 
             // We determine which popup needs to stay open after this click
             foreach (PopupRoot popupRoot in popupRootList)
             {
-                if (popupRoot.INTERNAL_LinkedPopup != null)
+                if (popupRoot.ParentPopup != null)
                 {
                     // We must prevent all the parents of a popup to be closed when:
                     // - this popup is set to StayOpen
                     // - or the click happend in this popup
 
-                    Popup popup = popupRoot.INTERNAL_LinkedPopup;
+                    Popup popup = popupRoot.ParentPopup;
 
                     if (popup.StayOpen)
                     {
@@ -172,6 +169,13 @@ namespace System.Windows.Controls.Primitives
                 content.Arrange(new Rect(new Point(), content.DesiredSize));
                 content.UpdateLayout();
             }
+        }
+
+        internal void PutPopupInFront()
+        {
+            string parentDiv = OpenSilver.Interop.GetVariableStringForJS(ParentWindow.RootDomElement);
+            string popupDiv = OpenSilver.Interop.GetVariableStringForJS(OuterDiv);
+            OpenSilver.Interop.ExecuteJavaScriptVoidAsync($"{parentDiv}.appendChild({popupDiv})");
         }
     }
 }

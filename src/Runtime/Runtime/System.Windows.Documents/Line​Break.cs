@@ -11,14 +11,17 @@
 *  
 \*====================================================================================*/
 
-namespace System.Windows.Documents
+using System.Text;
+
+namespace System.Windows.Documents;
+
+/// <summary>
+/// Represents an inline element that causes a new line to begin in 
+/// content when rendered in a text container.
+/// </summary>
+public sealed class LineBreak : Inline
 {
-    /// <summary>
-    /// Represents an inline element that causes a new line to begin in 
-    /// content when rendered in a text container.
-    /// </summary>
-    public sealed class LineBreak : Inline
-    {
-        internal override string TagName => "br";
-    }
+    internal override string TagName => "br";
+
+    internal override void AppendHtml(StringBuilder builder) => builder.Append("<br />");
 }

@@ -11,6 +11,7 @@
 *  
 \*====================================================================================*/
 
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text;
 using System.Windows.Markup;
@@ -62,7 +63,7 @@ namespace System.Windows.Media
         public GeometryCollection Children
         {
             get => (GeometryCollection)GetValue(ChildrenProperty);
-            set => SetValue(ChildrenProperty, value);
+            set => SetValueInternal(ChildrenProperty, value);
         }
 
         private static void OnChildrenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -122,7 +123,7 @@ namespace System.Windows.Media
         public FillRule FillRule
         {
             get => (FillRule)GetValue(FillRuleProperty);
-            set => SetValue(FillRuleProperty, value);
+            set => SetValueInternal(FillRuleProperty, value);
         }
 
         internal override Rect BoundsInternal
@@ -131,8 +132,8 @@ namespace System.Windows.Media
             {
                 Rect boundsRect = Rect.Empty;
 
-                GeometryCollection children = (GeometryCollection)GetValue(ChildrenProperty);
-                if (children != null && children.Count > 0)
+                List<Geometry> children = Children.InternalItems;
+                if (children.Count > 0)
                 {
                     for (int i = 0; i < children.Count; i++)
                     {
@@ -148,7 +149,7 @@ namespace System.Windows.Media
         {
             var sb = new StringBuilder();
 
-            foreach (var child in Children)
+            foreach (var child in Children.InternalItems)
             {
                 var childData = child.ToPathData(formatProvider);
                 sb.Append(childData);

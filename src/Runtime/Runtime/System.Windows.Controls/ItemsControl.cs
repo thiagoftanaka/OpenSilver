@@ -15,7 +15,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Windows.Markup;
-using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -38,10 +37,6 @@ namespace System.Windows.Controls
         // that is added to the visual tree (such a datatemplate) or to 
         // the native DOM element in case of native combo box for example.
         private ItemContainerGenerator _itemContainerGenerator;
-
-        // ItemsPresenter retrieve from this control's Template
-        // in which items will be rendered.
-        internal ItemsPresenter _itemsPresenter;
 
         private ItemCollection _items;
 
@@ -96,12 +91,16 @@ namespace System.Windows.Controls
         {
             this._items = new ItemCollection(this);
 
+            // ItemInfos must get adjusted before the generator's change handler is called,
+            // so that any new ItemInfos arising from the generator don't get adjusted by mistake
+            this._items.CollectionChanged += new NotifyCollectionChangedEventHandler(this.OnItemCollectionChanged1);
+
             // the generator must attach its collection change handler before
             // the control itself, so that the generator is up-to-date by the
             // time the control tries to use it
             this._itemContainerGenerator = new ItemContainerGenerator(this);
 
-            this._items.CollectionChanged += this.OnItemCollectionChanged;
+            this._items.CollectionChanged += new NotifyCollectionChangedEventHandler(this.OnItemCollectionChanged2);
         }
 
         #endregion Public Properties
@@ -115,7 +114,7 @@ namespace System.Windows.Controls
         public ItemsPanelTemplate ItemsPanel
         {
             get { return (ItemsPanelTemplate)GetValue(ItemsPanelProperty); }
-            set { SetValue(ItemsPanelProperty, value); }
+            set { SetValueInternal(ItemsPanelProperty, value); }
         }
 
         /// <summary>
@@ -134,7 +133,7 @@ namespace System.Windows.Controls
             {
                 Template = new TemplateContent(
                     new XamlContext(),
-                    (owner, context) => new StackPanel { TemplatedParent = owner.AsDependencyObject() }                    
+                    (owner, context) => new StackPanel { TemplatedParent = (DependencyObject)owner }                    
                 )
             };
 
@@ -160,7 +159,7 @@ namespace System.Windows.Controls
         public IEnumerable ItemsSource
         {
             get { return (IEnumerable)GetValue(ItemsSourceProperty); }
-            set { SetValue(ItemsSourceProperty, value); }
+            set { SetValueInternal(ItemsSourceProperty, value); }
         }
 
         /// <summary>
@@ -199,7 +198,7 @@ namespace System.Windows.Controls
         public DataTemplate ItemTemplate
         {
             get { return (DataTemplate)GetValue(ItemTemplateProperty); }
-            set { SetValue(ItemTemplateProperty, value); }
+            set { SetValueInternal(ItemTemplateProperty, value); }
         }
 
         /// <summary>
@@ -231,7 +230,7 @@ namespace System.Windows.Controls
         public string DisplayMemberPath
         {
             get { return (string)GetValue(DisplayMemberPathProperty); }
-            set { SetValue(DisplayMemberPathProperty, value); }
+            set { SetValueInternal(DisplayMemberPathProperty, value); }
         }
 
         /// <summary>
@@ -259,7 +258,7 @@ namespace System.Windows.Controls
         public Style ItemContainerStyle
         {
             get { return (Style)GetValue(ItemContainerStyleProperty); }
-            set { SetValue(ItemContainerStyleProperty, value); }
+            set { SetValueInternal(ItemContainerStyleProperty, value); }
         }
 
         /// <summary>
@@ -379,10 +378,6 @@ namespace System.Windows.Controls
 
         #region Protected Methods
 
-        protected virtual void ManageCollectionChanged(NotifyCollectionChangedEventArgs e)
-        {
-        }
-
         protected virtual void UpdateItemsPanel(ItemsPanelTemplate newTemplate)
         {
             this.ItemContainerGenerator.OnPanelChanged();
@@ -390,12 +385,6 @@ namespace System.Windows.Controls
 
         protected virtual void OnItemsSourceChanged(IEnumerable oldValue, IEnumerable newValue)
         {
-            this.OnItemsSourceChanged_BeforeVisualUpdate(oldValue, newValue);
-        }
-
-        protected virtual void OnItemsSourceChanged_BeforeVisualUpdate(IEnumerable oldValue, IEnumerable newValue)
-        {
-            //we do nothing here
         }
 
         /// <summary>
@@ -413,29 +402,6 @@ namespace System.Windows.Controls
         /// </summary>
         internal virtual void AdjustItemInfoOverride(NotifyCollectionChangedEventArgs e)
         {
-        }
-
-        protected internal override void INTERNAL_OnAttachedToVisualTree()
-        {
-            // We update the ItemsPanel only if there is no ControlTemplate.
-            base.INTERNAL_OnAttachedToVisualTree();
-
-            if (!this.HasTemplate && this.TemplateChild == null)
-            {
-                // If we have no template we have to create an ItemPresenter
-                // manually and attach it to this control.
-                // This can happen for instance if a class derive from
-                // ItemsControl and specify a DefaultStyleKey and the associated
-                // default style does not contain a Setter for the Template
-                // property.                
-                // We need to set this ItemsPresenter so that if we move from 
-                // no template to a template, the "manually generated" template
-                // will be detached as expected.
-                // Note: this is a Silverlight specific behavior.
-                // In WPF the content of the ItemsControl would simply not be
-                // displayed in this scenario.
-                this.TemplateChild = new ItemsPresenter();
-            }
         }
 
         #endregion Protected Methods
@@ -462,18 +428,24 @@ namespace System.Windows.Controls
             }
         }
 
-        internal ItemsPresenter ItemsPresenter
-        {
-            get { return this._itemsPresenter; }
-            set { this._itemsPresenter = value; }
-        }
+        internal override FrameworkTemplate TemplateInternal => base.TemplateInternal ?? DefaultTemplate;
 
         internal Panel ItemsHost { get; set; }
 
         internal bool HasItems
         {
-            get { return this._items != null && this._items.CountInternal > 0; }
+            get { return this._items != null && this._items.Count > 0; }
         }
+
+        private static ControlTemplate DefaultTemplate { get; } =
+            new ControlTemplate
+            {
+                TargetType = typeof(ItemsControl),
+                Template = new TemplateContent(
+                    new XamlContext(),
+                    static (owner, context) => new ItemsPresenter { TemplatedParent = (DependencyObject)owner }
+                ),
+            };
 
         #endregion Internal Properties
 
@@ -702,7 +674,17 @@ namespace System.Windows.Controls
 
         private void ApplyItemContainerStyle(DependencyObject container, object item)
         {
-            FrameworkElement feContainer = container as FrameworkElement;
+            if (container is not FrameworkElement feContainer)
+            {
+                return;
+            }
+
+            // don't overwrite a locally-defined style
+            if (!feContainer.IsStyleSetFromGenerator &&
+                feContainer.ReadLocalValue(StyleProperty) != DependencyProperty.UnsetValue)
+            {
+                return;
+            }
 
             // Control's ItemContainerStyle has first stab
             Style style = ItemContainerStyle;
@@ -712,10 +694,19 @@ namespace System.Windows.Controls
             {
                 // verify style is appropriate before applying it
                 if (!style.TargetType.IsInstanceOfType(container))
-                    throw new InvalidOperationException(string.Format("A style intended for type '{0}' cannot be applied to type '{1}'.", style.TargetType.Name, container.GetType().Name));
+                {
+                    throw new InvalidOperationException(
+                        $"A style intended for type '{style.TargetType.Name}' cannot be applied to type '{container.GetType().Name}'.");
+                }
 
                 feContainer.Style = style;
-                //feContainer.IsStyleSetFromGenerator = true;
+                feContainer.IsStyleSetFromGenerator = true;
+            }
+            else
+            {
+                // if Style was formerly set from ItemContainerStyle, clear it
+                feContainer.IsStyleSetFromGenerator = false;
+                feContainer.ClearValue(StyleProperty);
             }
         }
 
@@ -727,12 +718,13 @@ namespace System.Windows.Controls
             return IsItemItsOwnContainerOverride(item);
         }
 
-        private void OnItemCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void OnItemCollectionChanged1(object sender, NotifyCollectionChangedEventArgs e)
         {
-            this.ManageCollectionChanged(e);
-
             this.AdjustItemInfoOverride(e);
+        }
 
+        private void OnItemCollectionChanged2(object sender, NotifyCollectionChangedEventArgs e)
+        {
             this.OnItemsChanged(e);
         }
 
@@ -852,7 +844,7 @@ namespace System.Windows.Controls
                     {
                         TextBlock textBlock = new TextBlock();
                         textBlock.SetBinding(TextBlock.TextProperty, new Binding(displayMemberPath ?? string.Empty));
-                        textBlock.TemplatedParent = control.AsDependencyObject();
+                        textBlock.TemplatedParent = (DependencyObject)control;
 
                         return textBlock;
                     }                    
@@ -921,57 +913,5 @@ namespace System.Windows.Controls
 
             e.Handled = true;
         }
-
-        #region Obsolete
-
-        /// <summary>
-        /// Derived classes can call this methed in their constructor if they 
-        /// want to disable the default rendering of the ItemsControl. It can 
-        /// be useful for example to replace the rendering with a custom 
-        /// HTML-based one.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        protected void DisableDefaultRendering()
-        {
-        }
-
-        /// <summary>
-        /// Returns the item itself if the item is already a container of the 
-        /// correct type, otherwise it returns null if no container is to be 
-        /// created, or it returns the new container otherwise.
-        /// </summary>
-        /// <param name="item">The item to generate the container with.</param>
-        /// <returns>
-        /// Returns the item itself if the item is already a container of the 
-        /// correct type, otherwise it returns null if no container is to be 
-        /// created, or it returns the new container otherwise.
-        /// </returns>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        protected virtual SelectorItem INTERNAL_GenerateContainer(object item)
-        {
-            return (SelectorItem)this.GetContainerFromItem(item);
-        }
-
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        protected virtual void OnChildItemRemoved(object item)
-        {
-            // This is intented to be overridden by the controls that have 
-            // a "SelectedItem" to make sure that the item is de-selected 
-            // in case that the element is removed.
-        }
-
-        /// <summary>
-        /// Create or identify the element used to display the given item.
-        /// </summary>
-        /// <returns>
-        /// The element that is used to display the given item.
-        /// </returns>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        protected virtual DependencyObject GetContainerFromItem(object item)
-        {
-            return null;
-        }
-
-        #endregion Obsolete
     }
 }

@@ -12,6 +12,7 @@
 \*====================================================================================*/
 
 using System.Collections.Specialized;
+using System.Linq;
 
 namespace System.Windows.Controls
 {
@@ -33,13 +34,8 @@ namespace System.Windows.Controls
 
         internal FrameworkElement LogicalParent { get; }
 
-        internal override void AddOverride(UIElement value)
+        internal sealed override void AddOverride(UIElement value)
         {
-            if (value == null)
-            {
-                throw new ArgumentNullException(nameof(value));
-            }
-
             SetLogicalParent(value);
             SetVisualParent(value);
             AddInternal(value);
@@ -47,16 +43,12 @@ namespace System.Windows.Controls
             VisualParent.InvalidateMeasure();
         }
 
-        internal override void ClearOverride()
+        internal sealed override void ClearOverride()
         {
-            int count = CountInternal;
+            int count = Count;
             if (count > 0)
             {
-                UIElement[] uies = new UIElement[count];
-                for (int i = 0; i < count; ++i)
-                {
-                    uies[i] = GetItemInternal(i);
-                }
+                UIElement[] uies = InternalItems.ToArray();
 
                 for (int i = 0; i < count; ++i)
                 {
@@ -70,28 +62,10 @@ namespace System.Windows.Controls
             }
         }
 
-        internal override UIElement GetItemOverride(int index)
+        internal sealed override UIElement GetItemOverride(int index) => GetItemInternal(index);
+
+        internal sealed override void InsertOverride(int index, UIElement value)
         {
-            if (index < 0 || index >= CountInternal)
-            {
-                throw new ArgumentOutOfRangeException(nameof(index));
-            }
-
-            return GetItemInternal(index);
-        }
-
-        internal override void InsertOverride(int index, UIElement value)
-        {
-            if (value == null)
-            {
-                throw new ArgumentNullException(nameof(value));
-            }
-
-            if (index < 0 || index > CountInternal)
-            {
-                throw new ArgumentOutOfRangeException(nameof(index));
-            }
-
             SetLogicalParent(value);
             SetVisualParent(value);
             InsertInternal(index, value);
@@ -99,13 +73,8 @@ namespace System.Windows.Controls
             VisualParent.InvalidateMeasure();
         }
 
-        internal override void RemoveAtOverride(int index)
+        internal sealed override void RemoveAtOverride(int index)
         {
-            if (index < 0 || index >= CountInternal)
-            {
-                throw new ArgumentOutOfRangeException(nameof(index));
-            }
-
             UIElement oldChild = GetItemInternal(index);
             ClearVisualParent(oldChild);
             ClearLogicalParent(oldChild);
@@ -114,18 +83,8 @@ namespace System.Windows.Controls
             VisualParent.InvalidateMeasure();
         }
 
-        internal override void SetItemOverride(int index, UIElement value)
+        internal sealed override void SetItemOverride(int index, UIElement value)
         {
-            if (value == null)
-            {
-                throw new ArgumentNullException(nameof(value));
-            }
-
-            if (index < 0 || index >= CountInternal)
-            {
-                throw new ArgumentOutOfRangeException(nameof(index));
-            }
-
             UIElement oldChild = GetItemInternal(index);
             if (oldChild != value)
             {
@@ -147,24 +106,12 @@ namespace System.Windows.Controls
             remove => base.CollectionChanged -= value;
         }
 
-        private void SetLogicalParent(UIElement child)
-        {
-            LogicalParent?.AddLogicalChild(child);
-        }
+        private void SetLogicalParent(UIElement child) => LogicalParent?.AddLogicalChild(child);
 
-        private void ClearLogicalParent(UIElement child)
-        {
-            LogicalParent?.RemoveLogicalChild(child);
-        }
+        private void ClearLogicalParent(UIElement child) => LogicalParent?.RemoveLogicalChild(child);
 
-        private void SetVisualParent(UIElement child)
-        {
-            VisualParent.AddVisualChild(child);
-        }
+        private void SetVisualParent(UIElement child) => VisualParent.AddVisualChild(child);
 
-        private void ClearVisualParent(UIElement child)
-        {
-            VisualParent.RemoveVisualChild(child);
-        }
+        private void ClearVisualParent(UIElement child) => VisualParent.RemoveVisualChild(child);
     }
 }

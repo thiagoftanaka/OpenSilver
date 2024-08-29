@@ -13,44 +13,107 @@
 
 using System.Windows.Markup;
 using CSHTML5.Internal;
-using OpenSilver.Internal.Documents;
+using OpenSilver.Internal;
 
-namespace System.Windows.Documents
+namespace System.Windows.Documents;
+
+/// <summary>
+/// Provides a block-level content element that is used to group content into a paragraph.
+/// </summary>
+[ContentProperty(nameof(Inlines))]
+public sealed class Paragraph : Block
 {
-    /// <summary>
-    /// Provides a block-level content element that is used to group content into a paragraph.
-    /// </summary>
-    [ContentProperty(nameof(Inlines))]
-    public sealed class Paragraph : Block
+    private InlineCollection _inlines;
+
+    static Paragraph()
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Paragraph"/> class.
-        /// </summary>
-        public Paragraph()
-        {
-            Inlines = new InlineCollection(this);
-        }
-
-        internal override string TagName => "section";
-
-        /// <summary>
-        /// Gets an <see cref="InlineCollection"/> containing the top-level <see cref="Inline"/>
-        /// elements that include the contents of the <see cref="Paragraph"/>.
-        /// </summary>
-        public InlineCollection Inlines { get; }
-
-        protected internal override void INTERNAL_OnAttachedToVisualTree()
-        {
-            base.INTERNAL_OnAttachedToVisualTree();
-            foreach (var inline in Inlines)
+        LineHeightProperty.OverrideMetadata(
+            typeof(Paragraph),
+            new FrameworkPropertyMetadata(
+                0.0,
+                FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure,
+                OnPropertyChanged)
             {
-                INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(inline, this);
-            }
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((Paragraph)d).SetLineHeight((double)newValue),
+            });
+
+        LineStackingStrategyProperty.OverrideMetadata(
+            typeof(Paragraph),
+            new FrameworkPropertyMetadata(
+                LineStackingStrategy.MaxHeight,
+                FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((Paragraph)d).SetLineStackingStrategy((LineStackingStrategy)newValue),
+            });
+
+        TextAlignmentProperty.OverrideMetadata(
+            typeof(Paragraph),
+            new FrameworkPropertyMetadata(
+                TextAlignment.Left,
+                FrameworkPropertyMetadataOptions.Inherits,
+                OnPropertyChanged)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((Paragraph)d).SetTextAlignment((TextAlignment)newValue),
+            });
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Paragraph"/> class.
+    /// </summary>
+    public Paragraph()
+    {
+        SetValueInternal(InlinesProperty, new InlineCollection(this));
+    }
+
+    internal override string TagName => "section";
+
+    private static readonly DependencyProperty InlinesProperty =
+        DependencyProperty.Register(
+            nameof(Inlines),
+            typeof(InlineCollection),
+            typeof(Paragraph),
+            new PropertyMetadata(null, OnInlinesChanged));
+
+    /// <summary>
+    /// Gets an <see cref="InlineCollection"/> containing the top-level <see cref="Inline"/>
+    /// elements that include the contents of the <see cref="Paragraph"/>.
+    /// </summary>
+    public InlineCollection Inlines => _inlines;
+
+    private static void OnInlinesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        ((Paragraph)d)._inlines = (InlineCollection)e.NewValue;
+    }
+
+    private static void OnPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        ((Block)d).TextContainer.OnTextContentChanged();
+    }
+
+    protected internal override void INTERNAL_OnAttachedToVisualTree()
+    {
+        base.INTERNAL_OnAttachedToVisualTree();
+        foreach (var inline in Inlines.InternalItems)
+        {
+            INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(inline, this);
+        }
+    }
+
+    internal sealed override bool IsModel
+    {
+        get => _inlines.IsModel;
+        set => _inlines.IsModel = value;
+    }
+
+    internal sealed override int VisualChildrenCount => Inlines.Count;
+
+    internal sealed override UIElement GetVisualChild(int index)
+    {
+        if (index >= VisualChildrenCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(index));
         }
 
-        internal override string GetContainerText()
-        {
-            return new TextContainerParagraph(this).Text;
-        }
+        return Inlines[index];
     }
 }

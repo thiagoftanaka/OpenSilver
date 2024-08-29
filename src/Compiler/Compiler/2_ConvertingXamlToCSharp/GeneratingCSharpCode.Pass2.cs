@@ -22,8 +22,6 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using OpenSilver.Internal;
-using OpenSilver.Compiler.Common;
-using ILogger = OpenSilver.Compiler.Common.ILogger;
 
 namespace OpenSilver.Compiler
 {
@@ -52,7 +50,7 @@ namespace OpenSilver.Compiler
                 public sealed override string ToString() => ToStringCore();
             }
 
-            private class RootScope : GeneratorScope
+            private sealed class RootScope : GeneratorScope
             {
                 private readonly Dictionary<string, string> _namescope;
 
@@ -97,7 +95,39 @@ namespace OpenSilver.Compiler
                 }
             }
 
-            private class FrameworkTemplateScope : GeneratorScope
+            private sealed class NewObjectScope : GeneratorScope
+            {
+                public NewObjectScope(string objectName, string objectType)
+                    : base(objectName)
+                {
+                    ObjectType = objectType;
+                    MethodName = $"New_{objectName}";
+                }
+
+                public string MethodName { get; }
+
+                public string ObjectType { get; }
+
+                public override void RegisterName(string name, string scopedElement)
+                {
+                    throw new NotSupportedException();
+                }
+
+                protected override string ToStringCore()
+                {
+                    StringBuilder builder = new StringBuilder();
+
+                    builder.AppendLine($"private static {ObjectType} {MethodName}({XamlContextClass} {XamlContext})")
+                        .AppendLine("{")
+                        .Append(StringBuilder.ToString());
+                    builder.AppendLine($"return {Root};")
+                        .AppendLine("}");
+
+                    return builder.ToString();
+                }
+            }
+
+            private sealed class FrameworkTemplateScope : GeneratorScope
             {
                 private readonly IMetadata _metadata;
 
@@ -137,7 +167,7 @@ namespace OpenSilver.Compiler
 
             private class GeneratorContext
             {
-                private readonly Stack<GeneratorScope> _scopes = new Stack<GeneratorScope>();
+                private readonly Stack<GeneratorScope> _scopes = new();
 
                 public readonly List<string> ResultingMethods = new List<string>();
                 public readonly List<string> ResultingFieldsForNamedElements = new List<string>();
@@ -167,8 +197,6 @@ namespace OpenSilver.Compiler
                 public string CurrentXamlContext => CurrentScope.XamlContext;
             }
 
-            private ConvertingStringToValue ConvertingStringToValue = new ConvertingStringToValueCS();
-
             private const string TemplateOwnerValuePlaceHolder = "TemplateOwnerValuePlaceHolder";
 
             private readonly XamlReader _reader;
@@ -179,8 +207,6 @@ namespace OpenSilver.Compiler
             private readonly string _assemblyNameWithoutExtension;
             private readonly AssembliesInspector _reflectionOnSeparateAppDomain;
             private readonly string _codeToPutInTheInitializeComponentOfTheApplicationClass;
-            private readonly ILogger _logger;
-            private SystemTypesHelperCS _systemTypesHelper = new SystemTypesHelperCS();
 
             public GeneratorPass2(XDocument doc,
                 string sourceFile,
@@ -188,8 +214,7 @@ namespace OpenSilver.Compiler
                 string assemblyNameWithoutExtension,
                 AssembliesInspector reflectionOnSeparateAppDomain,
                 ConversionSettings settings,
-                string codeToPutInTheInitializeComponentOfTheApplicationClass,
-                ILogger logger)
+                string codeToPutInTheInitializeComponentOfTheApplicationClass)
             {
                 _reader = new XamlReader(doc);
                 _settings = settings;
@@ -198,7 +223,6 @@ namespace OpenSilver.Compiler
                 _assemblyNameWithoutExtension = assemblyNameWithoutExtension;
                 _reflectionOnSeparateAppDomain = reflectionOnSeparateAppDomain;
                 _codeToPutInTheInitializeComponentOfTheApplicationClass = codeToPutInTheInitializeComponentOfTheApplicationClass;
-                _logger = logger;
             }
 
             public string Generate() => GenerateImpl(new GeneratorContext());
@@ -278,8 +302,7 @@ namespace OpenSilver.Compiler
                                                                parameters.ResultingFieldsForNamedElements,
                                                                className,
                                                                namespaceStringIfAny,
-                                                               baseType,
-                                                               addApplicationEntryPoint: false);
+                                                               baseType);
 
                     string componentTypeFullName = GetFullTypeName(namespaceStringIfAny, className);
 
@@ -333,7 +356,7 @@ namespace OpenSilver.Compiler
                     out string assemblyNameIfAny);
 
                 bool isRootElement = IsElementTheRootElement(element);
-                bool isKnownSystemType = _systemTypesHelper.IsSupportedSystemType(
+                bool isKnownSystemType = _settings.SystemTypes.IsSupportedSystemType(
                     elementTypeInCSharp.Substring("global::".Length), assemblyNameIfAny
                 );
                 bool isInitializeTypeFromString =
@@ -344,10 +367,15 @@ namespace OpenSilver.Compiler
                 // (unless this is the root element)
                 string elementUniqueNameOrThisKeyword = GeneratingCode.GetUniqueName(element);
 
-                bool flag = false;
-                if (!isRootElement)
+                bool isInNewScope = false;
+                GeneratorScope rootScope = parameters.CurrentScope;
+
+                if (isRootElement)
                 {
-                    flag = true;
+                    parameters.StringBuilder.AppendLine($"_ = {RuntimeHelperClass}.XamlContext_WriteStartObject({parameters.CurrentXamlContext}, {elementUniqueNameOrThisKeyword});");
+                }
+                else
+                {
                     if (isKnownSystemType)
                     {
                         //------------------------------------------------
@@ -362,7 +390,7 @@ namespace OpenSilver.Compiler
                         {
                             // If the direct content is not specified, we use the type's
                             // default value (ex: <sys:String></sys:String>)
-                            directContent = _systemTypesHelper.GetDefaultValue(namespaceName, localTypeName, assemblyNameIfAny);
+                            directContent = _settings.SystemTypes.GetDefaultValue(namespaceName, localTypeName, assemblyNameIfAny);
                         }
 
                         parameters.StringBuilder.AppendLine(
@@ -370,7 +398,7 @@ namespace OpenSilver.Compiler
                                 "{1} {0} = {3}.XamlContext_WriteStartObject({4}, {2});",
                                 elementUniqueNameOrThisKeyword,
                                 elementTypeInCSharp,
-                                _systemTypesHelper.ConvertFromInvariantString(directContent, elementTypeInCSharp.Substring("global::".Length)),
+                                _settings.SystemTypes.ConvertFromInvariantString(directContent, elementTypeInCSharp.Substring("global::".Length)),
                                 RuntimeHelperClass,
                                 parameters.CurrentXamlContext
                             )
@@ -384,13 +412,12 @@ namespace OpenSilver.Compiler
 
                         string stringValue = element.Attribute(InsertingImplicitNodes.InitializedFromStringAttribute).Value;
 
-                        bool isKnownCoreType = _settings.CoreTypesConverter.IsSupportedCoreType(
+                        bool isKnownCoreType = _settings.CoreTypes.IsSupportedCoreType(
                             elementTypeInCSharp.Substring("global::".Length), assemblyNameIfAny
                         );
 
                         string preparedValue = ConvertFromInvariantString(
-                            stringValue, elementTypeInCSharp, isKnownCoreType, isKnownSystemType
-                        );
+                            stringValue, elementTypeInCSharp, isKnownCoreType, isKnownSystemType);
 
                         parameters.StringBuilder.AppendLine(
                             string.Format("var {0} = {2}.XamlContext_WriteStartObject({3}, {1});", 
@@ -403,14 +430,17 @@ namespace OpenSilver.Compiler
                     }
                     else
                     {
-                        //------------------------------------------------
-                        // Add the type constructor:
-                        //------------------------------------------------
-                        parameters.StringBuilder.AppendLine(string.Format("var {0} = {2}.XamlContext_WriteStartObject({3}, new {1}());", 
-                            elementUniqueNameOrThisKeyword, 
-                            elementTypeInCSharp,
-                            RuntimeHelperClass,
-                            parameters.CurrentXamlContext));
+                        isInNewScope = true;
+
+                        var objectScope = new NewObjectScope(elementUniqueNameOrThisKeyword, elementTypeInCSharp);
+
+                        parameters.StringBuilder.AppendLine(
+                            $"var {elementUniqueNameOrThisKeyword} = {objectScope.MethodName}({parameters.CurrentXamlContext});");
+
+                        parameters.PushScope(objectScope);
+
+                        parameters.StringBuilder.AppendLine(
+                            $"var {elementUniqueNameOrThisKeyword} = {RuntimeHelperClass}.XamlContext_WriteStartObject({parameters.CurrentXamlContext}, new {elementTypeInCSharp}());");
 
                         if (IsResourceDictionaryCreatedFromSource(element))
                         {
@@ -428,24 +458,26 @@ namespace OpenSilver.Compiler
                         }
                     }
                 }
-                
-                if (!flag)
-                {
-                    parameters.StringBuilder.AppendLine($"_ = {RuntimeHelperClass}.XamlContext_WriteStartObject({parameters.CurrentXamlContext}, {elementUniqueNameOrThisKeyword});");
-                }
 
                 // Set templated parent if any
-                if (parameters.CurrentScope is FrameworkTemplateScope scope)
+                if (rootScope is FrameworkTemplateScope templateScope)
                 {
                     if (_reflectionOnSeparateAppDomain.IsAssignableFrom(_settings.Metadata.SystemWindowsNS, "IFrameworkElement", element.Name.NamespaceName, element.Name.LocalName))
                     {
-                        parameters.StringBuilder.AppendLine($"{RuntimeHelperClass}.SetTemplatedParent({elementUniqueNameOrThisKeyword}, {scope.TemplateOwner});");
+                        templateScope.StringBuilder.AppendLine($"{RuntimeHelperClass}.SetTemplatedParent({elementUniqueNameOrThisKeyword}, {templateScope.TemplateOwner});");
                     }
                 }
 
                 if (_reflectionOnSeparateAppDomain.IsAssignableFrom(_settings.Metadata.SystemWindowsMediaAnimationNS, "Timeline", element.Name.NamespaceName, element.Name.LocalName))
                 {
                     parameters.StringBuilder.AppendLine($"{RuntimeHelperClass}.XamlContext_SetAnimationContext({parameters.CurrentXamlContext}, {elementUniqueNameOrThisKeyword});");
+                }
+
+                if (_reflectionOnSeparateAppDomain.IsAssignableFrom(_settings.Metadata.SystemWindowsNS, "IUIElement", element.Name.NamespaceName, element.Name.LocalName))
+                {
+                    string xamlPath = element.Attribute(GeneratingPathInXaml.PathInXamlAttribute)?.Value ?? string.Empty;
+                    parameters.StringBuilder.AppendLine($"{XamlDesignerBridgeClass}.SetPathInXaml({elementUniqueNameOrThisKeyword}, \"{xamlPath}\");");
+                    parameters.StringBuilder.AppendLine($"{XamlDesignerBridgeClass}.SetFilePath({elementUniqueNameOrThisKeyword}, @\"{_sourceFile}\");");
                 }
 
                 // Add the attributes:
@@ -455,10 +487,10 @@ namespace OpenSilver.Compiler
                     // ATTRIBUTE
                     //-------------
 
-                    string attributeValue = attribute.Value;
+                    string attributeValue = GetAttributeValue(attribute);
                     string attributeLocalName = attribute.Name.LocalName;
 
-                    // Skip the attributes "GeneratingUniqueNames.UniqueNameAttribute" and "InitializedFromStringAttribute":
+                    // Skip the utility attributes:
                     if (!IsReservedAttribute(attributeLocalName)
                         && !attribute.IsNamespaceDeclaration)
                     {
@@ -510,7 +542,7 @@ namespace OpenSilver.Compiler
                                     }
                                 }
 
-                                parameters.CurrentScope.RegisterName(name, elementUniqueNameOrThisKeyword);
+                                rootScope.RegisterName(name, elementUniqueNameOrThisKeyword);
                                 //todo: throw an exception when both "x:Name" and "Name" are specified in the XAML.
 
                             }
@@ -607,7 +639,7 @@ namespace OpenSilver.Compiler
                                                     parameters.StringBuilder.AppendLine(
                                                         string.Format("{0}.XamlPath = {1};",
                                                             elementUniqueNameOrThisKeyword,
-                                                            _systemTypesHelper.ConvertFromInvariantString(resolvedPath, "System.String")
+                                                            _settings.SystemTypes.ConvertFromInvariantString(resolvedPath, "System.String")
                                                         )
                                                     );
                                                 }
@@ -631,7 +663,7 @@ namespace OpenSilver.Compiler
                                                 parameters.StringBuilder.AppendLine(
                                                     string.Format("{0}.DependencyPropertyName = {1};",
                                                         elementUniqueNameOrThisKeyword,
-                                                        _systemTypesHelper.ConvertFromInvariantString(propertyName, "System.String")));
+                                                        _settings.SystemTypes.ConvertFromInvariantString(propertyName, "System.String")));
                                                 if (typeName != null)
                                                 {
                                                     parameters.StringBuilder.AppendLine(
@@ -703,6 +735,11 @@ namespace OpenSilver.Compiler
                         }
                     }
                 }
+
+                if (isInNewScope)
+                {
+                    parameters.PopScope();
+                }
             }
 
             private void OnWriteEndObject(GeneratorContext parameters)
@@ -719,8 +756,7 @@ namespace OpenSilver.Compiler
                 string typeName = member.Name.LocalName.Substring(0, idx);
                 string propertyName = member.Name.LocalName.Substring(idx + 1);
 
-                if (propertyName == "ContentPropertyUsefulOnlyDuringTheCompilation" &&
-                    _reflectionOnSeparateAppDomain.IsAssignableFrom(_settings.Metadata.SystemWindowsNS, "FrameworkTemplate", member.Name.NamespaceName, typeName))
+                if (_reflectionOnSeparateAppDomain.IsFrameworkTemplateTemplateProperty(propertyName, member.Name.NamespaceName, typeName))
                 {
                     if (member.Elements().Count() > 1)
                     {
@@ -754,12 +790,9 @@ namespace OpenSilver.Compiler
                 string propertyName = element.Name.LocalName.Split('.')[1];
                 XName elementName = element.Name.Namespace + typeName; // eg. if the element is <VisualStateManager.VisualStateGroups>, this will be "DefaultNamespace+VisualStateManager"
 
-                bool isFrameworkTemplateContentProperty = propertyName == "ContentPropertyUsefulOnlyDuringTheCompilation" &&
-                   _reflectionOnSeparateAppDomain.IsAssignableFrom(_settings.Metadata.SystemWindowsNS, "FrameworkTemplate", element.Name.NamespaceName, typeName);
-
-                if (isFrameworkTemplateContentProperty)
+                if (_reflectionOnSeparateAppDomain.IsFrameworkTemplateTemplateProperty(propertyName, element.Name.NamespaceName, typeName))
                 {
-                    // TODO move call to FrameworkTemplate.SetMethodToInstantiateFrameworkTemplate(...) here
+                    // TODO move call to RuntimeHelpers.SetTemplateContent(...) here
                     parameters.PopScope();
                 }
                 else
@@ -772,7 +805,7 @@ namespace OpenSilver.Compiler
                     if (IsPropertyOrFieldACollection(element, isAttachedProperty)
                         && (element.Elements().Count() != 1
                         || (!IsTypeAssignableFrom(element.Elements().First().Name, element.Name, isAttached: isAttachedProperty)) // To handle the case where the user explicitly declares the collection element. Example: <Application.Resources><ResourceDictionary><Child x:Key="test"/></ResourceDictionary></Application.Resources> (rather than <Application.Resources><Child x:Key="test"/></Application.Resources>), in which case we need to do "=" instead pf "Add()"
-                        && !GeneratingCode.IsBinding(element.Elements().First())
+                        && !GeneratingCode.IsBinding(element.Elements().First(), _settings)
                         && element.Elements().First().Name.LocalName != "StaticResourceExtension"
                         && element.Elements().First().Name.LocalName != "StaticResource"
                         && element.Elements().First().Name.LocalName != "TemplateBinding"
@@ -879,7 +912,6 @@ namespace OpenSilver.Compiler
                                         out propertyLocalTypeName,
                                         out _,
                                         out _,
-                                        out _,
                                         assemblyNameIfAny,
                                         isAttached: true
                                     );
@@ -905,7 +937,6 @@ namespace OpenSilver.Compiler
                                         parent.Name.LocalName,
                                         out propertyNamespaceName,
                                         out propertyLocalTypeName,
-                                        out _,
                                         out _,
                                         out _,
                                         assemblyNameIfAny,
@@ -941,8 +972,6 @@ namespace OpenSilver.Compiler
                                 string propertyDeclaringTypeName;
                                 string propertyTypeNamespace;
                                 string propertyTypeName;
-                                bool isTypeString;
-                                bool isTypeEnum;
                                 if (!isAttachedProperty)
                                 {
                                     _reflectionOnSeparateAppDomain.GetPropertyOrFieldInfo(propertyName,
@@ -951,8 +980,6 @@ namespace OpenSilver.Compiler
                                                                                          out propertyDeclaringTypeName,
                                                                                          out propertyTypeNamespace,
                                                                                          out propertyTypeName,
-                                                                                         out isTypeString,
-                                                                                         out isTypeEnum,
                                                                                          assemblyNameIfAny,
                                                                                          false);
                                 }
@@ -964,8 +991,6 @@ namespace OpenSilver.Compiler
                                         out propertyDeclaringTypeName,
                                         out propertyTypeNamespace,
                                         out propertyTypeName,
-                                        out isTypeString,
-                                        out isTypeEnum,
                                         assemblyNameIfAny);
                                 }
                                 string propertyTypeFullName = (!string.IsNullOrEmpty(propertyTypeNamespace) ? propertyTypeNamespace + "." : "") + propertyTypeName;
@@ -1048,9 +1073,8 @@ namespace OpenSilver.Compiler
                                         splittedLocalName[0],
                                         out string propertyNamespaceName,
                                         out string propertyLocalTypeName,
-                                        out string propertyAssemblyName,
-                                        out bool isTypeString,
-                                        out bool isTypeEnum,
+                                        out _,
+                                        out _,
                                         assemblyNameIfAny,
                                         true
                                     );
@@ -1088,10 +1112,8 @@ namespace OpenSilver.Compiler
                                         parent.Name.Namespace.NamespaceName,
                                         parent.Name.LocalName,
                                         out string propertyDeclaringTypeName,
-                                        out string propertyTypeNamespace,
-                                        out string propertyTypeName,
-                                        out bool isTypeString,
-                                        out bool isTypeEnum,
+                                        out _,
+                                        out _,
                                         assemblyNameIfAny,
                                         false
                                     );
@@ -1102,47 +1124,29 @@ namespace OpenSilver.Compiler
                                         parent.Name.LocalName,
                                         out string propertyNamespaceName,
                                         out string propertyLocalTypeName,
-                                        out string propertyAssemblyName,
-                                        out isTypeString,
-                                        out isTypeEnum,
+                                        out _,
+                                        out _,
                                         assemblyNameIfAny
                                     );
 
-
-                                    string customMarkupValueName = "customMarkupValue_" + Guid.NewGuid().ToString("N");
-
-                                    bool isDependencyProperty = _reflectionOnSeparateAppDomain.GetField(
+                                    string dpName = _reflectionOnSeparateAppDomain.GetField(
                                         propertyName + "Property",
                                         isAttachedProperty ? elementName.Namespace.NamespaceName : parent.Name.Namespace.NamespaceName,
                                         isAttachedProperty ? elementName.LocalName : parent.Name.LocalName,
-                                        _assemblyNameWithoutExtension) != null;
+                                        _assemblyNameWithoutExtension);
 
-                                    if (isDependencyProperty)
+                                    if (dpName != null)
                                     {
-                                        string bindingBaseTypeString = $"global::{_settings.Metadata.SystemWindowsDataNS}.Binding";
-
-                                        //todo: make this more readable by cutting it into parts ?
-                                        parameters.StringBuilder.AppendLine(
-                                            string.Format(@"object {0} = (({10}){1}).ProvideValue(new global::System.ServiceProvider({2}, {3}));
-if ({0} is {4})
+                                        string markupValue = GeneratingUniqueNames.GenerateUniqueNameFromString("tmp");
+                                        string propertyTypeFullName = string.IsNullOrEmpty(propertyNamespaceName) ?
+                                            $"global::{propertyLocalTypeName}" :
+                                            $"global::{propertyNamespaceName}.{propertyLocalTypeName}";
+                                        
+                                        parameters.StringBuilder.AppendLine($@"object {markupValue};
+if (!{RuntimeHelperClass}.TrySetMarkupExtension({parentElementUniqueNameOrThisKeyword}, {dpName}, {childUniqueName}, out {markupValue}))
 {{
-    global::{9}.BindingOperations.SetBinding({7}, {8}, ({4}){0});
-}}
-else
-{{
-    {2}.{5} = ({6}){0};
-}}",
-                                                          customMarkupValueName, //0
-                                                          childUniqueName,//1
-                                                          GeneratingCode.GetUniqueName(parent),//2
-                                                          propertyKeyString,//3
-                                                          bindingBaseTypeString,//4
-                                                          propertyName,//5
-                                                          "global::" + (!string.IsNullOrEmpty(propertyNamespaceName) ? propertyNamespaceName + "." : "") + propertyLocalTypeName,//6
-                                                          parentElementUniqueNameOrThisKeyword,//7
-                                                          propertyDeclaringTypeName + "." + propertyName + "Property", //8
-                                                          _settings.Metadata.SystemWindowsDataNS, //9
-                                                          IMarkupExtensionClass));
+    {parentElementUniqueNameOrThisKeyword}.{propertyName} = ({propertyTypeFullName}){markupValue};
+}}");
                                     }
                                     else
                                     {
@@ -1227,9 +1231,7 @@ else
                         string typeName = currentElement.Parent.Name.LocalName.Substring(0, index);
                         string propertyName = currentElement.Parent.Name.LocalName.Substring(index + 1);
 
-                        if (propertyName == "ContentPropertyUsefulOnlyDuringTheCompilation" &&
-                            _reflectionOnSeparateAppDomain.IsAssignableFrom(_settings.Metadata.SystemWindowsNS, "FrameworkTemplate",
-                            namespaceName, typeName))
+                        if (_reflectionOnSeparateAppDomain.IsFrameworkTemplateTemplateProperty(propertyName, namespaceName, typeName))
                         {
                             return currentElement;
                         }
@@ -1410,12 +1412,12 @@ else
                 {
                     return element.Attribute(GeneratingCode.xNamespace + "Name").Value;
                 }
-                else if (GeneratingCode.IsStyle(element))
+                else if (GeneratingCode.IsStyle(element, _settings))
                 {
                     isImplicitStyle = true;
                     return GetCSharpFullTypeNameFromTargetTypeString(element);
                 }
-                else if (GeneratingCode.IsDataTemplate(element) && element.Attribute("DataType") != null)
+                else if (GeneratingCode.IsDataTemplate(element, _settings) && element.Attribute("DataType") != null)
                 {
                     isImplicitDataTemplate = true;
                     return GetCSharpFullTypeNameFromTargetTypeString(element, isDataType: true);
@@ -1440,7 +1442,7 @@ else
                     out string assemblyNameIfAny);
 
                 string valueNamespaceName, valueLocalTypeName, valueAssemblyName;
-                bool isValueString, isValueEnum;
+                bool isValueEnum;
 
                 if (isAttachedProperty)
                 {
@@ -1451,7 +1453,6 @@ else
                         out valueNamespaceName,
                         out valueLocalTypeName,
                         out valueAssemblyName,
-                        out isValueString,
                         out isValueEnum,
                         assemblyNameIfAny);
                 }
@@ -1464,7 +1465,6 @@ else
                         out valueNamespaceName,
                         out valueLocalTypeName,
                         out valueAssemblyName,
-                        out isValueString,
                         out isValueEnum,
                         assemblyNameIfAny);
                 }
@@ -1477,14 +1477,7 @@ else
                 );
 
                 // Generate the code or instantiating the attribute
-                if (isValueString)
-                {
-                    //----------------------------
-                    // PROPERTY IS OF TYPE STRING
-                    //----------------------------
-                    return ConvertingStringToValue.PrepareStringForString(value);
-                }
-                else if (isValueEnum)
+                if (isValueEnum)
                 {
                     //----------------------------
                     // PROPERTY IS AN ENUM
@@ -1540,29 +1533,24 @@ else
                         propertyName,
                         xName);
 
-                    bool isKnownSystemType = _systemTypesHelper.IsSupportedSystemType(
-                        valueTypeFullName.Substring("global::".Length), valueAssemblyName
-                    );
+                    bool isKnownSystemType = _settings.SystemTypes.IsSupportedSystemType(
+                        valueTypeFullName.Substring("global::".Length), valueAssemblyName);
 
-                    bool isKnownCoreType = _settings.CoreTypesConverter.IsSupportedCoreType(
-                        valueTypeFullName.Substring("global::".Length), valueAssemblyName
-                    );
-
-                    string declaringTypeName = _reflectionOnSeparateAppDomain.GetCSharpEquivalentOfXamlTypeAsString(
-                        namespaceName, localTypeName, assemblyNameIfAny
-                    );
+                    bool isKnownCoreType = _settings.CoreTypes.IsSupportedCoreType(
+                        valueTypeFullName.Substring("global::".Length), valueAssemblyName);
 
                     if (isAttachedProperty)
                     {
                         return ConvertFromInvariantString(
-                            value, valueTypeFullName, isKnownCoreType, isKnownSystemType
-                        );
+                            value, valueTypeFullName, isKnownCoreType, isKnownSystemType);
                     }
                     else
                     {
+                        string declaringTypeName = _reflectionOnSeparateAppDomain.GetCSharpEquivalentOfXamlTypeAsString(
+                            namespaceName, localTypeName, assemblyNameIfAny);
+
                         return ConvertFromInvariantString(
-                            declaringTypeName, propertyName, value, valueTypeFullName, isKnownCoreType, isKnownSystemType
-                        );
+                            declaringTypeName, propertyName, value, valueTypeFullName, isKnownCoreType, isKnownSystemType);
                     }
                 }
             }
@@ -1774,23 +1762,43 @@ else
 
             private string ConvertFromInvariantString(string value, string type, bool isKnownCoreType, bool isKnownSystemType)
             {
-                string preparedValue;
+                if (_settings.SystemTypes.IsNullableType(type.Substring("global::".Length), null, out string underlyingType))
+                {
+                    string typeName = underlyingType.Substring("global::".Length);
 
-                if (isKnownCoreType)
-                {
-                    preparedValue = _settings.CoreTypesConverter.ConvertFromInvariantString(
-                        value, type.Substring("global::".Length)
-                    );
-                }
-                else if (isKnownSystemType)
-                {
-                    preparedValue = _systemTypesHelper.ConvertFromInvariantString(
-                        value, type.Substring("global::".Length)
-                    );
+                    return ConvertFromInvariantStringHelper(value,
+                        underlyingType,
+                        _settings.CoreTypes.IsSupportedCoreType(typeName, null),
+                        _settings.SystemTypes.IsSupportedSystemType(typeName, null),
+                        true);
                 }
                 else
                 {
-                    preparedValue = ConvertingStringToValue.ConvertFromInvariantString(type, value);
+                    return ConvertFromInvariantStringHelper(value, type, isKnownCoreType, isKnownSystemType, false);
+                }
+            }
+
+            private string ConvertFromInvariantStringHelper(string value, string type, bool isKnownCoreType, bool isKnownSystemType, bool isNullable)
+            {
+                string preparedValue;
+
+                if (isNullable && string.IsNullOrEmpty(value))
+                {
+                    preparedValue = "null";
+                }
+                else if (isKnownCoreType)
+                {
+                    preparedValue = _settings.CoreTypes.ConvertFromInvariantString(
+                        value, type.Substring("global::".Length));
+                }
+                else if (isKnownSystemType)
+                {
+                    preparedValue = _settings.SystemTypes.ConvertFromInvariantString(
+                        value, type.Substring("global::".Length));
+                }
+                else
+                {
+                    preparedValue = CoreTypesHelper.ConvertFromInvariantStringHelper(value, type);
                 }
 
                 return preparedValue;
@@ -1811,8 +1819,7 @@ else
                     propertyDeclaringType,
                     EscapeString(propertyName),
                     EscapeString(value),
-                    ConvertFromInvariantString(value, propertyType, isKnownCoreType, isKnownSystemType)
-                );
+                    ConvertFromInvariantString(value, propertyType, isKnownCoreType, isKnownSystemType));
             }
 
             private bool IsEventTriggerRoutedEventProperty(string typeFullName, string propertyName)
@@ -1820,18 +1827,26 @@ else
 
             private static bool IsReservedAttribute(string attributeName)
             {
-                if (attributeName == GeneratingUniqueNames.UniqueNameAttribute ||
-                    attributeName == InsertingImplicitNodes.InitializedFromStringAttribute)
-                {
-                    return true;
-                }
-
-                return false;
+                return attributeName == GeneratingUniqueNames.UniqueNameAttribute ||
+                       attributeName == InsertingImplicitNodes.InitializedFromStringAttribute ||
+                       attributeName == GeneratingPathInXaml.PathInXamlAttribute;
             }
 
             private static string EscapeString(string stringValue)
             {
                 return string.Concat("@\"", stringValue.Replace("\"", "\"\""), "\"");
+            }
+
+            private static string GetAttributeValue(XAttribute attribute)
+            {
+                string value = attribute.Value;
+
+                if (value is not null && value.StartsWith("{}"))
+                {
+                    return value.Substring(2);
+                }
+
+                return value;
             }
 
             private bool IsPropertyAttached(XElement propertyElement)

@@ -15,9 +15,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using CSHTML5;
-using CSHTML5.Internal;
-using OpenSilver.Internal;
 
 namespace OpenSilver
 {
@@ -28,13 +25,12 @@ namespace OpenSilver
 
         public BulkExecuteJavascriptAsync()
         {
-            _javascript = StringBuilderFactory.Get();
+            _javascript = new StringBuilder();
         }
 
         public IDisposable AddJavascriptAsync(string javascript, params object[] variables)
         {
-            javascript = INTERNAL_InteropImplementation.ReplaceJSArgs(javascript, variables);
-            return AddJavascriptAsync(javascript);
+            return AddDisposable(Interop.ExecuteJavaScriptAsync(javascript, variables));
         }
 
         public IDisposable AddJavascriptAsync(string javascript)
@@ -50,7 +46,7 @@ namespace OpenSilver
 
         public void AddJavascript(string javascript, params object[] variables)
         {
-            javascript = INTERNAL_InteropImplementation.ReplaceJSArgs(javascript, variables);
+            javascript = Interop.FormatArguments(javascript, variables);
             AddJavascript(javascript);
         }
 
@@ -70,17 +66,15 @@ namespace OpenSilver
                 {
                     // very important: the first functions need to be executed before executing the remaining javascript,
                     // since the remaining javascript can rely on the results from here
-                    INTERNAL_ExecuteJavaScript.JavaScriptRuntime.Flush();
+                    Interop.JavaScriptRuntime.Flush();
 
-                    await INTERNAL_ExecuteJavaScript.ExecuteJavaScriptAsync(_javascript.ToString(), 0, false);
+                    await Interop.ExecuteJavaScriptAsync(_javascript.ToString(), 0, false);
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine($"error executing Javascript: {e}");
                 }
             }
-
-            StringBuilderFactory.Return(_javascript);
 
             // Console.WriteLine($"disposed of JS Obj Refs: {string.Join(",", _disposables.OfType<INTERNAL_JSObjectReference>().Select(js => js.ReferenceId))}");
             foreach (var d in _disposables)

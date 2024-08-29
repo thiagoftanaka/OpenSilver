@@ -32,7 +32,7 @@ namespace System.Windows.Media
 
         internal override void ClearOverride()
         {
-            foreach (Transform t in this)
+            foreach (Transform t in InternalItems)
             {
                 UnsubscribeToChangedEvent(t);
             }
@@ -48,7 +48,7 @@ namespace System.Windows.Media
 
         internal override void RemoveAtOverride(int index)
         {
-            UnsubscribeToChangedEvent(this[index]);
+            UnsubscribeToChangedEvent(GetItemInternal(index));
             RemoveAtDependencyObjectInternal(index);
         }
 
@@ -56,7 +56,7 @@ namespace System.Windows.Media
 
         internal override void SetItemOverride(int index, Transform value)
         {
-            UnsubscribeToChangedEvent(this[index]);
+            UnsubscribeToChangedEvent(GetItemInternal(index));
             SubscribeToChangedEvent(value);
             SetItemDependencyObjectInternal(index, value);
         }
@@ -67,20 +67,20 @@ namespace System.Windows.Media
         private void SubscribeToChangedEvent(Transform transform)
         {
             Debug.Assert(transform is not null);
-            transform.Changed += new EventHandler(TransformChanged);
+            transform.Changed += TransformChanged;
         }
 
         private void UnsubscribeToChangedEvent(Transform transform)
         {
             Debug.Assert(transform is not null);
-            transform.Changed -= new EventHandler(TransformChanged);
+            transform.Changed -= TransformChanged;
         }
 
         private void TransformChanged(object sender, EventArgs e)
         {
             if (_ownerWeakRef.TryGetTarget(out TransformGroup owner))
             {
-                owner.RaiseTransformChanged();
+                owner.OnTransformChanged();
             }
         }
     }

@@ -11,9 +11,6 @@
 *  
 \*====================================================================================*/
 
-using System.ComponentModel;
-using OpenSilver.Internal;
-
 namespace System.Windows
 {
     /// <summary>
@@ -36,7 +33,7 @@ namespace System.Windows
             get { return _originalSource; }
             internal set
             {
-                if (value == null || !(value is DependencyObject))
+                if (value == null || value is not DependencyObject)
                 {
                     throw new ArgumentException();
                 }
@@ -85,17 +82,6 @@ namespace System.Windows
             }
         }
 
-        /// <summary>
-        /// (Optional) Gets the original javascript event arg.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public object INTERNAL_OriginalJSEventArg
-        {
-            get => UIEventArg;
-            set => UIEventArg = value;
-        }
-
         internal object UIEventArg { get; set; }
 
         internal bool Cancellable { get; set; } = true;
@@ -110,7 +96,7 @@ namespace System.Windows
             if (UIEventArg != null)
             {
                 OpenSilver.Interop.ExecuteJavaScriptVoid(
-                    $"{CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(UIEventArg)}.preventDefault();");
+                    $"{OpenSilver.Interop.GetVariableStringForJS(UIEventArg)}.preventDefault();");
             }
         }
     }

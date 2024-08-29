@@ -12,75 +12,32 @@
 \*====================================================================================*/
 
 using System;
+using System.Diagnostics;
 using System.Windows;
-using System.Windows.Input;
-using CSHTML5.Internal;
+using System.Windows.Controls;
 
 namespace OpenSilver.Internal.Controls;
 
-internal abstract partial class TextViewBase<T> : FrameworkElement
-    where T : UIElement
+internal abstract partial class TextViewBase : FrameworkElement
 {
     private Size _contentSize;
-    private JavaScriptCallback _inputCallback;
-    private JavaScriptCallback _scrollCallback;
 
-    internal TextViewBase(T host)
+    internal TextViewBase(UIElement host)
     {
+        Debug.Assert(host is TextBox || host is PasswordBox || host is RichTextBox);
+
         Host = host ?? throw new ArgumentNullException(nameof(host));
     }
 
-    internal T Host { get; }
-
-    internal object InputDiv => INTERNAL_OuterDomElement;
+    internal UIElement Host { get; }
 
     internal sealed override UIElement KeyboardTarget => Host;
 
     internal sealed override bool EnablePointerEventsCore => true;
 
-    public sealed override void INTERNAL_AttachToDomEvents()
-    {
-        base.INTERNAL_AttachToDomEvents();
-
-        _inputCallback = JavaScriptCallback.Create(OnInputNative, true);
-        _scrollCallback = JavaScriptCallback.Create(OnScrollNative, true);
-
-        string sDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(INTERNAL_OuterDomElement);
-        string sInputCallback = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_inputCallback);
-        string sScrollCallback = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_scrollCallback);
-        Interop.ExecuteJavaScriptFastAsync($@"{sDiv}.addEventListener('input', {sInputCallback});
-{sDiv}.addEventListener('scroll', {sScrollCallback});");
-    }
-
-    public sealed override void INTERNAL_DetachFromDomEvents()
-    {
-        base.INTERNAL_DetachFromDomEvents();
-
-        _inputCallback?.Dispose();
-        _inputCallback = null;
-
-        _scrollCallback?.Dispose();
-        _scrollCallback = null;
-    }
-
-    internal sealed override void AddEventListeners() => InputManager.Current.AddEventListeners(this, true);
-
     protected abstract Size MeasureContent(Size constraint);
 
-    protected abstract void OnInput();
-
-    private void OnInputNative() => OnInput();
-
-    private void OnScrollNative()
-    {
-        if (!IsScrollClient) return;
-
-        string sDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(INTERNAL_OuterDomElement);
-        double scrollLeft = Interop.ExecuteJavaScriptDouble($"{sDiv}.scrollLeft;");
-        double scrollTop = Interop.ExecuteJavaScriptDouble($"{sDiv}.scrollTop;");
-
-        UpdateOffsets(new Point(scrollLeft, scrollTop));
-    }
+    internal protected abstract void OnInput();
 
     protected sealed override Size MeasureOverride(Size availableSize)
     {

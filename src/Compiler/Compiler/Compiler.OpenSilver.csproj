@@ -1,25 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net461</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <EnableDefaultItems>false</EnableDefaultItems>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <AssemblyName>OpenSilver.Compiler</AssemblyName>
+    <AssemblyName Condition="'$(OpenSilverBuildUUID)' == ''">OpenSilver.Compiler</AssemblyName>
+    <AssemblyName Condition="'$(OpenSilverBuildUUID)' != ''">OpenSilver.Compiler.$(OpenSilverBuildUUID)</AssemblyName>
     <RootNamespace>OpenSilver.Compiler</RootNamespace>
     <DefineTrace>true</DefineTrace>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Compiler.TypeScriptDefToCSharp\Compiler.TypeScriptDefToCSharp.OpenSilver.csproj" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Build.Tasks.Core" Version="17.0.0" />
     <PackageReference Include="Mono.Cecil" Version="0.11.4" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="System.Windows.Forms" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,34 +22,47 @@
     </Compile>
     <Compile Include="1_ConvertingXaml\ConvertingStringToValue.cs" />
     <Compile Include="1_ConvertingXaml\ConverstionSettings.cs" />
+    <Compile Include="1_ConvertingXaml\CoreTypesConverters.cs" />
     <Compile Include="1_ConvertingXaml\CoreTypesHelper.cs" />
     <Compile Include="1_ConvertingXaml\FixingPropertiesOrder.cs" />
     <Compile Include="1_ConvertingXaml\GeneratingCode.cs" />
+    <Compile Include="1_ConvertingXaml\GeneratingPathInXaml.cs" />
     <Compile Include="1_ConvertingXaml\GeneratingUniqueNames.cs" />
     <Compile Include="1_ConvertingXaml\GettingInformationAboutAXamlType.cs" />
     <Compile Include="1_ConvertingXaml\IMetadata.cs" />
     <Compile Include="1_ConvertingXaml\InsertingImplicitNodes.cs" />
     <Compile Include="1_ConvertingXaml\InsertingMarkupNodesInXaml.cs" />
     <Compile Include="1_ConvertingXaml\SupportedLanguage.cs" />
-    <Compile Include="1_ConvertingXaml\ProcessingColorAnimationNodes.cs" />
     <Compile Include="1_ConvertingXaml\ProcessingContentPresenterNodes.cs" />
     <Compile Include="1_ConvertingXaml\ProcessingHtmlPresenterNodes.cs" />
     <Compile Include="1_ConvertingXaml\ProcessingTextBlockNodes.cs" />
     <Compile Include="1_ConvertingXaml\SystemTypesHelper.cs" />
+    <Compile Include="1_ConvertingXaml\XamlParseException.cs" />
     <Compile Include="1_ConvertingXaml\XamlReader.cs" />
     <Compile Include="2_ConvertingXamlToCSharp\GeneratingCSharpCode.Pass1.cs" />
     <Compile Include="2_ConvertingXamlToCSharp\GeneratingCSharpCode.Pass2.cs" />
     <Compile Include="2_ConvertingXamlToCSharp\IMetadataCS.cs" />
-    <Compile Include="EntryPoints\ValidateCompilerVersion.cs" />
+    <Compile Include="3_ConvertingXamlToFSharp\ConvertingXamlToFS.cs" />
+    <Compile Include="3_ConvertingXamlToFSharp\CoreTypesHelperFS.cs" />
+    <Compile Include="3_ConvertingXamlToFSharp\GeneratingFSCode.cs" />
+    <Compile Include="3_ConvertingXamlToFSharp\GeneratingFSCode.Pass1.cs" />
+    <Compile Include="3_ConvertingXamlToFSharp\GeneratingFSCode.Pass2.cs" />
+    <Compile Include="3_ConvertingXamlToFSharp\IMetadataFS.cs" />
+    <Compile Include="3_ConvertingXamlToFSharp\SystemTypesHelperFS.cs" />
+    <Compile Include="EntryPoints\UpdateIncludesInFSharpProjectFile.cs" />
+    <Compile Include="EntryPoints\ResourceClassifier.cs" />
+    <Compile Include="EntryPoints\ResourcesGenerator.cs" />
+    <Compile Include="Helpers\ResourceIDHelper.cs" />
+    <Compile Include="Helpers\TaskHelper.cs" />
     <Compile Include="OtherHelpersAndHandlers\FixingServiceReferencesVB.cs" />
     <Compile Include="OtherHelpersAndHandlers\MonoCecilAssembliesInspector\MonoCecilAssembliesInspectorImpl.cs" />
+    <Compile Include="OtherHelpersAndHandlers\MonoCecilAssembliesInspector\MonoCecilAssemblyStorage.cs" />
     <Compile Include="OtherHelpersAndHandlers\MonoCecilAssembliesInspector\TypeDefinitionExtensions.cs" />
     <Compile Include="OtherHelpersAndHandlers\MonoCecilAssembliesInspector\TypeReferenceExtensions.cs" />
     <Compile Include="EntryPoints\Updates.cs" />
     <Compile Include="OtherHelpersAndHandlers\OpenSilverSettings.cs" />
-    <Compile Include="OtherHelpersAndHandlers\Version.cs" />
+    <Compile Include="OtherHelpersAndHandlers\PathsHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="2_ConvertingXamlToCSharp\ConvertingStringToValueCS.cs" />
     <Compile Include="2_ConvertingXamlToCSharp\CoreTypesHelperCS.cs" />
     <Compile Include="2_ConvertingXamlToCSharp\SystemTypesHelperCS.cs" />
     <Compile Include="2_ConvertingXamlToCSharp\GeneratingCSharpCode.cs" />
@@ -63,20 +70,12 @@
     <Compile Include="7_ConvertingXamlToVB\GeneratingVBCode.Pass1.cs" />
     <Compile Include="7_ConvertingXamlToVB\GeneratingVBCode.Pass2.cs" />
     <Compile Include="7_ConvertingXamlToVB\IMetadataVB.cs" />
-    <Compile Include="7_ConvertingXamlToVB\ConvertingStringToValueVB.cs" />
     <Compile Include="7_ConvertingXamlToVB\CoreTypesHelperVB.cs" />
     <Compile Include="7_ConvertingXamlToVB\SystemTypesHelperVB.cs" />
     <Compile Include="7_ConvertingXamlToVB\GeneratingVBCode.cs" />
     <Compile Include="7_ConvertingXamlToVB\ConvertingXamlToVB.cs" />
     <Compile Include="EntryPoints\XamlPreprocessor.cs" />
-    <Compile Include="EntryPoints\BeforeXamlPreprocessor.cs" />
-    <Compile Include="EntryPoints\AfterXamlPreprocessor.cs" />
-    <Compile Include="EntryPoints\ResXProcessor.cs" />
-    <Compile Include="EntryPoints\ResourcesProcessor.cs" />
     <Compile Include="EntryPoints\ServiceReferenceFixer.cs" />
-    <Compile Include="EntryPoints\TypeScriptDefToCSharp.cs" />
-    <Compile Include="OtherHelpersAndHandlers\OpenSilverHelper.cs" />
-    <Compile Include="OtherHelpersAndHandlers\ActivationHelpers_SharedWithOtherProjects.cs" />
     <Compile Include="OtherHelpersAndHandlers\FixingServiceReferences.cs" />
     <Compile Include="OtherHelpersAndHandlers\RegistryHelpers_SharedWithOtherProjects.cs" />
     <Compile Include="OtherHelpersAndHandlers\TrialHelpers_SharedWithOtherProjects.cs" />
@@ -89,5 +88,38 @@
   <ItemGroup>
     <None Include="Compiler.licenseheader" />
   </ItemGroup>
+
+  <Target Name="GenerateOpenSilverTargets" AfterTargets="PostBuildEvent" Condition="'$(OpenSilverBuildUUID)' != ''">
+
+    <PropertyGroup>
+      <_OpenSilverTargets>
+&lt;!--
+/*===================================================================================
+* 
+*   Copyright (c) Userware/OpenSilver.net
+*      
+*   This file is part of the OpenSilver Runtime (https://opensilver.net), which is
+*   licensed under the MIT license: https://opensource.org/licenses/MIT
+*   
+*   As stated in the MIT license, "the above copyright notice and this permission
+*   notice shall be included in all copies or substantial portions of the Software."
+*  
+\*====================================================================================*/
+--&gt;
+
+&lt;Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003"&gt;
+
+  &lt;PropertyGroup&gt;
+    &lt;_OpenSilverCompilerAssemblyName&gt;OpenSilver.Compiler.$(OpenSilverBuildUUID)&lt;/_OpenSilverCompilerAssemblyName&gt;
+    &lt;_OpenSilverCompilerResourcesAssemblyName&gt;OpenSilver.Compiler.Resources.$(OpenSilverBuildUUID)&lt;/_OpenSilverCompilerResourcesAssemblyName&gt;
+  &lt;/PropertyGroup&gt;
+  
+&lt;/Project&gt;
+      </_OpenSilverTargets>
+    </PropertyGroup>
+    
+    <WriteLinesToFile File="$(OutputPath)OpenSilver.Common.Config.targets" Lines="$(_OpenSilverTargets)" Overwrite="true" />
+
+  </Target>
 
 </Project>

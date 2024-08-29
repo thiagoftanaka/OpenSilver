@@ -83,6 +83,17 @@ namespace System.Windows.Media
         }
 
         /// <summary>
+        /// Returns an object's parent object in the visual tree.
+        /// </summary>
+        /// <param name="reference">
+        /// The object for which to get the parent object.
+        /// </param>
+        /// <returns>
+        /// The parent object of the reference object in the visual tree.
+        /// </returns>
+        public static DependencyObject GetParent(UIElement reference) => reference?.VisualParent;
+
+        /// <summary>
         /// Returns the number of children that exist in an object's child collection in the visual tree.
         /// </summary>
         /// <param name="reference">The source visual.</param>
@@ -95,6 +106,25 @@ namespace System.Windows.Media
             }
 
             throw new InvalidOperationException("Reference is not a valid visual DependencyObject.");
+        }
+
+        /// <summary>
+        /// Returns the number of children that exist in an object's child collection in the visual tree.
+        /// </summary>
+        /// <param name="reference">
+        /// The source visual.
+        /// </param>
+        /// <returns>
+        /// The number of visual children for the provided source visual.
+        /// </returns>
+        public static int GetChildrenCount(UIElement reference)
+        {
+            if (reference is null)
+            {
+                throw new InvalidOperationException("Reference is not a valid visual DependencyObject.");
+            }
+
+            return reference.VisualChildrenCount;
         }
 
         /// <summary>
@@ -113,15 +143,14 @@ namespace System.Windows.Media
             throw new InvalidOperationException("Reference is not a valid visual DependencyObject.");
         }
 
-        /// <summary>
-        /// Retrieves an object that is located within a specified point of an object's coordinate space.
-        /// </summary>
-        /// <param name="intersectingPoint">The point to use as the determination point.</param>
-        /// <returns>The UIElement object that is determined to be located
-        /// in the visual tree composition at the specified point.</returns>
-        internal static UIElement FindElementInHostCoordinates(Point intersectingPoint)
+        public static DependencyObject GetChild(UIElement reference, int childIndex)
         {
-            return INTERNAL_HtmlDomManager.FindElementInHostCoordinates_UsedBySimulatorToo(intersectingPoint.X, intersectingPoint.Y);
+            if (reference is null)
+            {
+                throw new InvalidOperationException("Reference is not a valid visual DependencyObject.");
+            }
+
+            return reference.GetVisualChild(childIndex);
         }
 
         /// <summary>
@@ -270,54 +299,18 @@ namespace System.Windows.Media
 
             if (window is not null)
             {
-                foreach (PopupRoot root in INTERNAL_PopupsManager.GetActivePopupRoots())
+                foreach (PopupRoot root in PopupsManager.GetActivePopupRoots())
                 {
-                    if (root.INTERNAL_ParentWindow == window &&
-                        root.INTERNAL_LinkedPopup.IsOpen &&
-                        root.INTERNAL_LinkedPopup.Child != null)
+                    if (root.ParentWindow == window &&
+                        root.ParentPopup.IsOpen &&
+                        root.ParentPopup.Child != null)
                     {
-                        result.Add(root.INTERNAL_LinkedPopup);
+                        result.Add(root.ParentPopup);
                     }
                 }
             }
 
             return result;
-        }
-
-        /// <summary>
-        /// Get the visual tree children of an element.
-        /// </summary>
-        /// <param name="element">The element.</param>
-        /// <returns>The visual tree children of an element.</returns>
-        /// <exception cref="ArgumentNullException">
-        /// <paramref name="element"/> is null.
-        /// </exception>
-        public static IEnumerable<DependencyObject> GetVisualChildren(DependencyObject element)
-        {
-            if (element == null)
-            {
-                throw new ArgumentNullException(nameof(element));
-            }
-
-            return GetVisualChildrenAndSelfIterator(element).Skip(1);
-        }
-
-        /// <summary>
-        /// Get the visual tree children of an element and the element itself.
-        /// </summary>
-        /// <param name="element">The element.</param>
-        /// <returns>
-        /// The visual tree children of an element and the element itself.
-        /// </returns>
-        private static IEnumerable<DependencyObject> GetVisualChildrenAndSelfIterator(DependencyObject element)
-        {
-            yield return element;
-
-            int count = GetChildrenCount(element);
-            for (int i = 0; i < count; i++)
-            {
-                yield return GetChild(element, i);
-            }
         }
     }
 }

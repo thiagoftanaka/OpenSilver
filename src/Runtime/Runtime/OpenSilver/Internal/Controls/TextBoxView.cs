@@ -14,36 +14,107 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
 using CSHTML5.Internal;
 
 namespace OpenSilver.Internal.Controls;
 
-internal sealed class TextBoxView : TextViewBase<TextBox>
+internal sealed class TextBoxView : TextViewBase
 {
+    static TextBoxView()
+    {
+        TextElement.CharacterSpacingProperty.AddOwner(
+            typeof(TextBoxView),
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetCharacterSpacing((int)newValue),
+            });
+
+        TextElement.FontFamilyProperty.AddOwner(
+            typeof(TextBoxView),
+            new FrameworkPropertyMetadata(FontFamily.Default, FrameworkPropertyMetadataOptions.Inherits, OnFontFamilyChanged)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetFontFamily((FontFamily)newValue),
+            });
+
+        TextElement.FontSizeProperty.AddOwner(
+            typeof(TextBoxView),
+            new FrameworkPropertyMetadata(11d, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetFontSize((double)newValue),
+            });
+
+        TextElement.FontStyleProperty.AddOwner(
+            typeof(TextBoxView),
+            new FrameworkPropertyMetadata(FontStyles.Normal, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetFontStyle((FontStyle)newValue),
+            });
+
+        TextElement.FontWeightProperty.AddOwner(
+           typeof(TextBoxView),
+           new FrameworkPropertyMetadata(FontWeights.Normal, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
+           {
+               MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetFontWeight((FontWeight)newValue),
+           });
+
+        TextElement.ForegroundProperty.AddOwner(
+            typeof(TextBoxView),
+            new FrameworkPropertyMetadata(
+                TextElement.ForegroundProperty.DefaultMetadata.DefaultValue,
+                FrameworkPropertyMetadataOptions.Inherits,
+                OnForegroundChanged)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetForeground(oldValue as Brush, (Brush)newValue),
+            });
+
+        Block.LineHeightProperty.AddOwner(
+            typeof(TextBoxView),
+            new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetLineHeight((double)newValue),
+            });
+
+        Block.TextAlignmentProperty.AddOwner(
+            typeof(TextBoxView),
+            new FrameworkPropertyMetadata(TextAlignment.Left, FrameworkPropertyMetadataOptions.Inherits)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetTextAlignment((TextAlignment)newValue),
+            });
+
+        IsHitTestableProperty.OverrideMetadata(typeof(TextBoxView), new PropertyMetadata(BooleanBoxes.TrueBox));
+    }
+
+    private WeakEventListener<TextBoxView, Brush, EventArgs> _foregroundChangedListener;
+
     internal TextBoxView(TextBox host)
         : base(host)
     {
     }
 
+    internal new TextBox Host => (TextBox)base.Host;
+
     public sealed override object CreateDomElement(object parentRef, out object domElementWhereToPlaceChildren)
     {
-        return AddContentEditableDomElement(parentRef, out domElementWhereToPlaceChildren);
+        domElementWhereToPlaceChildren = null;
+        return INTERNAL_HtmlDomManager.CreateTextBoxViewDomElementAndAppendIt((INTERNAL_HtmlDomElementReference)parentRef, this);
     }
 
     protected sealed internal override void INTERNAL_OnAttachedToVisualTree()
     {
         base.INTERNAL_OnAttachedToVisualTree();
 
-        SetTextNative(Host.Text);
+        SetProperties();
 
         if (FocusManager.GetFocusedElement() == Host)
         {
-            InputManager.SetFocusNative(InputDiv);
+            InputManager.SetFocusNative(OuterDiv);
         }
     }
 
-    protected sealed override void OnInput()
+    internal protected sealed override void OnInput()
     {
         Host.UpdateTextProperty(GetText());
         InvalidateMeasure();
@@ -51,9 +122,9 @@ internal sealed class TextBoxView : TextViewBase<TextBox>
 
     internal void SetTextNative(string text)
     {
-        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv is not null)
+        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
         {
-            string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(InputDiv);
+            string sElement = Interop.GetVariableStringForJS(OuterDiv);
             Interop.ExecuteJavaScriptVoid(
                 $"{sElement}.value = \"{INTERNAL_HtmlDomManager.EscapeStringForUseInJavaScript(text)}\";");
 
@@ -61,13 +132,47 @@ internal sealed class TextBoxView : TextViewBase<TextBox>
         }
     }
 
+    private void SetProperties()
+    {
+        TextBox host = Host;
+
+        this.SetTextDecorations(host.TextDecorations);
+        this.SetTextWrapping(host.TextWrapping);
+        this.SetCaretColor(host.CaretBrush);
+
+        if (host.IsReadOnly)
+        {
+            INTERNAL_HtmlDomManager.SetDomElementAttribute(OuterDiv, "readonly", string.Empty);
+        }
+
+        int maxlength = host.MaxLength;
+        if (maxlength > 0)
+        {
+            INTERNAL_HtmlDomManager.SetDomElementAttribute(OuterDiv, "maxlength", maxlength);
+        }
+
+        // Disable spell check
+        INTERNAL_HtmlDomManager.SetDomElementAttribute(OuterDiv, "spellcheck", host.IsSpellCheckEnabled);
+
+        // Set the "data-accepts-return" property (that we have invented) so that the
+        // "KeyDown" and "Paste" JavaScript events can retrieve this value:
+        INTERNAL_HtmlDomManager.SetDomElementAttribute(OuterDiv, "data-acceptsreturn", host.AcceptsReturn);
+        INTERNAL_HtmlDomManager.SetDomElementAttribute(OuterDiv, "data-acceptstab", host.AcceptsTab);
+
+        if (Interop.IsRunningInTheSimulator)
+        {
+            string sElement = Interop.GetVariableStringForJS(OuterDiv);
+            Interop.ExecuteJavaScriptVoidAsync($"document.textviewManager.handleKeyDownFromSimulator({sElement})");
+        }
+
+        SetTextNative(host.Text);
+    }
+
     internal void ProcessKeyDown(KeyEventArgs e)
     {
-        if (InputDiv is null) return;
+        if (OuterDiv is null) return;
 
-        string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(InputDiv);
-        string sArgs = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(e.UIEventArg);
-        if (Interop.ExecuteJavaScriptBoolean($"document.textboxHelpers.onKeyDownNative({sElement}, {sArgs});"))
+        if (TextViewManager.Instance.OnKeyDown(this, e))
         {
             e.Handled = true;
             e.Cancellable = false;
@@ -76,100 +181,73 @@ internal sealed class TextBoxView : TextViewBase<TextBox>
 
     internal void OnAcceptsReturnChanged(bool acceptsReturn)
     {
-        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv != null)
+        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv != null)
         {
-            //--- SIMULATOR ONLY: ---
-            // Set the "data-accepts-return" property (that we have invented) so that the "keydown" JavaScript event can retrieve this value:
-            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript($@"
-var element = document.getElementByIdSafe(""{((INTERNAL_HtmlDomElementReference)InputDiv).UniqueIdentifier}"");
-element.setAttribute(""data-acceptsreturn"", ""{acceptsReturn.ToString().ToLower()}"");");
-        }
-    }
-
-    internal void OnTextAlignmentChanged(TextAlignment alignment)
-    {
-        UpdateTextAlignment(INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(this), alignment);
-    }
-
-    private static void UpdateTextAlignment(INTERNAL_HtmlDomStyleReference style, TextAlignment alignment)
-    {
-        switch (alignment)
-        {
-            case TextAlignment.Center:
-                style.textAlign = "center";
-                break;
-            case TextAlignment.Left:
-                style.textAlign = "start";
-                break;
-            case TextAlignment.Right:
-                style.textAlign = "end";
-                break;
-            case TextAlignment.Justify:
-                style.textAlign = "justify";
-                break;
-            default:
-                break;
+            // Set the "data-accepts-return" property (that we have invented)
+            // so that the "keydown" JavaScript event can retrieve this value:
+            INTERNAL_HtmlDomManager.SetDomElementAttribute(OuterDiv, "data-acceptsreturn", acceptsReturn);
         }
     }
 
     internal void OnTextWrappingChanged(TextWrapping textWrapping)
     {
-        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv != null)
+        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv != null)
         {
-            TextBlock.ApplyTextWrapping(
-                INTERNAL_HtmlDomManager.GetDomElementStyleForModification(InputDiv),
-                textWrapping);
+            this.SetTextWrapping(textWrapping);
         }
     }
 
     internal void OnMaxLengthChanged(int maxLength)
     {
-        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv != null)
+        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv != null)
         {
             if (maxLength > 0)
             {
-                INTERNAL_HtmlDomManager.SetDomElementAttribute(InputDiv, "maxlength", maxLength);
+                INTERNAL_HtmlDomManager.SetDomElementAttribute(OuterDiv, "maxlength", maxLength);
             }
             else
             {
-                INTERNAL_HtmlDomManager.RemoveAttribute(InputDiv, "maxlength");
+                INTERNAL_HtmlDomManager.RemoveAttribute(OuterDiv, "maxlength");
             }
         }
     }
 
     internal void OnTextDecorationsChanged(TextDecorationCollection tdc)
     {
-        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv is not null)
+        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
         {
-            ApplyTextDecorations(INTERNAL_HtmlDomManager.GetDomElementStyleForModification(InputDiv), tdc);
+            this.SetTextDecorations(tdc);
         }
-    }
-
-    private static void ApplyTextDecorations(INTERNAL_HtmlDomStyleReference cssStyle, TextDecorationCollection tdc)
-    {
-        cssStyle.textDecoration = tdc?.ToHtmlString() ?? string.Empty;
     }
 
     internal void OnIsReadOnlyChanged(bool isReadOnly)
     {
-        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv != null)
+        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv != null)
         {
             if (isReadOnly)
             {
-                INTERNAL_HtmlDomManager.SetDomElementAttribute(InputDiv, "readonly", "''");
+                INTERNAL_HtmlDomManager.SetDomElementAttribute(OuterDiv, "readonly", string.Empty);
             }
             else
             {
-                INTERNAL_HtmlDomManager.RemoveAttribute(InputDiv, "readonly");
+                INTERNAL_HtmlDomManager.RemoveAttribute(OuterDiv, "readonly");
             }
         }
     }
 
     internal void OnIsSpellCheckEnabledChanged(bool isSpellCheckEnabled)
     {
-        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv != null)
+        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv != null)
         {
-            INTERNAL_HtmlDomManager.SetDomElementAttribute(InputDiv, "spellcheck", isSpellCheckEnabled);
+            INTERNAL_HtmlDomManager.SetDomElementAttribute(OuterDiv, "spellcheck", isSpellCheckEnabled);
+        }
+    }
+
+    internal void SetCaretBrush(Brush brush)
+    {
+        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
+        {
+            this.SetCaretColor(brush);
         }
     }
 
@@ -177,20 +255,18 @@ element.setAttribute(""data-acceptsreturn"", ""{acceptsReturn.ToString().ToLower
     {
         get
         {
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv is not null)
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
             {
-                string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(InputDiv);
-                return Interop.ExecuteJavaScriptInt32($"{sElement}.selectionStart;");
+                return TextViewManager.Instance.GetSelectionStart(this);
             }
 
             return 0;
         }
         set
         {
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv is not null)
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
             {
-                string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(InputDiv);
-                Interop.ExecuteJavaScriptVoid($"{sElement}.selectionStart = {value.ToInvariantString()};");
+                TextViewManager.Instance.SetSelectionStart(this, value);
             }
         }
     }
@@ -199,20 +275,18 @@ element.setAttribute(""data-acceptsreturn"", ""{acceptsReturn.ToString().ToLower
     {
         get
         {
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv is not null)
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
             {
-                string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(InputDiv);
-                return Interop.ExecuteJavaScriptInt32($"{sElement}.selectionEnd - {sElement}.selectionStart;");
+                return TextViewManager.Instance.GetSelectionLength(this);
             }
 
             return 0;
         }
         set
         {
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv is not null)
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
             {
-                string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(InputDiv);
-                Interop.ExecuteJavaScriptVoid($"{sElement}.selectionEnd = {sElement}.selectionStart + {value.ToInvariantString()};");
+                TextViewManager.Instance.SetSelectionLength(this, value);
             }
         }
     }
@@ -221,24 +295,19 @@ element.setAttribute(""data-acceptsreturn"", ""{acceptsReturn.ToString().ToLower
     {
         get
         {
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv is not null)
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
             {
-                string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(InputDiv);
-                return Interop.ExecuteJavaScriptString(
-                    $"{sElement}.value.substring({sElement}.selectionStart, {sElement}.selectionEnd);") ?? string.Empty;
+                return TextViewManager.Instance.GetSelectedText(this);
             }
 
             return string.Empty;
         }
         set
         {
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv is not null)
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
             {
-                string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(InputDiv);
-                string sText = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(value);
-                Interop.ExecuteJavaScriptVoid(
-                    $"{sElement}.setRangeText({sText}, {sElement}.selectionStart, {sElement}.selectionEnd, 'end');");
-
+                TextViewManager.Instance.SetSelectedText(this, value);
+                
                 Host.UpdateTextProperty(GetText());
                 InvalidateMeasure();
             }
@@ -247,136 +316,19 @@ element.setAttribute(""data-acceptsreturn"", ""{acceptsReturn.ToString().ToLower
 
     internal void SetSelectionRange(int start, int end)
     {
-        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv is not null)
+        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
         {
-            string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(InputDiv);
+            string sElement = Interop.GetVariableStringForJS(OuterDiv);
             Interop.ExecuteJavaScriptVoid(
                 $"{sElement}.setSelectionRange({start.ToInvariantString()}, {end.ToInvariantString()});");
         }
     }
 
-    private object AddContentEditableDomElement(object parentRef, out object domElementWhereToPlaceChildren)
-    {
-        var contentEditableDiv = INTERNAL_HtmlDomManager.CreateTextBoxViewDomElementAndAppendIt(parentRef, this);
-        var contentEditableDivStyle = contentEditableDiv.Style;
-
-        // Apply Host.TextDecorations
-        ApplyTextDecorations(contentEditableDivStyle, Host.TextDecorations);
-
-        // Apply Host.TextWrapping
-        TextBlock.ApplyTextWrapping(contentEditableDivStyle, Host.TextWrapping);
-
-        // Apply Host.TextAlignment
-        UpdateTextAlignment(contentEditableDivStyle, Host.TextAlignment);
-
-        if (Host.IsReadOnly)
-        {
-            INTERNAL_HtmlDomManager.SetDomElementAttribute(contentEditableDiv, "readonly", "''");
-        }
-
-        int maxlength = Host.MaxLength;
-        if (maxlength > 0)
-        {
-            INTERNAL_HtmlDomManager.SetDomElementAttribute(contentEditableDiv, "maxlength", maxlength);
-        }
-
-        // Disable spell check
-        INTERNAL_HtmlDomManager.SetDomElementAttribute(contentEditableDiv, "spellcheck", Host.IsSpellCheckEnabled);
-
-        domElementWhereToPlaceChildren = contentEditableDiv;
-
-        // ---- SIMULATOR ----
-        string uid = contentEditableDiv.UniqueIdentifier;
-
-        // Set the "data-accepts-return" property (that we have invented) so that the "KeyDown" and "Paste" JavaScript events can retrieve this value:
-        INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript($@"
-var element = document.getElementByIdSafe('{uid}');
-element.setAttribute('data-acceptsreturn', '{Host.AcceptsReturn.ToString().ToLower()}');
-element.setAttribute('data-acceptstab', '{Host.AcceptsTab.ToString().ToLower()}');");
-
-        if (Interop.IsRunningInTheSimulator)
-        {
-            // Register the "keydown" javascript event:
-            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript($@"
-var element_OutsideEventHandler = document.getElementByIdSafe(""{uid}"");
-element_OutsideEventHandler.addEventListener('keydown', function(e) {{
-
-    var element_InsideEventHandler = document.getElementByIdSafe(""{uid}""); // For some reason we need to get again the reference to the element.
-    var acceptsReturn = element_InsideEventHandler.getAttribute(""data-acceptsreturn"");
-    var maxLength = element_InsideEventHandler.getAttribute(""maxlength"");
-    var acceptsTab = element_InsideEventHandler.getAttribute(""data-acceptstab"");
-
-    if (maxLength == null) maxLength = 0;
-    if (e.keyCode == 13)
-    {{
-        if(acceptsReturn != ""true"")
-        {{
-            e.preventDefault();
-            return false;
-        }}
-    }}
-
-    var isAddingTabulation = e.keyCode == 9 && acceptsTab == ""true"";
-
-    if((isAddingTabulation || e.keyCode == 13 || e.keyCode == 32 || e.keyCode > 47) && maxLength != 0)
-    {{
-        var text = element_InsideEventHandler.value;
-        if (!acceptsReturn) {{
-            text = text.replace(""\n"", """").replace(""\r"", """");
-        }}
-
-        var correctionDueToNewLines = 0;
-        if (e.keyCode == 13)
-        {{
-            ++correctionDueToNewLines; //because adding a new line takes 2 characters instead of 1.
-        }}
-        if(text.length + correctionDueToNewLines >= maxLength)
-        {{
-            if (!window.getSelection().toString()) {{
-                e.preventDefault();
-                return false;
-            }}
-        }}
-    }}
-
-    if(isAddingTabulation)
-    {{
-        //we need to add '\t' where the cursor is, prevent the event (which would change the focus) and dispatch the event for the text changed:
-        var sel, range;
-        if (window.getSelection) {{
-            sel = window.getSelection();
-            if (sel.rangeCount) {{
-                range = sel.getRangeAt(0);
-                range.deleteContents();
-                range.insertNode(document.createTextNode('\t'));
-                sel.collapseToEnd();
-                range.collapse(false); //for IE
-            }}
-        }} else if (document.selection && document.selection.createRange) {{
-            range = document.selection.createRange();
-            range.text = '\t';
-            document.selection.collapseToEnd();
-        }}
-        if (window.IS_EDGE)
-        {{
-            sel.removeAllRanges();
-            sel.addRange(range);
-        }}
-
-        e.preventDefault();
-            return false;
-    }}
-}}, false);");//comma added on purpose because we need to get maxLength somehow (see how we did for acceptsReturn).
-        }
-
-        return contentEditableDiv;
-    }
-
     private string GetText()
     {
-        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && InputDiv is not null)
+        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
         {
-            string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(InputDiv);
+            string sElement = Interop.GetVariableStringForJS(OuterDiv);
             return Interop.ExecuteJavaScriptString($"{sElement}.value;") ?? string.Empty;
         }
 
@@ -385,11 +337,46 @@ element_OutsideEventHandler.addEventListener('keydown', function(e) {{
 
     protected sealed override Size MeasureContent(Size constraint)
     {
-        return INTERNAL_ParentWindow.TextMeasurementService.MeasureText(
-            ((INTERNAL_HtmlDomElementReference)INTERNAL_OuterDomElement).UniqueIdentifier,
+        return ParentWindow.TextMeasurementService.MeasureView(
+            OuterDiv.UniqueIdentifier,
             Host.TextWrapping == TextWrapping.NoWrap ? "pre" : "pre-wrap",
             Host.TextWrapping == TextWrapping.NoWrap ? string.Empty : "break-word",
             constraint.Width,
             "M");
+    }
+
+    private static void OnFontFamilyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        UIElementHelpers.InvalidateMeasureOnFontFamilyChanged((TextBoxView)d, (FontFamily)e.NewValue);
+    }
+
+    private static void OnForegroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var view = (TextBoxView)d;
+
+        if (view._foregroundChangedListener != null)
+        {
+            view._foregroundChangedListener.Detach();
+            view._foregroundChangedListener = null;
+        }
+
+        if (e.NewValue is Brush newBrush)
+        {
+            view._foregroundChangedListener = new(view, newBrush)
+            {
+                OnEventAction = static (instance, sender, args) => instance.OnForegroundChanged(sender, args),
+                OnDetachAction = static (listener, source) => source.Changed -= listener.OnEvent,
+            };
+            newBrush.Changed += view._foregroundChangedListener.OnEvent;
+        }
+    }
+
+    private void OnForegroundChanged(object sender, EventArgs e)
+    {
+        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
+        {
+            var foreground = (Brush)sender; 
+            this.SetForeground(foreground, foreground);
+        }
     }
 }

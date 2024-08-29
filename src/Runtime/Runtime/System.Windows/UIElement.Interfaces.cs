@@ -11,8 +11,6 @@
 *  
 \*====================================================================================*/
 
-using System;
-
 namespace System.Windows;
 
 public partial class UIElement : IInternalUIElement
@@ -33,23 +31,13 @@ public partial class UIElement : IInternalUIElement
 
     DependencyObject IInternalUIElement.VisualParent
     {
-        get => INTERNAL_VisualParent;
-        set => INTERNAL_VisualParent = value;
+        get => VisualParent;
+        set => VisualParent = value;
     }
-
-    event RoutedEventHandler IInternalUIElement.LostFocus
-    {
-        add => LostFocus += value;
-        remove => LostFocus -= value;
-    }
-
-    void IInternalUIElement.AddHandler(RoutedEvent routedEvent, Delegate handler, bool handledEventsToo)
-        => AddHandler(routedEvent, handler, handledEventsToo);
-
-    void IInternalUIElement.RemoveHandler(RoutedEvent routedEvent, Delegate handler)
-        => RemoveHandler(routedEvent, handler);
 
     DependencyObject IInternalUIElement.GetVisualChild(int index) => GetVisualChild(index);
 
     void IInternalUIElement.OnVisualParentChanged(DependencyObject oldParent) => OnVisualParentChanged(oldParent);
+
+    DependencyObject IInternalUIElement.AsDependencyObject() => this;
 }

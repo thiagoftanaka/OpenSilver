@@ -11,20 +11,22 @@
 *
 \*====================================================================================*/
 
-using DotNetForHtml5;
-using DotNetForHtml5.Core;
-using Microsoft.JSInterop;
 using System;
-using System.Collections.Generic;
+using System.Buffers;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
+using System.Threading;
+using DotNetForHtml5;
+using OpenSilver.Buffers;
 
 namespace CSHTML5.Internal
 {
     internal interface IPendingJavascript
     {
-        void AddJavaScript(string javascript);
+        void AcquireLock();
+
+        void ReleaseLock();
 
         void Flush();
 
@@ -36,13 +38,12 @@ namespace CSHTML5.Internal
         private const string CallJSMethodNameAsync = "callJSUnmarshalledHeap";
         private const string CallJSMethodNameSync = "callJSUnmarshalled_v2";
 
-        private static readonly Encoding DefaultEncoding = Encoding.Unicode;
-        private static readonly byte[] Delimiter = DefaultEncoding.GetBytes(";\n");
         private readonly IWebAssemblyExecutionHandler _webAssemblyExecutionHandler;
-        private readonly byte[] _buffer;
-        private int _currentLength;
+        private readonly CharArrayBuilder _charArrayBuilder;
 
-        public PendingJavascript(int bufferSize, IWebAssemblyExecutionHandler webAssemblyExecutionHandler)
+        private byte[] _buffer = Array.Empty<byte>();
+
+        public PendingJavascript(IWebAssemblyExecutionHandler webAssemblyExecutionHandler, CharArrayBuilder buffer)
         {
             if (webAssemblyExecutionHandler == null)
             {
@@ -51,46 +52,28 @@ namespace CSHTML5.Internal
 
             CheckWasmExecutionHandler(webAssemblyExecutionHandler);
 
-            if (bufferSize <= 0)
-            {
-                throw new ArgumentException("Buffer size can not be less or equal to 0");
-            }
-
             _webAssemblyExecutionHandler = webAssemblyExecutionHandler ?? throw new ArgumentNullException(nameof(webAssemblyExecutionHandler));
-            _buffer = new byte[bufferSize];
+            _charArrayBuilder = buffer ?? throw new ArgumentNullException(nameof(buffer));
         }
 
-        public void AddJavaScript(string javascript)
-        {
-            if (javascript == null) return;
+        public void AcquireLock() { }
 
-            // the idea -- the current buffer is already huge - in the very rare scenario it would get full, just flush it and restart
-            var maxByteCount = DefaultEncoding.GetMaxByteCount(javascript.Length) + Delimiter.Length;
-            if (maxByteCount + _currentLength > _buffer.Length)
-                Flush();
-
-            if (maxByteCount > _buffer.Length)
-                throw new Exception($"javascript too big! {maxByteCount}");
-
-            _currentLength += DefaultEncoding.GetBytes(javascript, 0, javascript.Length, _buffer, _currentLength);
-
-            Buffer.BlockCopy(Delimiter, 0, _buffer, _currentLength, Delimiter.Length);
-            _currentLength += Delimiter.Length;
-        }
+        public void ReleaseLock() { }
 
         public void Flush()
         {
-            if (_currentLength == 0)
-                return;
+            int minLength = Encoding.Unicode.GetMaxByteCount(_charArrayBuilder.Length);
 
-            var curLength = _currentLength;
-            _currentLength = 0;
+            if (_buffer.Length < minLength)
+            {
+                ArrayPool<byte>.Shared.Return(_buffer);
+                _buffer = ArrayPool<byte>.Shared.Rent(minLength);
+            }
 
-            //Here we pass a reference to _buffer object and current length
-            //Js will read data from the heap
+            int bytesLength = Encoding.Unicode.GetBytes(_charArrayBuilder.Buffer, 0, _charArrayBuilder.Length, _buffer, 0);
+            _charArrayBuilder.Reset();
 
-            // everything that was appended with AddJavascript, nothing to return
-            _webAssemblyExecutionHandler.InvokeUnmarshalled<byte[], int, object>(CallJSMethodNameAsync, _buffer, curLength);
+            _webAssemblyExecutionHandler.InvokeUnmarshalled<byte[], int, object>(CallJSMethodNameAsync, _buffer, bytesLength);
         }
 
         public object ExecuteJavaScript(string javascript, int referenceId, bool wantsResult)
@@ -127,36 +110,40 @@ namespace CSHTML5.Internal
 
     internal sealed class PendingJavascriptSimulator : IPendingJavascript
     {
-        private readonly List<string> _pending = new();
         private readonly IJavaScriptExecutionHandler _jsExecutionHandler;
+        private readonly object _sync = new();
+        private readonly CharArrayBuilder _charArrayBuilder;
 
-        public PendingJavascriptSimulator(IJavaScriptExecutionHandler jsExecutionHandler)
+        public PendingJavascriptSimulator(IJavaScriptExecutionHandler jsExecutionHandler, CharArrayBuilder buffer)
         {
             _jsExecutionHandler = jsExecutionHandler ?? throw new ArgumentNullException(nameof(jsExecutionHandler));
+            _charArrayBuilder = buffer ?? throw new ArgumentNullException(nameof(buffer));
         }
 
-        public void AddJavaScript(string javascript)
-        {
-            lock (_pending)
-            {
-                _pending.Add(javascript);
-            }
-        }
+        public void AcquireLock() => Monitor.Enter(_sync);
+
+        public void ReleaseLock() => Monitor.Exit(_sync);
 
         public void Flush()
         {
             string javascript = ReadAndClearAggregatedPendingJavaScriptCode();
             if (!string.IsNullOrWhiteSpace(javascript))
+            {
                 PerformActualInteropCallVoid(javascript);
+            }
         }
 
         public object ExecuteJavaScript(string javascript, int referenceId, bool wantsResult)
         {
             if (referenceId > 0 && !javascript.StartsWith("document.callScriptSafe"))
-                javascript = INTERNAL_ExecuteJavaScript.WrapReferenceIdInJavascriptCall(javascript, referenceId);
+            {
+                javascript = OpenSilver.Interop.WrapReferenceIdInJavascriptCall(javascript, referenceId);
+            }
 
             if (wantsResult)
+            {
                 return PerformActualInteropCall(javascript);
+            }
             else
             {
                 PerformActualInteropCallVoid(javascript);
@@ -166,7 +153,7 @@ namespace CSHTML5.Internal
 
         private object PerformActualInteropCall(string javaScriptToExecute)
         {
-            if (INTERNAL_ExecuteJavaScript.EnableInteropLogging)
+            if (OpenSilver.Interop.EnableInteropLogging)
             {
                 javaScriptToExecute = "//---- START INTEROP ----"
                     + Environment.NewLine
@@ -177,7 +164,7 @@ namespace CSHTML5.Internal
 
             try
             {
-                if (INTERNAL_ExecuteJavaScript.EnableInteropLogging)
+                if (OpenSilver.Interop.EnableInteropLogging)
                 {
                     Debug.WriteLine(javaScriptToExecute);
                 }
@@ -192,7 +179,7 @@ namespace CSHTML5.Internal
 
         private void PerformActualInteropCallVoid(string javaScriptToExecute)
         {
-            if (INTERNAL_ExecuteJavaScript.EnableInteropLogging)
+            if (OpenSilver.Interop.EnableInteropLogging)
             {
                 javaScriptToExecute = "//---- START INTEROP ----"
                                       + Environment.NewLine
@@ -203,7 +190,7 @@ namespace CSHTML5.Internal
 
             try
             {
-                if (INTERNAL_ExecuteJavaScript.EnableInteropLogging)
+                if (OpenSilver.Interop.EnableInteropLogging)
                 {
                     Debug.WriteLine(javaScriptToExecute);
                 }
@@ -218,15 +205,14 @@ namespace CSHTML5.Internal
 
         internal string ReadAndClearAggregatedPendingJavaScriptCode()
         {
-            lock (_pending)
+            try
             {
-                if (_pending.Count == 0)
-                    return null;
-
-                _pending.Add(string.Empty);
-                string aggregatedPendingJavaScriptCode = string.Join(";\n", _pending);
-                _pending.Clear();
-                return aggregatedPendingJavaScriptCode;
+                AcquireLock();
+                return _charArrayBuilder.ToStringAndClear();
+            }
+            finally
+            {
+                ReleaseLock();
             }
         }
     }

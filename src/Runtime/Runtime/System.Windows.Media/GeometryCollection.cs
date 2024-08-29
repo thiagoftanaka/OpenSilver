@@ -38,7 +38,7 @@ namespace System.Windows.Media
 
         internal override void ClearOverride()
         {
-            foreach (Geometry geometry in this)
+            foreach (Geometry geometry in InternalItems)
             {
                 StopListeningForPathChanges(geometry);
             }
@@ -54,7 +54,7 @@ namespace System.Windows.Media
 
         internal override void RemoveAtOverride(int index)
         {
-            StopListeningForPathChanges(this[index]);
+            StopListeningForPathChanges(GetItemInternal(index));
             RemoveAtDependencyObjectInternal(index);
         }
 
@@ -62,7 +62,7 @@ namespace System.Windows.Media
 
         internal override void SetItemOverride(int index, Geometry value)
         {
-            StopListeningForPathChanges(this[index]);
+            StopListeningForPathChanges(GetItemInternal(index));
             ListenForPathChanges(value);
             SetItemDependencyObjectInternal(index, value);
         }

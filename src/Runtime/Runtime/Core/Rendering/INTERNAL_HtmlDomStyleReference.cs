@@ -38,7 +38,9 @@ namespace CSHTML5.Internal
         }
 
         public string background { set { SetStylePropertyValue("background", value); } }
+        public string backgroundClip { set { SetStylePropertyValue("backgroundClip", value); } }
         public string backgroundColor { set { SetStylePropertyValue("backgroundColor", value); } }
+        public string backgroundImage { set { SetStylePropertyValue("backgroundImage", value); } }
         public string border { set { SetStylePropertyValue("border", value); } }
         public string borderRight { set { SetStylePropertyValue("borderRight", value); } }
         public string borderLeft { set { SetStylePropertyValue("borderLeft", value); } }
@@ -54,10 +56,11 @@ namespace CSHTML5.Internal
         public string borderTopLeftRadius { set { SetStylePropertyValue("borderTopLeftRadius", value); } }
         public string borderTopRightRadius { set { SetStylePropertyValue("borderTopRightRadius", value); } }
         public string borderWidth { set { SetStylePropertyValue("borderWidth", value); } }
-        public string borderImageSource { set { SetStylePropertyValue("border-image-source", value); } }
-        public string borderImageSlice { set { SetStylePropertyValue("border-image-slice", value); } }
+        public string borderImageSource { set { SetStylePropertyValue("borderImageSource", value); } }
+        public string borderImageSlice { set { SetStylePropertyValue("borderImageSlice", value); } }
         public string boxSizing { set { SetStylePropertyValue("boxSizing", value); } }
         public string boxShadow { set { SetStylePropertyValue("boxShadow", value); } }
+        public string caretColor { set { SetStylePropertyValue("caretColor", value); } }
         public string color { set { SetStylePropertyValue("color", value); } }
         public string cursor { set { SetStylePropertyValue("cursor", value); } }
         public string display { get { return GetCSSProperty("display"); } set { SetStylePropertyValue("display", value); } }
@@ -85,6 +88,7 @@ namespace CSHTML5.Internal
         public string marginInlineEnd { set { SetStylePropertyValue("marginInlineEnd", value); } }
         public string minHeight { set { SetStylePropertyValue("minHeight", value); } }
         public string minWidth { set { SetStylePropertyValue("minWidth", value); } }
+        public string maskImage { set { SetStylePropertyValue("maskImage", value); } }
         public string maxHeight { get { return GetCSSProperty("maxHeight"); } set { SetStylePropertyValue("maxHeight", value); } }
         public string maxWidth { get { return GetCSSProperty("maxWidth"); } set { SetStylePropertyValue("maxWidth", value); } }
         public string msGridColumn { set { SetStylePropertyValue("msGridColumn", value); } }
@@ -118,9 +122,10 @@ namespace CSHTML5.Internal
         public string textDecoration { set { SetStylePropertyValue("textDecoration", value); } }
         public string textOverflow { set { SetStylePropertyValue("textOverflow", value); } }
         public string textShadow { set { SetStylePropertyValue("textShadow", value); } }
-        public string transform { set { SetTransformPropertyValue(value); } }
-        public string transformOrigin { set { SetTransformOriginPropertyValue(value); } }
+        public string transform { set { SetStylePropertyValue("transform", value); } }
+        public string transformOrigin { set { SetStylePropertyValue("transformOrigin", value); } }
         public string top { set { SetStylePropertyValue("top", value); } }
+        public string touchAction { set { SetStylePropertyValue("touchAction", value); } }
         public string verticalAlign { set { SetStylePropertyValue("verticalAlign", value); } }
         public string WebkitOverflowScrolling { set { SetStylePropertyValue("WebkitOverflowScrolling", value); } }
         public string WebkitTransform { set { transform = value; } }
@@ -131,6 +136,7 @@ namespace CSHTML5.Internal
         public string gridArea { set { SetStylePropertyValue("gridArea", value); } }
         public string visibility { set { SetStylePropertyValue("visibility", value); } }
         public string clip { set { SetStylePropertyValue("clip", value); } }
+        public string clipPath { set { SetStylePropertyValue("clipPath", value); } }
         public string overflowWrap { set { SetStylePropertyValue("overflowWrap", value); } }
         public string alignItems { set { SetStylePropertyValue("alignItems", value); } }
         public string justifyContent { set { SetStylePropertyValue("justifyContent", value); } }
@@ -145,24 +151,16 @@ namespace CSHTML5.Internal
         public string webkitBoxOrient { set { SetStylePropertyValue("webkitBoxOrient", value); } }
 
         internal void setProperty(string propertyName, string value) =>
-            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
-                $"document.setStyleProperty('{Uid}', '{propertyName}', '{value}');");
+            OpenSilver.Interop.ExecuteJavaScriptVoidAsync(
+                $"document.setCSSProperty('{Uid}','{propertyName}','{value}')");
 
         internal void setProperty(string propertyName, string value, string priority) =>
-            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
-                $"document.setStyleProperty('{Uid}', '{propertyName}', '{value}', '{priority}');");
+            OpenSilver.Interop.ExecuteJavaScriptVoidAsync(
+                $"document.setCSSProperty('{Uid}','{propertyName}','{value}','{priority}')");
 
         private void SetStylePropertyValue(string propertyName, string value) =>
-            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
-                $"document.setDomStyle('{Uid}', '{propertyName}', '{value}');");
-
-        private void SetTransformPropertyValue(string propertyValue) =>
-            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
-                $"document.setDomTransform('{Uid}', '{propertyValue}');");
-
-        private void SetTransformOriginPropertyValue(string propertyValue) =>
-            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
-                $"document.setDomTransformOrigin('{Uid}', '{propertyValue}');");
+            OpenSilver.Interop.ExecuteJavaScriptVoidAsync(
+                $"document.setCSS('{Uid}','{propertyName}','{value}')");
 
         private string GetCSSProperty(string propertyName) =>
             OpenSilver.Interop.ExecuteJavaScriptString(

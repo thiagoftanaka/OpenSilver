@@ -11,27 +11,20 @@
 *  
 \*====================================================================================*/
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
-using System.Text;
-using System.Windows;
 using System.Windows.Resources;
 using OpenSilver.Internal;
 using OpenSilver.Internal.Xaml;
 using System.Text.Json;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Xaml.Markup;
 using System.ApplicationModel.Activation;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-using CSHTML5;
 using CSHTML5.Internal;
 
 namespace System.Windows
@@ -41,11 +34,11 @@ namespace System.Windows
     /// </summary>
     public partial class Application
     {
-        private static Dictionary<string, string> _resourcesCache = null;
+        private static readonly Dictionary<string, string> _resourcesCache = new(StringComparer.OrdinalIgnoreCase);
 
         private readonly Window _mainWindow;
         private readonly INTERNAL_HtmlDomElementReference _rootDiv;
-        
+
         private ApplicationLifetimeObjectsCollection _lifetimeObjects;
         private ResourceDictionary _resources;
         private Dictionary<object, object> _implicitResourcesCache;
@@ -59,8 +52,6 @@ namespace System.Windows
         /// </summary>
         public static Application Current { get; private set; }
 
-        internal INTERNAL_XamlResourcesHandler XamlResourcesHandler { get; } = new INTERNAL_XamlResourcesHandler();
-
         public Application()
             : this("opensilver-root")
         {
@@ -73,25 +64,25 @@ namespace System.Windows
                 throw new ArgumentNullException(nameof(rootDivId));
             }
 
-            _rootDiv = new INTERNAL_HtmlDomElementReference(rootDivId, null);
+            _rootDiv = new(rootDivId);
 
             // Keep a reference to the app:
             Current = this;
 
             // Initialize Deployment
             _ = Deployment.Current;
+            // Ensure InputManager is created
+            _ = InputManager.Current;
 
             AppParams = GetAppParams();
 
-            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
-            {
-                OnUnhandledException(e.ExceptionObject as Exception, false);
-            };
+            AppDomain.CurrentDomain.UnhandledException +=
+                (s, e) => OnUnhandledException(e.ExceptionObject as Exception, false);
 
             new DOMEventManager(GetWindow, "unload", ProcessOnExit).AttachToDomEvents();
 
             // In case of a redirection from Microsoft AAD, when running in the Simulator, we re-instantiate the application. We need to reload the JavaScript files because they are no longer in the HTML DOM due to the AAD redirection:
-            INTERNAL_InteropImplementation.ResetLoadedFilesDictionaries();
+            OpenSilver.Interop.ResetLoadedFilesDictionaries();
 
             // we change the resource manager for every resource registered
             ClientSideResourceRegister.Startup();
@@ -152,7 +143,7 @@ namespace System.Windows
             HTMLParam[] paramsArray;
             try
             {
-                string sElement = INTERNAL_InteropImplementation.GetVariableStringForJS(_rootDiv);
+                string sElement = OpenSilver.Interop.GetVariableStringForJS(_rootDiv);
                 paramsArray = JsonSerializer.Deserialize<HTMLParam[]>(
                     OpenSilver.Interop.ExecuteJavaScriptString($"document.getAppParams({sElement});"));
             }
@@ -331,60 +322,55 @@ namespace System.Windows
         /// </returns>
         public static Task<string> GetResourceString(Uri uriResource)
         {
-            if (_resourcesCache == null)
+            if (_resourcesCache.TryGetValue(uriResource.OriginalString, out string content))
             {
-                _resourcesCache = new Dictionary<string, string>();
+                return Task.FromResult(content);
             }
-            TaskCompletionSource<string> tcs = new TaskCompletionSource<string>();
-            if (_resourcesCache.ContainsKey(uriResource.OriginalString.ToLower()))
-            {
-                tcs.SetResult(_resourcesCache[uriResource.OriginalString.ToLower()]);
-                return tcs.Task;
-            }
-            HashSet<string> supportedExtensions = new HashSet<string>(new string[] { ".txt", ".xml", ".config", ".json", ".clientconfig" });
 
             string uriAsString = uriResource.OriginalString;
             string extension = uriAsString.Substring(uriAsString.LastIndexOf('.'));
-            if (!supportedExtensions.Contains(extension.ToLower())) //todo: when we will be able to handle more extensions, add them to supportedExtensions and do not forget to update GetResourceStream as well.
+
+            if (string.Equals(extension, ".txt", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(extension, ".xml", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(extension, ".config", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(extension, ".json", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(extension, ".clientconfig", StringComparison.OrdinalIgnoreCase))
             {
-                throw new NotSupportedException("Application.GetResourceString is currently not supported for files with an extension different than .txt, .xml, .json, .config, or .clientconfig.");
+                var tcs = new TaskCompletionSource<string>();
+
+                var uris = new List<string>(1)
+                {
+                    uriAsString + ".g.js"
+                };
+
+                if (string.Equals(uriResource.OriginalString, "ms-appx://app.config", StringComparison.OrdinalIgnoreCase))
+                {
+                    OpenSilver.Interop.LoadJavaScriptFilesAsync(
+                        uris,
+                        () => tcs.SetResult(OpenSilver.Interop.ExecuteJavaScriptString("window.AppConfig")));
+                }
+                else if (string.Equals(uriResource.OriginalString, "ms-appx://servicereferences.clientconfig", StringComparison.OrdinalIgnoreCase))
+                {
+                    OpenSilver.Interop.LoadJavaScriptFilesAsync(
+                        uris,
+                        () => tcs.SetResult(OpenSilver.Interop.ExecuteJavaScriptString("window.ServiceReferencesClientConfig")));
+                }
+                else
+                {
+                    OpenSilver.Interop.LoadJavaScriptFilesAsync(
+                        uris,
+                        () =>
+                        {
+                            string result = OpenSilver.Interop.ExecuteJavaScriptString("window.FileContent");
+                            _resourcesCache.Add(uriResource.OriginalString.ToLower(), result);
+                            tcs.SetResult(result);
+                        });
+                }
+
+                return tcs.Task;
             }
-            List<string> uris = new List<string>();
-            uris.Add(uriAsString + ".g.js");
-            if (uriResource.OriginalString.ToLower() == "ms-appx://app.config")
-            {
-                OpenSilver.Interop.LoadJavaScriptFilesAsync(
-                    uris,
-                    (Action)(() =>
-                    {
-                        tcs.SetResult(OpenSilver.Interop.ExecuteJavaScriptString("window.AppConfig"));
-                    })
-                    );
-            }
-            else if (uriResource.OriginalString.ToLower() == "ms-appx://servicereferences.clientconfig")
-            {
-                OpenSilver.Interop.LoadJavaScriptFilesAsync(
-                    uris,
-                    (Action)(() =>
-                    {
-                        tcs.SetResult(OpenSilver.Interop.ExecuteJavaScriptString("window.ServiceReferencesClientConfig"));
-                    })
-                    );
-            }
-            else
-            {
-                OpenSilver.Interop.LoadJavaScriptFilesAsync(
-                    uris,
-                    (Action)(() =>
-                    {
-                        string result = OpenSilver.Interop.ExecuteJavaScriptString("window.FileContent");
-                        _resourcesCache.Add(uriResource.OriginalString.ToLower(), result);
-                        tcs.SetResult(result);
-                    })
-                    );
-            }
-            //return Convert.ToString(Interop.ExecuteJavaScript("window.FileContent"));
-            return tcs.Task;
+
+            return Task.FromResult(string.Empty);
         }
 
         /// <summary>
@@ -397,7 +383,20 @@ namespace System.Windows
         /// </returns>
         public object TryFindResource(object resourceKey)
         {
-            return XamlResourcesHandler.TryFindResource(resourceKey);
+            if (resourceKey is Type typeKey)
+            {
+                if (XamlResources.FindStyleResourceInGenericXaml(typeKey) is object resource1)
+                {
+                    return resource1;
+                }
+            }
+
+            if (HasResources && Resources.TryGetResource(resourceKey, out object resource2))
+            {
+                return resource2;
+            }
+
+            return XamlResources.FindBuiltInResource(resourceKey);
         }
 
         /// <summary>
@@ -424,7 +423,7 @@ namespace System.Windows
             }
 
             string resourceUri = resourceLocator.ToString();
-            if (IsComponentUri(resourceUri))
+            if (AppResourcesManager.IsComponentUri(resourceUri))
             {
                 IXamlComponentLoader factory = GetXamlComponentLoader(resourceUri);
                 if (factory != null)
@@ -450,27 +449,10 @@ namespace System.Windows
             loader.LoadComponent(component);
         }
 
-        private static bool IsComponentUri(string uri)
-        {
-            int index = uri.IndexOf(';');
-            if (index > -1)
-            {
-                return uri.AsSpan(index).StartsWith(";component/".AsSpan(), StringComparison.OrdinalIgnoreCase);
-            }
-
-            return false;
-        }
-
-        private static string ExtractAssemblyNameFromComponentUri(string uri)
-        {
-            int offset = uri[0] == '/' ? 1 : 0;
-            return uri.Substring(offset, uri.IndexOf(';') - offset);
-        }
-
         private static IXamlComponentLoader GetXamlComponentLoader(string componentUri)
         {
             string className = XamlResourcesHelper.GenerateClassNameFromComponentUri(componentUri);
-            string assemblyName = ExtractAssemblyNameFromComponentUri(componentUri);
+            string assemblyName = AppResourcesManager.ExtractAssemblyNameFromComponentUri(componentUri);
 
             Type loaderType = Type.GetType($"{className}, {assemblyName}");
             if (loaderType != null)
@@ -481,60 +463,49 @@ namespace System.Windows
             return null;
         }
 
-        // Exceptions:
-        //   System.ArgumentNullException:
-        //     The System.Uri that is passed to System.Windows.Application.GetResourceStream(System.Uri)
-        //     is null.
-        //
-        //   System.ArgumentException:
-        //     The System.Uri.OriginalString property of the System.Uri that is passed to
-        //     System.Windows.Application.GetResourceStream(System.Uri) is null.
-        //
-        //   System.ArgumentException:
-        //     The System.Uri that is passed to System.Windows.Application.GetResourceStream(System.Uri)
-        //     is either not relative, or is absolute but not in the pack://application:,,,/
-        //     form.
-        //
-        //   System.IO.IOException:
-        //     The System.Uri that is passed to System.Windows.Application.GetResourceStream(System.Uri)
-        //     cannot be found.
         /// <summary>
-        /// Returns a resource stream for a resource data file that is located at the
-        /// specified System.Uri (see WPF Application Resource, Content, and Data Files).
+        /// Returns a resource file from a location in the application package.
         /// </summary>
-        /// <param name="uriResource">The System.Uri that maps to an embedded resource.</param>
+        /// <param name="uriResource">
+        /// A relative URI that identifies the resource file to be loaded. The URI is relative
+        /// to the application package and does not need a leading forward slash.
+        /// </param>
         /// <returns>
-        /// A System.Windows.Resources.StreamResourceInfo that contains a resource stream
-        /// for resource data file that is located at the specified System.Uri.
+        /// A <see cref="StreamResourceInfo"/> that contains the stream for the desired resource 
+        /// file.
         /// </returns>
-        public static async Task<StreamResourceInfo> GetResourceStream(Uri uriResource)
+        /// <exception cref="ArgumentNullException">
+        /// uriResource is null.
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// uriResource is an absolute URI.
+        /// </exception>
+        public static Task<StreamResourceInfo> GetResourceStream(Uri uriResource)
         {
-            string resourceString = await GetResourceString(uriResource);
-            string uriAsString = uriResource.OriginalString;
-            string extensionLowercase = uriAsString.Substring(uriAsString.LastIndexOf('.')).ToLower();
-
-            byte[] byteArray = Encoding.ASCII.GetBytes(resourceString);
-            MemoryStream stream = new MemoryStream(byteArray);
-
-            string mimeType = "text/plain";
-            if (extensionLowercase == ".xml" || extensionLowercase == ".config" || extensionLowercase == ".clientconfig")
+            if (uriResource is null)
             {
-                mimeType = "application/xml";
+                throw new ArgumentNullException(nameof(uriResource));
             }
-            else if (extensionLowercase == ".json")
-            {
-                mimeType = "application/json";
-            } //todo: update this when more extensions will be handled
 
-            StreamResourceInfo resourceInfo = new StreamResourceInfo(stream, mimeType);
-            return resourceInfo;
+            if (uriResource.IsAbsoluteUri)
+            {
+                throw new ArgumentException("Uri must be relative.");
+            }
+
+            if (AppResourcesManager.GetResourceStream(uriResource.ToString()) is Stream stream)
+            {
+                return Task.FromResult(new StreamResourceInfo(stream, null));
+            }
+
+            return Task.FromResult<StreamResourceInfo>(null);
         }
 
+        [Obsolete(Helper.ObsoleteMemberMessage)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static event EventHandler INTERNAL_Reloaded;
 
-        /// <summary>
-        /// Intended to be called by the Simulator when navigating back from an external page.
-        /// </summary>
+        [Obsolete(Helper.ObsoleteMemberMessage)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static void INTERNAL_RaiseReloadedEvent()
         {
             EventHandler handler = INTERNAL_Reloaded;
@@ -581,10 +552,6 @@ namespace System.Windows
         /// to ensure correction functioning of the application.
         /// </summary>
         /// <param name="entryPoint"></param>
-        public static void RunApplication(Action entryPoint)
-        {
-            entryPoint();
-            INTERNAL_ExecuteJavaScript.ExecutePendingJavaScriptCode();
-        }
+        public static void RunApplication(Action entryPoint) => entryPoint();
     }
 }

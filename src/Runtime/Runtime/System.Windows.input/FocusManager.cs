@@ -58,7 +58,7 @@ namespace System.Windows.Input
         /// <param name="newFocus"></param>
         internal static void SetFocusedElement(DependencyObject scope, UIElement newFocus)
         {
-            scope.SetValue(FocusedElementProperty, newFocus);
+            scope.SetValueInternal(FocusedElementProperty, newFocus);
         }
 
         private static void OnFocusedElementChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
@@ -71,7 +71,7 @@ namespace System.Windows.Input
 
         internal static DependencyObject GetFocusScope(UIElement uie)
         {
-            return uie?.INTERNAL_ParentWindow ?? Window.Current;
+            return uie?.ParentWindow ?? Window.Current;
         }
 
         internal static bool HasFocus(UIElement uie, bool useLogicalTree = false)

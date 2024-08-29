@@ -148,11 +148,11 @@ internal sealed class InputManager
 
     private InputManager()
     {
-        _handler = JavaScriptCallback.Create(ProcessInput, true);
+        _handler = JavaScriptCallback.Create(ProcessInput);
 
         if (Current == null)
         {
-            string sHandler = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_handler);
+            string sHandler = OpenSilver.Interop.GetVariableStringForJS(_handler);
             OpenSilver.Interop.ExecuteJavaScriptVoid($"document.createInputManager({sHandler});");
         }
     }
@@ -162,9 +162,9 @@ internal sealed class InputManager
     /// </summary>
     public static InputManager Current { get; } = new InputManager();
 
-    internal void RegisterRoot(object element)
+    internal void RegisterRoot(INTERNAL_HtmlDomElementReference element)
     {
-        string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(element);
+        string sElement = OpenSilver.Interop.GetVariableStringForJS(element);
         OpenSilver.Interop.ExecuteJavaScriptVoid($"document.inputManager.registerRoot({sElement});");
     }
 
@@ -175,24 +175,24 @@ internal sealed class InputManager
 
     internal bool CaptureMouse(UIElement uie)
     {
-        if (Pointer.INTERNAL_captured is null && _mouseLeftDown)
+        if (Pointer.Captured is null && _mouseLeftDown)
         {
-            Pointer.INTERNAL_captured = uie;
+            Pointer.Captured = uie;
 
-            string sDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(uie.INTERNAL_OuterDomElement);
+            string sDiv = OpenSilver.Interop.GetVariableStringForJS(uie.OuterDiv);
             OpenSilver.Interop.ExecuteJavaScriptVoid($"document.inputManager.captureMouse({sDiv});");
 
             return true;
         }
 
-        return Pointer.INTERNAL_captured == uie;
+        return Pointer.Captured == uie;
     }
 
     internal void ReleaseMouseCapture(UIElement uie)
     {
-        if (Pointer.INTERNAL_captured == uie)
+        if (Pointer.Captured == uie)
         {
-            Pointer.INTERNAL_captured = null;
+            Pointer.Captured = null;
             OpenSilver.Interop.ExecuteJavaScriptVoid($"document.inputManager.releaseMouseCapture();");
 
             uie.RaiseEvent(new MouseEventArgs
@@ -200,21 +200,6 @@ internal sealed class InputManager
                 RoutedEvent = UIElement.LostMouseCaptureEvent,
                 OriginalSource = uie,
             });
-        }
-    }
-
-    internal void AddEventListeners(UIElement uie, bool isFocusable)
-    {
-        if (uie.INTERNAL_OuterDomElement is INTERNAL_HtmlDomElementReference domRef)
-        {
-            OpenSilver.Interop.ExecuteJavaScriptFastAsync(
-                $"document.inputManager.addListeners('{domRef.UniqueIdentifier}', {(isFocusable ? "true" : "false")});");
-        }
-        else
-        {
-            string sOuter = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(uie.INTERNAL_OuterDomElement);
-            OpenSilver.Interop.ExecuteJavaScriptFastAsync(
-                $"document.inputManager.addListeners({sOuter}, {(isFocusable ? "true" : "false")});");
         }
     }
 
@@ -227,7 +212,7 @@ internal sealed class InputManager
             return true;
         }
 
-        if (uie.GetFocusTarget() is object target)
+        if (uie.GetFocusTarget() is INTERNAL_HtmlDomElementReference target)
         {
             if (SetFocusNative(target))
             {
@@ -247,15 +232,15 @@ internal sealed class InputManager
         return false;
     }
 
-    internal static bool SetFocusNative(object domElement)
+    internal static bool SetFocusNative(INTERNAL_HtmlDomElementReference domElement)
     {
-        string sDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(domElement);
+        string sDiv = OpenSilver.Interop.GetVariableStringForJS(domElement);
         return OpenSilver.Interop.ExecuteJavaScriptBoolean($"document.inputManager.focus({sDiv});");
     }
 
     internal static void ClearTabIndex(UIElement uie)
     {
-        if (uie.GetFocusTarget() is { } domElement)
+        if (uie.GetFocusTarget() is INTERNAL_HtmlDomElementReference domElement)
         {
             switch (uie)
             {
@@ -318,7 +303,7 @@ internal sealed class InputManager
             // element that was clicked would still have captured the pointer 
             // events, preventing the user to click on anything until the capture 
             // is released (if it does ever happen).
-            if (Pointer.INTERNAL_captured == uie)
+            if (Pointer.Captured == uie)
             {
                 uie.ReleaseMouseCapture();
             }
@@ -376,7 +361,7 @@ internal sealed class InputManager
 
     private void ReleaseMouseCapture()
     {
-        if (Pointer.INTERNAL_captured is UIElement uie)
+        if (Pointer.Captured is UIElement uie)
         {
             ReleaseMouseCapture(uie);
         }
@@ -636,19 +621,19 @@ internal sealed class InputManager
     {
         UIElement keyboardTarget = uie.KeyboardTarget;
         if (keyboardTarget is null || !int.TryParse(OpenSilver.Interop.ExecuteJavaScriptString(
-            $"{CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(jsEventArg)}.keyCode"), out int keyCode))
+            $"{OpenSilver.Interop.GetVariableStringForJS(jsEventArg)}.keyCode"), out int keyCode))
         {
             return;
         }
 
-        keyCode = INTERNAL_VirtualKeysHelpers.FixKeyCodeForSilverlight(keyCode);
+        keyCode = VirtualKeysHelpers.FixKeyCodeForSilverlight(keyCode);
         var e = new KeyEventArgs()
         {
             RoutedEvent = UIElement.KeyDownEvent,
             OriginalSource = keyboardTarget,
             UIEventArg = jsEventArg,
             PlatformKeyCode = keyCode,
-            Key = INTERNAL_VirtualKeysHelpers.GetKeyFromKeyCode(keyCode),
+            Key = VirtualKeysHelpers.GetKeyFromKeyCode(keyCode),
             KeyModifiers = Keyboard.Modifiers,
         };
 
@@ -669,19 +654,19 @@ internal sealed class InputManager
         UIElement keyboardTarget = uie.KeyboardTarget;
 
         if (keyboardTarget is null || !int.TryParse(OpenSilver.Interop.ExecuteJavaScriptString(
-            $"{CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(jsEventArg)}.keyCode"), out int keyCode))
+            $"{OpenSilver.Interop.GetVariableStringForJS(jsEventArg)}.keyCode"), out int keyCode))
         {
             return;
         }
 
-        keyCode = INTERNAL_VirtualKeysHelpers.FixKeyCodeForSilverlight(keyCode);
+        keyCode = VirtualKeysHelpers.FixKeyCodeForSilverlight(keyCode);
         var e = new KeyEventArgs()
         {
             RoutedEvent = UIElement.KeyUpEvent,
             OriginalSource = keyboardTarget,
             UIEventArg = jsEventArg,
             PlatformKeyCode = keyCode,
-            Key = INTERNAL_VirtualKeysHelpers.GetKeyFromKeyCode(keyCode),
+            Key = VirtualKeysHelpers.GetKeyFromKeyCode(keyCode),
             KeyModifiers = Keyboard.Modifiers,
         };
 
@@ -733,25 +718,38 @@ internal sealed class InputManager
     {
         UIElement keyboardTarget = uie.KeyboardTarget;
         if (keyboardTarget is null || !int.TryParse(OpenSilver.Interop.ExecuteJavaScriptString(
-            $"{CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(jsEventArg)}.keyCode"), out int keyCode))
+            $"{OpenSilver.Interop.GetVariableStringForJS(jsEventArg)}.keyCode"), out int keyCode))
         {
             return;
         }
 
-        var e = new TextCompositionEventArgs
+        string text = ((char)keyCode).ToString();
+
+        var textInputStartArgs = new TextCompositionEventArgs
         {
-            RoutedEvent = UIElement.TextInputEvent,
+            RoutedEvent = UIElement.TextInputStartEvent,
             OriginalSource = keyboardTarget,
-            Text = ((char)keyCode).ToString(),
-            TextComposition = new TextComposition(string.Empty),
+            Text = text,
+            TextComposition = TextComposition.Empty,
             UIEventArg = jsEventArg,
         };
 
-        keyboardTarget.RaiseEvent(e);
+        keyboardTarget.RaiseEvent(textInputStartArgs);
 
-        if (e.Cancel)
+        var textInputArgs = new TextCompositionEventArgs
         {
-            e.PreventDefault();
+            RoutedEvent = UIElement.TextInputEvent,
+            OriginalSource = keyboardTarget,
+            Text = text,
+            TextComposition = TextComposition.Empty,
+            UIEventArg = jsEventArg,
+        };
+
+        keyboardTarget.RaiseEvent(textInputArgs);
+
+        if (textInputArgs.Cancel)
+        {
+            textInputArgs.PreventDefault();
         }
     }
 

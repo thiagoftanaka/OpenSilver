@@ -11,59 +11,32 @@
 *  
 \*====================================================================================*/
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Windows;
 
 namespace System.ComponentModel
 {
     /// <summary>
-    /// Provides data for the System.Windows.Window.Closing event.
+    /// Provides data for the <see cref="Window.Closing"/> event.
     /// </summary>
-    public partial class ClosingEventArgs : CancelEventArgs
+    public class ClosingEventArgs : CancelEventArgs
     {
-        internal object INTERNAL_JSArgs;
-
         /// <summary>
-        /// Initializes a new instance of the System.ComponentModel.ClosingEventArgs
-        /// class.
+        /// Initializes a new instance of the <see cref="ClosingEventArgs"/> class.
         /// </summary>
-        /// <param name="isCancelable">Initializes the System.ComponentModel.ClosingEventArgs.IsCancelable property.</param>
+        /// <param name="isCancelable">
+        /// Initializes the <see cref="IsCancelable"/> property.
+        /// </param>
         public ClosingEventArgs(bool isCancelable)
         {
-            _isCancelable = isCancelable;
+            IsCancelable = isCancelable;
         }
 
-        bool _isCancelable = true;
         /// <summary>
-        /// Gets a value that indicates whether you can cancel the Window.Closing event.
+        /// Gets a value that indicates whether you can cancel the <see cref="Window.Closing"/> event.
         /// </summary>
-        public bool IsCancelable { get { return _isCancelable; } }
-
-        private bool _showCloseConfirmationDialog;
-
-        public bool ShowCloseConfirmationDialog
-        {
-            get { return _showCloseConfirmationDialog; }
-            set
-            {
-                _showCloseConfirmationDialog = value;
-                if (INTERNAL_JSArgs != null)
-                {
-                    if (value)
-                    {
-                        OpenSilver.Interop.ExecuteJavaScriptVoid(
-                            $"{CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(INTERNAL_JSArgs)}.returnValue = 'The modifications you made may not be saved.';"); //todo: find a way to change this message at will (changing this only has an impact on IE and maybe Edge).
-                    }
-                    else
-                    {
-                        OpenSilver.Interop.ExecuteJavaScriptVoid(
-                            $"{CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(INTERNAL_JSArgs)}.returnValue = '';");
-                    }
-                }
-            }
-        }
+        /// <returns>
+        /// true if you can cancel the event; otherwise, false.
+        /// </returns>
+        public bool IsCancelable { get; }
     }
 }

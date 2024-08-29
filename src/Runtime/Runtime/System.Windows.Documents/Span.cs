@@ -11,53 +11,86 @@
 *  
 \*====================================================================================*/
 
+using System.Text;
 using System.Windows.Markup;
 using CSHTML5.Internal;
 
-namespace System.Windows.Documents
+namespace System.Windows.Documents;
+
+/// <summary>
+/// Groups other <see cref="Inline"/> content elements.
+/// </summary>
+[ContentProperty(nameof(Inlines))]
+public class Span : Inline
 {
+    private InlineCollection _inlines;
+
     /// <summary>
-    /// Groups other Inline flow content elements.
+    /// Initializes a new instance of the <see cref="Span"/> class.
     /// </summary>
-    [ContentProperty(nameof(Inlines))]
-    public class Span : Inline
+    public Span()
     {
-        internal override int VisualChildrenCount
+        SetValueInternal(InlinesProperty, new InlineCollection(this));
+    }
+
+    private static readonly DependencyProperty InlinesProperty =
+        DependencyProperty.Register(
+            nameof(Inlines),
+            typeof(InlineCollection),
+            typeof(Span),
+            new PropertyMetadata(null, OnInlinesChanged));
+
+    /// <summary>
+    /// Gets an <see cref="InlineCollection"/> containing the top-level inline
+    /// elements that include the contents of <see cref="Span"/>.
+    /// </summary>
+    /// <returns>
+    /// An <see cref="InlineCollection"/> containing the inline elements that
+    /// include the contents of the <see cref="Span"/>. This property has
+    /// no default value.
+    /// </returns>
+    public InlineCollection Inlines => _inlines;
+
+    private static void OnInlinesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        ((Span)d)._inlines = (InlineCollection)e.NewValue;
+    }
+
+    protected internal override void INTERNAL_OnAttachedToVisualTree()
+    {
+        base.INTERNAL_OnAttachedToVisualTree();
+
+        foreach (Inline child in Inlines.InternalItems)
         {
-            get { return this.Inlines.Count; }
+            INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(child, this);
+        }
+    }
+
+    internal sealed override bool IsModel
+    {
+        get => _inlines.IsModel;
+        set => _inlines.IsModel = value;
+    }
+
+    internal sealed override int VisualChildrenCount => Inlines.Count;
+
+    internal sealed override UIElement GetVisualChild(int index)
+    {
+        if (index >= VisualChildrenCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(index));
         }
 
-        internal override UIElement GetVisualChild(int index)
+        return Inlines.InternalItems[index];
+    }
+
+    internal sealed override void AppendHtml(StringBuilder builder)
+    {
+        builder.Append($"<{TagName} class=\"opensilver-textelement\">");
+        foreach (Inline inline in Inlines.InternalItems)
         {
-            if (index >= VisualChildrenCount)
-            {
-                throw new ArgumentOutOfRangeException(nameof(index));
-            }
-
-            return (Inline)this.Inlines[index];
+            inline.AppendHtml(builder);
         }
-
-        /// <summary>
-        /// Initializes a new instance of the Span class.
-        /// </summary>
-        public Span()
-        {
-            Inlines = new InlineCollection(this);
-        }
-
-        /// <summary>
-        ///Gets an InlineCollection containing the top-level inline elements that include the contents of Span.
-        /// </summary>
-        public InlineCollection Inlines { get; }
-
-        protected internal override void INTERNAL_OnAttachedToVisualTree()
-        {
-            base.INTERNAL_OnAttachedToVisualTree();
-
-            foreach (Inline child in this.Inlines)
-            {
-                INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(child, this);
-            }
-        }
+        builder.Append($"</{TagName}>");
     }
 }

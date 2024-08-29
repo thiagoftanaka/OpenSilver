@@ -26,7 +26,7 @@ namespace System.Windows.Data
     /// <summary>
     /// Contains information about a single instance of a <see cref="Binding" />.
     /// </summary>
-    public class BindingExpression : BindingExpressionBase
+    public sealed class BindingExpression : BindingExpressionBase
     {
         [Flags]
         private enum BindingStatus
@@ -88,12 +88,28 @@ namespace System.Windows.Data
 
         private bool ReadFlag(BindingStatus flag) => (flag & _status) != 0;
 
-        internal BindingExpression(Binding binding, DependencyProperty property)
+        private BindingExpression(Binding binding)
         {
             ParentBinding = binding;
-            TargetProperty = property;
 
             _propertyPathWalker = new PropertyPathWalker(this);
+        }
+
+        // Create a new BindingExpression from the given Bind description
+        internal static BindingExpression CreateBindingExpression(DependencyProperty dp, Binding binding)
+        {
+            if (dp.ReadOnly)
+            {
+                throw new ArgumentException($"'{dp.Name}' property cannot be data-bound.", nameof(dp));
+            }
+
+            if (binding.Mode == BindingMode.TwoWay && (binding.Path.Path == string.Empty || binding.Path.Path == "."))
+            {
+                throw new InvalidOperationException("Two-way binding requires Path.");
+            }
+
+            // create the BindingExpression
+            return new BindingExpression(binding);
         }
 
         private void OnDataContextChanged(DependencyObject d, DependencyPropertyChangedEventArgs args)
@@ -134,7 +150,7 @@ namespace System.Windows.Data
             // in the remark.
             if (_status == BindingStatus.None && ParentBinding.Mode == BindingMode.TwoWay)
             {
-                UpdateSourceObject(Target.GetValue(TargetProperty));
+                UpdateSourceObject();
             }
         }
 
@@ -220,6 +236,7 @@ namespace System.Windows.Data
             IsAttaching = IsAttached = true;
 
             Target = d;
+            TargetProperty = dp;
 
             AttachToContext(false);
 
@@ -230,7 +247,7 @@ namespace System.Windows.Data
                     ((d is TextBox && dp == TextBox.TextProperty) || (d is PasswordBox && dp == PasswordBox.PasswordProperty));
                 if (_isUpdateOnLostFocus)
                 {
-                    ((IInternalFrameworkElement)Target).LostFocus += new RoutedEventHandler(OnTargetLostFocus);
+                    ((FrameworkElement)Target).LostFocus += new RoutedEventHandler(OnTargetLostFocus);
                 }
 
                 _targetPropertyListener = new DependencyPropertyChangedListener(Target, TargetProperty, UpdateSourceCallback);
@@ -246,8 +263,7 @@ namespace System.Windows.Data
 
         internal override void OnDetach(DependencyObject d, DependencyProperty dp)
         {
-            if (!IsAttached)
-                return;
+            if (!IsAttached) return;
 
             IsAttached = false;
 
@@ -290,13 +306,16 @@ namespace System.Windows.Data
             if (_isUpdateOnLostFocus)
             {
                 _isUpdateOnLostFocus = false;
-                ((IInternalFrameworkElement)Target).LostFocus -= new RoutedEventHandler(OnTargetLostFocus);
+                ((FrameworkElement)Target).LostFocus -= new RoutedEventHandler(OnTargetLostFocus);
             }
 
             DetachMentor();
 
             Target.InheritedContextChanged -= new EventHandler(OnTargetInheritedContextChanged);
             Target = null;
+            TargetProperty = null;
+
+            _status = BindingStatus.None;
         }
 
         internal void ValueChanged()
@@ -652,7 +671,7 @@ namespace System.Windows.Data
             //--------------
         }
 
-        internal void UpdateSourceObject(object value)
+        internal void UpdateSourceObject()
         {
             if (_propertyPathWalker.IsPathBroken)
             {
@@ -663,7 +682,7 @@ namespace System.Windows.Data
 
             IPropertyPathNode node = _propertyPathWalker.FinalNode;
 
-            object convertedValue = value;
+            object convertedValue = Target.GetValue(TargetProperty);
             Type expectedType = node.Type;
 
             ValidationError vError = null;
@@ -672,7 +691,7 @@ namespace System.Windows.Data
             {
                 if (expectedType != null && ParentBinding.Converter != null)
                 {
-                    convertedValue = ParentBinding.Converter.ConvertBack(value,
+                    convertedValue = ParentBinding.Converter.ConvertBack(convertedValue,
                         expectedType,
                         ParentBinding.ConverterParameter,
                         ParentBinding.ConverterCulture);
@@ -762,7 +781,7 @@ namespace System.Windows.Data
             if (_needsUpdate)
             {
                 _needsUpdate = false;
-                UpdateSourceObject(Target.GetValue(TargetProperty));
+                UpdateSourceObject();
             }
         }
 
@@ -1140,7 +1159,7 @@ namespace System.Windows.Data
             
             try
             {
-                UpdateSourceObject(args.NewValue);
+                UpdateSourceObject();
             }
             catch (Exception ex)
             {
@@ -1154,7 +1173,7 @@ namespace System.Windows.Data
 
             bool oldIsUpdating = IsUpdatingValue;
             IsUpdatingValue = true;
-            Target.ApplyExpression(TargetProperty, this, ParentBinding._isInStyle);
+            Target.ApplyExpression(TargetProperty, this);
             IsUpdatingValue = oldIsUpdating;
         }
     }

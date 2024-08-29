@@ -195,85 +195,85 @@ namespace CSHTML5.Native.JavaScript.Networking
 
         private void SetTimout(object xmlHttpRequest, int timeOut)
         {
-            string sRequest = INTERNAL_InteropImplementation.GetVariableStringForJS(xmlHttpRequest);
-            string sTimeout = INTERNAL_InteropImplementation.GetVariableStringForJS(timeOut);
+            string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
+            string sTimeout = OpenSilver.Interop.GetVariableStringForJS(timeOut);
             OpenSilver.Interop.ExecuteJavaScriptVoid($"{sRequest}.timeout = {sTimeout}");
         }
 
         private void SetRequestHeader(object xmlHttpRequest, string key, string header)
         {
-            string sRequest = INTERNAL_InteropImplementation.GetVariableStringForJS(xmlHttpRequest);
-            string sKey = INTERNAL_InteropImplementation.GetVariableStringForJS(key);
-            string sHeader = INTERNAL_InteropImplementation.GetVariableStringForJS(header);
+            string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
+            string sKey = OpenSilver.Interop.GetVariableStringForJS(key);
+            string sHeader = OpenSilver.Interop.GetVariableStringForJS(header);
             OpenSilver.Interop.ExecuteJavaScriptVoid($"{sRequest}.setRequestHeader({sKey}, {sHeader})");
         }
 
         private void OnLoad(object xmlHttpRequest, Action<object> onLoad)
         {
-            string sRequest = INTERNAL_InteropImplementation.GetVariableStringForJS(xmlHttpRequest);
-            string sCallback = INTERNAL_InteropImplementation.GetVariableStringForJS(onLoad);
+            string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
+            string sCallback = OpenSilver.Interop.GetVariableStringForJS(onLoad);
             OpenSilver.Interop.ExecuteJavaScriptVoid($"{sRequest}.onload = {sCallback}");
         }
 
         private void OnProgress(object xmlHttpRequest, Action<object> onProgress)
         {
-            string sRequest = INTERNAL_InteropImplementation.GetVariableStringForJS(xmlHttpRequest);
-            string sCallback = INTERNAL_InteropImplementation.GetVariableStringForJS(onProgress);
+            string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
+            string sCallback = OpenSilver.Interop.GetVariableStringForJS(onProgress);
             OpenSilver.Interop.ExecuteJavaScriptVoid($"{sRequest}.onprogress = {sCallback}");
         }
 
         private void OnError(object xmlHttpRequest, Action<object> onError)
         {
-            string sRequest = INTERNAL_InteropImplementation.GetVariableStringForJS(xmlHttpRequest);
-            string sCallback = INTERNAL_InteropImplementation.GetVariableStringForJS(onError);
+            string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
+            string sCallback = OpenSilver.Interop.GetVariableStringForJS(onError);
             OpenSilver.Interop.ExecuteJavaScriptVoid($"{sRequest}.onerror = {sCallback}");
         }
 
         private void OnAbort(object xmlHttpRequest, Action<object> onAbort)
         {
-            string sRequest = INTERNAL_InteropImplementation.GetVariableStringForJS(xmlHttpRequest);
-            string sCallback = INTERNAL_InteropImplementation.GetVariableStringForJS(onAbort);
+            string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
+            string sCallback = OpenSilver.Interop.GetVariableStringForJS(onAbort);
             OpenSilver.Interop.ExecuteJavaScriptVoid($"{sRequest}.onabort = {sCallback}");
         }
 
         private void OnTimeOut(object xmlHttpRequest, Action<object> onTimeOut)
         {
-            string sRequest = INTERNAL_InteropImplementation.GetVariableStringForJS(xmlHttpRequest);
-            string sCallback = INTERNAL_InteropImplementation.GetVariableStringForJS(onTimeOut);
+            string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
+            string sCallback = OpenSilver.Interop.GetVariableStringForJS(onTimeOut);
             OpenSilver.Interop.ExecuteJavaScriptVoid($"{sRequest}.ontimeout = {sCallback}");
         }
 
         private void Open(object xmlHttpRequest, string method, string address, bool isAsync)
         {
-            string sRequest = INTERNAL_InteropImplementation.GetVariableStringForJS(xmlHttpRequest);
-            string sMethod = INTERNAL_InteropImplementation.GetVariableStringForJS(method);
-            string sAddress = INTERNAL_InteropImplementation.GetVariableStringForJS(address);
-            string sAsync = INTERNAL_InteropImplementation.GetVariableStringForJS(isAsync);
+            string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
+            string sMethod = OpenSilver.Interop.GetVariableStringForJS(method);
+            string sAddress = OpenSilver.Interop.GetVariableStringForJS(address);
+            string sAsync = OpenSilver.Interop.GetVariableStringForJS(isAsync);
             OpenSilver.Interop.ExecuteJavaScriptVoid($"{sRequest}.open({sMethod}, {sAddress}, {sAsync})");
         }
 
         private static void Send(object xmlHttpRequest, string body)
         {
-            string sRequest = INTERNAL_InteropImplementation.GetVariableStringForJS(xmlHttpRequest);
-            string sBody = INTERNAL_InteropImplementation.GetVariableStringForJS(body ?? "");
+            string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
+            string sBody = OpenSilver.Interop.GetVariableStringForJS(body ?? "");
             OpenSilver.Interop.ExecuteJavaScriptVoid($"{sRequest}.send({sBody})");
         }
 
         private static XhrReadyState GetReadyState(object xmlHttpRequest)
         {
-            string sRequest = INTERNAL_InteropImplementation.GetVariableStringForJS(xmlHttpRequest);
+            string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
             return (XhrReadyState)OpenSilver.Interop.ExecuteJavaScriptInt32($"{sRequest}.readyState");
         }
 
         private static int GetStatus(object xmlHttpRequest)
         {
-            string sRequest = INTERNAL_InteropImplementation.GetVariableStringForJS(xmlHttpRequest);
+            string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
             return OpenSilver.Interop.ExecuteJavaScriptInt32($"{sRequest}.status");
         }
 
         private static string GetResponse(object xmlHttpRequest)
         {
-            string sRequest = INTERNAL_InteropImplementation.GetVariableStringForJS(xmlHttpRequest);
+            string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
             return OpenSilver.Interop.ExecuteJavaScriptString($"{sRequest}.responseText");
         }
     }

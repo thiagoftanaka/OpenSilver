@@ -20,14 +20,6 @@ namespace OpenSilver.Compiler
 {
     public class AssembliesInspector : IDisposable
     {
-
-        //----------------------------------------------------------------------
-        // We create a static instance in the "BeforeXamlPreprocessor" task.
-        // The static instance avoids reloading the assemblies for each XAML file.
-        // We dispose it in the "AfterXamlPreprocessor" task.
-        //----------------------------------------------------------------------
-        public static AssembliesInspector Current;
-
         private readonly MonoCecilAssembliesInspectorImpl _monoCecilVersion;
 
         public AssembliesInspector(SupportedLanguage compilerType)
@@ -35,19 +27,9 @@ namespace OpenSilver.Compiler
             _monoCecilVersion = new MonoCecilAssembliesInspectorImpl(compilerType);
         }
 
-        public void Dispose()
-        {
-            // Unload everything:
-            _monoCecilVersion.Dispose();
-            GC.Collect(); // Collects all unused memory
-            GC.WaitForPendingFinalizers(); // Waits until GC has finished its work
-            GC.Collect();
-        }
+        public void Dispose() => _monoCecilVersion.Dispose();
 
-        public void LoadAssembly(string assemblyPath, bool loadReferencedAssembliesToo, bool skipReadingAttributesFromAssemblies)
-        {
-            _monoCecilVersion.LoadAssembly(assemblyPath, loadReferencedAssembliesToo, skipReadingAttributesFromAssemblies);
-        }
+        public void LoadAssembly(string assemblyPath) => _monoCecilVersion.LoadAssembly(assemblyPath);
 
         public string GetContentPropertyName(string namespaceName, string localTypeName, string assemblyNameIfAny = null)
             => _monoCecilVersion.GetContentPropertyName(namespaceName, localTypeName, assemblyNameIfAny);
@@ -98,21 +80,20 @@ namespace OpenSilver.Compiler
         public bool IsTypeAnEnum(string namespaceName, string localTypeName, string assemblyNameIfAny = null)
             => _monoCecilVersion.IsTypeAnEnum(namespaceName, localTypeName, assemblyNameIfAny);
 
-        public void GetMethodReturnValueTypeInfo(string methodName, string namespaceName, string localTypeName, out string returnValueNamespaceName, out string returnValueLocalTypeName, out string returnValueAssemblyName, out bool isTypeString, out bool isTypeEnum, string assemblyNameIfAny = null)
-            => _monoCecilVersion.GetMethodReturnValueTypeInfo(methodName, namespaceName, localTypeName, out returnValueNamespaceName, out returnValueLocalTypeName, out returnValueAssemblyName, out isTypeString, out isTypeEnum, assemblyNameIfAny);
+        public void GetMethodReturnValueTypeInfo(string methodName, string namespaceName, string localTypeName, out string returnValueNamespaceName, out string returnValueLocalTypeName, out string returnValueAssemblyName, out bool isTypeEnum, string assemblyNameIfAny = null)
+            => _monoCecilVersion.GetMethodReturnValueTypeInfo(methodName, namespaceName, localTypeName, out returnValueNamespaceName, out returnValueLocalTypeName, out returnValueAssemblyName, out isTypeEnum, assemblyNameIfAny);
 
-        public void GetAttachedPropertyGetMethodInfo(string methodName, string namespaceName, string localTypeName, out string declaringTypeName, out string returnValueNamespaceName, out string returnValueLocalTypeName, out bool isTypeString, out bool isTypeEnum, string assemblyNameIfAny = null)
+        public void GetAttachedPropertyGetMethodInfo(string methodName, string namespaceName, string localTypeName, out string declaringTypeName, out string returnValueNamespaceName, out string returnValueLocalTypeName, string assemblyNameIfAny = null)
             => _monoCecilVersion.GetAttachedPropertyGetMethodInfo(methodName, namespaceName, localTypeName,
-                out declaringTypeName, out returnValueNamespaceName, out returnValueLocalTypeName, out isTypeString,
-                out isTypeEnum, assemblyNameIfAny);
+                out declaringTypeName, out returnValueNamespaceName, out returnValueLocalTypeName, assemblyNameIfAny);
 
-        public void GetPropertyOrFieldTypeInfo(string propertyOrFieldName, string namespaceName, string localTypeName, out string propertyNamespaceName, out string propertyLocalTypeName, out string propertyAssemblyName, out bool isTypeString, out bool isTypeEnum, string assemblyNameIfAny = null, bool isAttached = false)
+        public void GetPropertyOrFieldTypeInfo(string propertyOrFieldName, string namespaceName, string localTypeName, out string propertyNamespaceName, out string propertyLocalTypeName, out string propertyAssemblyName, out bool isTypeEnum, string assemblyNameIfAny = null, bool isAttached = false)
             => _monoCecilVersion.GetPropertyOrFieldTypeInfo(propertyOrFieldName, namespaceName, localTypeName,
-                out propertyNamespaceName, out propertyLocalTypeName, out propertyAssemblyName, out isTypeString,
+                out propertyNamespaceName, out propertyLocalTypeName, out propertyAssemblyName,
                 out isTypeEnum, assemblyNameIfAny, isAttached: isAttached);
 
-        public void GetPropertyOrFieldInfo(string propertyOrFieldName, string namespaceName, string localTypeName, out string memberDeclaringTypeName, out string memberTypeNamespace, out string memberTypeName, out bool isTypeString, out bool isTypeEnum, string assemblyNameIfAny = null, bool isAttached = false)
-            => _monoCecilVersion.GetPropertyOrFieldInfo(propertyOrFieldName, namespaceName, localTypeName, out memberDeclaringTypeName, out memberTypeNamespace, out memberTypeName, out isTypeString, out isTypeEnum, assemblyNameIfAny, isAttached);
+        public void GetPropertyOrFieldInfo(string propertyOrFieldName, string namespaceName, string localTypeName, out string memberDeclaringTypeName, out string memberTypeNamespace, out string memberTypeName, string assemblyNameIfAny = null, bool isAttached = false)
+            => _monoCecilVersion.GetPropertyOrFieldInfo(propertyOrFieldName, namespaceName, localTypeName, out memberDeclaringTypeName, out memberTypeNamespace, out memberTypeName, assemblyNameIfAny, isAttached);
 
         public string GetEnumValue(string name, string namespaceName, string enumName, string assembly, bool ignoreCase, bool allowIntegerValue)
             => _monoCecilVersion.GetEnumValue(name, namespaceName, enumName, assembly, ignoreCase, allowIntegerValue);
@@ -120,7 +101,10 @@ namespace OpenSilver.Compiler
         public bool IsAssignableFrom(string namespaceName, string typeName, string fromNamespaceName, string fromTypeName)
             => _monoCecilVersion.IsAssignableFrom(namespaceName, typeName, fromNamespaceName, fromTypeName);
 
-        public bool IsResourceDictionarySourcePropertyVisible(string namespaceName, string typeName)
+        public bool IsFrameworkTemplateTemplateProperty(string propertyName, string namespaceName, string typeName)
+            => _monoCecilVersion.IsFrameworkTemplateTemplateProperty(propertyName, namespaceName, typeName);
+
+        public bool IsResourceDictionarySourcePropertyVisible( string namespaceName, string typeName)
             => _monoCecilVersion.IsResourceDictionarySourcePropertyVisible(namespaceName, typeName);
 
         public string GetField(string fieldName, string namespaceName, string typeName, string assemblyName)

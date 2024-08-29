@@ -12,25 +12,6 @@
 *
 \*====================================================================================*/
 
-//------------------------------
-// CHECK BROWSER COMPATIBILITY
-//------------------------------
-
-(function () {
-    const userAgentLowercase = navigator.userAgent.toLowerCase();
-
-    window.ANDROID_VERSION = (userAgentLowercase.indexOf('android') != -1) ? parseInt(userAgentLowercase.split('android')[1]) : false;
-    window.FIREFOX_VERSION = ((index = userAgentLowercase.indexOf('firefox')) != -1) ? parseInt(userAgentLowercase.substring(index + 8)) : false;
-
-    // Current version does not support Android < 4:
-    if (window.ANDROID_VERSION && window.ANDROID_VERSION < 4)
-        alert("This version of Android is not supported yet. Please use Android 4.x (or newer), Internet Explorer 11 (or newer), Chrome 35 (or newer), Firefox 27 (or newer), Safari 8 (or newer), Safari Mobile iOS 8 (or newer), or Opera 24 (or newer). More browsers will be supported in the future.");
-})();
-
-//------------------------------
-// DEFINE OTHER SCRIPTS
-//------------------------------
-
 document.getAppParams = function (element) {
     if (element) {
         return JSON.stringify(
@@ -82,13 +63,7 @@ document.createElementSafe = function (tagName, id, parent, index) {
     if (typeof parent === 'string') parent = document.getElementById(parent);
     if (parent == null) return null;
 
-    const element = document.createElement(tagName);
-
-    element.setAttribute('id', id);
-    Object.defineProperty(element, 'xamlid', {
-        value: id,
-        writable: false,
-    });
+    const element = document._createElement(tagName, id);
 
     if (index < 0 || index >= parent.children.length) {
         parent.appendChild(element);
@@ -96,16 +71,34 @@ document.createElementSafe = function (tagName, id, parent, index) {
         parent.insertBefore(element, parent.children[index]);
     }
 
-    Object.defineProperty(element, 'dump', {
-        get() { return document.dumpProperties(id); }
-    });
-
     return element;
 };
 
-document.createLayoutElement = function (tagName, id, parent, index) {
-    const element = document.createElementSafe(tagName, id, parent, index);
-    if (element) element.classList.add('uielement-unarranged');
+document._createElement = function (tagName, id) {
+    const element = document.createElement(tagName);
+    element.setAttribute('id', id);
+    Object.defineProperty(element, 'xamlid', {
+        value: id,
+        writable: false,
+    });
+    Object.defineProperty(element, 'dump', {
+        get() { return document.dumpProperties(id); }
+    });
+    return element;
+};
+
+document.createLayout = function (tagName, id, parentId, isKeyboardFocusable) {
+    const parent = document.getElementById(parentId);
+    if (!parent) return;
+
+    const element = document._createLayout(tagName, id, isKeyboardFocusable);
+    parent.appendChild(element);
+};
+
+document._createLayout = function (tagName, id, isKeyboardFocusable) {
+    const element = document._createElement(tagName, id);
+    element.classList.add('opensilver-uielement', 'uielement-unarranged');
+    document.inputManager.addListeners(element, isKeyboardFocusable);
     return element;
 };
 
@@ -116,75 +109,112 @@ document.dumpProperties = function (id, ...names) {
     return null;
 };
 
-document.createTextBlockElement = function (id, parent, wrap) {
-    const element = document.createLayoutElement('div', id, parent, -1);
-    if (element) {
-        element.style.overflow = 'hidden';
-        element.style.textAlign = 'start';
-        element.style.boxSizing = 'border-box';
-        if (wrap) {
-            element.style.overflowWrap = 'break-word';
-            element.style.whiteSpace = 'pre-wrap';
-        } else {
-            element.style.whiteSpace = 'pre';
-        }
-    }
+document.createTextBlock = function (id, parentId) {
+    const parent = document.getElementById(parentId);
+    if (!parent) return;
+
+    const element = document._createLayout('div', id, false);
+    element.classList.add('opensilver-textblock');
+
+    parent.appendChild(element);
 };
 
-document.createPopupRootElement = function (id, rootElement, pointerEvents) {
+document.createBorder = function (id, parentId) {
+    const parent = document.getElementById(parentId);
+    if (!parent) return;
+
+    const element = document._createLayout('div', id, false);
+    element.classList.add('opensilver-border');
+
+    parent.appendChild(element);
+};
+
+document.createInkPresenter = function (id, canvasId, parentId) {
+    const parent = document.getElementById(parentId);
+    if (!parent) return;
+
+    const element = document._createLayout('div', id, false);
+    const canvas = document._createElement('canvas', canvasId);
+    canvas.classList.add('opensilver-inkpresenter');
+
+    element.appendChild(canvas);
+    parent.appendChild(element);
+};
+
+document.createPopupRoot = function (id, rootElementId, pointerEvents) {
+    const rootElement = document.getElementById(rootElementId);
     if (!rootElement) return;
 
-    const popupRoot = document.createElement('div');
-    popupRoot.setAttribute('id', id);
-    Object.defineProperty(popupRoot, 'xamlid', {
-        value: id,
-        writable: false,
-    });
-    popupRoot.style.position = 'absolute';
-    popupRoot.style.width = '100%';
-    popupRoot.style.height = '100%';
-    popupRoot.style.overflow = 'clip';
+    const popupRoot = document._createElement('div', id);
+    popupRoot.classList.add('opensilver-popup');
     popupRoot.style.pointerEvents = pointerEvents;
+
     rootElement.appendChild(popupRoot);
 };
 
-document.createImageElement = function (id, parentElement) {
-    const img = document.createElementSafe('img', id, parentElement, -1);
+document.createImageManager = function (loadCallback, errorCallback) {
+    if (document.imgManager) return;
 
-    if (img) {
-        img.setAttribute('alt', ' ');
-        img.style.display = 'none';
-        img.style.width = 'inherit';
-        img.style.height = 'inherit';
-        img.style.lineHeight = '0px';
-        img.style.objectFit = 'contain';
-        img.style.objectPosition = 'left top';
-        img.addEventListener('load', function (e) {
-            this.style.display = '';
-        })
-        img.addEventListener('error', function (e) {
-            this.style.display = 'none';
-        });
-    }
+    document.imgManager = {
+        create: function (id, imgId, parentId) {
+            const parent = document.getElementById(parentId);
+            if (!parent) return;
+
+            const element = document._createLayout('div', id, false);
+            element.style.lineHeight = '0px';
+
+            const img = document._createElement('img', imgId);
+            img.setAttribute('alt', ' ');
+            img.style.display = 'none';
+            img.style.width = 'inherit';
+            img.style.height = 'inherit';
+            img.style.lineHeight = '0px';
+            img.style.objectFit = 'contain';
+            img.style.objectPosition = 'left top';
+            img.addEventListener('load', function (e) {
+                this.style.display = '';
+                loadCallback(id);
+            })
+            img.addEventListener('error', function (e) {
+                this.style.display = 'none';
+                errorCallback(id);
+            });
+
+            element.appendChild(img);
+            parent.appendChild(element);
+        },
+        getNaturalWidth: function (img) {
+            if (img) {
+                return img.naturalWidth;
+            }
+            return 0.0;
+        },
+        getNaturalHeight: function (img) {
+            if (img) {
+                return img.naturalHeight;
+            }
+            return 0.0;
+        },
+    };
 };
 
-document.createTextElement = function (id, tagName, parent) {
-    if (typeof parent === 'string') parent = document.getElementById(parent);
-    if (parent === null) return null;
+document.createText = function (tagName, id, parentId) {
+    const parent = document.getElementById(parentId);
+    if (!parent) return;
 
     const textElement = document.createElement(tagName);
     textElement.setAttribute('id', id);
+    textElement.classList.add('opensilver-textelement');
 
     parent.appendChild(textElement);
 };
 
-document.createShapeElement = function (svgId, shapeId, defsId, svgTagName, parentId) {
+document.createShape = function (svgTagName, svgId, shapeId, defsId, parentId) {
     const parent = document.getElementById(parentId);
     if (!parent) return;
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.classList.add('uielement-shape');
-    svg.classList.add('uielement-unarranged');
+    svg.classList.add('opensilver-uielement', 'opensilver-shape', 'uielement-unarranged');
     svg.setAttribute('id', svgId);
     Object.defineProperty(svg, 'xamlid', {
         value: svgId,
@@ -207,14 +237,76 @@ document.createShapeElement = function (svgId, shapeId, defsId, svgTagName, pare
     parent.appendChild(svg);
 };
 
-document.createSvgElement = function (id, tagName, parentId) {
+document.createSvg = function (id, parentId, tagName) {
     const parent = document.getElementById(parentId);
     if (!parent) return;
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', tagName);
     svg.setAttribute('id', id);
-
     parent.appendChild(svg);
+};
+
+document.drawSvgLinearGradient = function (id, x1, y1, x2, y2, units, spreadMethod, transform, opacity, ...stops) {
+    const linearGradient = document.getElementById(id);
+    if (linearGradient) {
+        linearGradient.setAttribute('x1', x1);
+        linearGradient.setAttribute('y1', y1);
+        linearGradient.setAttribute('x2', x2);
+        linearGradient.setAttribute('y2', y2);
+        linearGradient.setAttribute('gradientUnits', units);
+        linearGradient.setAttribute('spreadMethod', spreadMethod);
+        linearGradient.setAttribute('gradientTransform', transform);
+
+        linearGradient.innerHTML = '';
+        for (let i = 0; i < stops.length; i += 2) {
+            const stop = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            stop.setAttribute('offset', stops[i]);
+            stop.style.stopColor = stops[i + 1];
+            stop.style.stopOpacity = opacity;
+            linearGradient.appendChild(stop);
+        }
+    }
+};
+
+document.drawSvgRadialGradient = function (id, cx, cy, r, units, spreadMethod, transform, opacity, ...stops) {
+    const radialGradient = document.getElementById(id);
+    if (radialGradient) {
+        radialGradient.setAttribute('cx', cx);
+        radialGradient.setAttribute('cy', cy);
+        radialGradient.setAttribute('r', r);
+        radialGradient.setAttribute('gradientUnits', units);
+        radialGradient.setAttribute('spreadMethod', spreadMethod);
+        radialGradient.setAttribute('gradientTransform', transform);
+
+        radialGradient.innerHTML = '';
+        for (let i = 0; i < stops.length; i += 2) {
+            const stop = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            stop.setAttribute('offset', stops[i]);
+            stop.style.stopColor = stops[i + 1];
+            stop.style.stopOpacity = opacity;
+            radialGradient.appendChild(stop);
+        }
+    }
+};
+
+document.arrangeRectangle = function (id, x, y, width, height) {
+    const rect = document.getElementById(id);
+    if (rect) {
+        rect.setAttribute('x', x);
+        rect.setAttribute('y', y);
+        rect.setAttribute('width', width);
+        rect.setAttribute('height', height);
+    }
+};
+
+document.arrangeEllipse = function (id, rx, ry, penThickness) {
+    const ellipse = document.getElementById(id);
+    if (ellipse) {
+        ellipse.setAttribute('rx', rx);
+        ellipse.setAttribute('ry', ry);
+        ellipse.setAttribute('cx', rx + penThickness / 2.0);
+        ellipse.setAttribute('cy', ry + penThickness / 2.0);
+    }
 };
 
 document.getBBox = function (svgElement) {
@@ -225,65 +317,46 @@ document.getBBox = function (svgElement) {
     return '{}';
 };
 
-document.set2dContextProperty = function (id, propertyName, propertyValue) {
+document.setCSS = function (id, cssPropertyName, value) {
     const element = document.getElementById(id);
-    if (!element || element.tagName !== 'CANVAS')
-        return;
-
-    element.getContext('2d')[propertyName] = propertyValue;
+    if (element) {
+        element.style[cssPropertyName] = value;
+    }
 };
 
-document.invoke2dContextMethod = function (id, methodName, args) {
-    const element = document.getElementById(id);
-    if (!element || element.tagName !== 'CANVAS')
-        return undefined;
-    return CanvasRenderingContext2D.prototype[methodName].apply(element.getContext('2d'),
-        args.split(',')
-            .map(Function.prototype.call, String.prototype.trim)
-            .filter(i => i.length > 0));
-};
-
-document.setDomStyle = function (id, propertyName, value) {
-    const element = document.getElementById(id);
-    if (!element)
-        return;
-
-    element.style[propertyName] = value;
-};
-
-document.setStyleProperty = function (id, propertyName, value, priority) {
+document.setCSSProperty = function (id, propertyName, value, priority) {
     const element = document.getElementById(id);
     if (element) {
         element.style.setProperty(propertyName, value, priority);
     }
 };
 
-document.setDomTransform = function (id, value) {
+document.setAttr = function (id, attributeName, value) {
     const element = document.getElementById(id);
-    if (!element)
-        return;
-
-    element.style['transform'] = value;
-    element.style['msTransform'] = value;
-    element.style['WebkitTransform'] = value;
+    if (element) {
+        element.setAttribute(attributeName, value);
+    }
 };
 
-document.setDomTransformOrigin = function (id, value) {
+document.unsetAttr = function (id, attributeName) {
     const element = document.getElementById(id);
-    if (!element)
-        return;
-
-    element.style['transformOrigin'] = value;
-    element.style['msTransformOrigin'] = value;
-    element.style['WebkitTransformOrigin'] = value;
+    if (element) {
+        element.removeAttribute(attributeName);
+    }
 };
 
-document.setDomAttribute = function (id, propertyName, value) {
+document.setProp = function (id, propertyName, value) {
     const element = document.getElementById(id);
-    if (!element)
-        return;
+    if (element) {
+        element[propertyName] = value;
+    }
+};
 
-    element.setAttribute(propertyName, value);
+document.detachView = function (id) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.remove();
+    }
 };
 
 document.removeEventListenerSafe = function (element, method, func) {
@@ -565,8 +638,7 @@ document.createInputManager = function (callback) {
                 }
             });
         },
-        addListeners: function (element, isFocusable) {
-            const view = typeof element === 'string' ? document.getElementById(element) : element;
+        addListeners: function (view, isFocusable) {
             if (!view) return;
 
             view.addEventListener('mouseenter', function (e) {
@@ -692,93 +764,136 @@ document.errorCallback = function (error, IndexOfNextUnmodifiedJSCallInList) {
     window.onCallBack.OnCallbackFromJavaScriptError(idWhereErrorCallbackArgsAreStored);
 };
 
-document.setVisualBounds = function (id, left, top, width, height, clip, clipLeft, clipTop, clipWidth, clipHeight) {
+document.setVisible = function (id, visible) {
+    const element = document.getElementById(id);
+    if (element) {
+        if (visible) {
+            element.classList.remove('uielement-collapsed')
+        } else {
+            element.classList.add('uielement-collapsed')
+        }
+    }
+};
+
+document.arrange = function (id, left, top, width, height, clip, clipLeft, clipTop, clipRight, clipBottom) {
     const element = document.getElementById(id);
     if (element) {
         element.style.left = left + 'px';
         element.style.top = top + 'px';
         element.style.width = width + 'px';
         element.style.height = height + 'px';
-        element.style.position = 'absolute';
         if (clip) {
-            element.style.clipPath = `polygon(${clipLeft}px ${clipTop}px, ${clipWidth}px ${clipTop}px, ${clipWidth}px ${clipHeight}px, ${clipLeft}px ${clipHeight}px)`;
+            element.style.clip = `rect(${clipTop}px ${clipRight}px ${clipBottom}px ${clipLeft}px)`;
         } else {
-            element.style.clipPath = '';
+            element.style.clip = '';
         }
         element.classList.remove('uielement-unarranged');
     }
 };
 
-document.createMeasurementService = function (parent) {
-    if (!parent) return null;
-    const measurer = document.createElement('div');
-    measurer.id = `${parent.id}-msr`; 
-    measurer.style.position = 'absolute';
-    measurer.style.visibility = 'hidden';
-    measurer.style.height = '';
-    measurer.style.width = '';
-    measurer.style.boxSizing = 'border-box';
-    measurer.style.whiteSpace = 'pre';
-    measurer.style.left = '-100000px';
-    measurer.style.top = '-100000px';
-    measurer.style.textAlign = 'left';
-    parent.appendChild(measurer);
-    return measurer.id;
+document.attachMeasurementService = function (owner) {
+    if (!owner || owner._measurementService) return;
+
+    const htmlMeasurer = document.createElement('div');
+    htmlMeasurer.style.position = 'absolute';
+    htmlMeasurer.style.visibility = 'hidden';
+    htmlMeasurer.style.height = '';
+    htmlMeasurer.style.width = '';
+    htmlMeasurer.style.boxSizing = 'border-box';
+    htmlMeasurer.style.whiteSpace = 'pre';
+    htmlMeasurer.style.left = '-100000px';
+    htmlMeasurer.style.top = '-100000px';
+    htmlMeasurer.style.textAlign = 'left';
+    owner.appendChild(htmlMeasurer);
+
+    const canvasMeasurer = document.createElement('canvas').getContext('2d');
+
+    owner._measurementService = {
+        measureTextView: function (element, whiteSpace, overflowWrap, maxWidth, emptyVal) {
+            if (element instanceof HTMLTextAreaElement) {
+                let text = element.value.length == 0 ? emptyVal : element.value;
+                // if the text ends with a new line, we need to add one more or it will not be measured
+                if (text.endsWith('\n')) text += '\n';
+                htmlMeasurer.textContent = text;
+            } else {
+                htmlMeasurer.innerHTML = element.innerHTML.length == 0 ? emptyVal : element.innerHTML;
+            }
+
+            htmlMeasurer.style.fontSize = element.style.fontSize;
+            htmlMeasurer.style.fontWeight = element.style.fontWeight;
+            htmlMeasurer.style.fontFamily = element.style.fontFamily;
+            htmlMeasurer.style.fontStyle = element.style.fontStyle;
+            htmlMeasurer.style.letterSpacing = element.style.letterSpacing;
+            htmlMeasurer.style.lineHeight = element.style.lineHeight;
+            htmlMeasurer.style.setProperty('--line-stacking-strategy', element.style.getPropertyValue('--line-stacking-strategy'));
+
+            htmlMeasurer.style.whiteSpace = whiteSpace;
+            htmlMeasurer.style.overflowWrap = overflowWrap;
+            htmlMeasurer.style.maxWidth = maxWidth;
+
+            const rect = htmlMeasurer.getBoundingClientRect();
+            const size = Math.ceil(rect.width) + '|' + Math.ceil(rect.height);
+
+            htmlMeasurer.innerHTML = '';
+
+            return size;
+        },
+        measureTextBlock: function (innerHTML, whiteSpace, overflowWrap, lineHeight, lineStackingStrategy, maxWidth) {
+            htmlMeasurer.innerHTML = innerHTML;
+            htmlMeasurer.style.fontSize = '';
+            htmlMeasurer.style.fontWeight = '';
+            htmlMeasurer.style.fontFamily = '';
+            htmlMeasurer.style.fontStyle = '';
+            htmlMeasurer.style.lineHeight = lineHeight;
+            htmlMeasurer.style.setProperty('--line-stacking-strategy', lineStackingStrategy);
+            htmlMeasurer.style.letterSpacing = '';
+            htmlMeasurer.style.whiteSpace = whiteSpace;
+            htmlMeasurer.style.overflowWrap = overflowWrap;
+            htmlMeasurer.style.maxWidth = maxWidth;
+
+            const rect = htmlMeasurer.getBoundingClientRect();
+            const size = rect.width + '|' + rect.height;
+
+            htmlMeasurer.innerHTML = '';
+
+            return size;
+        },
+        measureBaseline: function (fonts) {
+            let baselineOffset = 0.0;
+            for (const font of fonts) {
+                canvasMeasurer.font = font;
+                baselineOffset = Math.max(baselineOffset, canvasMeasurer.measureText('').fontBoundingBoxAscent);
+            }
+            return baselineOffset;
+        },
+    };
 };
 
-document.measureTextBlock = function (measureElementId, uid, whiteSpace, overflowWrap, maxWidth, emptyVal) {
-    const element = document.getElementById(measureElementId);
-    const elToMeasure = document.getElementById(uid);
-    if (element && elToMeasure) {
-        if (elToMeasure instanceof HTMLTextAreaElement) {
-            let text = elToMeasure.value.length == 0 ? emptyVal : elToMeasure.value;
-            // if the text ends with a new line, we need to add one more or it will not be measured
-            if (text.endsWith('\n')) text += '\n';
-            element.textContent = text;
-        } else {
-            element.innerHTML = elToMeasure.innerHTML.length == 0 ? emptyVal : elToMeasure.innerHTML;
-        }
-
-        const computedStyle = getComputedStyle(elToMeasure);
-
-        element.style.fontSize = computedStyle.fontSize;
-        element.style.fontWeight = computedStyle.fontWeight;
-        element.style.fontFamily = computedStyle.fontFamily;
-        element.style.fontStyle = computedStyle.fontStyle;
-        element.style.lineHeight = computedStyle.lineHeight;
-        element.style.letterSpacing = computedStyle.letterSpacing;
-
-        element.style.whiteSpace = whiteSpace;
-        element.style.overflowWrap = overflowWrap;
-        element.style.maxWidth = maxWidth;
-
-        const rect = element.getBoundingClientRect();
-        const size = Math.ceil(rect.width) + "|" + Math.ceil(rect.height);
-
-        element.innerHTML = '';
-
-        return size;
+document.measureTextBlock = function (measurerId, innerHTML, whiteSpace, overflowWrap, lineHeight, lineStackingStrategy, maxWidth) {
+    const owner = document.getElementById(measurerId);
+    if (owner && owner._measurementService) {
+        return owner._measurementService.measureTextBlock(innerHTML, whiteSpace, overflowWrap, lineHeight, lineStackingStrategy, maxWidth);
     }
-
-    return "0|0";
+    return '0|0';
 };
 
-document.getBaseLineOffset = (function () {
-    const ctx = document.createElement('canvas').getContext('2d');
-    return function (element) {
-        if (!element) return 0.0;
-        ctx.font = getComputedStyle(element).font;
-        return ctx.measureText('').fontBoundingBoxAscent;
-    };
-})();
+document.measureTextView = function (measurerId, id, whiteSpace, overflowWrap, maxWidth, emptyVal) {
+    const owner = document.getElementById(measurerId);
+    if (owner && owner._measurementService) {
+        const element = document.getElementById(id);
+        if (element) {
+            return owner._measurementService.measureTextView(element, whiteSpace, overflowWrap, maxWidth, emptyVal);
+        }
+    }
+    return '0|0';
+};
 
-document.setContentString = function (id, text, removeTextWrapping) {
-    var el = document.getElementById(id);
-    if (el) {
-        el.innerText = text;
-        if (removeTextWrapping)
-            el.style.whiteSpace = "nowrap";
-    };
+document.measureBaseline = function (measurerId, ...fonts) {
+    const owner = document.getElementById(measurerId);
+    if (owner && owner._measurementService) {
+        return owner._measurementService.measureBaseline(fonts);
+    }
+    return 0.0;
 };
 
 window.ViewInteropErrors = function () {
@@ -846,7 +961,23 @@ document.loadFont = async function (family, source, loadedCallback) {
     }
 };
 
-document.textboxHelpers = (function () {
+document.getSystemColor = function (color) {
+    if (CSS.supports('color', color)) {
+        const div = document.createElement('div');
+        div.style.color = color;
+        div.style.display = 'none';
+        document.body.appendChild(div);
+        const computedColor = window.getComputedStyle(div).color;
+        document.body.removeChild(div);
+        return computedColor;
+    }
+
+    return '';
+};
+
+document.createTextviewManager = function (inputCallback, scrollCallback) {
+    if (document.textviewManager) return;
+
     function getSelectionLength(view) {
         return view.selectionEnd - view.selectionStart;
     };
@@ -916,7 +1047,7 @@ document.textboxHelpers = (function () {
             return true;
         }
 
-        const caretIndex = getCaretPosition(view); 
+        const caretIndex = getCaretPosition(view);
         return caretIndex > 0 && (e.ctrlKey || !isNewLineChar(view.value[caretIndex - 1]));
     };
 
@@ -925,7 +1056,7 @@ document.textboxHelpers = (function () {
             return true;
         }
 
-        const caretIndex = getCaretPosition(view); 
+        const caretIndex = getCaretPosition(view);
         return caretIndex < view.value.length && (e.ctrlKey || !isNewLineChar(view.value[caretIndex]));
     };
 
@@ -940,17 +1071,18 @@ document.textboxHelpers = (function () {
         return false;
     };
 
-    return {
-        createView: function (id, parentId) {
-            const view = document.createLayoutElement('textarea', id, parentId, -1);
+    document.textviewManager = {
+        createTextView: function (id, parentId) {
+            const parent = document.getElementById(parentId);
+            if (!parent) return;
+
+            const view = document._createLayout('textarea', id, true);
             view.style.fontSize = 'inherit';
             view.style.fontFamily = 'inherit';
             view.style.color = 'inherit';
             view.style.letterSpacing = 'inherit';
             view.style.resize = 'none';
-            view.style.outline = 'none';
             view.style.border = 'none';
-            view.style.boxSizing = 'border-box';
             view.style.background = 'transparent';
             view.style.cursor = 'text';
             view.style.overflow = 'hidden';
@@ -958,6 +1090,14 @@ document.textboxHelpers = (function () {
             view.style.padding = '0px';
 
             view.setAttribute('tabindex', -1);
+
+            view.addEventListener('input', function (e) {
+                inputCallback(id);
+            });
+
+            view.addEventListener('scroll', function (e) {
+                scrollCallback(id);
+            });
 
             view.addEventListener('paste', function (e) {
                 if (this.getAttribute('data-acceptsreturn') === 'false') {
@@ -969,6 +1109,34 @@ document.textboxHelpers = (function () {
                     document.execCommand('insertText', false, content);
                 }
             }, false);
+
+            parent.appendChild(view);
+        },
+        createPasswordView: function (id, parentId) {
+            const parent = document.getElementById(parentId);
+            if (!parent) return;
+
+            const view = document._createLayout('input', id, true);
+            view.style.border = 'none';
+            view.style.background = 'transparent';
+            view.style.fontFamily = 'inherit';
+            view.style.fontSize = 'inherit';
+            view.style.color = 'inherit';
+            view.style.letterSpacing = 'inherit';
+            view.style.padding = '0px';
+
+            view.setAttribute('type', 'password');
+            view.setAttribute('tabindex', -1);
+
+            view.addEventListener('input', function (e) {
+                inputCallback(id);
+            });
+
+            view.addEventListener('scroll', function (e) {
+                scrollCallback(id);
+            });
+
+            parent.appendChild(view);
         },
         onKeyDownNative: function (view, e) {
             switch (e.key.toLowerCase()) {
@@ -1003,53 +1171,610 @@ document.textboxHelpers = (function () {
                     return false;
             }
         },
-    };
-})();
+        handleKeyDownFromSimulator: function (view) {
+            if (!view) return;
+            view.addEventListener('keydown', function (e) {
+                const acceptsReturn = this.getAttribute('data-acceptsreturn');
+                const maxLength = this.getAttribute('maxlength');
+                const acceptsTab = this.getAttribute('data-acceptstab');
 
-document.velocityHelpers = (function () {
-    const cache = {};
+                if (maxLength == null) maxLength = 0;
+                if (e.keyCode == 13) {
+                    if (acceptsReturn != "true") {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
 
-    function addToCache(element, key) {
-        const id = element.id;
-        if (id in cache && !cache[id].includes(key)) {
-            cache[id].push(key);
-        } else {
-            cache[id] = [element, key];
-        }
-    };
+                const isAddingTabulation = e.keyCode == 9 && acceptsTab == 'true';
+                if ((isAddingTabulation || e.keyCode == 13 || e.keyCode == 32 || e.keyCode > 47) && maxLength != 0) {
+                    let text = this.value;
+                    if (!acceptsReturn) {
+                        text = text.replace('\n', '').replace('\r', '');
+                    }
 
-    function cleanupCache() {
-        const keys = Object.keys(cache);
-        keys.forEach((key) => {
-            const el = document.getElementById(key);
-            if (el === null) {
-                Velocity.Utilities.removeData(cache[key][0], cache[key].slice(1));
-                Velocity.Utilities.removeData(cache[key][0], ['velocity']);
-                delete cache[key];
+                    let correctionDueToNewLines = 0;
+                    if (e.keyCode == 13) {
+                        ++correctionDueToNewLines; //because adding a new line takes 2 characters instead of 1.
+                    }
+                    if (text.length + correctionDueToNewLines >= maxLength) {
+                        if (!window.getSelection().toString()) {
+                            e.preventDefault();
+                            return false;
+                        }
+                    }
+                }
+
+                if (isAddingTabulation) {
+                    //we need to add '\t' where the cursor is, prevent the event (which would change the focus) and dispatch the event for the text changed:
+                    let sel, range;
+                    if (window.getSelection) {
+                        sel = window.getSelection();
+                        if (sel.rangeCount) {
+                            range = sel.getRangeAt(0);
+                            range.deleteContents();
+                            range.insertNode(document.createTextNode('\t'));
+                            sel.collapseToEnd();
+                            range.collapse(false); //for IE
+                        }
+                    } else if (document.selection && document.selection.createRange) {
+                        range = document.selection.createRange();
+                        range.text = '\t';
+                        document.selection.collapseToEnd();
+                    }
+
+                    e.preventDefault();
+                    return false;
+                }
+            }, false);
+        },
+        getSelectionStart: function (view) {
+            if (view) {
+                return view.selectionStart;
             }
+            return 0;
+        },
+        setSelectionStart: function (view, start) {
+            if (view) {
+                view.setSelectionRange(start, start + view.selectionEnd - view.selectionStart, 'forward');
+            }
+        },
+        getSelectionLength: function (view) {
+            if (view) {
+                return view.selectionEnd - view.selectionStart;
+            }
+            return 0;
+        },
+        setSelectionLength: function (view, length) {
+            if (view) {
+                view.setSelectionRange(view.selectionStart, view.selectionStart + length, 'forward');
+            }
+        },
+        getSelectedText: function (view) {
+            if (view) {
+                return view.value.substring(view.selectionStart, view.selectionEnd);
+            }
+            return '';
+        },
+        setSelectedText: function (view, text) {
+            if (view) {
+                view.setRangeText(text, view.selectionStart, view.selectionEnd, 'end');
+            }
+        },
+    };
+};
+
+document.createRichTextViewManager = function (selectionChangedCallback, contentChangedCallback, scrollCallback) {
+    if (document.richTextViewManager) return;
+
+    const ACCEPTS_TAB_ATTR = 'data-acceptstab';
+    const ACCEPTS_RETURN_ATTR = 'data-acceptsreturn';
+    const Options = createOptions();
+
+    function createOptions() {
+        const Parchment = Quill.import('parchment');
+        const Keyboard = Quill.import('modules/keyboard');
+
+        // Essential formats
+        const Block = Quill.import('blots/block');
+        const Break = Quill.import('blots/break');
+        const Container = Quill.import('blots/container');
+        const Cursor = Quill.import('blots/cursor');
+        const Inline = Quill.import('blots/inline');
+        const Scroll = Quill.import('blots/scroll');
+        const Text = Quill.import('blots/text');
+
+        // TextElement properties
+        const Spacing = new Parchment.StyleAttributor('spacing', 'letter-spacing', {
+            scope: Parchment.Scope.INLINE_ATTRIBUTE
         });
-    };
+        const Font = new Parchment.StyleAttributor('font', 'font-family', {
+            scope: Parchment.Scope.INLINE_ATTRIBUTE
+        });
+        const Size = new Parchment.StyleAttributor('size', 'font-size', {
+            scope: Parchment.Scope.INLINE_ATTRIBUTE
+        });
+        const Style = new Parchment.StyleAttributor('style', 'font-style', {
+            scope: Parchment.Scope.INLINE_ATTRIBUTE,
+            whitelist: ['normal', 'oblique', 'italic']
+        });
+        const Weight = new Parchment.StyleAttributor('weight', 'font-weight', {
+            scope: Parchment.Scope.INLINE_ATTRIBUTE,
+            whitelist: ['100', '200', '300', '350', '400', '500', '600', '700', '800', '900', '950']
+        });
+        const Color = new Parchment.StyleAttributor('color', 'color', {
+            scope: Parchment.Scope.INLINE_ATTRIBUTE
+        });
+        const Decoration = new Parchment.StyleAttributor('decoration', 'text-decoration', {
+            scope: Parchment.Scope.INLINE_ATTRIBUTE,
+            whitelist: ['underline', 'line-through', 'overline']
+        });
 
-    setInterval(() => { cleanupCache(); }, 10000);
+        // Block properties
+        const Height = new Parchment.StyleAttributor('height', 'line-height', {
+            scope: Parchment.Scope.BLOCK
+        });
+        const Align = new Parchment.StyleAttributor('align', 'text-align', {
+            scope: Parchment.Scope.BLOCK,
+            whitelist: ['start', 'center', 'end', 'justify']
+        });
 
-    return {
-        setDomStyle: function (element, properties, value) {
-            const obj = {};
-            for (const property of properties.split(',')) {
-                obj[property] = value;
+        const registry = new Parchment.Registry();
+        registry.register(
+            Scroll,
+            Block,
+            Break,
+            Container,
+            Cursor,
+            Inline,
+            Text,
+            Spacing,
+            Font,
+            Size,
+            Style,
+            Weight,
+            Color,
+            Decoration,
+            Height,
+            Align
+        );
+
+        return {
+            registry,
+            modules: {
+                keyboard: {
+                    bindings: {
+                        tab: {
+                            key: 'Tab',
+                            handler: function (t, e) {
+                                if (acceptsTab(this.quill.container)) {
+                                    return Keyboard.DEFAULTS.bindings['tab'].handler.apply(this, [t, e]);
+                                }
+                                return false;
+                            },
+                        },
+                        'remove tab': {
+                            key: 'Tab',
+                            shiftKey: true,
+                            handler: function (t, e) {
+                                if (acceptsTab(this.quill.container)) {
+                                    return Keyboard.DEFAULTS.bindings['remove tab'].handler.apply(this, [t, e]);
+                                }
+                                return false;
+                            },
+                        },
+                        enter: {
+                            key: 'Enter',
+                            shiftKey: null,
+                            handler: function (t, e) {
+                                return acceptsReturn(this.quill.container);
+                            },
+                        },
+                        bold: {
+                            key: 'b',
+                            ctrlKey: true,
+                            handler: function (t, e) {
+                                this.quill.format('weight', this.quill.getFormat().weight > 600 ? '' : '700');
+                            },
+                        },
+                        italic: {
+                            key: 'i',
+                            ctrlKey: true,
+                            handler: function (t, e) {
+                                this.quill.format('style', this.quill.getFormat().style === 'italic' ? '' : 'italic');
+                            },
+                        },
+                        underline: {
+                            key: 'u',
+                            ctrlKey: true,
+                            handler: function (t, e) {
+                                this.quill.format('decoration', this.quill.getFormat().decoration === 'underline' ? '' : 'underline');
+                            },
+                        },
+                    }
+                }
+            }
+        };
+    }
+
+    function acceptsTab(view) { return view.getAttribute(ACCEPTS_TAB_ATTR) === 'true'; }
+
+    function acceptsReturn(view) { return view.getAttribute(ACCEPTS_RETURN_ATTR) === 'true'; }
+
+    function isNewLineChar(c) { return c === '\n' || c === '\r'; };
+
+    function getLength(ql) { return Math.max(0, ql.getLength() - 1); }
+
+    function getSelectionLength(ql) {
+        const selection = ql.getSelection();
+        if (selection) {
+            return selection.length;
+        }
+        return 0;
+    }
+
+    function getSelectionDirection() {
+        const selection = document.getSelection();
+        const position = selection.anchorNode.compareDocumentPosition(selection.focusNode);
+        if (position === 0) {
+            return selection.anchorOffset > selection.focusOffset ? 'backward' : 'forward';
+        } else if (position === Node.DOCUMENT_POSITION_PRECEDING) {
+            return 'backward';
+        } else {
+            return 'forward';
+        }
+    }
+
+    function getCaretPosition(ql) {
+        const selection = ql.getSelection();
+        if (selection) {
+            if (selection.length === 0) {
+                return selection.index;
+            }
+            return getSelectionDirection() === 'forward' ? selection.index + selection.length : selection.index;
+        }
+        return 0;
+    }
+
+    function navigateInDirection(ql, e) {
+        if (!e.shiftKey && !e.ctrlKey && getSelectionLength(ql) > 0) return true;
+
+        switch (e.key) {
+            case 'ArrowUp':
+                return getCaretPosition(ql) > 0;
+            case 'ArrowDown':
+                return getCaretPosition(ql) < getLength(ql);
+            case 'ArrowLeft':
+                return window.getComputedStyle(ql.container).direction === 'ltr' ?
+                    (getCaretPosition(ql) > 0) :
+                    (getCaretPosition(ql) < getLength(ql));
+            case 'ArrowRight':
+                return window.getComputedStyle(ql.container).direction === 'ltr' ?
+                    (getCaretPosition(ql) < getLength(ql)) :
+                    (getCaretPosition(ql) > 0);
+            default:
+                return false;
+        }
+    }
+
+    function navigateByPage(ql, e) {
+        if (e.ctrlKey) return false;
+
+        if (e.key === 'PageDown') {
+            if (getCaretPosition(ql) < getLength(ql) || (!e.shiftKey && getSelectionLength(ql) > 0)) {
+                return true;
+            }
+        } else {
+            if (getCaretPosition(ql) > 0 || (!e.shiftKey && getSelectionLength(ql) > 0)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function navigateToStart(ql, e) {
+        if (!e.shiftKey && getSelectionLength(ql) > 0) {
+            return true;
+        }
+
+        const caretIndex = getCaretPosition(ql);
+        return caretIndex > 0 && (e.ctrlKey || !isNewLineChar(ql.getText(caretIndex - 1, 1)));
+    }
+
+    function navigateToEnd(ql, e) {
+        if (!e.shiftKey && getSelectionLength(ql) > 0) {
+            return true;
+        }
+
+        const caretIndex = getCaretPosition(ql);
+        return caretIndex < getLength(ql) && (e.ctrlKey || !isNewLineChar(ql.getText(caretIndex, 1)));
+    }
+
+    document.richTextViewManager = {
+        createView: function (id, parentId) {
+            const parent = document.getElementById(parentId);
+            if (!parent) return;
+
+            const view = document._createLayout('div', id, true);
+            view.addEventListener('scroll', function (e) { scrollCallback(this.id); });
+            view.addEventListener('focus', function (e) {
+                setTimeout(function (thisArg) {
+                    if (document.activeElement === thisArg) {
+                        const ql = Quill.find(thisArg);
+                        if (ql) {
+                            ql.focus();
+                        }
+                    }
+                }, 0, this);
+            });
+
+            const ql = new Quill(view, Options);
+
+            // we can't use the 'selection-change' event because it does not fire when the user types in the editor
+            ql.on('editor-change', function (eventName, ...args) {
+                if (eventName === 'selection-change') {
+                    const range = args[0];
+                    if (range) {
+                        selectionChangedCallback(id, range.index, range.length);
+                    } else {
+                        selectionChangedCallback(id, 0, 0);
+                    }
+                }
+            });
+            ql.on('text-change', function (delta, oldDelta, source) {
+                if (source === Quill.sources.USER) {
+                    contentChangedCallback(id);
+                }
+            });
+
+            parent.appendChild(view);
+        },
+        setAcceptsTab: function (id, value) {
+            const view = document.getElementById(id);
+            if (view) {
+                view.setAttribute(ACCEPTS_TAB_ATTR, value);
+            }
+        },
+        setAcceptsReturn: function (id, value) {
+            const view = document.getElementById(id);
+            if (view) {
+                view.setAttribute(ACCEPTS_RETURN_ATTR, value);
+            }
+        },
+        measureView: function (id, maxWidth, maxHeight) {
+            const ql = Quill.find(document.getElementById(id));
+            if (!ql) return '0|0';
+
+            const root = ql.root;
+
+            root.style.width = 'max-content';
+            root.style.height = 'auto';
+            if (maxWidth >= 0) {
+                root.style.maxWidth = maxWidth + 'px';
+            }
+            if (maxHeight >= 0) {
+                root.style.maxHeight = maxHeight + 'px';
             }
 
-            Velocity(element, obj, { duration: 1, queue: false });
-            addToCache(element, 'velocity');
-        },
+            const size = root.scrollWidth + '|' + root.scrollHeight;
 
-        animate: function (element, fromToValues, options, groupName) {
-            Velocity(element, fromToValues, options);
-            Velocity.Utilities.dequeue(element, groupName);
-            addToCache(element, `${groupName}queue`);
+            root.style.width = '';
+            root.style.height = '';
+            root.style.maxWidth = '';
+            root.style.maxHeight = '';
+
+            return size;
+        },
+        onKeyDownNative: function (view, e) {
+            const ql = Quill.find(view);
+            if (!ql) return false;
+
+            switch (e.key.toLowerCase()) {
+                case 'arrowleft':
+                case 'arrowright':
+                case 'arrowdown':
+                case 'arrowup':
+                    return navigateInDirection(ql, e);
+                case 'pagedown':
+                case 'pageup':
+                    return navigateByPage(ql, e);
+                case 'home':
+                    return navigateToStart(ql, e);
+                case 'end':
+                    return navigateToEnd(ql, e);
+                case 'delete':
+                    return getCaretPosition(ql) < getLength(ql) || getSelectionLength(ql) > 0;
+                case 'backspace':
+                    return getCaretPosition(ql) > 0 || getSelectionLength(ql) > 0;
+                case 'c':
+                case 'x':
+                    return e.ctrlKey && getSelectionLength(ql) > 0;
+                case 'a':
+                    return e.ctrlKey && getSelectionLength(ql) < getLength(ql);
+                case 'v':
+                case 'y':
+                case 'z':
+                    return e.ctrlKey;
+                case 'tab':
+                    return acceptsTab(view);
+                default:
+                    return false;
+            }
+        },
+        getContentLength: function (id) {
+            const ql = Quill.find(document.getElementById(id));
+            if (!ql) return 0;
+
+            return ql.getLength();
+        },
+        getSelectedText: function (id) {
+            const ql = Quill.find(document.getElementById(id));
+            if (!ql) return;
+
+            const selection = ql.getSelection();
+            if (selection) {
+                return ql.getText(selection);
+            }
+            return '';
+        },
+        setSelectedText: function (id, text) {
+            const ql = Quill.find(document.getElementById(id));
+            if (!ql) return;
+
+            const selection = ql.getSelection();
+            if (selection) {
+                if (text.length > 0) {
+                    if (selection.length > 0) {
+                        ql.deleteText(selection.index, selection.length, Quill.sources.SILENT);
+                    }
+                    ql.insertText(selection.index, text, Quill.sources.API);
+                } else if (selection.length > 0) {
+                    ql.deleteText(selection.index, selection.length, Quill.sources.API);
+                }
+            } else if (text.length > 0) {
+                ql.insertText(0, text, Quill.sources.API);
+            }
+        },
+        select: function (id, start, length) {
+            const ql = Quill.find(document.getElementById(id));
+            if (!ql) return;
+
+            ql.setSelection(start, length, Quill.sources.API);
+        },
+        selectAll: function (id) {
+            const ql = Quill.find(document.getElementById(id));
+            if (!ql) return;
+
+            ql.setSelection(0, ql.getLength(), Quill.sources.API);
+        },
+        getContents: function (id, start, length) {
+            const ql = Quill.find(document.getElementById(id));
+            if (!ql) return '[]';
+
+            const contents = ql.getContents(start, length);
+            return JSON.stringify(contents.ops);
+        },
+        setContents: function (id, delta) {
+            const ql = Quill.find(document.getElementById(id));
+            if (!ql) return;
+
+            ql.setContents(delta, Quill.sources.API);
+        },
+        updateContents: function (id, delta) {
+            const ql = Quill.find(document.getElementById(id));
+            if (!ql) return;
+
+            ql.updateContents(delta, Quill.sources.API);
+        },
+        enable: function (id, enable) {
+            const ql = Quill.find(document.getElementById(id));
+            if (!ql) return;
+
+            ql.enable(enable);
+        },
+        format: function (id, property, value) {
+            const ql = Quill.find(document.getElementById(id));
+            if (!ql) return;
+
+            ql.format(property, value, Quill.sources.API);
+        },
+        getFormat: function (id, property) {
+            const ql = Quill.find(document.getElementById(id));
+            if (!ql) return null;
+
+            const format = ql.getFormat()[property];
+            if (!Array.isArray(format)) {
+                return format;
+            }
+            return '';
+        },
+    };
+};
+
+document.htmlPresenterHelpers = (function () {
+    return {
+        createView: function (id, contentId, parentId, useShadowDom) {
+            const parent = document.getElementById(parentId);
+            if (!parent) return;
+
+            const view = document._createLayout('div', id, false);
+            const content = document.createElement('div');
+            content.setAttribute('id', contentId);
+            if (useShadowDom) {
+                content.attachShadow({ mode: 'open' });
+            }
+
+            view.appendChild(content);
+            parent.appendChild(view);
+        },
+        onKeyDownNative: function (view, e) {
+            if (!view || !e) return false;
+
+            switch (e.key) {
+                case 'ArrowLeft':
+                    return view.scrollLeft > 0;
+                case 'ArrowRight':
+                    return view.scrollLeft < (view.scrollWidth - view.clientWidth);
+                case 'ArrowUp':
+                case 'PageUp':
+                case 'Home':
+                    return view.scrollTop > 0;
+                case 'ArrowDown':
+                case 'PageDown':
+                case 'End':
+                    return view.scrollTop < (view.scrollHeight - view.clientHeight);
+            }
+
+            return false;
+        },
+        onWheelNative: function (view, e) {
+            if (!view || !e || e.deltaY === 0) return false;
+
+            if (e.deltaY > 0) {
+                if (e.shiftKey) {
+                    return view.scrollLeft < (view.scrollWidth - view.clientWidth);
+                } else {
+                    return view.scrollTop < (view.scrollHeight - view.clientHeight);
+                }
+            } else {
+                if (e.shiftKey) {
+                    return view.scrollLeft > 0;
+                } else {
+                    return view.scrollTop > 0;
+                }
+            }
         },
     };
 })();
+
+document.createUIDispatcher = function (callback) {
+    if (document.UIDispatcher) return;
+
+    function computeDelay(tickRate) {
+        if (tickRate > 0) {
+            return 1000 / tickRate;
+        } else if (tickRate === 0) {
+            return 1000;
+        } else {
+            return 1;
+        }
+    }
+
+    let _delay = computeDelay(60);
+    let _intervalID = setInterval(callback, _delay);
+
+    document.UIDispatcher = {
+        setTickRate: function (tickRate) {
+            const delay = computeDelay(tickRate);
+            if (_delay !== delay) {
+                _delay = delay;
+                clearInterval(_intervalID);
+                _intervalID = setInterval(callback, _delay);
+            }
+        },
+    };
+};
 
 document.browserService = (function () {
     const JSTYPE = {

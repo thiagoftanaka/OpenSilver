@@ -11,46 +11,41 @@
 *  
 \*====================================================================================*/
 
+using System.Diagnostics;
+using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using CSHTML5.Internal;
 
 namespace OpenSilver.Internal.Documents;
 
-internal sealed class TextContainerRichTextBlock : TextContainer<RichTextBlock>
+internal sealed class TextContainerRichTextBlock : ITextContainer
 {
-    public TextContainerRichTextBlock(RichTextBlock parent)
-        : base(parent)
+    private readonly RichTextBlock _rtb;
+
+    public TextContainerRichTextBlock(RichTextBlock rtb)
     {
+        Debug.Assert(rtb is not null);
+        _rtb = rtb;
     }
 
-    public override string Text
-    {
-        get
-        {
-            string text = "";
-            foreach (var block in Parent.Blocks)
-            {
-                text += block.GetContainerText();
-            }
+    public string Text => string.Join("\n", _rtb.Blocks.InternalItems.Select(b => b.TextContainer.Text));
 
-            return text;
+    public void OnTextAdded(TextElement textElement, int index)
+    {
+        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(_rtb))
+        {
+            INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(textElement, _rtb, index);
         }
     }
 
-    protected override void OnTextAddedOverride(TextElement textElement)
+    public void OnTextRemoved(TextElement textElement)
     {
-        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(Parent))
+        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(_rtb))
         {
-            INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(textElement, Parent);
+            INTERNAL_VisualTreeManager.DetachVisualChildIfNotNull(textElement, _rtb);
         }
     }
 
-    protected override void OnTextRemovedOverride(TextElement textElement)
-    {
-        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(Parent))
-        {
-            INTERNAL_VisualTreeManager.DetachVisualChildIfNotNull(textElement, Parent);
-        }
-    }
+    public void OnTextContentChanged() => _rtb.InvalidateMeasure();
 }

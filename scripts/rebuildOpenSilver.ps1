@@ -1,8 +1,8 @@
 param (
-    $OS_VERSION = $(if ($null -eq $env:OS_VERSION) { "2.0.0" } else { $env:OS_VERSION }),
+    $OS_VERSION = $(if ($null -eq $env:OS_VERSION) { "3.0.0" } else { $env:OS_VERSION }),
     $OS_NAME = $(if ($null -eq $env:OS_NAME) { "OpenSilver" } else { $env:OS_NAME }),
     $OS_SIMULATOR_NAME = $(if ($null -eq $env:OS_SIMULATOR_NAME) { "OpenSilver.Simulator" } else { $env:OS_SIMULATOR_NAME }),
-    $OS_SIMULATOR_VERSION = $(if ($null -eq $env:OS_SIMULATOR_VERSION) { "2.0.0" } else { $env:OS_SIMULATOR_VERSION }),
+    $OS_SIMULATOR_VERSION = $(if ($null -eq $env:OS_SIMULATOR_VERSION) { "3.0.0" } else { $env:OS_SIMULATOR_VERSION }),
     $MSBUILD = "msbuild.exe",
     $NUGET_CACHE = "$env:USERPROFILE\.nuget\packages",
     $COPY_PDB = $false,
@@ -70,9 +70,14 @@ try {
     taskkill /fi "imagename eq msbuild.exe" /f
     Write-Output "Building Compiler" | Green
     Invoke-Expression "&'$MSBUILD' .\src\Compiler\Compiler\Compiler.OpenSilver.csproj /p:Configuration=$OS_CONFIGURATION /consoleloggerparameters:ErrorsOnly $BUILD_PARAMS"
+    if ($LASTEXITCODE -ne 0) {
+        throw "MSBuild failed with exit code $LASTEXITCODE"
+    }
     Write-Output "Building ResourcesExtractor" | Green
     Invoke-Expression "&'$MSBUILD' .\src\Compiler\Compiler.ResourcesExtractor\Compiler.ResourcesExtractor.OpenSilver.csproj /p:Configuration=Release /consoleloggerparameters:ErrorsOnly $BUILD_PARAMS"
-
+    if ($LASTEXITCODE -ne 0) {
+        throw "MSBuild failed with exit code $LASTEXITCODE"
+    }
     # Compiler
     Write-Output "Copying OpenSilver.Compiler.* files to local packages folder" | Green
     xcopy /y "src\Compiler\Compiler\bin\$OS_CONFIGURATION\net461\OpenSilver.Compiler.*" "src\packages\$OS_NAME.$OS_BUILD_VERSION\tools\"

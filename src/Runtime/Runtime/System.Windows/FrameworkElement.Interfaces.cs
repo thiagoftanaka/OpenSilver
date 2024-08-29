@@ -11,7 +11,6 @@
 *  
 \*====================================================================================*/
 
-using System;
 using System.Collections;
 using OpenSilver.Internal;
 
@@ -39,12 +38,6 @@ public partial class FrameworkElement : IInternalFrameworkElement
         set => ShouldLookupImplicitStyles = value;
     }
 
-    bool IInternalFrameworkElement.IsLoadedInResourceDictionary
-    {
-        get => IsLoadedInResourceDictionary;
-        set => IsLoadedInResourceDictionary = value;
-    }
-
     IEnumerator IInternalFrameworkElement.LogicalChildren => LogicalChildren;
 
     RoutedEvent IInternalFrameworkElement.LoadedEvent => LoadedEvent;
@@ -55,18 +48,10 @@ public partial class FrameworkElement : IInternalFrameworkElement
         set => TemplatedParent = value;
     }
 
-    IInternalFrameworkElement IInternalFrameworkElement.TemplateChild
+    IFrameworkElement IInternalFrameworkElement.TemplateChild
     {
         get => TemplateChild;
         set => TemplateChild = (FrameworkElement)value;
-    }
-
-    DependencyObject IInternalFrameworkElement.Parent => Parent;
-
-    ResourceDictionary IInternalFrameworkElement.Resources
-    {
-        get => Resources;
-        set => Resources = value;
     }
 
     event InheritedPropertyChangedEventHandler IInternalFrameworkElement.InheritedPropertyChanged
@@ -75,29 +60,9 @@ public partial class FrameworkElement : IInternalFrameworkElement
         remove => InheritedPropertyChanged -= value;
     }
 
-    event RoutedEventHandler IInternalFrameworkElement.Loaded
-    {
-        add => Loaded += value;
-        remove => Loaded -= value;
-    }
-
     void IInternalFrameworkElement.AddLogicalChild(object child) => AddLogicalChild(child);
-
-    DependencyObject IInternalFrameworkElement.AsDependencyObject() => this;
 
     void IInternalFrameworkElement.ChangeLogicalParent(DependencyObject newParent) => ChangeLogicalParent(newParent);
 
-    object IInternalFrameworkElement.FindName(string name) => FindName(name);
-
-    void IInternalFrameworkElement.LoadResources() => LoadResources();
-
-    void IInternalFrameworkElement.OnInheritedPropertyChanged(InheritablePropertyChangeInfo info) => OnInheritedPropertyChanged(this, info);
-
-    void IInternalFrameworkElement.RaiseLoadedEvent() => RaiseLoadedEvent();
-
-    void IInternalFrameworkElement.RaiseUnloadedEvent() => RaiseUnloadedEvent();
-
     void IInternalFrameworkElement.RemoveLogicalChild(object child) => RemoveLogicalChild(child);
-
-    void IInternalFrameworkElement.UnloadResources() => UnloadResources();
 }

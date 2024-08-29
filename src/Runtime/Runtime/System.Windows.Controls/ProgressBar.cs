@@ -67,7 +67,7 @@ namespace System.Windows.Controls
         public bool IsIndeterminate
         {
             get { return (bool)GetValue(IsIndeterminateProperty); }
-            set { SetValue(IsIndeterminateProperty, value); }
+            set { SetValueInternal(IsIndeterminateProperty, value); }
         }
 
         private static void IsIndeterminatePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -96,7 +96,7 @@ namespace System.Windows.Controls
             if (indeterminateRoot != null)
             {
                 var indeterminateRootStyle = INTERNAL_HtmlDomManager
-                    .GetDomElementStyleForModification(indeterminateRoot.INTERNAL_OuterDomElement);
+                    .GetDomElementStyleForModification(indeterminateRoot.OuterDiv);
                 indeterminateRootStyle.overflow = "hidden";
             }
 

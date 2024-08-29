@@ -11,15 +11,13 @@
 *  
 \*====================================================================================*/
 
-using System;
-using System.ComponentModel;
 using System.Threading.Tasks;
-using System.Globalization;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Automation.Peers;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
+using OpenSilver.Internal.Controls;
 
 namespace System.Windows.Controls
 {
@@ -40,11 +38,14 @@ namespace System.Windows.Controls
     /// </example>
     public sealed class Image : FrameworkElement
     {
-        private object _imageDiv;
+        private INTERNAL_HtmlDomElementReference _imageDiv;
         private Size _naturalSize;
-        private JavaScriptCallback _imgLoadCallback;
-        private JavaScriptCallback _imgErrorCallack;
         private WeakEventListener<Image, BitmapImage, EventArgs> _sourceChangedListener;
+
+        static Image()
+        {
+            IsHitTestableProperty.OverrideMetadata(typeof(Image), new PropertyMetadata(BooleanBoxes.TrueBox));
+        }
 
         internal override bool EnablePointerEventsCore => true;
 
@@ -57,7 +58,7 @@ namespace System.Windows.Controls
         public ImageSource Source
         {
             get => (ImageSource)GetValue(SourceProperty);
-            set => SetValue(SourceProperty, value);
+            set => SetValueInternal(SourceProperty, value);
         }
 
         /// <summary>
@@ -113,7 +114,7 @@ namespace System.Windows.Controls
         public Stretch Stretch
         {
             get => (Stretch)GetValue(StretchProperty);
-            set => SetValue(StretchProperty, value);
+            set => SetValueInternal(StretchProperty, value);
         }
 
         /// <summary>
@@ -133,15 +134,14 @@ namespace System.Windows.Controls
         {
             Image img = (Image)d;
 
-            INTERNAL_HtmlDomManager.GetDomElementStyleForModification(img._imageDiv)
-                .objectFit = (Stretch)newValue switch
-                {
-                    Stretch.None => "none",
-                    Stretch.Fill => "fill",
-                    Stretch.Uniform => "contain",
-                    Stretch.UniformToFill => "cover",
-                    _ => string.Empty,
-                };
+            img._imageDiv.Style.objectFit = (Stretch)newValue switch
+            {
+                Stretch.None => "none",
+                Stretch.Fill => "fill",
+                Stretch.Uniform => "contain",
+                Stretch.UniformToFill => "cover",
+                _ => string.Empty,
+            };
 
             img.SetObjectPosition();
         }
@@ -156,45 +156,14 @@ namespace System.Windows.Controls
         /// </summary>
         public event EventHandler<RoutedEventArgs> ImageOpened;
 
-        public override void INTERNAL_AttachToDomEvents()
-        {
-            base.INTERNAL_AttachToDomEvents();
-
-            DisposeJSCallbacks();
-
-            _imgLoadCallback = JavaScriptCallback.Create(ProcessLoadEvent, true);
-            _imgErrorCallack = JavaScriptCallback.Create(ProcessErrorEvent, true);
-
-            string sImage = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_imageDiv);
-            string sLoadCallback = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_imgLoadCallback);
-            string sErrorCallback = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_imgErrorCallack);
-            OpenSilver.Interop.ExecuteJavaScriptFastAsync(
-                @$"{sImage}.addEventListener('load', function (e) {{ {sLoadCallback}(); }});
-{sImage}.addEventListener('error', function (e) {{ {sErrorCallback}(); }});");
-        }
-
-        public override void INTERNAL_DetachFromDomEvents()
-        {
-            base.INTERNAL_DetachFromDomEvents();
-            DisposeJSCallbacks();
-        }
-
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public object INTERNAL_DomImageElement => _imageDiv;
+        internal INTERNAL_HtmlDomElementReference ImageDiv => _imageDiv;
 
         public override object CreateDomElement(object parentRef, out object domElementWhereToPlaceChildren)
         {
-            var style = INTERNAL_HtmlDomManager.CreateDomLayoutElementAppendItAndGetStyle("div", parentRef, this, out object div);
-            style.lineHeight = "0px";
-            _imageDiv = INTERNAL_HtmlDomManager.CreateImageDomElementAndAppendIt(div, this);
             domElementWhereToPlaceChildren = null;
-            return div;
+            (var outerDiv, _imageDiv) = INTERNAL_HtmlDomManager.CreateImageDomElementAndAppendIt((INTERNAL_HtmlDomElementReference)parentRef, this);
+            return outerDiv;
         }
-
-        protected override void OnAfterApplyHorizontalAlignmentAndWidth() => SetObjectPosition();
-
-        protected override void OnAfterApplyVerticalAlignmentAndWidth() => SetObjectPosition();
 
         protected override AutomationPeer OnCreateAutomationPeer()
             => new ImageAutomationPeer(this);
@@ -267,22 +236,7 @@ namespace System.Windows.Controls
                     break;
             }
 
-            INTERNAL_HtmlDomManager.GetDomElementStyleForModification(_imageDiv).objectPosition = $"{hPos} {vPos}";
-        }
-
-        private void DisposeJSCallbacks()
-        {
-            if (_imgLoadCallback != null)
-            {
-                _imgLoadCallback.Dispose();
-                _imgLoadCallback = null;
-            }
-
-            if (_imgErrorCallack != null)
-            {
-                _imgErrorCallack.Dispose();
-                _imgErrorCallack = null;
-            }
+            _imageDiv.Style.objectPosition = $"{hPos} {vPos}";
         }
 
         private void OnBitmapImageSourceChanged(object sender, EventArgs e)
@@ -290,11 +244,10 @@ namespace System.Windows.Controls
             _ = RefreshSource();
         }
 
-        private async Task RefreshSource()
+        private async ValueTask RefreshSource()
         {
             _naturalSize = new Size();
 
-            string sImageDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_imageDiv);
             if (Source != null)
             {
                 var imageSrc = await Source.GetDataStringAsync(this);
@@ -302,49 +255,30 @@ namespace System.Windows.Controls
             }
             else
             {
-                OpenSilver.Interop.ExecuteJavaScriptVoid(
-                    $"{sImageDiv}.removeAttribute('src'); {sImageDiv}.style.display = 'none';");
+                INTERNAL_HtmlDomManager.RemoveAttribute(_imageDiv, "src");
+                _imageDiv.Style.display = "none";
 
                 InvalidateMeasure();
                 InvalidateArrange();
             }
         }
 
-        private void ProcessLoadEvent()
+        internal void OnLoadNative()
         {
-            _naturalSize = GetNaturalSize();
+            _naturalSize = ImageManager.Instance.GetNaturalSize(this);
 
             InvalidateMeasure();
             InvalidateArrange();
             ImageOpened?.Invoke(this, new RoutedEventArgs { OriginalSource = this });
         }
 
-        private void ProcessErrorEvent()
+        internal void OnErrorNative()
         {
             _naturalSize = new Size();
 
             InvalidateMeasure();
             InvalidateArrange();
             ImageFailed?.Invoke(this, new ExceptionRoutedEventArgs { OriginalSource = this });
-        }
-
-        private Size GetNaturalSize()
-        {
-            string sDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_imageDiv);
-            var size = OpenSilver.Interop.ExecuteJavaScriptString(
-                $"(function(img) {{ return img.naturalWidth + '|' + img.naturalHeight; }})({sDiv});");
-
-            int sepIndex = size.IndexOf('|');
-            if (sepIndex > -1)
-            {
-                if (double.TryParse(size.Substring(0, sepIndex), NumberStyles.Any, CultureInfo.InvariantCulture, out double naturalWidth)
-                    && double.TryParse(size.Substring(sepIndex + 1), NumberStyles.Any, CultureInfo.InvariantCulture, out double naturalHeight))
-                {
-                    return new Size(naturalWidth, naturalHeight);
-                }
-            }
-
-            return new Size(0, 0);
         }
     }
 }

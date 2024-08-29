@@ -99,6 +99,8 @@ namespace System.Windows
         string IFormattable.ToString(string format, IFormatProvider formatProvider)
             => ConvertToString(format, formatProvider);
 
+        internal int ToOpenTypeStyle() => _style;
+
         /// <summary>
         /// Creates a string representation of this object based on the format string 
         /// and IFormatProvider passed in.  

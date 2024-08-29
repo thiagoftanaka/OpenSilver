@@ -12,31 +12,61 @@
 \*====================================================================================*/
 
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Diagnostics;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using CSHTML5.Internal;
 using DotNetForHtml5.Core;
+using OpenSilver.Internal;
 
 namespace System.Windows.Threading;
 
 /// <summary>
 /// Provides services for managing the queue of work items for a thread.
 /// </summary>
-public class Dispatcher
+public sealed class Dispatcher
 {
-    private static Dispatcher _currentDispatcher;
+    private const int DefaultTickRate = 60;
 
     private readonly PriorityQueue<DispatcherOperation> _queue;
-    private readonly IDisposable _disableProcessingToken;
+    private readonly Queue<DispatcherOperation> _pendingOperations;
+    private readonly object _sync = new();
     private int _disableProcessingRequests;
-    private bool _isProcessQueueScheduled;
+    private bool _isProcessingQueue;
+    private int _tickRate = DefaultTickRate;
 
-    public Dispatcher()
+    private Dispatcher()
     {
-        _queue = new PriorityQueue<DispatcherOperation>((int)DispatcherPriority.Send - (int)DispatcherPriority.Invalid);
-        _disableProcessingToken = new DispatcherProcessingDisabled(this);
+        _queue = new((int)DispatcherPriority.Send - (int)DispatcherPriority.Inactive + 1);
+        _pendingOperations = new();
+
+        var jsCallback = JavaScriptCallback.Create(OnDispatcherTickNative);
+        string sHandler = OpenSilver.Interop.GetVariableStringForJS(jsCallback);
+        OpenSilver.Interop.ExecuteJavaScriptVoid($"document.createUIDispatcher({sHandler})", false);
+        SetTickRate(DefaultTickRate);
     }
 
-    internal static Dispatcher CurrentDispatcher => _currentDispatcher ??= new Dispatcher();
+    /// <summary>
+    /// Gets the <see cref="Dispatcher"/> for the thread currently executing
+    /// and creates a new <see cref="Dispatcher"/> if one is not already associated
+    /// with the thread.
+    /// </summary>
+    /// <returns>
+    /// The dispatcher associated with the current thread.
+    /// </returns>
+    public static Dispatcher CurrentDispatcher { get; } = new Dispatcher();
+
+    internal event EventHandler Tick;
+
+    internal int TickRate
+    {
+        get => _tickRate;
+        set
+        {
+            _tickRate = value;
+            SetTickRate(_tickRate);
+        }
+    }
 
     /// <summary>
     /// Executes the specified delegate asynchronously on the thread the <see cref="Dispatcher"/>
@@ -80,10 +110,7 @@ public class Dispatcher
     /// is called, that represents the operation that has been posted to the <see cref="Dispatcher"/>
     /// queue.
     /// </returns>
-    public DispatcherOperation BeginInvoke(Delegate d, params object[] args)
-    {
-        return BeginInvoke(() => d.DynamicInvoke(args));
-    }
+    public DispatcherOperation BeginInvoke(Delegate d, params object[] args) => BeginInvoke(() => d.DynamicInvoke(args));
 
     /// <summary>
     /// Determines whether the calling thread is the thread associated with this <see cref="Dispatcher"/>.
@@ -91,52 +118,76 @@ public class Dispatcher
     /// <returns>
     /// true if the calling thread is the thread associated with this <see cref="Dispatcher"/>; otherwise, false.
     /// </returns>
-    public bool CheckAccess()
-    {
-        return !OpenSilver.Interop.IsRunningInTheSimulator || INTERNAL_Simulator.OpenSilverDispatcherCheckAccess();
-    }
+    public bool CheckAccess() =>
+        !OpenSilver.Interop.IsRunningInTheSimulator || INTERNAL_Simulator.OpenSilverDispatcherCheckAccess();
 
+    /// <summary>
+    /// Executes the specified <see cref="Action"/> asynchronously at the specified priority on the thread 
+    /// the <see cref="Dispatcher"/> is associated with.
+    /// </summary>
+    /// <param name="a">
+    /// A delegate to invoke through the dispatcher.
+    /// </param>
+    /// <param name="priority">
+    /// The priority that determines the order in which the specified callback is invoked relative to the 
+    /// other pending operations in the <see cref="Dispatcher"/>.
+    /// </param>
+    /// <returns>
+    /// An object, which is returned immediately after <see cref="InvokeAsync(Action, DispatcherPriority)"/>
+    /// is called, that can be used to interact with the delegate as it is pending execution in the event queue.
+    /// </returns>
     public DispatcherOperation InvokeAsync(Action a, DispatcherPriority priority = DispatcherPriority.Normal)
     {
-        return EnqueueOperation(a, priority);
-    }
+        ValidatePriority(priority);
 
-    public IDisposable DisableProcessing()
-    {
-        _disableProcessingRequests++;
-        return _disableProcessingToken;
-    }
+        var operation = new DispatcherOperation(a, priority);
 
-    private void EnableProcessing()
-    {
-        if (--_disableProcessingRequests == 0)
+        lock (_sync)
         {
-            ScheduleProcessQueue();
+            if (_isProcessingQueue)
+            {
+                _pendingOperations.Enqueue(operation);
+            }
+            else
+            {
+                EnqueueOperation(operation);
+            }
         }
+
+        return operation;
     }
 
-    private void ScheduleProcessQueue()
+    /// <summary>
+    /// Disables processing of the <see cref="Dispatcher"/> queue.
+    /// </summary>
+    /// <returns>
+    /// A structure used to re-enable dispatcher processing.
+    /// </returns>
+    public DispatcherProcessingDisabled DisableProcessing()
     {
-        if (_isProcessQueueScheduled) return;
-
-        _isProcessQueueScheduled = true;
-
-        if (!OpenSilver.Interop.IsRunningInTheSimulator)
-        {
-            Task.Run(ProcessQueueAsync);
-        }
-        else
-        {
-            INTERNAL_Simulator.OpenSilverDispatcherBeginInvoke(() => _ = ProcessQueueAsync());
-        }
+        Interlocked.Increment(ref _disableProcessingRequests);
+        return new(this);
     }
 
-    private async Task ProcessQueueAsync()
-    {
-        while (TryDequeue(out DispatcherOperation operation))
-        {
-            await Task.Delay(1);
+    internal void EnableProcessing() => Interlocked.Decrement(ref _disableProcessingRequests);
 
+    private void SetTickRate(int tickRate) =>
+        OpenSilver.Interop.ExecuteJavaScriptVoid($"document.UIDispatcher.setTickRate({tickRate.ToInvariantString()})", false);
+
+    private void OnDispatcherTickNative()
+    {
+        Tick?.Invoke(this, EventArgs.Empty);
+
+        ProcessQueue();
+        ProcessPendingOperations();
+    }
+
+    private void ProcessQueue()
+    {
+        _isProcessingQueue = true;
+
+        while (TryDequeueOperation(out DispatcherOperation operation))
+        {
             if (operation.Status == DispatcherOperationStatus.Pending)
             {
                 try
@@ -150,23 +201,36 @@ public class Dispatcher
             }
         }
 
-        _isProcessQueueScheduled = false;
+        _isProcessingQueue = false;
     }
 
-    private DispatcherOperation EnqueueOperation(Action a, DispatcherPriority priority)
+    private void ProcessPendingOperations()
     {
-        var operation = new DispatcherOperation(a, priority);
-        _queue.Enqueue((int)operation.Priority + 1, operation);
-        ScheduleProcessQueue();
-
-        return operation;
-    }
-
-    private bool TryDequeue(out DispatcherOperation operation)
-    {
-        while (_disableProcessingRequests == 0 && _queue.MaxPriority - 1 > (int)DispatcherPriority.Inactive)
+        while (_pendingOperations.Count > 0)
         {
-            operation = _queue.Dequeue();
+            DispatcherOperation operation = _pendingOperations.Dequeue();
+            lock (_sync)
+            {
+                EnqueueOperation(operation);
+            }
+        }
+    }
+
+    private void EnqueueOperation(DispatcherOperation operation) => _queue.Enqueue((int)operation.Priority, operation);
+
+    private bool TryDequeueOperation(out DispatcherOperation operation)
+    {
+        while (_disableProcessingRequests == 0)
+        {
+            lock (_sync)
+            {
+                if (_queue.MaxPriority == (int)DispatcherPriority.Inactive)
+                {
+                    break;
+                }
+
+                operation = _queue.Dequeue();
+            }
 
             if (operation.Status != DispatcherOperationStatus.Pending) continue;
 
@@ -177,19 +241,11 @@ public class Dispatcher
         return false;
     }
 
-    private sealed class DispatcherProcessingDisabled : IDisposable
+    private static void ValidatePriority(DispatcherPriority priority, [CallerArgumentExpression(nameof(priority))] string paramName = null)
     {
-        private readonly Dispatcher _dispatcher;
-
-        public DispatcherProcessingDisabled(Dispatcher dispatcher)
+        if (priority < DispatcherPriority.Inactive || priority > DispatcherPriority.Send)
         {
-            Debug.Assert(dispatcher != null);
-            _dispatcher = dispatcher;
-        }
-
-        public void Dispose()
-        {
-            _dispatcher.EnableProcessing();
+            throw new InvalidEnumArgumentException(paramName, (int)priority, typeof(DispatcherPriority));
         }
     }
 }

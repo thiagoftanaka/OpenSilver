@@ -56,28 +56,24 @@ namespace OpenSilver.Internal
         }
 
         private static bool IsWPFClipboardAvailable()
-            => Interop.IsRunningInTheSimulator && INTERNAL_Simulator.ClipboardHandler != null;
+            => Interop.IsRunningInTheSimulator && INTERNAL_Simulator.AsyncClipboard != null;
 
         private static bool IsNavigatorClipboardAvailable()
             => Interop.ExecuteJavaScriptBoolean("!!navigator.clipboard", false);
 
         private class WPFClipboard : IAsyncClipboard
         {
-            public void SetText(string text) => INTERNAL_Simulator.ClipboardHandler.SetText(text);
+            public void SetText(string text) => INTERNAL_Simulator.AsyncClipboard.SetText(text);
 
-            public Task SetTextAsync(string text)
-            {
-                SetText(text);
-                return Task.CompletedTask;
-            }
+            public Task SetTextAsync(string text) => INTERNAL_Simulator.AsyncClipboard.SetTextAsync(text);
 
-            public string GetText() => INTERNAL_Simulator.ClipboardHandler.GetText();
+            public string GetText() => INTERNAL_Simulator.AsyncClipboard.GetText();
 
-            public Task<string> GetTextAsync() => Task.FromResult(GetText());
+            public Task<string> GetTextAsync() => INTERNAL_Simulator.AsyncClipboard.GetTextAsync();
 
-            public bool ContainsText() => INTERNAL_Simulator.ClipboardHandler.ContainsText();
+            public bool ContainsText() => INTERNAL_Simulator.AsyncClipboard.ContainsText();
 
-            public Task<bool> ContainsTextAsync() => Task.FromResult(ContainsText());
+            public Task<bool> ContainsTextAsync() => INTERNAL_Simulator.AsyncClipboard.ContainsTextAsync();
         }
 
         private class NavigatorClipboard : IAsyncClipboard
@@ -92,7 +88,7 @@ namespace OpenSilver.Internal
             {
                 var tcs = new TaskCompletionSource<object>();
 
-                string sCallback = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(
+                string sCallback = Interop.GetVariableStringForJS(
                     JavaScriptCallbackHelper.CreateSelfDisposedJavaScriptCallback<bool>(success =>
                     {
                         if (success)
@@ -105,7 +101,7 @@ namespace OpenSilver.Internal
                         }
                     }));
 
-                string sText = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(text);
+                string sText = Interop.GetVariableStringForJS(text);
 
                 Interop.ExecuteJavaScriptVoid(
                     $"navigator.clipboard.writeText({sText}).then(() => {sCallback}(true), () => {sCallback}(false));",
@@ -121,7 +117,7 @@ namespace OpenSilver.Internal
             {
                 var tcs = new TaskCompletionSource<string>();
 
-                string sCallback = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(
+                string sCallback = Interop.GetVariableStringForJS(
                     JavaScriptCallbackHelper.CreateSelfDisposedJavaScriptCallback<string, bool>((content, success) =>
                     {
                         if (success)
@@ -148,7 +144,7 @@ namespace OpenSilver.Internal
             {
                 var tcs = new TaskCompletionSource<bool>();
 
-                string sCallback = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(
+                string sCallback = Interop.GetVariableStringForJS(
                     JavaScriptCallbackHelper.CreateSelfDisposedJavaScriptCallback<bool>(b => tcs.SetResult(b)));
 
                 Interop.ExecuteJavaScriptVoid(
@@ -189,7 +185,7 @@ namespace OpenSilver.Internal
 
             public void SetText(string text)
             {
-                string escapedText = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(text);
+                string escapedText = Interop.GetVariableStringForJS(text);
                 Interop.ExecuteJavaScriptVoid($"_opensilver.clipboard.writeText({escapedText})");
             }
 

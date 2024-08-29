@@ -11,11 +11,8 @@
 *  
 \*====================================================================================*/
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Threading.Tasks;
 using System.Windows.Markup;
 using System.Windows.Media;
 using CSHTML5.Internal;
@@ -51,9 +48,14 @@ namespace System.Windows.Controls
     /// MyStackPanel.Children.Add(myBorder);
     /// </code>
     /// </example>
-    [ContentProperty("Child")]
-    public partial class Border : FrameworkElement
+    [ContentProperty(nameof(Child))]
+    public class Border : FrameworkElement
     {
+        private UIElement _child;
+        private WeakEventListener<Border, Brush, EventArgs> _backgroundChangedListener;
+        private WeakEventListener<Border, Brush, EventArgs> _borderBrushChangedListener;
+        private bool _refreshBackgroundOnSizeChange;
+
         /// <summary>
         /// Returns the Visual children count.
         /// </summary>
@@ -123,8 +125,8 @@ namespace System.Windows.Controls
         /// </summary>
         public UIElement Child
         {
-            get => (UIElement)GetValue(ChildProperty);
-            set => SetValue(ChildProperty, value);
+            get => _child;
+            set => SetValueInternal(ChildProperty, value);
         }
 
         private static void OnChildChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -132,6 +134,8 @@ namespace System.Windows.Controls
             Border border = (Border)d;
             UIElement oldChild = (UIElement)e.OldValue;
             UIElement newChild = (UIElement)e.NewValue;
+
+            border._child = newChild;
 
             INTERNAL_VisualTreeManager.DetachVisualChildIfNotNull(oldChild, border);
 
@@ -148,26 +152,11 @@ namespace System.Windows.Controls
         protected internal override void INTERNAL_OnAttachedToVisualTree()
         {
             base.INTERNAL_OnAttachedToVisualTree();
-
-            if (this.BorderBrush == null)
-            {
-                UpdateDomOnBorderBrushChanged(this, null, null);
-            }
-
             INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(Child, this);
         }
 
         /// <summary>
-        /// Gets or sets the Brush that fills the background of the border.
-        /// </summary>
-        public Brush Background
-        {
-            get { return (Brush)GetValue(BackgroundProperty); }
-            set { SetValue(BackgroundProperty, value); }
-        }
-
-        /// <summary>
-        /// Identifies the <see cref="Border.Background"/> dependency property.
+        /// Identifies the <see cref="Background"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty BackgroundProperty =
             DependencyProperty.Register(
@@ -176,86 +165,148 @@ namespace System.Windows.Controls
                 typeof(Border),
                 new PropertyMetadata(null, OnBackgroundChanged)
                 {
-                    MethodToUpdateDom2 = (d, oldValue, newValue) =>
-                    {
-                        var border = (Border)d;
-                        _ = Panel.RenderBackgroundAsync(border, (Brush)newValue);
-                        SetPointerEvents(border);
-                    },
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => _ = ((Border)d).SetBackgroundAsync((Brush)newValue),
                 });
+
+        /// <summary>
+        /// Gets or sets the <see cref="Brush"/> that fills the background of the border.
+        /// </summary>
+        /// <returns>
+        /// The brush that fills the background.
+        /// </returns>
+        public Brush Background
+        {
+            get => (Brush)GetValue(BackgroundProperty);
+            set => SetValueInternal(BackgroundProperty, value);
+        }
 
         private static void OnBackgroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             Border border = (Border)d;
-            border.SizeChanged -= OnSizeChanged;
-            if (e.NewValue is LinearGradientBrush)
+
+            border._refreshBackgroundOnSizeChange = e.NewValue is LinearGradientBrush;
+
+            if (border._backgroundChangedListener != null)
             {
-                border.SizeChanged += OnSizeChanged;
+                border._backgroundChangedListener.Detach();
+                border._backgroundChangedListener = null;
+            }
+
+            if (e.NewValue is Brush newBrush)
+            {
+                border._backgroundChangedListener = new(border, newBrush)
+                {
+                    OnEventAction = static (instance, sender, args) => instance.OnBackgroundChanged(sender, args),
+                    OnDetachAction = static (listener, source) => source.Changed -= listener.OnEvent,
+                };
+                newBrush.Changed += border._backgroundChangedListener.OnEvent;
+            }
+
+            // Update pointer events
+            border.CoerceIsHitTestable();
+        }
+
+        private void OnBackgroundChanged(object sender, EventArgs e)
+        {
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
+            {
+                _ = this.SetBackgroundAsync((Brush)sender);
             }
         }
 
-        private static void OnSizeChanged(object sender, SizeChangedEventArgs e)
+        internal override void OnRenderSizeChanged(SizeChangedInfo info)
         {
-            Border b = (Border)sender;
-            _ = Panel.RenderBackgroundAsync(b, b.Background);
+            base.OnRenderSizeChanged(info);
+
+            if (_refreshBackgroundOnSizeChange && INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
+            {
+                _ = this.SetBackgroundAsync(Background);
+            }
         }
 
         /// <summary>
-        /// Gets or sets a brush that describes the border background of a control.
-        /// </summary>
-        public Brush BorderBrush
-        {
-            get { return (Brush)GetValue(BorderBrushProperty); }
-            set { SetValue(BorderBrushProperty, value); }
-        }
-
-        /// <summary>
-        /// Identifies the <see cref="Border.BorderBrush"/> dependency property.
+        /// Identifies the <see cref="BorderBrush"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty BorderBrushProperty =
             DependencyProperty.Register(
                 nameof(BorderBrush),
                 typeof(Brush),
                 typeof(Border),
-                new PropertyMetadata((object)null)
+                new PropertyMetadata(null, OnBorderBrushChanged)
                 {
-                    MethodToUpdateDom2 = UpdateDomOnBorderBrushChanged,
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ChangeBorderColor((Border)d, oldValue as Brush, (Brush)newValue),
                 });
 
-        private static void UpdateDomOnBorderBrushChanged(DependencyObject d, object oldValue, object newValue)
+        /// <summary>
+        /// Gets or sets the <see cref="Brush"/> that is used to create the border.
+        /// </summary>
+        /// <returns>
+        /// The brush that fills the border.
+        /// </returns>
+        public Brush BorderBrush
+        {
+            get => (Brush)GetValue(BorderBrushProperty);
+            set => SetValueInternal(BorderBrushProperty, value);
+        }
+
+        private static void OnBorderBrushChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             var border = (Border)d;
-            var cssStyle = INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(border);
-            switch (newValue)
+
+            if (border._borderBrushChangedListener != null)
             {
-                case SolidColorBrush solid:
-                    if (oldValue is GradientBrush)
-                    {
-                        cssStyle.borderImageSource = string.Empty;
-                        cssStyle.borderImageSlice = string.Empty;
-                    }
-                    cssStyle.borderColor = solid.INTERNAL_ToHtmlString();
+                border._borderBrushChangedListener.Detach();
+                border._borderBrushChangedListener = null;
+            }
+
+            if (e.NewValue is Brush newBrush)
+            {
+                border._borderBrushChangedListener = new(border, newBrush)
+                {
+                    OnEventAction = static (instance, sender, args) => instance.OnBorderBrushChanged(sender, args),
+                    OnDetachAction = static (listener, source) => source.Changed -= listener.OnEvent,
+                };
+                newBrush.Changed += border._borderBrushChangedListener.OnEvent;
+            }
+        }
+
+        private void OnBorderBrushChanged(object sender, EventArgs e)
+        {
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
+            {
+                var brush = (Brush)sender;
+                ChangeBorderColor(this, brush, brush);
+            }
+        }
+
+        private static void ChangeBorderColor(Border border, Brush oldBrush, Brush newBrush)
+        {
+            var cssStyle = border.OuterDiv.Style;
+            switch (oldBrush, newBrush)
+            {
+                case (GradientBrush, SolidColorBrush solid):
+                    cssStyle.borderImageSource = string.Empty;
+                    cssStyle.borderImageSlice = string.Empty;
+                    cssStyle.borderColor = solid.ToHtmlString();
                     break;
 
-                case LinearGradientBrush linear:
-                    if (oldValue is SolidColorBrush)
-                    {
-                        cssStyle.borderColor = string.Empty;
-                    }
-                    cssStyle.borderImageSource = linear.INTERNAL_ToHtmlString(border);
+                case (_, SolidColorBrush solid):
+                    cssStyle.borderColor = solid.ToHtmlString();
+                    break;
+
+                case (_, LinearGradientBrush linear):
+                    cssStyle.borderColor = string.Empty;
+                    cssStyle.borderImageSource = linear.ToHtmlString(border);
                     cssStyle.borderImageSlice = "1";
                     break;
 
-                case RadialGradientBrush radial:
-                    if (oldValue is SolidColorBrush)
-                    {
-                        cssStyle.borderColor = string.Empty;
-                    }
-                    cssStyle.borderImageSource = radial.INTERNAL_ToHtmlString(border);
+                case (_, RadialGradientBrush radial):
+                    cssStyle.borderColor = string.Empty;
+                    cssStyle.borderImageSource = radial.ToHtmlString(border);
                     cssStyle.borderImageSlice = "1";
                     break;
 
-                case null:
+                case (_, null):
                     cssStyle.borderColor = "transparent";
                     cssStyle.borderImageSource = string.Empty;
                     cssStyle.borderImageSlice = string.Empty;
@@ -274,7 +325,7 @@ namespace System.Windows.Controls
         public Thickness BorderThickness
         {
             get { return (Thickness)GetValue(BorderThicknessProperty); }
-            set { SetValue(BorderThicknessProperty, value); }
+            set { SetValueInternal(BorderThicknessProperty, value); }
         }
 
         /// <summary>
@@ -287,19 +338,9 @@ namespace System.Windows.Controls
                 typeof(Border),
                 new FrameworkPropertyMetadata(new Thickness(), FrameworkPropertyMetadataOptions.AffectsMeasure)
                 {
-                    MethodToUpdateDom = BorderThickness_MethodToUpdateDom
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((Border)d).SetBorderWidth((Thickness)newValue),
                 },
                 IsThicknessValid);
-
-        private static void BorderThickness_MethodToUpdateDom(DependencyObject d, object newValue)
-        {
-            var border = (Border)d;
-            var domElement = INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(border);
-            var thickness = (Thickness)newValue;
-            domElement.boxSizing = "border-box";
-            domElement.borderStyle = "solid"; //todo: see if we should put this somewhere else
-            domElement.borderWidth = $"{thickness.Top.ToInvariantString()}px {thickness.Right.ToInvariantString()}px {thickness.Bottom.ToInvariantString()}px {thickness.Left.ToInvariantString()}px";
-        }
 
         /// <summary>
         /// Gets or sets the radius for the corners of the border.
@@ -307,11 +348,11 @@ namespace System.Windows.Controls
         public CornerRadius CornerRadius
         {
             get { return (CornerRadius)GetValue(CornerRadiusProperty); }
-            set { SetValue(CornerRadiusProperty, value); }
+            set { SetValueInternal(CornerRadiusProperty, value); }
         }
 
         /// <summary>
-        /// Identifies the <see cref="Border.CornerRadius"/> dependency property.
+        /// Identifies the <see cref="CornerRadius"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty CornerRadiusProperty =
             DependencyProperty.Register(
@@ -320,17 +361,9 @@ namespace System.Windows.Controls
                 typeof(Border),
                 new PropertyMetadata(new CornerRadius())
                 {
-                    MethodToUpdateDom = CornerRadius_MethodToUpdateDom
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((Border)d).SetBorderRadius((CornerRadius)newValue),
                 },
                 IsCornerRadiusValid);
-
-        private static void CornerRadius_MethodToUpdateDom(DependencyObject d, object newValue)
-        {
-            var border = (Border)d;
-            var cr = (CornerRadius)newValue;
-            var domStyle = INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(border);
-            domStyle.borderRadius = $"{cr.TopLeft.ToInvariantString()}px {cr.TopRight.ToInvariantString()}px {cr.BottomRight.ToInvariantString()}px {cr.BottomLeft.ToInvariantString()}px";
-        }
 
         /// <summary>
         /// Gets or sets the distance between the border and its child object.
@@ -338,7 +371,7 @@ namespace System.Windows.Controls
         public Thickness Padding
         {
             get { return (Thickness)GetValue(PaddingProperty); }
-            set { SetValue(PaddingProperty, value); }
+            set { SetValueInternal(PaddingProperty, value); }
         }
 
         /// <summary>
@@ -412,6 +445,12 @@ namespace System.Windows.Controls
         {
             CornerRadius cr = (CornerRadius)value;
             return CornerRadius.IsValid(cr, false, false, false, false);
+        }
+
+        public override object CreateDomElement(object parentRef, out object domElementWhereToPlaceChildren)
+        {
+            domElementWhereToPlaceChildren = null;
+            return INTERNAL_HtmlDomManager.CreateBorderDomElementAndAppendIt(parentRef, this);
         }
     }
 }

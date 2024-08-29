@@ -16,6 +16,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Xaml;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Media.Animation;
 using OpenSilver.Internal.Xaml.Context;
@@ -95,6 +96,41 @@ namespace OpenSilver.Internal.Xaml
         }
 
         [EditorBrowsable(EditorBrowsableState.Never)]
+        public static T ConvertFromInvariantString<T>(string value)
+        {
+            Debug.Assert(value is not null);
+
+            if (TypeConverterHelper.GetConverter(typeof(T)) is TypeConverter converter)
+            {
+                return (T)converter.ConvertFromInvariantString(value);
+            }
+
+            if (value is T t)
+            {
+                return t;
+            }
+
+            throw new XamlParseException($"Failed to create a '{typeof(T)}' from the text '{value}'.");
+        }
+
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public static TypeConverter GetTypeConverter(Type forType)
+        {
+            Debug.Assert(forType is not null);
+
+            return TypeConverterHelper.GetConverter(forType);
+        }
+
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public static DependencyProperty DependencyPropertyFromName(string name, Type type)
+        {
+            Debug.Assert(name is not null);
+            Debug.Assert(type is not null);
+
+            return DependencyProperty.FromName(name, type);
+        }
+
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static void InitializeNameScope(DependencyObject dependencyObject)
         {
             Debug.Assert(dependencyObject is IFrameworkElement);
@@ -112,6 +148,24 @@ namespace OpenSilver.Internal.Xaml
                 {
                     nameScope.RegisterName(name, scopedElement);
                 }
+            }
+        }
+
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public static void RegisterEventHandler(string handlerName, string eventName, object target, object firstArgument)
+        {
+            try
+            {
+                var methodInfo = firstArgument.GetType().GetMethod(handlerName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var eventInfo = target.GetType().GetEvent(eventName);
+                Delegate handler = Delegate.CreateDelegate(eventInfo.EventHandlerType,
+                                             firstArgument,
+                                             methodInfo);
+                eventInfo.AddEventHandler(target, handler);
+            }
+            catch(Exception ex)
+            {
+                throw new InvalidOperationException($"{handlerName}: {ex.Message}");
             }
         }
 
@@ -161,7 +215,7 @@ namespace OpenSilver.Internal.Xaml
             Debug.Assert(xamlContext != null);
             Debug.Assert(factory != null);
 
-            template.Template = new TemplateContent(xamlContext, (e, c) => (IInternalFrameworkElement)factory(e, c));
+            template.Template = new TemplateContent(xamlContext, factory);
         }
 
         [EditorBrowsable(EditorBrowsableState.Never)]
@@ -239,21 +293,40 @@ namespace OpenSilver.Internal.Xaml
         }
 
         [EditorBrowsable(EditorBrowsableState.Never)]
+        public static bool TrySetMarkupExtension(object target, DependencyProperty dp, IMarkupExtension<object> markupExtension, out object value)
+        {
+            Debug.Assert(target is not null);
+            Debug.Assert(dp is not null);
+            Debug.Assert(markupExtension is not null);
+
+            var serviceProvider = new ServiceProvider(target, dp);
+
+            value = markupExtension.ProvideValue(serviceProvider);
+
+            if (value is Binding binding)
+            {
+                value = binding.ProvideValue(serviceProvider);
+            }
+
+            if (value is BindingExpression bindingExpression && target is DependencyObject d)
+            {
+                d.SetValue(dp, bindingExpression);
+                return true;
+            }
+
+            return false;
+        }
+
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static void XamlContext_SetAnimationContext(XamlContext context, Timeline timeline)
         {
             Debug.Assert(context != null);
             Debug.Assert(timeline != null);
 
-            if (!(timeline is Storyboard))
+            if (timeline is not Storyboard)
             {
                 timeline.NameResolver = context.NameResolver;
             }
-        }
-
-        [Obsolete(Helper.ObsoleteMemberMessage, true)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public static void UIElement_SetKeepHiddenInFirstRender(UIElement uie, bool value)
-        {
         }
     }
 }

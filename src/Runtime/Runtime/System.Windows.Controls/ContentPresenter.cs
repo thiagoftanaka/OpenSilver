@@ -67,7 +67,7 @@ namespace System.Windows.Controls
         public object Content
         {
             get { return GetValue(ContentProperty); }
-            set { SetValue(ContentProperty, value); }
+            set { SetValueInternal(ContentProperty, value); }
         }
 
         private static void OnContentChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -138,7 +138,7 @@ namespace System.Windows.Controls
         public DataTemplate ContentTemplate
         {
             get { return (DataTemplate)GetValue(ContentTemplateProperty); }
-            set { SetValue(ContentTemplateProperty, value); }
+            set { SetValueInternal(ContentTemplateProperty, value); }
         }
 
         private static void OnContentTemplateChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -168,7 +168,7 @@ namespace System.Windows.Controls
         private DataTemplate Template
         {
             get { return _templateCache; }
-            set { SetValue(TemplateProperty, value); }
+            set { SetValueInternal(TemplateProperty, value); }
         }
 
         // Property invalidation callback invoked when TemplateProperty is invalidated
@@ -490,19 +490,19 @@ namespace System.Windows.Controls
 
         private class UseContentTemplate : DataTemplate
         {
-            internal override bool BuildVisualTree(IInternalFrameworkElement container)
+            internal override bool BuildVisualTree(IFrameworkElement container)
             {
-                FrameworkElement child = ((ContentPresenter)container).Content as FrameworkElement;
+                ContentPresenter cp = (ContentPresenter)container;
+                FrameworkElement child = cp.Content as FrameworkElement;
                 if (child != null)
                 {
-                    FrameworkElement parent = VisualTreeHelper.GetParent(child) as FrameworkElement;
-                    if (parent != null)
+                    if (VisualTreeHelper.GetParent(child) is FrameworkElement parent)
                     {
                         parent.TemplateChild = null;
                     }
                 }
 
-                container.TemplateChild = child;
+                cp.TemplateChild = child;
 
                 return true;
             }
@@ -510,12 +510,12 @@ namespace System.Windows.Controls
 
         private class DefaultTemplate : DataTemplate
         {
-            internal override bool BuildVisualTree(IInternalFrameworkElement container)
+            internal override bool BuildVisualTree(IFrameworkElement container)
             {
                 ContentPresenter cp = (ContentPresenter)container;
                 FrameworkElement result = DefaultExpansion(cp.Content, cp);
 
-                container.TemplateChild = result;
+                cp.TemplateChild = result;
 
                 return result != null;
             }

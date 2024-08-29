@@ -11,9 +11,7 @@
 *  
 \*====================================================================================*/
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Collections;
 using System.Collections.Specialized;
 
@@ -22,40 +20,43 @@ namespace System.Windows
     /// <summary>
     /// Provides a common collection class for Silverlight collections.
     /// </summary>
-    /// <typeparam name="T">Type constraint for type safety of the constrained collection implementation.</typeparam>
-    public abstract partial class PresentationFrameworkCollection<T> : DependencyObject, IList<T>, ICollection<T>, IEnumerable<T>, IList, ICollection, IEnumerable
+    /// <typeparam name="T">
+    /// Type constraint for type safety of the constrained collection implementation.
+    /// </typeparam>
+    public abstract class PresentationFrameworkCollection<T> : DependencyObject, IList<T>, IList
     {
-        private readonly List<T> _collection;
+        private readonly List<T> _items;
         private readonly bool _processCollectionChanged;
-        private readonly SimpleMonitor _monitor = new SimpleMonitor();
+        private int _blockReentrancyCount;
 
         internal PresentationFrameworkCollection(bool processCollectionChanged)
         {
-            this._processCollectionChanged = processCollectionChanged;
-            this._collection = new List<T>();
-            this.UpdateCountProperty();
+            _processCollectionChanged = processCollectionChanged;
+            _items = new List<T>();
         }
 
         internal PresentationFrameworkCollection(int capacity, bool processCollectionChanged)
         {
-            this._processCollectionChanged = processCollectionChanged;
-            this._collection = new List<T>(capacity);
-            this.UpdateCountProperty();
+            _processCollectionChanged = processCollectionChanged;
+            _items = new List<T>(capacity);
         }
 
         internal PresentationFrameworkCollection(IEnumerable<T> source, bool processCollectionChanged)
         {
-            this._processCollectionChanged = processCollectionChanged;
-            this._collection = new List<T>(source);
-            this.UpdateCountProperty();
+            _processCollectionChanged = processCollectionChanged;
+            _items = new List<T>(source);
         }
+
+        private static readonly PropertyMetadata _countMetadata = new ReadOnlyPropertyMetadata(0, GetCount);
 
         private static readonly DependencyPropertyKey CountPropertyKey =
             DependencyProperty.RegisterReadOnly(
                 nameof(Count),
                 typeof(int),
                 typeof(PresentationFrameworkCollection<T>),
-                new PropertyMetadata(0));
+                _countMetadata);
+
+        private static object GetCount(DependencyObject d) => ((PresentationFrameworkCollection<T>)d).Count;
 
         /// <summary>
         /// Identifies the <see cref="Count"/> dependency property.
@@ -65,10 +66,7 @@ namespace System.Windows
         /// <summary>
         /// Gets the number of elements contained in the <see cref="PresentationFrameworkCollection{T}"/>.
         /// </summary>
-        public int Count
-        {
-            get { return this.CountInternal; }
-        }
+        public int Count => CountInternal;
 
         /// <summary>
         /// Gets or sets the element at the specified index.
@@ -81,34 +79,21 @@ namespace System.Windows
         /// </returns>
         public T this[int index]
         {
-            get 
+            get => GetItemOverride(index);
+            set
             {
-                if (index < 0 || index >= this.CountInternal)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(index));
-                }
+                CheckReentrancy();
 
-                return this.GetItemOverride(index); 
-            }
-            set 
-            {
-                this.CheckReentrancy();
-
-                if (null == value)
+                if (value is null)
                 {
                     throw new ArgumentNullException(nameof(value));
                 }
 
-                if (index < 0 || index >= this.CountInternal)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(index));
-                }
+                T originalItem = GetItemOverride(index);
 
-                T originalItem = this[index];
+                SetItemOverride(index, value);
 
-                this.SetItemOverride(index, value);
-
-                this.OnCollectionChanged(NotifyCollectionChangedAction.Replace, originalItem, value, index);
+                OnCollectionChanged(NotifyCollectionChangedAction.Replace, originalItem, value, index);
             }
         }
 
@@ -120,13 +105,7 @@ namespace System.Windows
         /// true if the <see cref="PresentationFrameworkCollection{T}"/> has a fixed size;
         /// otherwise, false.
         /// </returns>
-        public bool IsFixedSize
-        {
-            get
-            {
-                return this.IsFixedSizeImpl;
-            }
-        }
+        public bool IsFixedSize => IsFixedSizeImpl;
 
         /// <summary>
         /// Gets a value indicating whether the <see cref="PresentationFrameworkCollection{T}"/>
@@ -136,13 +115,7 @@ namespace System.Windows
         /// true if the <see cref="PresentationFrameworkCollection{T}"/> is read-only; otherwise,
         /// false.
         /// </returns>
-        public bool IsReadOnly
-        {
-            get
-            {
-                return this.IsReadOnlyImpl;
-            }
-        }
+        public bool IsReadOnly => IsReadOnlyImpl;
 
         /// <summary>
         /// Gets a value indicating whether access to the <see cref="PresentationFrameworkCollection{T}"/>
@@ -152,10 +125,7 @@ namespace System.Windows
         /// true if access to the <see cref="PresentationFrameworkCollection{T}"/> is synchronized
         /// (thread safe); otherwise, false.
         /// </returns>
-        public bool IsSynchronized
-        {
-            get { return true; }
-        }
+        public bool IsSynchronized => true;
 
         /// <summary>
         /// Gets an object that can be used to synchronize access to the <see cref="PresentationFrameworkCollection{T}"/>.
@@ -163,10 +133,7 @@ namespace System.Windows
         /// <returns>
         /// An object that can be used to synchronize access to the <see cref="PresentationFrameworkCollection{T}"/>.
         /// </returns>
-        public object SyncRoot
-        {
-            get { return this; }
-        }
+        public object SyncRoot => this;
 
         /// <summary>
         /// Returns an enumerator that iterates through a collection.
@@ -175,10 +142,7 @@ namespace System.Windows
         /// An <see cref="IEnumerator"/> object that can be used to iterate through
         /// the collection.
         /// </returns>
-        public IEnumerator<T> GetEnumerator()
-        {
-            return this.GetEnumeratorImpl();
-        }
+        public IEnumerator<T> GetEnumerator() => GetEnumeratorImpl();
 
         /// <summary>
         /// Adds an item to the <see cref="PresentationFrameworkCollection{T}"/>.
@@ -186,16 +150,16 @@ namespace System.Windows
         /// <param name="value">The object to add.</param>
         public void Add(T value)
         {
-            this.CheckReentrancy();
+            CheckReentrancy();
 
-            if (null == value)
+            if (value is null)
             {
                 throw new ArgumentNullException(nameof(value));
             }
 
-            this.AddOverride(value);
+            AddOverride(value);
 
-            this.OnCollectionChanged(NotifyCollectionChangedAction.Add, value, this.CountInternal - 1);
+            OnCollectionChanged(NotifyCollectionChangedAction.Add, value, Count - 1);
         }
 
         /// <summary>
@@ -203,11 +167,11 @@ namespace System.Windows
         /// </summary>
         public void Clear()
         {
-            this.CheckReentrancy();
+            CheckReentrancy();
 
-            this.ClearOverride();
+            ClearOverride();
 
-            this.OnCollectionReset();
+            OnCollectionReset();
         }
 
         /// <summary>
@@ -219,10 +183,7 @@ namespace System.Windows
         /// true if the object is found in the <see cref="PresentationFrameworkCollection{T}"/>;
         /// otherwise, false.
         /// </returns>
-        public bool Contains(T value)
-        {
-            return this.ContainsImpl(value);
-        }
+        public bool Contains(T value) => IndexOf(value) >= 0;
 
         /// <summary>
         /// Copies the elements of the <see cref="PresentationFrameworkCollection{T}"/> to
@@ -236,7 +197,17 @@ namespace System.Windows
         /// <param name="index">The zero-based index in array at which copying begins.</param>
         public void CopyTo(Array array, int index)
         {
-            this.CopyToImpl(array, index);
+            if (array is T[] a)
+            {
+                CopyToImpl(a, index);
+            }
+            else
+            {
+                for (int i = 0; i < Count; ++i)
+                {
+                    array.SetValue(GetItemOverride(i), index + i);
+                }
+            }
         }
 
         /// <summary>
@@ -249,10 +220,7 @@ namespace System.Windows
         /// have zero-based indexing.
         /// </param>
         /// <param name="index">The zero-based index in array at which copying begins.</param>
-        public void CopyTo(T[] array, int index)
-        {
-            this.CopyToImpl(array, index);
-        }
+        public void CopyTo(T[] array, int index) => CopyToImpl(array, index);
 
         /// <summary>
         /// Determines the index of a specific item in the <see cref="PresentationFrameworkCollection{T}"/>.
@@ -262,10 +230,7 @@ namespace System.Windows
         /// <exception cref="ArgumentException">
         /// The object was not found in the list.
         /// </exception>
-        public int IndexOf(T value)
-        {
-            return this.IndexOfImpl(value);
-        }
+        public int IndexOf(T value) => IndexOfImpl(value);
 
         /// <summary>
         /// Inserts an item to the <see cref="PresentationFrameworkCollection{T}"/> at the
@@ -275,21 +240,16 @@ namespace System.Windows
         /// <param name="value">The object to insert into the <see cref="PresentationFrameworkCollection{T}"/>.</param>
         public void Insert(int index, T value)
         {
-            this.CheckReentrancy();
+            CheckReentrancy();
 
-            if (null == value)
+            if (value is null)
             {
                 throw new ArgumentNullException(nameof(value));
             }
 
-            if (index < 0 || index > this.CountInternal)
-            {
-                throw new ArgumentOutOfRangeException(nameof(index));
-            }
+            InsertOverride(index, value);
 
-            this.InsertOverride(index, value);
-
-            this.OnCollectionChanged(NotifyCollectionChangedAction.Add, value, index);
+            OnCollectionChanged(NotifyCollectionChangedAction.Add, value, index);
         }
 
         /// <summary>
@@ -299,11 +259,11 @@ namespace System.Windows
         /// <returns>true if an object was removed; otherwise, false.</returns>
         public bool Remove(T value)
         {
-            int index = this.IndexOf(value);
+            int index = IndexOf(value);
 
             if (index >= 0)
             {
-                this.RemoveAt(index);
+                RemoveAt(index);
                 return true;
             }
 
@@ -316,68 +276,39 @@ namespace System.Windows
         /// <param name="index">The zero-based index of the item to remove.</param>
         public void RemoveAt(int index)
         {
-            this.CheckReentrancy();
-            
-            if (index < 0 || index >= this.CountInternal)
-            {
-                throw new ArgumentOutOfRangeException(nameof(index));
-            }
+            CheckReentrancy();
 
-            T removedItem = this[index];
+            T removedItem = GetItemOverride(index);
 
-            this.RemoveAtOverride(index);
+            RemoveAtOverride(index);
 
-            this.OnCollectionChanged(NotifyCollectionChangedAction.Remove, removedItem, index);
+            OnCollectionChanged(NotifyCollectionChangedAction.Remove, removedItem, index);
         }
 
         #region Explicit Interface implementation
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return this.GetEnumerator();
-        }
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         int IList.Add(object value)
         {
-            this.Add((T)value);
-            return this.CountInternal;
+            Add((T)value);
+            return Count;
         }
 
-        void IList.Remove(object value)
-        {
-            this.Remove((T)value);
-        }
+        void IList.Remove(object value) => Remove((T)value);
 
-        void IList.RemoveAt(int index)
-        {
-            this.RemoveAt(index);
-        }
+        void IList.RemoveAt(int index) => RemoveAt(index);
 
-        void IList.Insert(int index, object value)
-        {
-            this.Insert(index, (T)value);
-        }
+        void IList.Insert(int index, object value) => Insert(index, (T)value);
 
-        int IList.IndexOf(object value)
-        {
-            return this.IndexOf((T)value);
-        }
+        int IList.IndexOf(object value) => IndexOf((T)value);
 
-        bool IList.Contains(object value)
-        {
-            return this.Contains((T)value);
-        }
+        bool IList.Contains(object value) => Contains((T)value);
 
         object IList.this[int index]
         {
-            get
-            {
-                return this[index];
-            }
-            set
-            {
-                this[index] = (T)value;
-            }
+            get => this[index];
+            set => this[index] = (T)value;
         }
 
         #endregion
@@ -396,52 +327,36 @@ namespace System.Windows
 
         internal abstract T GetItemOverride(int index);
 
-        internal virtual bool IsFixedSizeImpl
-        {
-            get { return false; }
-        }
+        internal virtual bool IsFixedSizeImpl => false;
 
-        internal virtual bool IsReadOnlyImpl
-        {
-            get { return false; }
-        }
+        internal virtual bool IsReadOnlyImpl => false;
 
         /// <summary>
         /// Get the Count of the underlying <see cref="List{T}"/> collection.
         /// This property returns the same value as the Count property and is only here
         /// for performances.
         /// </summary>
-        internal virtual int CountInternal
-        {
-            get { return this._collection.Count; }
-        }
+        internal virtual int CountInternal => _items.Count;
 
-        internal virtual void CopyToImpl(Array array, int index)
-        {
-            for (int i = 0; i < this.CountInternal; ++i)
-            {
-                array.SetValue(this[i], index + i);
-            }
-        }
+        internal virtual void CopyToImpl(T[] array, int index) => _items.CopyTo(array, index);
 
-        internal virtual bool ContainsImpl(T value)
-        {
-            return this._collection.Contains(value);
-        }
+        internal virtual int IndexOfImpl(T value) => _items.IndexOf(value);
 
-        internal virtual int IndexOfImpl(T value)
-        {
-            return this._collection.IndexOf(value);
-        }
-
-        internal virtual IEnumerator<T> GetEnumeratorImpl()
-        {
-            return this._collection.GetEnumerator();
-        }
+        internal virtual IEnumerator<T> GetEnumeratorImpl() => _items.GetEnumerator();
 
         #endregion
 
         #region Generic collection manipulation methods
+
+        /// <summary>
+        /// Get the underlying <see cref="List{T}"/> used to back this collection.
+        /// </summary>
+        /// <remarks>
+        /// <b>IMPORTANT</b>: This property is dangerous and must be used very carefully. Read
+        /// operations (get accessor, GetEnumerator, Count...) are generally safe to use, but
+        /// write operations (Add, Remove, Clear...) will likely lead to unexpected behaviors.
+        /// </remarks>
+        internal List<T> InternalItems => _items;
 
         /// <summary>
         /// Call the Add method of underlying <see cref="List{T}"/> collection.
@@ -449,8 +364,9 @@ namespace System.Windows
         /// <param name="value"></param>
         internal void AddInternal(T value)
         {
-            this._collection.Add(value);
-            this.UpdateCountProperty();
+            int previousCount = Count;
+            _items.Add(value);
+            UpdateCountProperty(previousCount, Count);
         }
 
         /// <summary>
@@ -458,8 +374,9 @@ namespace System.Windows
         /// </summary>
         internal void ClearInternal()
         {
-            this._collection.Clear();
-            this.UpdateCountProperty();
+            int previousCount = Count;
+            _items.Clear();
+            UpdateCountProperty(previousCount, Count);
         }
 
         /// <summary>
@@ -467,8 +384,9 @@ namespace System.Windows
         /// </summary>
         internal void InsertInternal(int index, T value)
         {
-            this._collection.Insert(index, value);
-            this.UpdateCountProperty();
+            int previousCount = Count;
+            _items.Insert(index, value);
+            UpdateCountProperty(previousCount, Count);
         }
 
         /// <summary>
@@ -476,38 +394,20 @@ namespace System.Windows
         /// </summary>
         internal void RemoveAtInternal(int index)
         {
-            this._collection.RemoveAt(index);
-            this.UpdateCountProperty();
-        }
-
-        /// <summary>
-        /// Call the Remove method of underlying <see cref="List{T}"/> collection.
-        /// </summary>
-        internal bool RemoveInternal(T value)
-        {
-            if (this._collection.Remove(value))
-            {
-                this.UpdateCountProperty();
-                return true;
-            }
-            return false;
+            int previousCount = Count;
+            _items.RemoveAt(index);
+            UpdateCountProperty(previousCount, Count);
         }
 
         /// <summary>
         /// Call the Indexer (getter) property of underlying <see cref="List{T}"/> collection.
         /// </summary>
-        internal T GetItemInternal(int index)
-        {
-            return this._collection[index];
-        }
+        internal T GetItemInternal(int index) => _items[index];
 
         /// <summary>
         /// Call the Indexer (setter) property of underlying <see cref="List{T}"/> collection.
         /// </summary>
-        internal void SetItemInternal(int index, T value)
-        {
-            this._collection[index] = value;
-        }
+        internal void SetItemInternal(int index, T value) => _items[index] = value;
 
         #endregion
 
@@ -522,9 +422,9 @@ namespace System.Windows
 
         private static DependencyObject CastDO(T value)
         {
-            if (!(value is DependencyObject valueDO))
+            if (value is not DependencyObject valueDO)
             {
-                throw new ArgumentException(string.Format("'{0}' does not derive from {1}.", typeof(T).Name, typeof(DependencyObject).Name));
+                throw new ArgumentException($"'{typeof(T).Name}' does not derive from {typeof(DependencyObject).Name}.");
             }
 
             return valueDO;
@@ -538,9 +438,9 @@ namespace System.Windows
         internal void AddDependencyObjectInternal(T value)
         {
             DependencyObject valueDO = CastDO(value);
-            this.ProvideSelfAsInheritanceContext(valueDO, null);
+            ProvideSelfAsInheritanceContext(valueDO, null);
 
-            this.AddInternal(value);
+            AddInternal(value);
         }
 
         /// <summary>
@@ -549,12 +449,13 @@ namespace System.Windows
         /// </summary>
         internal void ClearDependencyObjectInternal()
         {
-            foreach (DependencyObject valueDO in this.Select(v => CastDO(v)))
+            foreach (T item in _items)
             {
-                this.RemoveSelfAsInheritanceContext(valueDO, null);
+                DependencyObject valueDO = CastDO(item);
+                RemoveSelfAsInheritanceContext(valueDO, null);
             }
 
-            this.ClearInternal();
+            ClearInternal();
         }
 
         /// <summary>
@@ -564,9 +465,9 @@ namespace System.Windows
         internal void InsertDependencyObjectInternal(int index, T value)
         {
             DependencyObject valueDO = CastDO(value);
-            this.ProvideSelfAsInheritanceContext(valueDO, null);
+            ProvideSelfAsInheritanceContext(valueDO, null);
 
-            this.InsertInternal(index, value);
+            InsertInternal(index, value);
         }
 
         /// <summary>
@@ -575,26 +476,10 @@ namespace System.Windows
         /// </summary>
         internal void RemoveAtDependencyObjectInternal(int index)
         {
-            DependencyObject removedDO = CastDO(this._collection[index]);
-            this.RemoveSelfAsInheritanceContext(removedDO, null);
+            DependencyObject removedDO = CastDO(_items[index]);
+            RemoveSelfAsInheritanceContext(removedDO, null);
 
-            this.RemoveAtInternal(index);
-        }
-
-        /// <summary>
-        /// Call the Remove method of underlying <see cref="List{T}"/> collection
-        /// and update inheritance context to match this object.
-        /// </summary>
-        internal bool RemoveDependencyObjectInternal(T value)
-        {
-            int index = this._collection.IndexOf(value);
-            if (index > -1)
-            {
-                this.RemoveAtDependencyObjectInternal(index);
-                return true;
-            }
-
-            return false;
+            RemoveAtInternal(index);
         }
 
         /// <summary>
@@ -603,84 +488,78 @@ namespace System.Windows
         /// </summary>
         internal void SetItemDependencyObjectInternal(int index, T value)
         {
-            DependencyObject originalDO = CastDO(this._collection[index]);
+            DependencyObject originalDO = CastDO(_items[index]);
             DependencyObject newDO = CastDO(value);
-            this.RemoveSelfAsInheritanceContext(originalDO, null);
-            this.ProvideSelfAsInheritanceContext(newDO, null);
+            RemoveSelfAsInheritanceContext(originalDO, null);
+            ProvideSelfAsInheritanceContext(newDO, null);
 
-            this.SetItemInternal(index, value);
+            SetItemInternal(index, value);
         }
 
         #endregion
 
-        internal void UpdateCountProperty()
+        internal void UpdateCountProperty(int previousCount, int count)
         {
-            this.SetValue(CountPropertyKey, this.CountInternal);
+            if (previousCount != count)
+            {
+                NotifyPropertyChange(
+                    new DependencyPropertyChangedEventArgs(
+                        previousCount,
+                        count,
+                        CountProperty,
+                        _countMetadata));
+            }
         }
 
         internal event NotifyCollectionChangedEventHandler CollectionChanged;
 
+        internal void OnCollectionReset()
+        {
+            if (_processCollectionChanged)
+            {
+                OnCollectionChangedImpl(EventArgsCache.ResetCollectionChanged);
+            }
+        }
+
         internal void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
         {
-            if (this._processCollectionChanged)
+            if (_processCollectionChanged)
             {
-                this.__OnCollectionChanged(e);
+                OnCollectionChangedImpl(e);
             }
         }
 
         private void OnCollectionChanged(NotifyCollectionChangedAction action, object item, int index)
         {
-            if (this._processCollectionChanged)
+            if (_processCollectionChanged)
             {
-                this.__OnCollectionChanged(new NotifyCollectionChangedEventArgs(action, item, index));
+                OnCollectionChangedImpl(new NotifyCollectionChangedEventArgs(action, item, index));
             }
         }
 
         private void OnCollectionChanged(NotifyCollectionChangedAction action, object oldItem, object newItem, int index)
         {
-            if (this._processCollectionChanged)
+            if (_processCollectionChanged)
             {
-                this.__OnCollectionChanged(new NotifyCollectionChangedEventArgs(action, newItem, oldItem, index));
+                OnCollectionChangedImpl(new NotifyCollectionChangedEventArgs(action, newItem, oldItem, index));
             }
         }
 
-        private void OnCollectionReset()
+        private void OnCollectionChangedImpl(NotifyCollectionChangedEventArgs e)
         {
-            if (this._processCollectionChanged)
-            {
-                this.__OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-            }
-        }
-
-        private void __OnCollectionChanged(NotifyCollectionChangedEventArgs e)
-        {
-            NotifyCollectionChangedEventHandler handler = this.CollectionChanged;
+            NotifyCollectionChangedEventHandler handler = CollectionChanged;
             if (handler != null)
             {
-                using (this.BlockReentrancy())
+                _blockReentrancyCount++;
+                try
                 {
                     handler(this, e);
                 }
+                finally
+                {
+                    _blockReentrancyCount--;
+                }
             }
-        }
-
-        /// <summary>
-        /// Disallow reentrant attempts to change this collection. E.g. a event handler
-        /// of the CollectionChanged event is not allowed to make changes to this collection.
-        /// </summary>
-        /// <remarks>
-        /// typical usage is to wrap e.g. a OnCollectionChanged call with a using() scope:
-        /// <code>
-        ///         using (BlockReentrancy())
-        ///         {
-        ///             CollectionChanged(this, new NotifyCollectionChangedEventArgs(action, item, index));
-        ///         }
-        /// </code>
-        /// </remarks>
-        private IDisposable BlockReentrancy()
-        {
-            this._monitor.Enter();
-            return this._monitor;
         }
 
         /// <summary> Check and assert for reentrant attempts to change this collection. </summary>
@@ -688,39 +567,27 @@ namespace System.Windows
         /// while another collection change is still being notified to other listeners </exception>
         internal void CheckReentrancy()
         {
-            if (!this._processCollectionChanged)
+            if (!_processCollectionChanged)
             {
                 return;
             }
 
-            if (this._monitor.Busy)
+            if (_blockReentrancyCount > 0)
             {
                 // we can allow changes if there's only one listener - the problem
                 // only arises if reentrant changes make the original event args
                 // invalid for later listeners.  This keeps existing code working
                 // (e.g. Selector.SelectedItems).
-                if (this.CollectionChanged?.GetInvocationList().Length > 1)
+                if (CollectionChanged?.GetInvocationList().Length > 1)
                 {
                     throw new InvalidOperationException("Reentrancy not allowed");
                 }
             }
         }
+    }
 
-        private class SimpleMonitor : IDisposable
-        {
-            public void Enter()
-            {
-                ++this._busyCount;
-            }
-
-            public void Dispose()
-            {
-                --this._busyCount;
-            }
-
-            public bool Busy { get { return this._busyCount > 0; } }
-
-            int _busyCount;
-        }
+    internal static class EventArgsCache
+    {
+        internal static readonly NotifyCollectionChangedEventArgs ResetCollectionChanged = new(NotifyCollectionChangedAction.Reset);
     }
 }

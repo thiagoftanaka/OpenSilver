@@ -56,7 +56,7 @@ namespace System.Windows.Controls
         public UIElement Content
         {
             get { return (UIElement)GetValue(ContentProperty); }
-            set { SetValue(ContentProperty, value); }
+            set { SetValueInternal(ContentProperty, value); }
         }
 
         /// <summary>
@@ -111,9 +111,10 @@ namespace System.Windows.Controls
                 Seal();
             }
 
-            internal override bool BuildVisualTree(IInternalFrameworkElement container)
+            internal override bool BuildVisualTree(IFrameworkElement container)
             {
-                container.TemplateChild = ((UserControl)container).Content as FrameworkElement;
+                UserControl uc = (UserControl)container;
+                uc.TemplateChild = uc.Content as FrameworkElement;
                 return false;
             }
         }

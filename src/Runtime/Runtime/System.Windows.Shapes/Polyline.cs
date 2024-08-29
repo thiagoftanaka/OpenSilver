@@ -15,6 +15,7 @@ using System.Linq;
 using System.Collections.Specialized;
 using System.Windows.Media;
 using OpenSilver.Internal;
+using System.Collections.Generic;
 
 namespace System.Windows.Shapes
 {
@@ -24,13 +25,6 @@ namespace System.Windows.Shapes
     public sealed class Polyline : Shape
     {
         private WeakEventListener<Polyline, PointCollection, NotifyCollectionChangedEventArgs> _pointsCollectionChanged;
-
-        static Polyline()
-        {
-            StretchProperty.OverrideMetadata(
-                typeof(Polyline),
-                new FrameworkPropertyMetadata(Stretch.Fill, FrameworkPropertyMetadataOptions.AffectsMeasure));
-        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Polyline"/> class.
@@ -59,7 +53,7 @@ namespace System.Windows.Shapes
         public FillRule FillRule
         {
             get => (FillRule)GetValue(FillRuleProperty);
-            set => SetValue(FillRuleProperty, value);
+            set => SetValueInternal(FillRuleProperty, value);
         }
 
         /// <summary>
@@ -91,7 +85,8 @@ namespace System.Windows.Shapes
                         {
                             polyline.SetSvgAttribute(
                                 "points",
-                                string.Join(" ", points.Select(static p => $"{p.X.ToInvariantString()},{p.Y.ToInvariantString()}")));
+                                string.Join(" ",
+                                    points.InternalItems.Select(static p => $"{Math.Round(p.X, 2).ToInvariantString()},{Math.Round(p.Y, 2).ToInvariantString()}")));
                         }
                         else
                         {
@@ -110,7 +105,7 @@ namespace System.Windows.Shapes
         public PointCollection Points
         {
             get => (PointCollection)GetValue(PointsProperty);
-            set => SetValue(PointsProperty, value);
+            set => SetValueInternal(PointsProperty, value);
         }
 
         private static void OnPointsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -161,8 +156,8 @@ namespace System.Windows.Shapes
         /// </summary>
         internal sealed override Rect GetDefiningGeometryBounds()
         {
-            PointCollection points = Points;
-            if (points is null || points.Count == 0)
+            List<Point> points = Points.InternalItems;
+            if (points.Count == 0)
             {
                 return new Rect();
             }

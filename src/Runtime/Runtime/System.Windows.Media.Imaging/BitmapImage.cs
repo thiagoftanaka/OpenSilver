@@ -36,14 +36,11 @@ namespace System.Windows.Media.Imaging
             UriSource = uriSource;
         }
 
-        internal override Task<string> GetDataStringAsync(UIElement parent)
+        internal override ValueTask<string> GetDataStringAsync(UIElement parent)
         {
             if (UriSource != null)
             {
-                return Task.FromResult(
-                    INTERNAL_UriHelper.ConvertToHtml5Path(
-                        UriSource.OriginalString,
-                        parent));
+                return new(INTERNAL_UriHelper.ConvertToHtml5Path(UriSource.OriginalString, parent));
             }
 
             return base.GetDataStringAsync(parent);
@@ -64,16 +61,21 @@ namespace System.Windows.Media.Imaging
             {
                 string callerAssemblyName = Assembly.GetCallingAssembly().GetName().Name;
                 INTERNAL_NameOfAssemblyThatSetTheSourceUri = callerAssemblyName;
-                SetValue(UriSourceProperty, value);
+                SetValueInternal(UriSourceProperty, value);
             }
         }
+
         /// <summary>
-        /// Identifies the UriSource dependency property.
+        /// Identifies the <see cref="UriSource"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty UriSourceProperty =
-            DependencyProperty.Register("UriSource", typeof(Uri), typeof(BitmapImage), new PropertyMetadata(null, UriSource_Changed)
-            { CallPropertyChangedWhenLoadedIntoVisualTree = WhenToCallPropertyChangedEnum.IfPropertyIsSet });
-        static void UriSource_Changed(DependencyObject i, DependencyPropertyChangedEventArgs e)
+            DependencyProperty.Register(
+                nameof(UriSource),
+                typeof(Uri),
+                typeof(BitmapImage),
+                new PropertyMetadata(null, OnUriSourceChanged));
+
+        private static void OnUriSourceChanged(DependencyObject i, DependencyPropertyChangedEventArgs e)
         {
             var bitmapImage = (BitmapImage)i;
             bitmapImage.OnUriSourceChanged();

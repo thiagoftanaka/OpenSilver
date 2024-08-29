@@ -17,15 +17,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
-using OpenSilver.Compiler.Common;
 
 namespace OpenSilver.Compiler
 {
-    internal static class CoreTypesConvertersCS
-    {
-        public static ICoreTypesConverter Silverlight { get; } = new SLCoreTypesConverterCS();
-    }
-
     internal sealed class SLCoreTypesConverterCS : CoreTypesConverterBase
     {
         protected override Dictionary<string, Func<string, string>> SupportedCoreTypes { get; }
@@ -48,11 +42,12 @@ namespace OpenSilver.Compiler
         //
         private static Dictionary<string, Func<string, string>> GetSupportedCoreTypes()
         {
-            return new Dictionary<string, Func<string, string>>(27)
+            return new Dictionary<string, Func<string, string>>(28)
             {
                 ["system.windows.input.cursor"] = (s => CoreTypesHelper.ConvertToCursor(s, "global::System.Windows.Input.Cursor", "global::System.Windows.Input.Cursors")),
                 ["system.windows.media.animation.keytime"] = (s => CoreTypesHelper.ConvertToKeyTime(s, "global::System.Windows.Media.Animation.KeyTime")),
                 ["system.windows.media.animation.repeatbehavior"] = (s => CoreTypesHelper.ConvertToRepeatBehavior(s, "global::System.Windows.Media.Animation.RepeatBehavior")),
+                ["system.windows.media.animation.keyspline"] = (s => CoreTypesHelper.ConvertToKeySpline(s, "global::System.Windows.Media.Animation.KeySpline", "global::System.Windows.Point")),
                 ["system.windows.media.brush"] = (s => CoreTypesHelper.ConvertToBrush(s, "global::System.Windows.Media.SolidColorBrush", "global::System.Windows.Media.Color")),
                 ["system.windows.media.solidcolorbrush"] = (s => CoreTypesHelper.ConvertToBrush(s, "global::System.Windows.Media.SolidColorBrush", "global::System.Windows.Media.Color")),
                 ["system.windows.media.color"] = (s => CoreTypesHelper.ConvertToColor(s, "global::System.Windows.Media.Color")),
@@ -84,16 +79,11 @@ namespace OpenSilver.Compiler
 
     internal static class CoreTypesHelper
     {
-        public const string TypeFromStringConvertersFullName = "global::DotNetForHtml5.Core.TypeFromStringConverters";
-
-        private static SystemTypesHelper SystemTypesHelperCS = new SystemTypesHelperCS();
+        public const string RuntimeHelperClass = "global::OpenSilver.Internal.Xaml.RuntimeHelpers";
 
         public static string ConvertFromInvariantStringHelper(string source, string destinationType)
         {
-            return string.Format(
-                "({0}){1}.ConvertFromInvariantString(typeof({0}), {2})",
-                destinationType, TypeFromStringConvertersFullName, Escape(source)
-            );
+            return $"{RuntimeHelperClass}.ConvertFromInvariantString<{destinationType}>({Escape(source)})";
         }
 
         internal static string ConvertToCursor(string source, string destinationType, string cursorsTypeFullName)
@@ -105,7 +95,7 @@ namespace OpenSilver.Compiler
         {
             string stringValue = source.Trim();
 
-            if (stringValue == "Uniform" || stringValue == "Paced")
+            if (stringValue == "Paced")
             {
                 throw new XamlParseException(
                     $"The '{destinationType}.{stringValue}' property is not supported yet."
@@ -118,9 +108,13 @@ namespace OpenSilver.Compiler
                     $"Percentage values for '{destinationType}' are not supported yet."
                 );
             }
+            else if (stringValue == "Uniform")
+            {
+                return $"{destinationType}.Uniform";
+            }
             else
             {
-                return SystemTypesHelperCS.ConvertFromInvariantString(stringValue, "system.timespan");
+                return $"{destinationType}.FromTimeSpan({SystemTypesHelper.CSharp.ConvertFromInvariantString(stringValue, "system.timespan")})";
             }
         }
 
@@ -142,7 +136,23 @@ namespace OpenSilver.Compiler
                 return $"new {destinationType}({stringDoubleValue.TrimEnd()})";
             }
 
-            return SystemTypesHelperCS.ConvertFromInvariantString(stringValue, "system.timespan");
+            return SystemTypesHelper.CSharp.ConvertFromInvariantString(stringValue, "system.timespan");
+        }
+
+        internal static string ConvertToKeySpline(string source, string destinationType, string pointTypeName)
+        {
+            if (string.IsNullOrEmpty(source))
+            {
+                return $"new {destinationType}()";
+            }
+
+            string[] split = source.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (split.Length == 4)
+            {
+                return $"new {destinationType} {{ ControlPoint1 = new {pointTypeName}({split[0]}, {split[1]}), ControlPoint2 = new {pointTypeName}({split[2]}, {split[3]}), }}";
+            }
+
+            throw GetConvertException(source, destinationType);
         }
 
         internal static string ConvertToBrush(string source, string destinationType, string colorTypeName)
@@ -156,7 +166,7 @@ namespace OpenSilver.Compiler
             const int s_aLower = (int)'a';
             const int s_aUpper = (int)'A';
 
-            string MatchColor(string colorString, out bool isKnownColor, out bool isNumericColor, out bool isScRgbColor)
+            static string MatchColor(string colorString, out bool isKnownColor, out bool isNumericColor, out bool isScRgbColor)
             {
                 string trimmedString = colorString.Trim();
 
@@ -186,7 +196,7 @@ namespace OpenSilver.Compiler
                 return trimmedString;
             }
 
-            int ParseHexChar(char c)
+            static int ParseHexChar(char c)
             {
                 int intChar = (int)c;
 
@@ -207,7 +217,7 @@ namespace OpenSilver.Compiler
                 throw new FormatException("Token is not valid.");
             }
 
-            string ParseHexColor(string trimmedColor)
+            static string ParseHexColor(string trimmedColor, string colorType)
             {
                 int a, r, g, b;
                 a = 255;
@@ -249,11 +259,11 @@ namespace OpenSilver.Compiler
                 return string.Format(
                     CultureInfo.InvariantCulture,
                     "{0}.FromArgb((byte){1}, (byte){2}, (byte){3}, (byte){4})",
-                    destinationType, a, r, g, b
+                    colorType, a, r, g, b
                 );
             }
 
-            string ParseScRgbColor(string trimmedColor)
+            static string ParseScRgbColor(string trimmedColor, string colorType)
             {
                 if (!trimmedColor.StartsWith("sc#", StringComparison.Ordinal))
                 {
@@ -270,7 +280,7 @@ namespace OpenSilver.Compiler
                     return string.Format(
                         CultureInfo.InvariantCulture,
                         "{0}.FromScRgb({1}F, {2}F, {3}F, {4}F)",
-                        destinationType,
+                        colorType,
                         1.0f,
                         Convert.ToSingle(split[0], CultureInfo.InvariantCulture),
                         Convert.ToSingle(split[1], CultureInfo.InvariantCulture),
@@ -282,7 +292,7 @@ namespace OpenSilver.Compiler
                     return string.Format(
                         CultureInfo.InvariantCulture,
                         "{0}.FromScRgb({1}F, {2}F, {3}F, {4}F)",
-                        destinationType,
+                        colorType,
                         Convert.ToSingle(split[0], CultureInfo.InvariantCulture),
                         Convert.ToSingle(split[1], CultureInfo.InvariantCulture),
                         Convert.ToSingle(split[2], CultureInfo.InvariantCulture),
@@ -293,7 +303,7 @@ namespace OpenSilver.Compiler
                 throw new FormatException("Token is not valid.");
             }
 
-            string ParseColor(string colorString)
+            static string ParseColor(string colorString, string colorType)
             {
                 string trimmedColor = MatchColor(
                     colorString, out bool isPossibleKnowColor, out bool isNumericColor, out bool isScRgbColor
@@ -302,11 +312,11 @@ namespace OpenSilver.Compiler
                 //Is it a number?
                 if (isNumericColor)
                 {
-                    return ParseHexColor(trimmedColor);
+                    return ParseHexColor(trimmedColor, colorType);
                 }
                 else if (isScRgbColor)
                 {
-                    return ParseScRgbColor(trimmedColor);
+                    return ParseScRgbColor(trimmedColor, colorType);
                 }
                 else
                 {
@@ -314,12 +324,12 @@ namespace OpenSilver.Compiler
 
                     if (Enum.TryParse(trimmedColor, true, out ColorsEnum namedColor))
                     {
-                        int color = (int)namedColor;
+                        uint color = (uint)namedColor;
 
                         return string.Format(
                             CultureInfo.InvariantCulture,
                             "{0}.FromArgb((byte){1}, (byte){2}, (byte){3}, (byte){4})",
-                            destinationType,
+                            colorType,
                             (color >> 0x18) & 0xff,
                             (color >> 0x10) & 0xff,
                             (color >> 8) & 0xff,
@@ -328,10 +338,10 @@ namespace OpenSilver.Compiler
                     }
                 }
 
-                throw GetConvertException(colorString, destinationType);
+                throw GetConvertException(colorString, colorType);
             }
 
-            return ParseColor(source);
+            return ParseColor(source, destinationType);
         }
 
         internal static string ConvertToDoubleCollection(string source, string destinationType)
@@ -460,7 +470,7 @@ namespace OpenSilver.Compiler
             }
             else
             {
-                return SystemTypesHelperCS.ConvertFromInvariantString(stringValue, "system.timespan");
+                return SystemTypesHelper.CSharp.ConvertFromInvariantString(stringValue, "system.timespan");
             }
         }
 

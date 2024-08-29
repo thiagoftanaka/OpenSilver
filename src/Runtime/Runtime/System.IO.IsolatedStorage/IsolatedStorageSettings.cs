@@ -13,16 +13,14 @@
 
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
-using CSHTML5.Types;
 using OpenSilver;
+using OpenSilver.Internal;
 
 namespace System.IO.IsolatedStorage
 {
     /// <summary>
-    /// Provides a System.Collections.Generic.Dictionary&lt;TKey,TValue&gt; that stores
-    /// key-value pairs in isolated storage.
+    /// Provides a <see cref="Dictionary{TKey, TValue}"/> that stores key-value pairs in isolated storage.
     /// </summary>
     /// <example>
     /// Here is how to use the IsolatedStorageSettings:
@@ -36,31 +34,32 @@ namespace System.IO.IsolatedStorage
     /// </example>
     public sealed partial class IsolatedStorageSettings : IEnumerable, IEnumerable<KeyValuePair<string, object>>
     {
-        string _fullApplicationName = null;
+        private static IsolatedStorageSettings _applicationSettings;
+        private static IsolatedStorageSettings _domainSettings;
+
         private AppDomain _appDomain;
 
-        dynamic GetLocalStorage()
-        {
-            return Interop.ExecuteJavaScript("window.localStorage");
-        } 
+        private readonly string _fullApplicationName;
+        private readonly string _keyPrefix;
 
-        string GetKeysFirstPart()
-        {
-            return $"storage_{_fullApplicationName}{(_appDomain != null ? $"_{_appDomain.Id}" : "")}_settings_";
-        }
+        private int GetLength() => Interop.ExecuteJavaScriptInt32("window.localStorage.length");
 
-        private IsolatedStorageSettings() : this(null)
+        private string GetKey(int index) => Interop.ExecuteJavaScriptString($"window.localStorage.key({index.ToInvariantString()})");
+
+        private string GetKeysPrefix() => _keyPrefix;
+
+        IsolatedStorageSettings()
         {
+            _fullApplicationName = Application.Current.ToString();
+            _keyPrefix = $"storage_{_fullApplicationName}_settings_";
         }
 
         private IsolatedStorageSettings(AppDomain appDomain)
         {
             _fullApplicationName = Application.Current.ToString();
+            _keyPrefix = $"storage_{_fullApplicationName}_settings_";
             _appDomain = appDomain;
         }
-
-        static IsolatedStorageSettings _applicationSettings = null;
-        static IsolatedStorageSettings _domainSettings;
 
         /// <summary>
         /// Gets an instance of System.IO.IsolatedStorage.IsolatedStorageSettings that
@@ -68,17 +67,7 @@ namespace System.IO.IsolatedStorage
         /// scoped at the application level, or creates a new instance of System.IO.IsolatedStorage.IsolatedStorageSettings
         /// if one does not exist.
         /// </summary>
-        public static IsolatedStorageSettings ApplicationSettings
-        {
-            get
-            {
-                if (_applicationSettings == null)
-                {
-                    _applicationSettings = new IsolatedStorageSettings();
-                }
-                return _applicationSettings;
-            }
-        }
+        public static IsolatedStorageSettings ApplicationSettings => _applicationSettings ??= new IsolatedStorageSettings();
 
         /// <summary>
         /// Gets the number of key-value pairs that are stored in the dictionary.
@@ -87,23 +76,18 @@ namespace System.IO.IsolatedStorage
         {
             get
             {
-                if (!Interop.IsRunningInTheSimulator)
-                {
-                    return Interop.ExecuteJavaScriptInt32(
-                            $"Object.keys(window.localStorage).filter(k => k.startsWith('{GetKeysFirstPart()}')).length");
-                }
-                else
-                {
-                    return GetSettingsForCSharpForApplicationOrSite().Count;
-                }
-            }
-        }
+                int length = GetLength();
 
-        private IsolatedStorageSettingsForCSharp GetSettingsForCSharpForApplicationOrSite()
-        {
-            return _appDomain != null
-                ? IsolatedStorageSettingsForCSharp.DomainInstance
-                : IsolatedStorageSettingsForCSharp.Instance;
+                int count = 0;
+                for (int i = 0; i < length; ++i)
+                {
+                    if (GetKey(i).StartsWith(GetKeysPrefix()))
+                    {
+                        ++count;
+                    }
+                }
+                return count;
+            }
         }
 
         /// <summary>
@@ -113,16 +97,19 @@ namespace System.IO.IsolatedStorage
         {
             get
             {
-                if (!Interop.IsRunningInTheSimulator)
+                var keysList = new List<string>();
+                int length = GetLength();
+
+                int lengthOfPartToRemoveFromKey = GetKeysPrefix().Length;
+                for (int i = 0; i < length; ++i)
                 {
-                    string keys = Interop.ExecuteJavaScriptString(
-                            $"Object.keys(window.localStorage).filter(k => k.startsWith('{GetKeysFirstPart()}')).join(';')");
-                    return keys?.Replace(GetKeysFirstPart(), "").Split(';');
+                    string key = GetKey(i);
+                    if (key.StartsWith(GetKeysPrefix()))
+                    {
+                        keysList.Add(key.Substring(lengthOfPartToRemoveFromKey));
+                    }
                 }
-                else
-                {
-                    return GetSettingsForCSharpForApplicationOrSite().Keys.ToList<string>();
-                }
+                return keysList;
             }
         }
 
@@ -148,16 +135,17 @@ namespace System.IO.IsolatedStorage
         {
             get
             {
-                if (!Interop.IsRunningInTheSimulator)
+                var valuesList = new List<object>();
+                int length = GetLength();
+                for (int i = 0; i < length; ++i)
                 {
-                    string keys = Interop.ExecuteJavaScriptString(
-                            $"Object.entries(window.localStorage).filter(([k, v], index) => k.startsWith('{GetKeysFirstPart()}')).map(([k, v], index) => v).join(';')");
-                    return keys.Split(';');
+                    string key = GetKey(i);
+                    if (key.StartsWith(GetKeysPrefix()))
+                    {
+                        valuesList.Add(this[key].ToString());
+                    }
                 }
-                else
-                {
-                    return IsolatedStorageSettingsForCSharp.Instance.Values.ToList();
-                }
+                return valuesList;
             }
         }
 
@@ -172,29 +160,11 @@ namespace System.IO.IsolatedStorage
         /// </returns>
         public object this[string key]
         {
-            get
-            {
-                if (!Interop.IsRunningInTheSimulator)
-                {
-                    var result = Interop.ExecuteJavaScript("window.localStorage[$0]", GetKeysFirstPart() + key)
-                        as INTERNAL_JSObjectReference;
-                    return result?.GetActualValue();
-                }
-                else
-                {
-                    return GetSettingsForCSharpForApplicationOrSite()[key];
-                }
-            }
+            get => Interop.ExecuteJavaScriptString($"window.localStorage['{GetKeysPrefix() + key}']");
             set
             {
-                if (!Interop.IsRunningInTheSimulator)
-                {
-                    Interop.ExecuteJavaScriptVoidAsync("window.localStorage[$0] = $1", GetKeysFirstPart() + key, value);
-                }
-                else
-                {
-                    GetSettingsForCSharpForApplicationOrSite()[key] = value;
-                }
+                string sValue = Interop.GetVariableStringForJS(value);
+                Interop.ExecuteJavaScriptVoid($"window.localStorage['{GetKeysPrefix() + key}'] = {sValue}", false);
             }
         }
 
@@ -205,15 +175,8 @@ namespace System.IO.IsolatedStorage
         /// <param name="value">The value to be stored.</param>
         public void Add(string key, object value)
         {
-            if (!Interop.IsRunningInTheSimulator)
-            {
-                Interop.ExecuteJavaScriptVoidAsync("window.localStorage[$0] = $1", GetKeysFirstPart() + key, value);
-            }
-            else
-            {
-                GetSettingsForCSharpForApplicationOrSite().Add(key, value);
-                GetSettingsForCSharpForApplicationOrSite().Save();
-            }
+            string sValue = Interop.GetVariableStringForJS(value);
+            Interop.ExecuteJavaScriptVoid($"window.localStorage['{GetKeysPrefix() + key}'] = {sValue}");
         }
 
         /// <summary>
@@ -222,16 +185,10 @@ namespace System.IO.IsolatedStorage
         /// </summary>
         public void Clear()
         {
-            if (!Interop.IsRunningInTheSimulator)
+            List<string> keys = (List<string>)Keys;
+            foreach (string key in keys)
             {
-                foreach (string key in Keys)
-                {
-                    Interop.ExecuteJavaScriptVoidAsync("delete window.localStorage[$0]", GetKeysFirstPart() + key);
-                }
-            }
-            else
-            {
-                GetSettingsForCSharpForApplicationOrSite().Clear();
+                Interop.ExecuteJavaScriptVoid($"window.localStorage.removeItem('{GetKeysPrefix() + key}')");
             }
         }
 
@@ -243,16 +200,7 @@ namespace System.IO.IsolatedStorage
         /// <returns>true if the dictionary contains the specified key; otherwise, false.</returns>
         public bool Contains(string key)
         {
-            if (!Interop.IsRunningInTheSimulator)
-            {
-                var result = Interop.ExecuteJavaScript("window.localStorage[$0]", GetKeysFirstPart() + key)
-                    as INTERNAL_JSObjectReference;
-                return result?.GetActualValue() != null;
-            }
-            else
-            {
-                return GetSettingsForCSharpForApplicationOrSite().ContainsKey(key);
-            }
+            return Interop.ExecuteJavaScriptBoolean($"!!window.localStorage.getItem('{GetKeysPrefix() + key}')");
         }
 
         /// <summary>
@@ -262,19 +210,13 @@ namespace System.IO.IsolatedStorage
         /// <returns>true if the specified key was removed; otherwise, false.</returns>
         public bool Remove(string key)
         {
-            if (!Interop.IsRunningInTheSimulator)
+            if (Contains(key))
             {
-                return Interop.ExecuteJavaScriptBoolean(
-                    $@"let existedBefore = Object.keys(window.localStorage).includes('{GetKeysFirstPart() + key}');
-delete window.localStorage['{GetKeysFirstPart() + key}'];
-existedBefore && !Object.keys(window.localStorage).includes('{GetKeysFirstPart() + key}');");
+                Interop.ExecuteJavaScriptVoid($"window.localStorage.removeItem('{GetKeysPrefix() + key}')");
+                return true;
             }
-            else
-            {
-                bool ret = GetSettingsForCSharpForApplicationOrSite().Remove(key);
-                GetSettingsForCSharpForApplicationOrSite().Save();
-                return ret;
-            }
+
+            return false;
         }
 
         //below is commented because the data is directly saved when changed.
@@ -301,24 +243,14 @@ existedBefore && !Object.keys(window.localStorage).includes('{GetKeysFirstPart()
         /// <returns>true if the specified key is found; otherwise, false.</returns>
         public bool TryGetValue<T>(string key, out T value)
         {
-            if (!Interop.IsRunningInTheSimulator)
+            if (Contains(key))
             {
-                object valueAttempt = this[key];
-                if (valueAttempt != null)
-                {
-                    value = (T)valueAttempt;
-                    return true;
-                }
-                value = default;
-                return false;
+                value = (T)Convert.ChangeType(this[key], typeof(T));
+                return true;
             }
-            else
-            {
-                object temp;
-                bool ret = GetSettingsForCSharpForApplicationOrSite().TryGetValue(key, out temp);
-                value = (T)temp;
-                return ret;
-            }
+
+            value = default;
+            return false;
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -339,24 +271,15 @@ existedBefore && !Object.keys(window.localStorage).includes('{GetKeysFirstPart()
 
         IEnumerable<KeyValuePair<string, object>> EnumerateKeyValues()
         {
-            if (!Interop.IsRunningInTheSimulator)
+            List<string> keys = (List<string>)Keys;
+            foreach (string key in keys)
             {
-                foreach (var keyValuePair in ((IEnumerable<string>)Keys).Zip((IEnumerable<object>)Values,
-                             (key, value) => new KeyValuePair<string, object>(key, value)))
-                {
-                    yield return keyValuePair;
-                }
-            }
-            else
-            {
-                foreach (KeyValuePair<string, object> kv in GetSettingsForCSharpForApplicationOrSite())
-                {
-                    yield return kv;
-                }
+                object item = this[key];
+                yield return new KeyValuePair<string, object>(key, item);
             }
         }
 
-#region for the interfaces that we remove for now
+        #region for the interfaces that we remove for now
         //public void Add(KeyValuePair<string, object> item)
         //{
         //    throw new NotImplementedException();
@@ -483,6 +406,6 @@ existedBefore && !Object.keys(window.localStorage).includes('{GetKeysFirstPart()
         //{
         //    get { throw new NotImplementedException(); }
         //}
-#endregion
+        #endregion
     }
 }

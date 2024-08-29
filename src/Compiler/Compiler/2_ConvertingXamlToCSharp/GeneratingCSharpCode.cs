@@ -18,7 +18,6 @@ using System.Linq;
 using System.Text;
 using System.Xml.Linq;
 using OpenSilver.Internal;
-using ILogger = OpenSilver.Compiler.Common.ILogger;
 
 namespace OpenSilver.Compiler
 {
@@ -89,8 +88,7 @@ namespace OpenSilver.Compiler
             AssembliesInspector reflectionOnSeparateAppDomain,
             bool isFirstPass,
             ConversionSettings settings,
-            string codeToPutInTheInitializeComponentOfTheApplicationClass,
-            ILogger logger)
+            string codeToPutInTheInitializeComponentOfTheApplicationClass)
         {
             ICodeGenerator generator;
             if (isFirstPass)
@@ -109,8 +107,7 @@ namespace OpenSilver.Compiler
                     assemblyNameWithoutExtension,
                     reflectionOnSeparateAppDomain,
                     settings,
-                    codeToPutInTheInitializeComponentOfTheApplicationClass,
-                    logger);
+                    codeToPutInTheInitializeComponentOfTheApplicationClass);
             }
 
             return generator.Generate();
@@ -156,19 +153,8 @@ namespace OpenSilver.Compiler
             List<string> fieldsForNamedElements,
             string className,
             string namespaceStringIfAny,
-            string baseType,
-            bool addApplicationEntryPoint)
+            string baseType)
         {
-            string applicationEntryPointIfAny = string.Empty;
-            if (addApplicationEntryPoint)
-            {
-                applicationEntryPointIfAny = $@"
-public static void Main()
-{{
-    new {className}();
-}}";
-            }
-
             string fieldsForNamedElementsMergedCode = string.Join(Environment.NewLine, fieldsForNamedElements);
 
             string classCodeFilled = $@"
@@ -184,9 +170,6 @@ public partial class {className} : {baseType}, {IComponentConnectorClass}
 {initializeComponentMethod}
 
 {connectMethod}
-
-{applicationEntryPointIfAny}
-
 }}
 ";
 
@@ -343,5 +326,6 @@ public sealed class {factoryName} : {IXamlComponentFactoryClass}<{componentTypeF
         private const string IComponentConnectorClass = "global::OpenSilver.Internal.Xaml.IComponentConnector";
         private const string XamlContextClass = "global::OpenSilver.Internal.Xaml.Context.XamlContext";
         private const string IMarkupExtensionClass = "global::System.Xaml.IMarkupExtension<object>";
+        private const string XamlDesignerBridgeClass = "global::OpenSilver.Internal.Xaml.XamlDesignerBridge";
     }
 }

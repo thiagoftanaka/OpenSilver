@@ -1,3 +1,4 @@
+
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -10,12 +11,8 @@
 *  
 \*====================================================================================*/
 
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Globalization;
 using System.Windows.Controls;
-using System.Windows.Media;
 using OpenSilver.Internal;
 
 namespace System.Windows
@@ -27,16 +24,14 @@ namespace System.Windows
     /// </summary>
     public abstract partial class FrameworkElement : UIElement
     {
-        //static bool _theWarningAboutMarginsHasAlreadyBeenDisplayed = false;
-
-        //--------------------------------------
-        // Note: this is a "partial" class. This file handles anything related to Size and Alignment. Please refer to the other file for the rest of the FrameworkElement implementation.
-        //--------------------------------------
-
+        [Obsolete(Helper.ObsoleteMemberMessage)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual void OnAfterApplyHorizontalAlignmentAndWidth()
         {
         }
 
+        [Obsolete(Helper.ObsoleteMemberMessage)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual void OnAfterApplyVerticalAlignmentAndWidth()
         {
         }
@@ -44,13 +39,18 @@ namespace System.Windows
         #region Height property
 
         /// <summary>
-        /// Gets or sets the suggested height of a FrameworkElement.
+        /// Gets or sets the suggested height of a <see cref="FrameworkElement"/>.
         /// </summary>
-        [TypeConverter(typeof(LengthConverter))]
+        /// <returns>
+        /// The height, in pixels, of the object. The default is <see cref="double.NaN"/>. Except
+        /// for the special <see cref="double.NaN"/> value, this value must be equal to or greater
+        /// than 0.
+        /// </returns>
+        [TypeConverter(typeof(OpenSilver.Internal.LengthConverter))]
         public double Height
         {
-            get { return (double)GetValue(HeightProperty); }
-            set { SetValue(HeightProperty, value); }
+            get => (double)GetValue(HeightProperty);
+            set => SetValueInternal(HeightProperty, value);
         }
 
         /// <summary>
@@ -61,22 +61,7 @@ namespace System.Windows
                 nameof(Height),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(
-                    double.NaN,
-                    FrameworkPropertyMetadataOptions.AffectsMeasure)
-                {
-                    GetCSSEquivalent = (instance) => new CSSEquivalent
-                    {
-                        Value = (inst, value) => (value is double) ?
-                            !double.IsNaN((double)value) ? ((double)value).ToInvariantString() + "px" : "auto" :
-                            throw new InvalidOperationException(
-                                string.Format("Error when trying to set FrameworkElement.Height: expected double, got '{0}'.",
-                                    value.GetType().FullName)),
-                        UIElement = (UIElement)instance,
-                        Name = new List<string> { "height" },
-                        ApplyAlsoWhenThereIsAControlTemplate = true
-                    }
-                },
+                new FrameworkPropertyMetadata(double.NaN, FrameworkPropertyMetadataOptions.AffectsMeasure),
                 IsWidthHeightValid);
 
         #endregion
@@ -85,13 +70,18 @@ namespace System.Windows
         #region Width property
 
         /// <summary>
-        /// Gets or sets the width of a FrameworkElement.
+        /// Gets or sets the width of a <see cref="FrameworkElement"/>.
         /// </summary>
-        [TypeConverter(typeof(LengthConverter))]
+        /// <returns>
+        /// The width of the object, in pixels. The default is <see cref="double.NaN"/>. Except
+        /// for the special <see cref="double.NaN"/> value, this value must be equal to or greater
+        /// than 0.
+        /// </returns>
+        [TypeConverter(typeof(OpenSilver.Internal.LengthConverter))]
         public double Width
         {
-            get { return (double)GetValue(WidthProperty); }
-            set { SetValue(WidthProperty, value); }
+            get => (double)GetValue(WidthProperty);
+            set => SetValueInternal(WidthProperty, value);
         }
 
         /// <summary>
@@ -102,22 +92,7 @@ namespace System.Windows
                 nameof(Width),
                 typeof(double),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(
-                    double.NaN,
-                    FrameworkPropertyMetadataOptions.AffectsMeasure)
-                {
-                    GetCSSEquivalent = (instance) => new CSSEquivalent
-                    {
-                        Value = (inst, value) => (value is double) ?
-                            !double.IsNaN((double)value) ? ((double)value).ToInvariantString() + "px" : "auto" :
-                            throw new InvalidOperationException(
-                                string.Format("Error when trying to set FrameworkElement.Width: expected double, got '{0}'.",
-                                    value.GetType().FullName)),
-                        UIElement = (UIElement)instance,
-                        Name = new List<string> { "width" },
-                        ApplyAlsoWhenThereIsAControlTemplate = true
-                    }
-                },
+                new FrameworkPropertyMetadata(double.NaN,FrameworkPropertyMetadataOptions.AffectsMeasure),
                 IsWidthHeightValid);
 
         #endregion
@@ -133,7 +108,7 @@ namespace System.Windows
         public HorizontalAlignment HorizontalAlignment
         {
             get { return (HorizontalAlignment)GetValue(HorizontalAlignmentProperty); }
-            set { SetValue(HorizontalAlignmentProperty, value); }
+            set { SetValueInternal(HorizontalAlignmentProperty, value); }
         }
 
         /// <summary>
@@ -160,7 +135,7 @@ namespace System.Windows
         public VerticalAlignment VerticalAlignment
         {
             get { return (VerticalAlignment)GetValue(VerticalAlignmentProperty); }
-            set { SetValue(VerticalAlignmentProperty, value); }
+            set { SetValueInternal(VerticalAlignmentProperty, value); }
         }
 
         /// <summary>
@@ -185,7 +160,7 @@ namespace System.Windows
         public Thickness Margin
         {
             get { return (Thickness)GetValue(MarginProperty); }
-            set { SetValue(MarginProperty, value); }
+            set { SetValueInternal(MarginProperty, value); }
         }
 
         /// <summary>
@@ -217,7 +192,7 @@ namespace System.Windows
         public double MinHeight
         {
             get { return (double)GetValue(MinHeightProperty); }
-            set { SetValue(MinHeightProperty, value); }
+            set { SetValueInternal(MinHeightProperty, value); }
         }
 
         /// <summary>
@@ -242,7 +217,7 @@ namespace System.Windows
         public double MinWidth
         {
             get { return (double)GetValue(MinWidthProperty); }
-            set { SetValue(MinWidthProperty, value); }
+            set { SetValueInternal(MinWidthProperty, value); }
         }
 
         /// <summary>
@@ -267,7 +242,7 @@ namespace System.Windows
         public double MaxHeight
         {
             get { return (double)GetValue(MaxHeightProperty); }
-            set { SetValue(MaxHeightProperty, value); }
+            set { SetValueInternal(MaxHeightProperty, value); }
         }
 
         /// <summary>
@@ -292,7 +267,7 @@ namespace System.Windows
         public double MaxWidth
         {
             get { return (double)GetValue(MaxWidthProperty); }
-            set { SetValue(MaxWidthProperty, value); }
+            set { SetValueInternal(MaxWidthProperty, value); }
         }
 
         /// <summary>
@@ -337,11 +312,7 @@ namespace System.Windows
                 typeof(FrameworkElement),
                 _actualWidthMetadata);
 
-        private static object GetActualWidth(DependencyObject d)
-        {
-            FrameworkElement fe = (FrameworkElement)d;
-            return fe.HasWidthEverChanged ? fe.RenderSize.Width : 0d;
-        }
+        private static object GetActualWidth(DependencyObject d) => ((FrameworkElement)d).ActualWidth;
 
         /// <summary>
         /// Identifies the <see cref="ActualWidth"/> dependency property.
@@ -355,7 +326,9 @@ namespace System.Windows
         /// The width, in pixels, of the object. The default is 0. The default might be 
         /// encountered if the object has not been loaded and undergone a layout pass.
         /// </returns>
-        public double ActualWidth => RenderSize.Width;
+        public double ActualWidth => ActualWidthInternal;
+
+        internal virtual double ActualWidthInternal => RenderSize.Width;
 
         private static readonly PropertyMetadata _actualHeightMetadata = new ReadOnlyPropertyMetadata(0d, GetActualHeight);
 
@@ -366,11 +339,7 @@ namespace System.Windows
                 typeof(FrameworkElement),
                 _actualHeightMetadata);
 
-        private static object GetActualHeight(DependencyObject d)
-        {
-            FrameworkElement fe = (FrameworkElement)d;
-            return fe.HasHeightEverChanged ? fe.RenderSize.Height : 0d;
-        }
+        private static object GetActualHeight(DependencyObject d) => ((FrameworkElement)d).ActualHeight;
 
         /// <summary>
         /// Identifies the <see cref="ActualHeight"/> dependency property.
@@ -384,13 +353,9 @@ namespace System.Windows
         /// The height, in pixels, of the object. The default is 0. The default might be
         /// encountered if the object has not been loaded and undergone a layout pass.
         /// </returns>
-        public double ActualHeight => RenderSize.Height;
+        public double ActualHeight => ActualHeightInternal;
 
-        /// <summary>
-        /// Gets the rendered size of a FrameworkElement.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage + " Use FrameworkElement.RenderSize instead.")]
-        public Size ActualSize => RenderSize;
+        internal virtual double ActualHeightInternal => RenderSize.Height;
 
         #endregion
 
@@ -404,7 +369,7 @@ namespace System.Windows
         public ContextMenu ContextMenu
         {
             get { return (ContextMenu)GetValue(ContextMenuProperty); }
-            set { SetValue(ContextMenuProperty, value); }
+            set { SetValueInternal(ContextMenuProperty, value); }
         }
 
         /// <summary>

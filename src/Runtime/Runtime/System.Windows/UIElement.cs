@@ -11,7 +11,6 @@
 *  
 \*====================================================================================*/
 
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Windows.Media.Effects;
@@ -62,7 +61,7 @@ namespace System.Windows
         /// <summary>
         /// Returns the parent of this UIElement.
         /// </summary>
-        internal DependencyObject INTERNAL_VisualParent { get; private set; }
+        internal DependencyObject VisualParent { get; private set; }
 
 #endregion Visual Parent
 
@@ -128,7 +127,7 @@ namespace System.Windows
                 return;
             }
 
-            if (child.INTERNAL_VisualParent != null)
+            if (child.VisualParent != null)
             {
                 throw new ArgumentException("Must disconnect specified child from current parent UIElement before attaching to new parent UIElement.");
             }
@@ -137,7 +136,7 @@ namespace System.Windows
 
             // Set the parent pointer.
 
-            child.INTERNAL_VisualParent = this;
+            child.VisualParent = this;
 
             //
             // Resume layout.
@@ -184,12 +183,12 @@ namespace System.Windows
         /// </summary>
         internal void RemoveVisualChild(UIElement child)
         {
-            if (child == null || child.INTERNAL_VisualParent == null)
+            if (child == null || child.VisualParent == null)
             {
                 return;
             }
 
-            if (child.INTERNAL_VisualParent != this)
+            if (child.VisualParent != this)
             {
                 throw new ArgumentException("Specified UIElement is not a child of this UIElement.");
             }
@@ -201,7 +200,7 @@ namespace System.Windows
 
             // Set the parent pointer to null.
 
-            child.INTERNAL_VisualParent = null;
+            child.VisualParent = null;
 
             PropagateSuspendLayout(child);
 
@@ -246,9 +245,9 @@ namespace System.Windows
         internal virtual void OnVisualParentChanged(DependencyObject oldParent)
         {
             // Synchronize ForceInherit properties
-            if (INTERNAL_VisualParent != null)
+            if (VisualParent != null)
             {
-                SynchronizeForceInheritProperties(this, INTERNAL_VisualParent);
+                SynchronizeForceInheritProperties(this, VisualParent);
             }
             else
             {
@@ -261,15 +260,11 @@ namespace System.Windows
 
 #endregion Visual Children
 
-        internal Window INTERNAL_ParentWindow { get; set; } // This is a reference to the window where this control is presented. It is useful for example to know where to display the popups. //todo-perfs: replace all these properties with fields?
+        internal Window ParentWindow { get; set; } // This is a reference to the window where this control is presented. It is useful for example to know where to display the popups. //todo-perfs: replace all these properties with fields?
 
         // This is the main DIV of the HTML representation of the control
-        internal object INTERNAL_OuterDomElement { get; set; }
-        internal object INTERNAL_InnerDomElement { get; set; } // This is used to add visual children to the DOM (optionally wrapped into additional code, c.f. "INTERNAL_VisualChildInformation")
-        internal string INTERNAL_HtmlRepresentation { get; set; } // This can be used instead of overriding the "CreateDomElement" method to specify the appearance of the control.
-        internal Dictionary<UIElement, INTERNAL_VisualChildInformation> INTERNAL_VisualChildrenInformation { get; set; } //todo-performance: verify that JavaScript output is a performant dictionary too, otherwise change structure.
-        internal bool INTERNAL_RenderTransformOriginHasBeenApplied = false; // This is useful to ensure that the default RenderTransformOrigin is (0,0) like in normal XAML, instead of (0.5,0.5) like in CSS.
-        //Note: the two following fields are only used in the PointerRoutedEventArgs class to determine how many clicks have been made on this UIElement in a short amount of time.
+        internal INTERNAL_HtmlDomElementReference OuterDiv { get; set; }
+        internal HashSet<UIElement> VisualChildrenInformation { get; set; }
         public string XamlSourcePath; //this is used by the Simulator to tell where this control is defined. It is non-null only on root elements, that is, elements which class has "InitializeComponent" method. This member is public because it needs to be accessible via reflection.
         internal bool _isLoaded;
 
@@ -277,15 +272,24 @@ namespace System.Windows
 
         public UIElement()
         {
-            PreviousAvailableSize = new Size(double.PositiveInfinity, double.PositiveInfinity);
-            
             NeverMeasured = true;
             NeverArranged = true;
 
-            VisibilityCache = (Visibility)VisibilityProperty.GetMetadata(GetType()).DefaultValue;
-            ClipToBoundsCache = (bool)ClipToBoundsProperty.GetMetadata(GetType()).DefaultValue;
+            VisibilityCache = (Visibility)VisibilityProperty.GetMetadata(DependencyObjectType).DefaultValue;
+            ClipToBoundsCache = (bool)ClipToBoundsProperty.GetMetadata(DependencyObjectType).DefaultValue;
             
             WriteVisualFlag(VisualFlags.IsUIElement, true);
+        }
+
+        internal override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+        {
+            if (e.Metadata is PropertyMetadata metadata && _isLoaded)
+            {
+                metadata.MethodToUpdateDom?.Invoke(this, e.NewValue);
+                metadata.MethodToUpdateDom2?.Invoke(this, e.OldValue, e.NewValue);
+            }
+
+            base.OnPropertyChanged(e);
         }
 
 #region ClipToBounds
@@ -298,7 +302,7 @@ namespace System.Windows
         public bool ClipToBounds
         {
             get { return ClipToBoundsCache; }
-            set { SetValue(ClipToBoundsProperty, value); }
+            set { SetValueInternal(ClipToBoundsProperty, value); }
         }
 
         /// <summary>
@@ -336,7 +340,7 @@ namespace System.Windows
                 typeof(UIElement),
                 new PropertyMetadata(null, OnClipChanged)
                 {
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) => SetClipGeometry((UIElement)d, (Geometry)newValue),
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((UIElement)d).SetClipPath((Geometry)newValue),
                 });
 
         /// <summary>
@@ -349,7 +353,7 @@ namespace System.Windows
         public Geometry Clip
         {
             get => (Geometry)GetValue(ClipProperty);
-            set => SetValue(ClipProperty, value);
+            set => SetValueInternal(ClipProperty, value);
         }
 
         private static void OnClipChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -377,25 +381,7 @@ namespace System.Windows
         {
             if (e.AffectsMeasure)
             {
-                SetClipGeometry(this, Clip);
-            }
-        }
-
-        private static void SetClipGeometry(UIElement uie, Geometry geometry)
-        {
-            Debug.Assert(uie is not null);
-
-            var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(uie.INTERNAL_OuterDomElement);
-            switch (geometry)
-            {
-                case RectangleGeometry rectGeometry:
-                    Rect rect = rectGeometry.Rect;
-                    style.clip = $"rect({rect.Top.ToInvariantString()}px, {rect.Right.ToInvariantString()}px, {rect.Bottom.ToInvariantString()}px, {rect.Left.ToInvariantString()}px)";
-                    break;
-
-                default:
-                    style.clip = string.Empty;
-                    break;
+                this.SetClipPath(Clip);
             }
         }
 
@@ -411,37 +397,98 @@ namespace System.Windows
         /// <returns>The "root" dom element of the UIElement.</returns>
         public abstract object CreateDomElement(object parentRef, out object domElementWhereToPlaceChildren);
 
+        #region IsEnabled
+
         /// <summary>
-        /// When overriden, creates a dom wrapper for each child that is added to the UIElement.
+        /// Fetches the value that IsEnabled should be coerced to.
         /// </summary>
-        /// <param name="parentRef"></param>
-        /// <param name="domElementWhereToPlaceChild"></param>
-        /// <param name="index">The index for the position in which to add the child.</param>
-        /// <returns></returns>
-        public virtual object CreateDomChildWrapper(object parentRef, out object domElementWhereToPlaceChild, int index = -1)
+        /// <remarks>
+        /// This method is virtual is so that controls derived from UIElement
+        /// can combine additional requirements into the coersion logic.
+        /// It is important for anyone overriding this property to also
+        /// call CoerceValue when any of their dependencies change.
+        /// </remarks>
+        internal virtual bool IsEnabledCore => true;
+
+        /// <summary>
+        /// Identifies the <see cref="IsEnabled"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty IsEnabledProperty =
+            DependencyProperty.Register(
+                nameof(IsEnabled),
+                typeof(bool),
+                typeof(UIElement),
+                new PropertyMetadata(BooleanBoxes.TrueBox, OnIsEnabledChanged, CoerceIsEnabled)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((UIElement)d).ManageIsEnabled((bool)newValue),
+                });
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the user can interact with the control.
+        /// </summary>
+        /// <returns>
+        /// true if the user can interact with the control; otherwise, false.
+        /// </returns>
+        public bool IsEnabled
         {
-            // This method is optional (cf. documentation in "INTERNAL_VisualChildInformation" class). It should return null if not used.
-            domElementWhereToPlaceChild = null;
-            return null;
+            get => (bool)GetValue(IsEnabledProperty);
+            set => SetValueInternal(IsEnabledProperty, value);
         }
 
-        public virtual object GetDomElementWhereToPlaceChild(UIElement child) // Note: if overridden, it supercedes the "INTERNAL_InnerDomElement" property.
+        private static void OnIsEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            return null;
+            var uie = (UIElement)d;
+            uie.IsEnabledChanged?.Invoke(uie, e);
+            uie.InvalidateForceInheritPropertyOnChildren(e.Property);
+
+            // Update pointer events
+            uie.CoerceIsHitTestable();
         }
 
-        public object GetChildsWrapper(UIElement child)
+        private static object CoerceIsEnabled(DependencyObject d, object baseValue)
         {
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && INTERNAL_VisualTreeManager.IsElementInVisualTree(child))
+            var uie = (UIElement)d;
+
+            // We must be false if our parent is false, but we can be
+            // either true or false if our parent is true.
+            //
+            // Another way of saying this is that we can only be true
+            // if our parent is true, but we can always be false.
+            if ((bool)baseValue)
             {
-                return INTERNAL_VisualChildrenInformation[child].INTERNAL_OptionalChildWrapper_OuterDomElement;
+                // Our parent can constrain us.  We can be plugged into either
+                // a "visual" or "content" tree.  If we are plugged into a
+                // "content" tree, the visual tree is just considered a
+                // visual representation, and is normally composed of raw
+                // visuals, not UIElements, so we prefer the content tree.
+                //
+                // The content tree uses the "logical" links.  But not all
+                // "logical" links lead to a content tree.
+                //
+                DependencyObject parent = VisualTreeHelper.GetParent(uie);
+                if (parent == null || (bool)parent.GetValue(IsEnabledProperty))
+                {
+                    return BooleanBoxes.Box(uie.IsEnabledCore);
+                }
+                else
+                {
+                    return BooleanBoxes.FalseBox;
+                }
             }
             else
             {
-                return null;
+                return BooleanBoxes.FalseBox;
             }
         }
 
+        /// <summary>
+        /// Occurs when the <see cref="IsEnabled"/> property changes.
+        /// </summary>
+        public event DependencyPropertyChangedEventHandler IsEnabledChanged;
+
+        protected internal virtual void ManageIsEnabled(bool isEnabled) { }
+
+        #endregion
 
         #region Effect
 
@@ -455,7 +502,7 @@ namespace System.Windows
                 typeof(UIElement),
                 new PropertyMetadata(null, OnEffectChanged)
                 {
-                    MethodToUpdateDom2 = (d, oldValue, newValue) =>
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
                     {
                         var uie = (UIElement)d;
                         if (oldValue is Effect oldEffect)
@@ -482,7 +529,7 @@ namespace System.Windows
         public Effect Effect
         {
             get => (Effect)GetValue(EffectProperty);
-            set => SetValue(EffectProperty, value);
+            set => SetValueInternal(EffectProperty, value);
         }
 
         private static void OnEffectChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -510,67 +557,96 @@ namespace System.Windows
 
         private WeakEventListener<UIElement, Effect, EventArgs> _effectChangedListener;
 
-#endregion
+        #endregion
 
 
-#region RenderTransform and RenderTransformOrigin
-
-        /// <summary>
-        /// Gets or sets transform information that affects the rendering position of
-        /// a UIElement.
-        /// </summary>
-        public Transform RenderTransform
-        {
-            get { return (Transform)GetValue(RenderTransformProperty) ?? new MatrixTransform(); }
-            set { SetValue(RenderTransformProperty, value); }
-        }
+        #region RenderTransform and RenderTransformOrigin
 
         /// <summary>
-        /// Identifies the <see cref="UIElement.RenderTransform"/> dependency 
-        /// property.
+        /// Identifies the <see cref="RenderTransform"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty RenderTransformProperty =
             DependencyProperty.Register(
                 nameof(RenderTransform),
                 typeof(Transform),
                 typeof(UIElement),
-                new PropertyMetadata(null, RenderTransform_Changed)
+                new PropertyMetadata(null, OnRenderTransformChanged)
                 {
-                    CallPropertyChangedWhenLoadedIntoVisualTree = WhenToCallPropertyChangedEnum.IfPropertyIsSet
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
+                    {
+                        var uie = (UIElement)d;
+                        uie.SetTransform((Transform)newValue);
+                        uie.SetTransformOrigin(uie.RenderTransformOrigin);
+                    }
                 });
 
-        private static void RenderTransform_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        /// <summary>
+        /// Gets or sets transform information that affects the rendering position of a <see cref="UIElement"/>.
+        /// </summary>
+        /// <returns>
+        /// Describes the specifics of the desired render transform. The default value is null.
+        /// </returns>
+        public Transform RenderTransform
         {
-            Transform.ProcessChanged(d as UIElement, e.OldValue as Transform, e.NewValue as Transform);
+            get => (Transform)GetValue(RenderTransformProperty) ?? new MatrixTransform();
+            set => SetValueInternal(RenderTransformProperty, value);
         }
 
-        public Point RenderTransformOrigin
+        private static void OnRenderTransformChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            get { return (Point)GetValue(RenderTransformOriginProperty); }
-            set { SetValue(RenderTransformOriginProperty, value); }
+            UIElement uie = (UIElement)d;
+
+            if (uie._renderTransformChangedListener != null)
+            {
+                uie._renderTransformChangedListener.Detach();
+                uie._renderTransformChangedListener = null;
+            }
+
+            if (e.NewValue is Transform newTransform)
+            {
+                uie._renderTransformChangedListener = new(uie, newTransform)
+                {
+                    OnEventAction = static (instance, sender, args) => instance.OnRenderTransformChanged(sender, args),
+                    OnDetachAction = static (listener, source) => source.Changed -= listener.OnEvent,
+                };
+                newTransform.Changed += uie._renderTransformChangedListener.OnEvent;
+            }
         }
+
+        private void OnRenderTransformChanged(object sender, EventArgs e)
+        {
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
+            {
+                this.SetTransform((Transform)sender);
+            }
+        }
+
+        private WeakEventListener<UIElement, Transform, EventArgs> _renderTransformChangedListener;
 
         /// <summary>
-        /// Identifies the <see cref="UIElement.RenderTransformOrigin"/>
-        /// dependency property.
+        /// Identifies the <see cref="RenderTransformOrigin"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty RenderTransformOriginProperty =
             DependencyProperty.Register(
                 nameof(RenderTransformOrigin),
                 typeof(Point),
                 typeof(UIElement),
-                new PropertyMetadata(new Point(0d, 0d), RenderTransformOrigin_Changed)
+                new PropertyMetadata(new Point(0, 0))
                 {
-                    CallPropertyChangedWhenLoadedIntoVisualTree = WhenToCallPropertyChangedEnum.IfPropertyIsSet
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((UIElement)d).SetTransformOrigin((Point)newValue),
                 });
 
-        private static void RenderTransformOrigin_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        /// <summary>
+        /// Gets or sets the origin point of any possible render transform declared by
+        /// <see cref="RenderTransform"/>, relative to the bounds of the <see cref="UIElement"/>.
+        /// </summary>
+        /// <returns>
+        /// The origin point of the render transform. The default value is a point with value 0,0.
+        /// </returns>
+        public Point RenderTransformOrigin
         {
-            var uiElement = (UIElement)d;
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(uiElement))
-            {
-                Transform.ApplyRenderTransformOrigin(uiElement, (Point)e.NewValue);
-            }
+            get => (Point)GetValue(RenderTransformOriginProperty);
+            set => SetValueInternal(RenderTransformOriginProperty, value);
         }
 
 #endregion
@@ -585,12 +661,11 @@ namespace System.Windows
         public bool UseLayoutRounding
         {
             get { return (bool)GetValue(UseLayoutRoundingProperty); }
-            set { SetValue(UseLayoutRoundingProperty, value); }
+            set { SetValueInternal(UseLayoutRoundingProperty, value); }
         }
 
         /// <summary>
-        /// Identifies the <see cref="UIElement.UseLayoutRounding"/> dependency 
-        /// property.
+        /// Identifies the <see cref="UseLayoutRounding"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty UseLayoutRoundingProperty =
             DependencyProperty.Register(
@@ -647,7 +722,7 @@ namespace System.Windows
         public Visibility Visibility
         {
             get { return VisibilityCache; }
-            set { SetValue(VisibilityProperty, value); }
+            set { SetValueInternal(VisibilityProperty, value); }
         }
 
         /// <summary>
@@ -661,17 +736,7 @@ namespace System.Windows
                 new PropertyMetadata(VisibilityBoxes.VisibleBox, OnVisibilityChanged, CoerceVisibility)
                 {
                     MethodToUpdateDom2 = static (d, oldValue, newValue) =>
-                    {
-                        var uie = (UIElement)d;
-                        if ((Visibility)newValue == Visibility.Collapsed)
-                        {
-                            INTERNAL_HtmlDomManager.AddCSSClass(uie.INTERNAL_OuterDomElement, "uielement-collapsed");
-                        }
-                        else
-                        {
-                            INTERNAL_HtmlDomManager.RemoveCSSClass(uie.INTERNAL_OuterDomElement, "uielement-collapsed");
-                        }
-                    },
+                        INTERNAL_HtmlDomManager.SetVisible(((UIElement)d).OuterDiv, (Visibility)newValue == Visibility.Visible),
                 });
 
         private static void OnVisibilityChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -804,54 +869,74 @@ namespace System.Windows
                 }
             }
 
-            return isVisible;
+            return BooleanBoxes.Box(isVisible);
         }
 
+        /// <summary>
+        /// Occurs when the value of the <see cref="IsVisible"/> property changes on this element.
+        /// </summary>
         public event DependencyPropertyChangedEventHandler IsVisibleChanged;
 
-        internal void UpdateIsVisible()
-        {
-            CoerceValue(IsVisibleProperty);
-        }
+        internal void UpdateIsVisible() => CoerceValue(IsVisibleProperty);
 
         #endregion
 
         #region Opacity
 
         /// <summary>
-        /// Gets or sets the degree of the object's opacity.
-        /// A value between 0 and 1.0 that declares the opacity factor, with 1.0 meaning
-        /// full opacity and 0 meaning transparent. The default value is 1.0.
-        /// </summary>
-        public double Opacity
-        {
-            get { return (double)GetValue(OpacityProperty); }
-            set { SetValue(OpacityProperty, value); }
-        }
-
-        /// <summary>
-        /// Identifies the <see cref="UIElement.Opacity"/> dependency 
-        /// property.
+        /// Identifies the <see cref="Opacity"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty OpacityProperty =
             DependencyProperty.Register(
-                nameof(Opacity), 
-                typeof(double), 
-                typeof(UIElement), 
+                nameof(Opacity),
+                typeof(double),
+                typeof(UIElement),
                 new PropertyMetadata(1.0)
                 {
-                    GetCSSEquivalent = (instance) => new CSSEquivalent
-                    {
-                        // Note: We multiply by 1000 and then divide by 1000 so as to only keep 3 decimals at the most.
-                        Value = (inst, value) => (Math.Floor(Convert.ToDouble(value) * 1000) / 1000).ToInvariantString(),
-                        Name = new List<string> { "opacity" },
-                        ApplyAlsoWhenThereIsAControlTemplate = true,
-                    }
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((UIElement)d).SetOpacity((double)newValue),
                 });
 
-#endregion
+        /// <summary>
+        /// Gets or sets the degree of the object's opacity.
+        /// </summary>
+        /// <returns>
+        /// A value between 0 and 1.0 that declares the opacity factor, with 1.0 meaning
+        /// full opacity and 0 meaning transparent. The default value is 1.0.
+        /// </returns>
+        public double Opacity
+        {
+            get => (double)GetValue(OpacityProperty);
+            set => SetValueInternal(OpacityProperty, value);
+        }
 
-#region IsHitTestVisible
+        /// <summary>
+        /// Identifies the <see cref="OpacityMask"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty OpacityMaskProperty =
+            DependencyProperty.Register(
+                nameof(OpacityMask),
+                typeof(Brush),
+                typeof(UIElement),
+                new PropertyMetadata((object)null)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => _ = ((UIElement)d).SetMaskImageAsync((Brush)newValue),
+                });
+
+        /// <summary>
+        /// Gets or sets the brush used to alter the opacity of regions of this object.
+        /// </summary>
+        /// <returns>
+        /// A brush that describes the opacity applied to this object. The default is null.
+        /// </returns>
+        public Brush OpacityMask
+        {
+            get => (Brush)GetValue(OpacityMaskProperty);
+            set => SetValueInternal(OpacityMaskProperty, value);
+        }
+
+        #endregion
+
+        #region IsHitTestVisible
 
         /// <summary>
         /// Gets or sets whether the contained area of this UIElement can return true
@@ -860,38 +945,33 @@ namespace System.Windows
         public bool IsHitTestVisible
         {
             get { return (bool)GetValue(IsHitTestVisibleProperty); }
-            set { SetValue(IsHitTestVisibleProperty, value); }
+            set { SetValueInternal(IsHitTestVisibleProperty, value); }
         }
 
         /// <summary>
-        /// Identifies the <see cref="UIElement.IsHitTestVisible"/> dependency 
-        /// property.
+        /// Identifies the <see cref="IsHitTestVisible"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty IsHitTestVisibleProperty =
             DependencyProperty.Register(
                 nameof(IsHitTestVisible),
                 typeof(bool),
                 typeof(UIElement),
-                new PropertyMetadata(true, OnIsHitTestVisiblePropertyChanged, CoerceIsHitTestVisibleProperty)
-                {
-                    MethodToUpdateDom = (d, e) =>
-                    {
-                        SetPointerEvents((UIElement)d);
-                    },
-                });
+                new PropertyMetadata(BooleanBoxes.TrueBox, OnIsHitTestVisibleChanged, CoerceIsHitTestVisible));
 
-        private static void OnIsHitTestVisiblePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            // Invalidate the children so that they will inherit the new value.
-            ((UIElement)d).InvalidateForceInheritPropertyOnChildren(e.Property);
-        }
-
-        private static object CoerceIsHitTestVisibleProperty(DependencyObject d, object baseValue)
+        private static void OnIsHitTestVisibleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             UIElement uie = (UIElement)d;
 
-            if (!(baseValue is bool)) //todo: this is a temporary workaround - cf. comment in "CoerceIsEnabledProperty"
-                return true;
+            // Invalidate the children so that they will inherit the new value.
+            uie.InvalidateForceInheritPropertyOnChildren(e.Property);
+
+            // Update pointer events
+            uie.CoerceIsHitTestable();
+        }
+
+        private static object CoerceIsHitTestVisible(DependencyObject d, object baseValue)
+        {
+            UIElement uie = (UIElement)d;
 
             // We must be false if our parent is false, but we can be
             // either true or false if our parent is true.
@@ -903,16 +983,16 @@ namespace System.Windows
                 DependencyObject parent = VisualTreeHelper.GetParent(uie);
                 if (parent == null || (bool)parent.GetValue(IsHitTestVisibleProperty))
                 {
-                    return true;
+                    return BooleanBoxes.TrueBox;
                 }
                 else
                 {
-                    return false;
+                    return BooleanBoxes.FalseBox;
                 }
             }
             else
             {
-                return false;
+                return BooleanBoxes.FalseBox;
             }
         }
 
@@ -920,47 +1000,55 @@ namespace System.Windows
 
 #region pointer-events
 
-        internal static bool EnablePointerEventsBase(UIElement uie)
-        {
-            return (bool)uie.GetValue(FrameworkElement.IsEnabledProperty) &&
-                   uie.IsHitTestVisible;
-        }
-
         /// <summary>
         /// Fetches the value that pointer-events (css) should be coerced to.
         /// </summary>
-        internal virtual bool EnablePointerEventsCore
+        internal virtual bool EnablePointerEventsCore => false;
+
+        internal virtual void SetPointerEvents(bool hitTestable) =>
+            OuterDiv.Style.pointerEvents = hitTestable ? "auto" : "none";
+
+        // IsHitTestable should be updated exclusively with Coercion, that is why we create a read-only
+        // property and just drop the key.
+        internal static readonly DependencyProperty IsHitTestableProperty =
+            DependencyProperty.Register(
+                nameof(IsHitTestable),
+                typeof(bool),
+                typeof(UIElement),
+                new PropertyMetadata(BooleanBoxes.FalseBox, null, CoerceIsHitTestable)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((UIElement)d).SetPointerEvents((bool)newValue),
+                });
+
+        internal bool IsHitTestable => (bool)GetValue(IsHitTestableProperty);
+
+        private static object CoerceIsHitTestable(DependencyObject d, object value)
         {
-            get
-            {
-                return false;
-            }
+            UIElement uie = (UIElement)d;
+            return BooleanBoxes.Box(uie.EnablePointerEventsCore && uie.IsEnabled && uie.IsHitTestVisible);
         }
 
-        internal bool EnablePointerEvents
+        internal void CoerceIsHitTestable() => CoerceValue(IsHitTestableProperty);
+
+        #endregion pointer-events
+        
+        private static readonly DependencyProperty UseSystemFocusVisualsProperty =
+            DependencyProperty.Register(
+                nameof(UseSystemFocusVisuals),
+                typeof(bool),
+                typeof(UIElement),
+                new PropertyMetadata(BooleanBoxes.FalseBox)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((UIElement)d).SetOutline((bool)newValue),
+                });
+
+        internal bool UseSystemFocusVisuals
         {
-            get
-            {
-                return this.EnablePointerEventsCore &&
-                       EnablePointerEventsBase(this);
-            }
+            get => (bool)GetValue(UseSystemFocusVisualsProperty);
+            set => SetValue(UseSystemFocusVisualsProperty, value);
         }
 
-        internal virtual void SetPointerEventsImpl() =>
-            INTERNAL_HtmlDomManager.GetDomElementStyleForModification(INTERNAL_OuterDomElement)
-                .pointerEvents = EnablePointerEvents ? "auto" : "none";
-
-        internal static void SetPointerEvents(UIElement element)
-        {
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(element))
-            {
-                element.SetPointerEventsImpl();
-            }
-        }
-
-#endregion pointer-events
-
-#region AllowDrop
+        #region AllowDrop
 
         /// <summary>
         /// Gets or sets a value that determines whether this UIElement
@@ -969,12 +1057,11 @@ namespace System.Windows
         public bool AllowDrop
         {
             get { return (bool)GetValue(AllowDropProperty); }
-            set { SetValue(AllowDropProperty, value); }
+            set { SetValueInternal(AllowDropProperty, value); }
         }
 
         /// <summary>
-        /// Identifies the <see cref="UIElement.AllowDrop"/> dependency 
-        /// property.
+        /// Identifies the <see cref="AllowDrop"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty AllowDropProperty =
             DependencyProperty.Register(
@@ -996,7 +1083,7 @@ namespace System.Windows
         /// <summary>
         /// Gets a value indicating whether the pointer is captured to this element.
         /// </summary>
-        public bool IsMouseCaptured => Pointer.INTERNAL_captured == this;
+        public bool IsMouseCaptured => Pointer.Captured == this;
 
         /// <summary>
         /// Releases pointer captures for capture of one specific pointer by this UIElement.
@@ -1013,35 +1100,21 @@ namespace System.Windows
         public bool AllowScrollOnTouchMove
         {
             get { return (bool)GetValue(AllowScrollOnTouchMoveProperty); }
-            set { SetValue(AllowScrollOnTouchMoveProperty, value); }
+            set { SetValueInternal(AllowScrollOnTouchMoveProperty, value); }
         }
 
         /// <summary>
-        /// Identifies the <see cref="UIElement.AllowScrollOnTouchMove"/> dependency 
-        /// property.
+        /// Identifies the <see cref="AllowScrollOnTouchMove"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty AllowScrollOnTouchMoveProperty =
             DependencyProperty.Register(
-                nameof(AllowScrollOnTouchMove), 
-                typeof(bool), 
-                typeof(UIElement), 
-                new PropertyMetadata(true, AllowScrollOnTouchMove_Changed)
+                nameof(AllowScrollOnTouchMove),
+                typeof(bool),
+                typeof(UIElement),
+                new PropertyMetadata(BooleanBoxes.TrueBox)
                 {
-                    CallPropertyChangedWhenLoadedIntoVisualTree = WhenToCallPropertyChangedEnum.IfPropertyIsSet
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((UIElement)d).SetTouchAction((bool)newValue ? "auto" : "none"),
                 });
-
-        private static void AllowScrollOnTouchMove_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            UIElement element = (UIElement)d;
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(element))
-            {
-                // Note: "none" disables scrolling, pinching and other gestures.
-                // It is supposed to not have any effect on the "TouchStart",
-                // "TouchMove", and "TouchEnd" events.
-                OpenSilver.Interop.ExecuteJavaScriptVoid(
-                    $"{CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(element.INTERNAL_OuterDomElement)}.style.touchAction = \"{((bool)e.NewValue ? "auto" : "none")}\"");
-            }
-        }
 
 #endregion
 
@@ -1063,13 +1136,10 @@ namespace System.Windows
             {
                 throw new ArgumentException();
             }
-
-            var outerDivOfThisControl = INTERNAL_OuterDomElement;
-
             // If no "visual" was specified, we use the Window root instead.
             // Note: This is useful for example when calculating the position of popups, which
             // are defined in absolute coordinates, at the same level as the Window root.
-            object outerDivOfReferenceVisual;
+            INTERNAL_HtmlDomElementReference outerDivOfReferenceVisual;
             if (visual != null)
             {
                 if (!INTERNAL_VisualTreeManager.IsElementInVisualTree(visual))
@@ -1077,18 +1147,18 @@ namespace System.Windows
                     throw new ArgumentException(nameof(visual));
                 }
 
-                outerDivOfReferenceVisual = visual.INTERNAL_OuterDomElement;
+                outerDivOfReferenceVisual = visual.OuterDiv;
             }
             else
             {
                 UIElement rootVisual = Window.GetWindow(this)?.Content ?? throw new InvalidOperationException();
 
-                outerDivOfReferenceVisual = rootVisual.INTERNAL_OuterDomElement;
+                outerDivOfReferenceVisual = rootVisual.OuterDiv;
             }
 
             // Hack to improve the Simulator performance by making only one interop call rather than two:
-            string sOuterDivOfControl = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(outerDivOfThisControl);
-            string sOuterDivOfReferenceVisual = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(outerDivOfReferenceVisual);
+            string sOuterDivOfControl = OpenSilver.Interop.GetVariableStringForJS(OuterDiv);
+            string sOuterDivOfReferenceVisual = OpenSilver.Interop.GetVariableStringForJS(outerDivOfReferenceVisual);
             string concatenated = OpenSilver.Interop.ExecuteJavaScriptString(
                 $"({sOuterDivOfControl}.getBoundingClientRect().left - {sOuterDivOfReferenceVisual}.getBoundingClientRect().left) + '|' + ({sOuterDivOfControl}.getBoundingClientRect().top - {sOuterDivOfReferenceVisual}.getBoundingClientRect().top)");
             int sepIndex = concatenated.IndexOf('|');
@@ -1111,7 +1181,7 @@ namespace System.Windows
         {
             if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
             {
-                return INTERNAL_HtmlDomManager.GetBoundingClientSize(INTERNAL_OuterDomElement);
+                return INTERNAL_HtmlDomManager.GetBoundingClientSize(OuterDiv);
             }
 
             return new Size();
@@ -1126,7 +1196,7 @@ namespace System.Windows
 
             if (ancestor is not UIElement)
             {
-                throw new ArgumentException($"ancestor must be a UIElement.");
+                throw new ArgumentException("ancestor must be a UIElement.");
             }
 
             // Walk up the parent chain of the descendant until we run out
@@ -1141,17 +1211,13 @@ namespace System.Windows
             return current == ancestor;
         }
 
-        //internal virtual void INTERNAL_Render()
-        //{
-        //}
-
         #region ForceInherit property support
 
         internal static void SynchronizeForceInheritProperties(UIElement uie, DependencyObject parent)
         {
-            if (!(bool)parent.GetValue(FrameworkElement.IsEnabledProperty))
+            if (!(bool)parent.GetValue(IsEnabledProperty))
             {
-                uie.CoerceValue(FrameworkElement.IsEnabledProperty);
+                uie.CoerceValue(IsEnabledProperty);
             }
 
             if (!(bool)parent.GetValue(IsHitTestVisibleProperty))

@@ -36,7 +36,7 @@ Due to continous updates, this restored version can sometimes have outdated Open
 
 6. **Launch the Developer Command Prompt:** Open the "Developer Command Prompt for VS 2022" (or whatever is the latest version of Visual Studio) from your Start Menu and navigate to the "build" folder of this repository.
 
-7. **Run the compilation .BAT:** Launch the file "**build-nuget-package-OpenSilver-private.bat**" located inside the "build" folder of this repository, and **enter today's date** or any other unique identifier to use for the version number (eg. 2023-10-18).
+7. **Run the compilation .BAT:** Launch the file "**build-nuget-package-OpenSilver.bat**" located inside the "build" folder of this repository, and **enter today's date** or any other unique identifier to use for the version number (eg. 2023-10-18).
 
 8. **Use the newly built packages:** The previous command will create new NuGet packages inside the "build/output/OpenSilver" folder. You can now reference those packages from any OpenSilver application project ([here is how](https://stackoverflow.com/a/55167481/17088417)) (Note: you may need to check the options "Include prerelease" in the "Manage NuGet Packages" window in order to see the newly created NuGet packages). For example, to use them on a new "Hello World" OpenSilver application, make sure you have the VSIX installed (see the top of this document), then launch Visual Studio, click "Create a new project" -> "OpenSilver application", and replace the default NuGet package references with the new packages that you have built.
   
@@ -54,7 +54,6 @@ If you are compiling using the Command Prompt, please double-check that you are 
 
 If you still encounter any issues, please contact the OpenSilver team at: https://opensilver.net/contact.aspx
 
+# VSIX for OpenSilver
 
-
-
-
+If you're looking to build the VSIX extension for OpenSilver, instructions and the necessary source code are available in our dedicated repository - [OpenSilver.VSIX](https://github.com/OpenSilver/OpenSilver.VSIX).

@@ -39,7 +39,7 @@ namespace System.Windows.Shapes
                     {
                         Line line = (Line)d;
                         double x1 = (double)newValue;
-                        line.SetSvgAttribute("x1", x1.ToInvariantString());
+                        line.SetSvgAttribute("x1", Math.Round(x1, 2).ToInvariantString());
                     },
                 });
 
@@ -52,7 +52,7 @@ namespace System.Windows.Shapes
         public double X1
         {
             get => (double)GetValue(X1Property);
-            set => SetValue(X1Property, value);
+            set => SetValueInternal(X1Property, value);
         }
 
         /// <summary>
@@ -69,7 +69,7 @@ namespace System.Windows.Shapes
                     {
                         Line line = (Line)d;
                         double x2 = (double)newValue;
-                        line.SetSvgAttribute("x2", x2.ToInvariantString());
+                        line.SetSvgAttribute("x2", Math.Round(x2, 2).ToInvariantString());
                     },
                 });
 
@@ -82,7 +82,7 @@ namespace System.Windows.Shapes
         public double X2
         {
             get => (double)GetValue(X2Property);
-            set => SetValue(X2Property, value);
+            set => SetValueInternal(X2Property, value);
         }
 
         /// <summary>
@@ -99,7 +99,7 @@ namespace System.Windows.Shapes
                     {
                         Line line = (Line)d;
                         double y1 = (double)newValue;
-                        line.SetSvgAttribute("y1", y1.ToInvariantString());
+                        line.SetSvgAttribute("y1", Math.Round(y1, 2).ToInvariantString());
                     },
                 });
 
@@ -112,7 +112,7 @@ namespace System.Windows.Shapes
         public double Y1
         {
             get => (double)GetValue(Y1Property);
-            set => SetValue(Y1Property, value);
+            set => SetValueInternal(Y1Property, value);
         }
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace System.Windows.Shapes
                     {
                         Line line = (Line)d;
                         double y2 = (double)newValue;
-                        line.SetSvgAttribute("y2", y2.ToInvariantString());
+                        line.SetSvgAttribute("y2", Math.Round(y2, 2).ToInvariantString());
                     },
                 });
 
@@ -142,7 +142,7 @@ namespace System.Windows.Shapes
         public double Y2
         {
             get => (double)GetValue(Y2Property);
-            set => SetValue(Y2Property, value);
+            set => SetValueInternal(Y2Property, value);
         }
 
         internal sealed override string SvgTagName => "line";

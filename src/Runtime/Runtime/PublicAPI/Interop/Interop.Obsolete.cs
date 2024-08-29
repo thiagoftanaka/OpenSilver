@@ -63,25 +63,6 @@ namespace CSHTML5
         }
 
         /// <summary>
-        /// Allows calling JavaScript code from within C#.
-        /// </summary>
-        /// <param name="javascript">The JavaScript code to execute.</param>
-        internal static void ExecuteJavaScriptFastAsync(string javascript)
-        {
-            OpenSilver.Interop.ExecuteJavaScriptFastAsync(javascript);
-        }
-
-        /// <summary>
-        /// Unboxes the value passed as a parameter. It is particularly useful for the variables of the ExecuteJavaScript Methods calls aimed at using third party libraries.
-        /// </summary>
-        /// <param name="value">The value to unbox.</param>
-        /// <returns>the unboxed value if the value was boxed, the value itself otherwise.</returns>
-        public static object Unbox(object value)
-        {
-            return OpenSilver.Interop.Unbox(value);
-        }
-
-        /// <summary>
         /// Adds a 'script' tag to the HTML page and waits for the script to finish loading.
         /// </summary>
         /// <param name="url">The URL of the JavaScript file, with the syntax ms-appx:///AssemblyName/Folder/FileName.js or /AssemblyName;component/Folder/FileName.js</param>
@@ -164,10 +145,10 @@ namespace CSHTML5
             get { return OpenSilver.Interop.IsRunningInTheSimulator; }
         }
 
-       public static bool IsRunningInTheSimulator_WorkAround
-       {
-           get { return OpenSilver.Interop.IsRunningInTheSimulator_WorkAround; }
-       }
+        public static bool IsRunningInTheSimulator_WorkAround
+        {
+            get { return OpenSilver.Interop.IsRunningInTheSimulator; }
+        }
 
         /// <summary>
         /// Check if the given jsnode is undefined

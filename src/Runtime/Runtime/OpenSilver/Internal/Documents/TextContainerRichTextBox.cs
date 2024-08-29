@@ -11,44 +11,27 @@
 *  
 \*====================================================================================*/
 
+using System.Diagnostics;
 using System.Windows.Controls;
 using System.Windows.Documents;
 
 namespace OpenSilver.Internal.Documents;
 
-internal sealed class TextContainerRichTextBox : TextContainer<RichTextBox>
+internal sealed class TextContainerRichTextBox : ITextContainer
 {
-    public TextContainerRichTextBox(RichTextBox parent)
-        : base(parent)
+    private readonly RichTextBox _richTextBox;
+
+    public TextContainerRichTextBox(RichTextBox richTextBox)
     {
+        Debug.Assert(richTextBox is not null);
+        _richTextBox = richTextBox;
     }
 
-    public override string Text => Parent.GetRawText();
+    public string Text => string.Empty;
 
-    protected override void OnTextAddedOverride(TextElement textElement)
-    {
-        if (textElement is Paragraph paragraph)
-        {
-            string text = "";
-            foreach (var inline in paragraph.Inlines)
-            {
-                if (inline is Run run)
-                {
-                    text += run.Text;
-                }
-                //TODO: support other Inlines
-            }
+    public void OnTextContentChanged() => _richTextBox.InvalidateUI();
 
-            Parent.InsertText(text);
-        }
-        else if (textElement is Section)
-        {
-            //Does not support now
-        }
-    }
+    public void OnTextAdded(TextElement textElement, int index) { }
 
-    protected override void OnTextRemovedOverride(TextElement textElement)
-    {
-        //TODO: implement
-    }
+    public void OnTextRemoved(TextElement textElement) { }
 }

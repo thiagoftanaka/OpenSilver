@@ -18,8 +18,8 @@ using System.Windows.Media;
 using System.Windows.Input;
 using CSHTML5;
 using CSHTML5.Internal;
-using OpenSilver.Internal;
 using OpenSilver.Internal.Controls;
+using OpenSilver.Internal.Media;
 
 namespace System.Windows.Controls
 {
@@ -58,47 +58,19 @@ namespace System.Windows.Controls
 
         static TextBox()
         {
-            CharacterSpacingProperty.OverrideMetadata(
-                typeof(TextBox),
-                new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
-                {
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
-                    {
-                        var tb = (TextBox)d;
-                        double value = (int)newValue / 1000.0;
-                        var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(tb.INTERNAL_OuterDomElement);
-                        style.letterSpacing = $"{value.ToInvariantString()}em";
-                    },
-                });
-
-            FontFamilyProperty.OverrideMetadata(
-                typeof(TextBox),
-                new FrameworkPropertyMetadata(FontFamily.Default, FrameworkPropertyMetadataOptions.Inherits, OnFontFamilyChanged)
-                {
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
-                    {
-                        var tb = (TextBox)d;
-                        var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(tb.INTERNAL_OuterDomElement);
-                        style.fontFamily = ((FontFamily)newValue).GetFontFace(tb).CssFontName;
-                    },
-                });
-
             JavaScriptCallback javaScriptCallback = JavaScriptCallback.Create((Action<string>)(activeElement =>
             {
-                IDisposable jsObjectReference = OpenSilver.Interop.ExecuteJavaScript(
-                    $"document.getElementById('{activeElement}')");
-                UIElement uiElement = INTERNAL_HtmlDomManager.GetUIElementFromDomElement(jsObjectReference);
-
+                UIElement uiElement = INTERNAL_HtmlDomManager.GetElementById(activeElement);
                 if (uiElement is TextBoxView textBoxView)
                 {
                     textBoxView.Host.RaiseSelectionChanged();
                 }
-            }), true);
-            string sAction = INTERNAL_InteropImplementation.GetVariableStringForJS(javaScriptCallback);
+            }));
+            string sAction = OpenSilver.Interop.GetVariableStringForJS(javaScriptCallback);
 
             // The selectionchange event listener is added to the whole document
             // and will be triggered every time the page Selection changes (anywhere)
-            INTERNAL_ExecuteJavaScript.QueueExecuteJavaScript(
+            OpenSilver.Interop.ExecuteJavaScriptAsync(
                 $@"document.addEventListener('selectionchange', () => {{
                     const activeElement = document.activeElement;
 
@@ -109,18 +81,14 @@ namespace System.Windows.Controls
             );
         }
 
-        private static void OnFontFamilyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            TextElementProperties.InvalidateMeasureOnFontFamilyChanged((TextBox)d, (FontFamily)e.NewValue);
-        }
-
         public TextBox()
         {
             DefaultStyleKey = typeof(TextBox);
             IsEnabledChanged += (o, e) => UpdateVisualStates();
         }
 
-        internal sealed override object GetFocusTarget() => _textViewHost?.View?.InputDiv ?? base.GetFocusTarget();
+        internal sealed override INTERNAL_HtmlDomElementReference GetFocusTarget()
+            => _textViewHost?.View?.OuterDiv ?? base.GetFocusTarget();
 
         /// <summary>
         /// Gets or sets the value that determines whether the text box allows and displays
@@ -129,7 +97,7 @@ namespace System.Windows.Controls
         public bool AcceptsReturn
         {
             get { return (bool)GetValue(AcceptsReturnProperty); }
-            set { SetValue(AcceptsReturnProperty, value); }
+            set { SetValueInternal(AcceptsReturnProperty, value); }
         }
 
         /// <summary>
@@ -158,7 +126,7 @@ namespace System.Windows.Controls
         public bool AcceptsTab
         {
             get { return (bool)GetValue(AcceptsTabProperty); }
-            set { SetValue(AcceptsTabProperty, value); }
+            set { SetValueInternal(AcceptsTabProperty, value); }
         }
 
         /// <summary>
@@ -177,7 +145,7 @@ namespace System.Windows.Controls
         public string PlaceholderText
         {
             get { return (string)GetValue(PlaceholderTextProperty); }
-            set { SetValue(PlaceholderTextProperty, value); }
+            set { SetValueInternal(PlaceholderTextProperty, value); }
         }
 
         /// <summary>
@@ -196,7 +164,7 @@ namespace System.Windows.Controls
         public string Text
         {
             get { return (string)GetValue(TextProperty); }
-            set { SetValue(TextProperty, value); }
+            set { SetValueInternal(TextProperty, value); }
         }
 
         /// <summary>
@@ -231,64 +199,90 @@ namespace System.Windows.Controls
         }
 
         /// <summary>
-        /// Gets or sets how the text should be aligned in the text box.
-        /// </summary>
-        public TextAlignment TextAlignment
-        {
-            get { return (TextAlignment)GetValue(TextAlignmentProperty); }
-            set { SetValue(TextAlignmentProperty, value); }
-        }
-
-        /// <summary>
-        /// Identifies the TextAlignment dependency property.
+        /// Identifies the <see cref="TextAlignment"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty TextAlignmentProperty =
-            DependencyProperty.Register(
-                nameof(TextAlignment),
-                typeof(TextAlignment),
-                typeof(TextBox),
-                new PropertyMetadata(TextAlignment.Left, OnTextAlignmentChanged));
-
-        private static void OnTextAlignmentChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            var tb = (TextBox)d;
-            if (tb._textViewHost != null)
-            {
-                tb._textViewHost.View.OnTextAlignmentChanged((TextAlignment)e.NewValue);
-            }
-        }
+            Block.TextAlignmentProperty.AddOwner(typeof(TextBox));
 
         /// <summary>
-        /// Gets or sets the brush that is used to render the vertical bar that indicates
-        /// the insertion point.
+        /// Gets or sets how the text should be aligned in the text box.
         /// </summary>
-        public Brush CaretBrush
+        /// <returns>
+        /// One of the <see cref="Windows.TextAlignment"/> enumeration values.
+        /// The default is <see cref="TextAlignment.Left"/>.
+        /// </returns>
+        public TextAlignment TextAlignment
         {
-            get { return (Brush)GetValue(CaretBrushProperty); }
-            set { SetValue(CaretBrushProperty, value); }
+            get => (TextAlignment)GetValue(TextAlignmentProperty);
+            set => SetValueInternal(TextAlignmentProperty, value);
         }
 
         /// <summary>
-        /// Identify the CaretBrush dependency property
+        /// Identifies the <see cref="LineHeight"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty LineHeightProperty =
+            Block.LineHeightProperty.AddOwner(typeof(TextBox));
+
+        /// <summary>
+        /// Gets or sets the height of each line of content.
+        /// </summary>
+        /// <returns>
+        /// The height of each line in pixels. A value of 0 indicates that 
+        /// the line height is determined automatically from the current
+        /// font characteristics. The default is 0.
+        /// </returns>
+        /// <exception cref="ArgumentException">
+        /// <see cref="LineHeight"/> is set to a non-positive value.
+        /// </exception>
+        public double LineHeight
+        {
+            get => (double)GetValue(LineHeightProperty);
+            set => SetValueInternal(LineHeightProperty, value);
+        }
+
+        /// <summary>
+        /// Identify the <see cref="CaretBrush"/> dependency property
         /// </summary>
         public static readonly DependencyProperty CaretBrushProperty =
             DependencyProperty.Register(
                 nameof(CaretBrush),
                 typeof(Brush),
                 typeof(TextBox),
-                new PropertyMetadata(new SolidColorBrush(Colors.Black)));
+                new PropertyMetadata(new SolidColorBrush(Colors.Black), OnCaretBrushChanged));
 
         /// <summary>
-        /// Gets or sets how the TextBow wraps text.
+        /// Gets or sets the brush that is used to render the vertical bar that indicates the
+        /// insertion point.
         /// </summary>
-        public TextWrapping TextWrapping
+        /// <returns>
+        /// A brush that is used to render the vertical bar that indicates the insertion point.
+        /// </returns>
+        public Brush CaretBrush
         {
-            get { return (TextWrapping)GetValue(TextWrappingProperty); }
-            set { SetValue(TextWrappingProperty, value); }
+            get => (Brush)GetValue(CaretBrushProperty);
+            set => SetValueInternal(CaretBrushProperty, value);
+        }
+
+        private static void OnCaretBrushChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            ((TextBox)d)._textViewHost?.View.SetCaretBrush((Brush)e.NewValue);
         }
 
         /// <summary>
-        /// Identifies the TextWrapping dependency property.
+        /// Gets or sets how line breaking occurs if a line of text extends beyond the available width of 
+        /// the text box.
+        /// </summary>
+        /// <returns>
+        /// One of the <see cref="TextWrapping"/> values. The default is <see cref="TextWrapping.NoWrap"/>.
+        /// </returns>
+        public TextWrapping TextWrapping
+        {
+            get => (TextWrapping)GetValue(TextWrappingProperty);
+            set => SetValueInternal(TextWrappingProperty, value);
+        }
+
+        /// <summary>
+        /// Identifies the <see cref="TextWrapping"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty TextWrappingProperty =
             DependencyProperty.Register(
@@ -317,7 +311,7 @@ namespace System.Windows.Controls
         public ScrollBarVisibility HorizontalScrollBarVisibility
         {
             get { return (ScrollBarVisibility)GetValue(HorizontalScrollBarVisibilityProperty); }
-            set { SetValue(HorizontalScrollBarVisibilityProperty, value); }
+            set { SetValueInternal(HorizontalScrollBarVisibilityProperty, value); }
         }
 
         /// <summary>
@@ -355,7 +349,7 @@ namespace System.Windows.Controls
         public ScrollBarVisibility VerticalScrollBarVisibility
         {
             get { return (ScrollBarVisibility)GetValue(VerticalScrollBarVisibilityProperty); }
-            set { SetValue(VerticalScrollBarVisibilityProperty, value); }
+            set { SetValueInternal(VerticalScrollBarVisibilityProperty, value); }
         }
 
         /// <summary>
@@ -384,7 +378,7 @@ namespace System.Windows.Controls
         public int MaxLength
         {
             get { return (int)GetValue(MaxLengthProperty); }
-            set { SetValue(MaxLengthProperty, value); }
+            set { SetValueInternal(MaxLengthProperty, value); }
         }
 
         /// <summary>
@@ -418,7 +412,7 @@ namespace System.Windows.Controls
         public new TextDecorationCollection TextDecorations
         {
             get { return (TextDecorationCollection)GetValue(TextDecorationsProperty); }
-            set { SetValue(TextDecorationsProperty, value); }
+            set { SetValueInternal(TextDecorationsProperty, value); }
         }
 
         /// <summary>
@@ -443,7 +437,7 @@ namespace System.Windows.Controls
         public bool IsReadOnly
         {
             get { return (bool)GetValue(IsReadOnlyProperty); }
-            set { SetValue(IsReadOnlyProperty, value); }
+            set { SetValueInternal(IsReadOnlyProperty, value); }
         }
 
         public static readonly DependencyProperty IsReadOnlyProperty =
@@ -475,7 +469,7 @@ namespace System.Windows.Controls
         public bool IsSpellCheckEnabled
         {
             get { return (bool)GetValue(IsSpellCheckEnabledProperty); }
-            set { SetValue(IsSpellCheckEnabledProperty, value); }
+            set { SetValueInternal(IsSpellCheckEnabledProperty, value); }
         }
 
         /// <summary>
@@ -506,16 +500,30 @@ namespace System.Windows.Controls
         /// is automatically calculated from the current font characteristics. The default
         /// is <see cref="double.NaN"/>.
         /// </returns>
-        public double BaselineOffset => GetBaseLineOffset(this);
-
-        private static double GetBaseLineOffset(TextBox textbox)
+        public double BaselineOffset
         {
-            if (textbox._textViewHost?.View is TextBoxView view)
+            get
             {
-                return TextElementProperties.GetBaseLineOffsetNative(view);
-            }
+                if (!string.IsNullOrEmpty(Text) &&
+                    _textViewHost?.View is TextBoxView view &&
+                    Application.Current is Application app)
+                {
+                    return app.MainWindow.TextMeasurementService.MeasureBaseline(
+                        new FontProperties[1]
+                        {
+                            new FontProperties
+                            {
+                                FontStyle = (FontStyle)view.GetValue(FontStyleProperty),
+                                FontWeight = (FontWeight)view.GetValue(FontWeightProperty),
+                                FontSize = (double)view.GetValue(FontSizeProperty),
+                                LineHeight = (double)view.GetValue(LineHeightProperty),
+                                FontFamily = (FontFamily)view.GetValue(FontFamilyProperty),
+                            },
+                        });
+                }
 
-            return 0.0;
+                return 0.0;
+            }
         }
 
         public string SelectedText
@@ -826,8 +834,8 @@ namespace System.Windows.Controls
         [OpenSilver.NotImplemented]
         public Brush SelectionForeground
         {
-            get { return (Brush)this.GetValue(TextBox.SelectionForegroundProperty); }
-            set { this.SetValue(TextBox.SelectionForegroundProperty, value); }
+            get { return (Brush)GetValue(SelectionForegroundProperty); }
+            set { SetValueInternal(SelectionForegroundProperty, value); }
         }
 
         [OpenSilver.NotImplemented]
@@ -842,11 +850,8 @@ namespace System.Windows.Controls
         public Brush SelectionBackground
         {
             get { return (Brush)GetValue(SelectionBackgroundProperty); }
-            set { SetValue(SelectionBackgroundProperty, value); }
+            set { SetValueInternal(SelectionBackgroundProperty, value); }
         }
-
-        [OpenSilver.NotImplemented]
-        public double LineHeight { get; set; }
 
         /// <summary>
         /// Returns a rectangle for the leading edge of the character at the specified index.

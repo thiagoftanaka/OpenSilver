@@ -4,50 +4,53 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<AssemblyName>OpenSilver</AssemblyName>
-    <AssemblyVersion>2.0.1</AssemblyVersion>
+    <AssemblyVersion>3.0.0</AssemblyVersion>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<NoWarn>$(NoWarn);CS1591;CS0067</NoWarn>
-		<NoCSHTML5Reference>true</NoCSHTML5Reference>
 		<EnableDefaultItems>false</EnableDefaultItems>
     <DefineTrace>true</DefineTrace>
+    <LangVersion>preview</LangVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
 		<PackageReference Include="Microsoft.JSInterop" Version="3.1.28" />
-		<PackageReference Include="System.ComponentModel.Composition" Version="6.0.0" />
 		<PackageReference Include="System.ServiceModel.Primitives" Version="4.10.0" />
 	</ItemGroup>
+
+  <Import Project="Controls\Controls.Imports.props" />
+  <Import Project="Data\Data.Imports.props" />
+  <Import Project="Controls.Toolkit\Controls.Toolkit.Imports.props" />
+  <Import Project="Controls.Input.Toolkit\Controls.Input.Toolkit.Imports.props" />
   
 	<ItemGroup>
     <Compile Include="..\OpenSilver.Xaml\**\*.cs" LinkBase="XamlReader" />
-    <Compile Include="System.Windows.Controls\Calendar\**\*.cs" />
-    <Compile Include="System.Windows.Controls\DatePicker\**\*.cs" />
-    <None Include="System.Windows.Controls\Calendar\**\*.xaml" />
-    <None Include="System.Windows.Controls\DatePicker\**\*.xaml" />
 		<Compile Include="APP_SUPPORT\JavaScriptExecutionHandler.cs" />
 		<Compile Include="Core\Events\DOMEventManager.cs" />
 		<Compile Include="Core\Main\CopyOnWriteList.cs" />
-		<Compile Include="Core\Main\DescendentsWalker.cs" />
-		<Compile Include="Core\Main\DescendentsWalkerBase.cs" />
-		<Compile Include="Core\Main\EffectiveValueEntry.cs" />
-		<Compile Include="Core\Main\EmptyEnumerator.cs" />
-		<Compile Include="Core\Main\InheritablePropertyChangeInfo.cs" />
-		<Compile Include="OpenSilver\Controls\DatePicker\Calendar.cs" />
-		<Compile Include="OpenSilver\Controls\DatePicker\Calendar.NotImplemented.cs" />
-		<Compile Include="OpenSilver\Controls\DatePicker\DatePicker.cs" />
-		<Compile Include="OpenSilver\Controls\DatePicker\DatePicker.NotImplemented.cs" />
-		<Compile Include="OpenSilver\Controls\DatePicker\SelectedDatesCollection.cs" />
 		<Compile Include="OpenSilver\Controls\SaveFileDialog.cs" />
-		<Compile Include="OpenSilver\Internal\Documents\TextContainerRichTextBox.cs" />
+		<Compile Include="OpenSilver\Features.cs" />
+		<Compile Include="OpenSilver\Buffers\StackVector.cs" />
+		<Compile Include="OpenSilver\Internal\Controls\ImageManager.cs" />
+		<Compile Include="OpenSilver\Internal\Controls\TextViewManager.cs" />
+		<Compile Include="OpenSilver\Internal\DescendentsWalker.cs" />
+		<Compile Include="OpenSilver\Internal\EffectiveValueEntry.cs" />
+		<Compile Include="OpenSilver\Internal\ITemplateContent.cs" />
+		<Compile Include="OpenSilver\Internal\Storage.cs" />
+		<Compile Include="OpenSilver\Internal\DependencyObjectStore.cs" />
+		<Compile Include="OpenSilver\Internal\Controls\EmptyEnumerator.cs" />
+		<Compile Include="OpenSilver\Internal\InheritablePropertyChangeInfo.cs" />
+		<Compile Include="OpenSilver\Internal\Documents\TextContainerLineBreak.cs" />
 		<Compile Include="OpenSilver\Internal\Documents\TextContainerParagraph.cs" />
 		<Compile Include="OpenSilver\Internal\Documents\TextContainerRichTextBlock.cs" />
+    <Compile Include="OpenSilver\Internal\Documents\TextContainerRichTextBox.cs" />
+		<Compile Include="OpenSilver\Internal\Documents\TextContainerRun.cs" />
 		<Compile Include="OpenSilver\Internal\Documents\TextContainerSection.cs" />
 		<Compile Include="OpenSilver\Internal\Documents\TextContainer.cs" />
 		<Compile Include="OpenSilver\Internal\Documents\TextContainersHelper.cs" />
 		<Compile Include="OpenSilver\Internal\Documents\TextContainerSpan.cs" />
 		<Compile Include="OpenSilver\Internal\Documents\TextContainerTextBlock.cs" />
-		<Compile Include="OpenSilver\Internal\Controls\ScrollData.cs" />
+    <Compile Include="OpenSilver\Internal\Controls\ScrollData.cs" />
 		<Compile Include="OpenSilver\Internal\Controls\TextViewBase.cs" />
 		<Compile Include="OpenSilver\Internal\Controls\TextViewBase.IScrollInfo.cs" />
 		<Compile Include="OpenSilver\Internal\Controls\TextViewHosts.cs" />
@@ -56,10 +59,23 @@
 		<Compile Include="OpenSilver\Internal\DefaultValueFactory.cs" />
 		<Compile Include="OpenSilver\Internal\DependencyObjectType.cs" />
 		<Compile Include="OpenSilver\Internal\KnownBoxes.cs" />
+		<Compile Include="OpenSilver\Internal\Media\Animation\AnimatedTypeHelpers.cs" />
+		<Compile Include="OpenSilver\Internal\Media\Animation\AnimationManager.cs" />
+		<Compile Include="OpenSilver\Internal\Media\Animation\ClockCollection.cs" />
+		<Compile Include="OpenSilver\Internal\Media\Animation\ControllableStopwatch.cs" />
+		<Compile Include="OpenSilver\Internal\Media\Animation\FromToByAnimator.cs" />
 		<Compile Include="OpenSilver\Internal\Media\Animation\ICloneOnAnimation.cs" />
+		<Compile Include="OpenSilver\Internal\Media\Animation\IFromByToAnimation.cs" />
+		<Compile Include="OpenSilver\Internal\Media\Animation\IKeyFrameAnimation.cs" />
+		<Compile Include="OpenSilver\Internal\Media\Animation\KeyFramesAnimator.cs" />
+		<Compile Include="OpenSilver\Internal\Media\Animation\ResolvedKeyFrameEntry.cs" />
+		<Compile Include="OpenSilver\Internal\Media\Animation\TimelineClock.cs" />
+		<Compile Include="OpenSilver\Internal\Media\ISvgBrush.cs" />
 		<Compile Include="OpenSilver\Internal\NamedObject.cs" />
+		<Compile Include="OpenSilver\Internal\SynchronyzedStore.cs" />
+		<Compile Include="OpenSilver\Internal\TemplateContent.cs" />
+		<Compile Include="OpenSilver\Internal\UIElementHelpers.cs" />
 		<Compile Include="OpenSilver\Internal\ValidateValueCallback.cs" />
-		<Compile Include="Core\Main\PrePostDescendentsWalker.cs" />
 		<Compile Include="Core\Main\WeakReferenceList.cs" />
 		<Compile Include="Core\Main\WeakReferenceListEnumerator.cs" />
 		<Compile Include="Diagnostics\DebugInfo.cs" />
@@ -86,9 +102,7 @@
 		<Compile Include="OpenSilver\Internal\Data\DataExtensionMethods.cs" />
 		<Compile Include="OpenSilver\Internal\Data\EnumerableCollectionView.cs" />
 		<Compile Include="OpenSilver\Internal\Data\IndexedEnumerable.cs" />
-		<Compile Include="OpenSilver\Internal\Data\IDependencyPropertyChangedEventArgs.cs" />
 		<Compile Include="OpenSilver\Internal\Data\IndexedPropertyPathNode.cs" />
-		<Compile Include="OpenSilver\Internal\Data\IDependencyPropertyChangedListener.cs" />
 		<Compile Include="OpenSilver\Internal\Data\DependencyPropertyChangedListener.cs" />
 		<Compile Include="OpenSilver\Internal\Data\PropertyPathNode.cs" />
 		<Compile Include="OpenSilver\Internal\Data\PropertyPathParser.cs" />
@@ -101,34 +115,36 @@
 			<Link>OpenSilver\Internal\XamlResourcesHelper.cs</Link>
 		</Compile>
 		<Compile Include="OpenSilver\Internal\TokenizerHelper.cs" />
+		<Compile Include="OpenSilver\Internal\VisualTransitionCollection.cs" />
 		<Compile Include="OpenSilver\Internal\WeakEventListener.cs" />
 		<Compile Include="OpenSilver\Internal\Xaml\Context\XamlContext.cs" />
 		<Compile Include="OpenSilver\Internal\Xaml\Context\XamlContextStack.cs" />
 		<Compile Include="OpenSilver\Internal\Xaml\Context\XamlObjectFrame.cs" />
 		<Compile Include="OpenSilver\Internal\Xaml\IComponentConnector.cs" />
 		<Compile Include="OpenSilver\Internal\Xaml\IXamlComponentLoader.cs" />
+		<Compile Include="OpenSilver\Internal\Xaml\OpenSilverMemberInvoker.cs" />
+		<Compile Include="OpenSilver\Internal\Xaml\OpenSilverXamlMember.cs" />
+		<Compile Include="OpenSilver\Internal\Xaml\OpenSilverXamlSchemaContext.cs" />
+		<Compile Include="OpenSilver\Internal\Xaml\OpenSilverXamlType.cs" />
 		<Compile Include="OpenSilver\Internal\Xaml\ServiceProviderContext.cs" />
+		<Compile Include="OpenSilver\Internal\Xaml\TemplateContentLoader.cs" />
+		<Compile Include="OpenSilver\Internal\Xaml\XamlDesignerBridge.cs" />
+		<Compile Include="OpenSilver\Internal\Xaml\XamlTemplateContent.cs" />
 		<Compile Include="OpenSilver\IO\MemoryFileInfo.cs" />
 		<Compile Include="OpenSilver\IO\MemoryFileStream.cs" />
 		<Compile Include="OpenSilver\NotImplementedAttribute.cs" />
 		<Compile Include="OpenSilver\Runtime\CompilerServices\OpenSilverAssemblyAttribute.cs" />
+		<Compile Include="OpenSilver\Runtime\CompilerServices\OpenSilverCompatibilityVersionAttribute.cs" />
 		<Compile Include="OpenSilver\Runtime\CompilerServices\OpenSilverResourceExposureAttribute.cs" />
 		<Compile Include="OpenSilver\Utility\FrugalMap.cs" />
 		<Compile Include="OpenSilver\XamlDesignerAttribute.cs" />
 		<Compile Include="OpenSilver\XamlDesignerConstructorStub.cs" />
-		<Compile Include="PagedCollectionView\CollectionViewGroupInternal.cs" />
-		<Compile Include="PagedCollectionView\CollectionViewGroupRoot.cs" />
-		<Compile Include="PagedCollectionView\IPagedCollectionView.cs" />
-		<Compile Include="PagedCollectionView\PageChangingEventArgs.cs" />
-		<Compile Include="PagedCollectionView\PagedCollectionView.cs" />
-		<Compile Include="PagedCollectionView\PagedCollectionViewResources.Designer.cs">
-			<DependentUpon>PagedCollectionViewResources.resx</DependentUpon>
-		</Compile>
-		<Compile Include="PagedCollectionView\TypeHelper.cs" />
 		<Compile Include="PublicAPI\Internal\KnownTypesHelper.cs" />
 		<Compile Include="PublicAPI\Internal\WebRequestsHelper.cs" />
 		<Compile Include="OpenSilver\Internal\IJavaScriptConvertible.cs" />
 		<Compile Include="PublicAPI\Interop\BulkExecuteJavascriptAsync.cs" />
+		<Compile Include="OpenSilver\Interop.ResourceFiles.cs" />
+		<Compile Include="OpenSilver\Buffers\CharArrayBuilder.cs" />
 		<Compile Include="PublicAPI\Interop\JSObjectReferenceHolder.cs" />
 		<Compile Include="PublicAPI\Interop\StackTraceProvider.cs" />
 		<Compile Include="PublicAPI\Interop\Interop.Obsolete.cs" />
@@ -137,11 +153,7 @@
 		<Compile Include="PublicAPI\Interop\PendingJavascript.cs" />
 		<Compile Include="PublicAPI\Interop\OnCallBackImpl.cs" />
 		<Compile Include="PublicAPI\Interop\OnCallbackSimulator.cs" />
-		<Compile Include="PublicAPI\Native.Html.Controls\NativeComboBox.cs" />
 		<Compile Include="System.Collections.Generic\PriorityQueue.cs" />
-		<Compile Include="System.ComponentModel.Composition.Hosting\WORKINPROGRESS\CompositionHost.cs" />
-		<Compile Include="System.ComponentModel.Composition.Hosting\WORKINPROGRESS\DeploymentCatalog.cs" />
-		<Compile Include="System.ComponentModel.Composition\WORKINPROGRESS\CompositionInitializer.cs" />
 		<Compile Include="System.Runtime.CompilerServices\DefaultInterpolatedStringHandler.cs" />
 		<Compile Include="System.Runtime.CompilerServices\InterpolatedStringHandlerAttribute.cs" />
 		<Compile Include="System.Runtime.CompilerServices\IsExternalInit.cs" />
@@ -152,14 +164,12 @@
 		<Compile Include="System.ServiceModel\WORKINPROGRESS\PollingDuplexHttpSecurityMode.cs" />
 		<Compile Include="System.ServiceModel\WORKINPROGRESS\CSHTML5_DuplexClientBase.cs" />
 		<Compile Include="System.Web\MimeMapping.cs" />
-		<Compile Include="System.Windows.Automation.Peers\ChildWindowAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Peers\ComboBoxAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Peers\HyperlinkButtonAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Peers\ImageAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Peers\ListBoxAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Peers\ListBoxItemAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Peers\MediaElementAutomationPeer.cs" />
-		<Compile Include="System.Windows.Automation.Peers\NumericUpDownAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Peers\CheckBoxAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Peers\PasswordBoxAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Peers\PopupRootAutomationPeer.cs" />
@@ -169,7 +179,6 @@
 		<Compile Include="System.Windows.Automation.Peers\SelectorItemAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Peers\SliderAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Peers\ThumbAutomationPeer.cs" />
-		<Compile Include="System.Windows.Automation.Peers\UpDownBaseAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation\AutomationIdentifierConstants.cs" />
 		<Compile Include="System.Windows.Automation\AutomationTextAttribute.cs" />
 		<Compile Include="System.Windows.Automation\ElementNotAvailableException.cs" />
@@ -203,114 +212,62 @@
 		<Compile Include="System.Windows.Controls.Primitives\Selector.InternalSelectedItemsStorage.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\Selector.Navigation.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\Selector.SelectionChanger.cs" />
-		<Compile Include="System.Windows.Controls.Primitives\WORKINPROGRESS\Clipper.cs" />
-		<Compile Include="System.Windows.Controls.Primitives\WORKINPROGRESS\LinearClipper.cs" />
 		<Compile Include="System.Windows.Controls\CleanUpVirtualizedItemEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\Control.VisualStates.cs" />
-		<Compile Include="System.Windows.Controls\DragDecorator.cs" />
-		<Compile Include="System.Windows.Controls\GridSplitter\DragValidator.cs" />
-		<Compile Include="System.Windows.Controls\GridSplitter\GridSplitter.cs" />
-		<Compile Include="System.Windows.Controls\GridSplitter\GridSplitter.DefinitionAbstraction.cs" />
-		<Compile Include="System.Windows.Controls\GridSplitter\GridSplitter.DoubleUtil.cs" />
-		<Compile Include="System.Windows.Controls\GridSplitter\GridSplitter.GridResizeBehavior.cs" />
-		<Compile Include="System.Windows.Controls\GridSplitter\GridSplitter.GridResizeDirection.cs" />
-		<Compile Include="System.Windows.Controls\GridSplitter\GridSplitter.ResizeBehavior.cs" />
-		<Compile Include="System.Windows.Controls\GridSplitter\GridSplitter.SplitBehavior.cs" />
-		<Compile Include="System.Windows.Controls\GridSplitter\GridSplitter.TestHook.cs" />
-		<Compile Include="System.Windows.Controls\GridSplitter\GridSplitterAutomationPeer.cs" />
-		<Compile Include="System.Windows.Controls\GridSplitter\PreviewControl.cs" />
 		<Compile Include="System.Windows.Controls\ItemsControl.ItemInfo.cs" />
-		<Compile Include="System.Windows.Controls\ItemsControlDragDropTarget.cs" />
-		<Compile Include="System.Windows.Controls\ListBoxDragDropTarget.cs" />
 		<Compile Include="System.Windows.Controls\RichTextBlock.NotImplemented.cs" />
-		<Compile Include="System.Windows.Controls\RichTextBox\QuillJs\QuillDeltas.cs" />
+		<Compile Include="System.Windows.Controls\RichTextBox\QuillJs\QuillContentParser.cs" />
+		<Compile Include="System.Windows.Controls\RichTextBox\QuillJs\QuillDelta.cs" />
 		<Compile Include="System.Windows.Controls\RichTextBox\RichTextBoxView.cs" />
-		<Compile Include="System.Windows.Controls\RichTextBox\QuillJs\QuillRange.cs" />
-		<Compile Include="System.Windows.Controls\RichTextBox\QuillJs\QuillRangeFormat.cs" />
 		<Compile Include="System.Windows.Controls\RichTextBox\RichTextBoxAutomationPeer.cs" />
 		<Compile Include="System.Windows.Controls\RichTextBox\RichTextFormatParser.cs" />
-		<Compile Include="System.Windows.Controls\RoutedPropertyChangingEventHandler.cs" />
+		<Compile Include="OpenSilver\Internal\Controls\RichTextViewManager.cs" />
 		<Compile Include="System.Windows.Controls\SelectedItemCollection.cs" />
-		<Compile Include="System.Windows.Controls\TreeViewItemCheckBox.cs" />
-		<Compile Include="System.Windows.Controls\ListTimePickerPopupAutomationPeer.cs" />
-		<Compile Include="System.Windows.Automation.Peers\PickerAutomationPeer.cs" />
-		<Compile Include="System.Windows.Automation.Peers\RangeTimePickerPopupAutomationPeer.cs" />
-		<Compile Include="System.Windows.Automation.Peers\TimePickerAutomationPeer.cs" />
-		<Compile Include="System.Windows.Automation.Peers\TimePickerPopupAutomationPeer.cs" />
-		<Compile Include="System.Windows.Automation.Peers\TimeUpDownAutomationPeer.cs" />
-		<Compile Include="System.Windows.Controls\CatchallTimeParser.cs" />
-		<Compile Include="System.Windows.Controls\CustomTimeFormat.cs" />
-		<Compile Include="System.Windows.Controls\Extensions.cs" />
-		<Compile Include="System.Windows.Controls\ITimeInput.cs" />
-		<Compile Include="System.Windows.Controls\ListTimePickerPopup.cs" />
-		<Compile Include="System.Windows.Controls\LongTimeFormat.cs" />
-		<Compile Include="System.Windows.Controls\Picker.cs" />
-		<Compile Include="System.Windows.Controls.Primitives\ItemSelectionHelper.cs" />
-		<Compile Include="System.Windows.Controls\RangeTimePickerPopup.cs" />
-		<Compile Include="System.Windows.Controls\ShortTimeFormat.cs" />
-		<Compile Include="System.Windows.Controls\TimeCoercionHelper.cs" />
-		<Compile Include="System.Windows.Controls\TimeFormatConverter.cs" />
-		<Compile Include="System.Windows.Controls\TimeGlobalizationInfo.cs" />
-		<Compile Include="System.Windows.Controls\TimeParser.cs" />
-		<Compile Include="System.Windows.Controls\TimeParserCollection.cs" />
-		<Compile Include="System.Windows.Controls\TimePicker.cs" />
-		<Compile Include="System.Windows.Controls\TimePickerPopup.cs" />
-		<Compile Include="System.Windows.Controls\TimeTypeConverter.cs" />
-		<Compile Include="System.Windows.Controls\TimeUpDown.cs" />
-		<Compile Include="System.Windows.Controls\TypeConverters.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\DomainUpDown.cs" />
 		<Compile Include="System.Windows.Controls\InkPresenter.cs" />
 		<Compile Include="System.Windows.Controls\MatchedTextInfo.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\ObservableObjectCollection.cs" />
-		<Compile Include="System.Windows.Documents\TextElementProperties.cs" />
+		<Compile Include="System.Windows.Documents\Glyphs.cs" />
 		<Compile Include="System.Windows.input\KeyboardNavigation.cs" />
 		<Compile Include="System.Windows.input\TraversalRequest.cs" />
 		<Compile Include="System.Windows.Markup\DependencyPropertyConverter.cs" />
 		<Compile Include="System.Windows.Markup\SetterValueConverter.cs" />
+		<Compile Include="OpenSilver\Internal\Media\Animation\IValueAnimator.cs" />
+		<Compile Include="OpenSilver\Internal\Media\Animation\AnimationClock.cs" />
+		<Compile Include="System.Windows.Media.Animation\KeySplineConverter.cs" />
+		<Compile Include="System.Windows.Media.Animation\KeyTimeType.cs" />
+		<Compile Include="System.Windows.Media.Animation\LinearPointKeyFrame.cs" />
 		<Compile Include="System.Windows.Media.Imaging\PngEncoder.cs" />
 		<Compile Include="System.Windows.Media.Imaging\WriteableBitmap.Wasm.cs" />
 		<Compile Include="System.Windows.Media.Imaging\WriteableBitmap.Simulator.cs" />
 		<Compile Include="System.Windows.Media\ColorInterpolationMode.cs" />
 		<Compile Include="OpenSilver\Internal\Media\FontFace.cs" />
+		<Compile Include="OpenSilver\Internal\Media\FontProperties.cs" />
 		<Compile Include="System.Windows.Media\MediaElementState.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\NotifyEventArgs.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\Rating.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\RatingItem.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\TreeViewConnectingLines.cs" />
-		<Compile Include="System.Windows.Controls\TreeViewExtensions.cs" />
 		<Compile Include="System.ComponentModel\ReflectedPropertyCollection.cs" />
 		<Compile Include="System.ComponentModel\ReflectedPropertyData.cs" />
 		<Compile Include="OpenSilver\Internal\Xaml\RuntimeHelpers.cs" />
 		<Compile Include="OpenSilver\Internal\Xaml\IXamlComponentFactory.cs" />
-		<Compile Include="System.Windows.Controls\SpinDirection.cs" />
-		<Compile Include="System.Windows.Controls\SpinEventArgs.cs" />
-		<Compile Include="System.Windows.Controls\Spinner.cs" />
-		<Compile Include="System.Windows.Controls\ButtonSpinner.cs" />
-		<Compile Include="System.Windows.Controls\UpDownBase.cs" />
-		<Compile Include="System.Windows.Controls\UpDownBase.Generic.cs" />
-		<Compile Include="System.Windows.Controls\UpDownParseErrorEventArgs.cs" />
-		<Compile Include="System.Windows.Controls\UpDownParsingEventArgs.cs" />
-		<Compile Include="System.Windows.Controls\ValidSpinDirections.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\WebBrowser.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\WebBrowserBrush.cs" />
-		<Compile Include="System.Windows.Documents\WORKINPROGRESS\FontSource.cs" />
+		<Compile Include="System.Windows.Documents\FontSource.cs" />
 		<Compile Include="System.Windows.Ink\Stroke.cs" />
 		<Compile Include="System.Windows.Ink\StrokeCollection.cs" />
 		<Compile Include="System.Windows.Ink\DrawingAttributes.cs" />
 		<Compile Include="System.Windows.input\StylusPoint.cs" />
 		<Compile Include="System.Windows.input\StylusPointCollection.cs" />
 		<Compile Include="System.Windows.Interop\NavigationStateChangedEventArgs.cs" />
-		<Compile Include="System.Windows.Controls\TreeViewDragDropTarget.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\EasingPointKeyFrame.cs" />
+		<Compile Include="System.Windows.Media.Animation\EasingPointKeyFrame.cs" />
 		<Compile Include="System.Windows.Media\BrushConverter.cs" />
 		<Compile Include="System.Windows.Media\Color.cs" />
+		<Compile Include="System.Windows.Media\RenderingEventArgs.cs" />
+		<Compile Include="System.Windows.Media\StyleSimulations.cs" />
 		<Compile Include="System.Windows.Media\WORKINPROGRESS\CacheModeConverter.cs" />
 		<Compile Include="System.Windows.Media\ColorConverter.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\DiscreteColorKeyFrame.cs" />
+		<Compile Include="System.Windows.Media.Animation\DiscreteColorKeyFrame.cs" />
 		<Compile Include="System.Windows.Media\WORKINPROGRESS\TimelineMarker.cs" />
 		<Compile Include="System.Windows.Media\TimelineMarkerCollection.cs" />
 		<Compile Include="System.Windows.Media\WORKINPROGRESS\VideoBrush.cs" />
-		<Compile Include="System.Windows.Navigation\WORKINPROGRESS\LoadCompletedEventHandler.cs" />
+		<Compile Include="System.Windows.Navigation\LoadCompletedEventHandler.cs" />
 		<Compile Include="System.Windows.Navigation\NavigatingCancelEventArgs.cs" />
 		<Compile Include="System.Windows.Navigation\NavigatingCancelEventHandler.cs" />
 		<Compile Include="System.Windows.Navigation\NavigationMode.cs" />
@@ -320,17 +277,23 @@
 		<Compile Include="System.Windows.Printing\PrintPageEventArgs.cs" />
 		<Compile Include="System.Windows.Threading\DispatcherPriority.cs" />
 		<Compile Include="System.Windows.Threading\DispatcherOperationStatus.cs" />
+		<Compile Include="System.Windows.Threading\DispatcherProcessingDisabled.cs" />
+		<Compile Include="OpenSilver\Internal\AppResourcesManager.cs" />
 		<Compile Include="System.Windows\CornerRadiusConverter.cs" />
 		<Compile Include="System.Windows.input\CursorConverter.cs" />
 		<Compile Include="System.Windows.Media\DoubleCollectionConverter.cs" />
+		<Compile Include="System.Windows\CrossDomainAccess.cs" />
 		<Compile Include="System.Windows\DataObject.SL.cs" />
 		<Compile Include="System.Windows\DataTemplateKey.cs" />
 		<Compile Include="System.Windows\DependencyPropertyKey.cs" />
 		<Compile Include="System.Windows\DurationConverter.cs" />
 		<Compile Include="System.Windows.Media\FontFamilyConverter.cs" />
+		<Compile Include="System.Windows\ElevatedPermissions.cs" />
 		<Compile Include="System.Windows\EventHandlersStore.cs" />
 		<Compile Include="System.Windows\EventRoute.cs" />
 		<Compile Include="System.Windows\EventRouteFactory.cs" />
+		<Compile Include="System.Windows\ExternalPart.cs" />
+		<Compile Include="System.Windows\ExternalPartCollection.cs" />
 		<Compile Include="System.Windows\FontStretchConverter.cs" />
 		<Compile Include="System.Windows\FontStyleConverter.cs" />
 		<Compile Include="System.Windows\FontWeightConverter.cs" />
@@ -344,15 +307,18 @@
 		<Compile Include="System.Windows.Media.Animation\KeyTimeConverter.cs" />
 		<Compile Include="System.Windows.Media\MatrixConverter.cs" />
 		<Compile Include="System.Windows.Media\PointCollectionConverter.cs" />
+		<Compile Include="System.Windows\Icon.cs" />
+		<Compile Include="System.Windows\IconCollection.cs" />
 		<Compile Include="System.Windows\IControl.cs" />
 		<Compile Include="System.Windows\IDependencyObject.cs" />
 		<Compile Include="System.Windows\IFrameworkElement.cs" />
+		<Compile Include="System.Windows\InBrowserSettings.cs" />
 		<Compile Include="System.Windows\InheritanceBehavior.cs" />
 		<Compile Include="System.Windows.Controls\IPanel.cs" />
 		<Compile Include="System.Windows\IUIElement.cs" />
 		<Compile Include="System.Windows.Controls\IUserControl.cs" />		
 		<Compile Include="System.Windows\LayoutCycleException.cs" />
-		<Compile Include="System.Windows\LengthConverter.cs" />
+		<Compile Include="OpenSilver\Internal\LengthConverter.cs" />
 		<Compile Include="System.Windows\PointConverter.cs" />
 		<Compile Include="System.Windows\PropertyPathConverter.cs" />
 		<Compile Include="System.Windows\ReadOnlyPropertyMetadata.cs" />
@@ -360,6 +326,7 @@
 		<Compile Include="System.Windows.Media.Animation\RepeatBehaviorConverter.cs" />
 		<Compile Include="System.Windows\RoutedEventHandlerInfo.cs" />
 		<Compile Include="System.Windows\RouteItem.cs" />
+		<Compile Include="System.Windows\SecuritySettings.cs" />
 		<Compile Include="System.Windows\SizeChangedInfo.cs" />
 		<Compile Include="System.Windows\SizeConverter.cs" />
 		<Compile Include="System.Windows\StyleHelper.cs" />
@@ -367,7 +334,6 @@
 		<Compile Include="System.Windows\ThicknessConverter.cs" />
 		<Compile Include="System.Windows.Media\TransformConverter.cs" />
 		<Compile Include="System.ComponentModel\TypeConverterHelper.cs" />
-		<Compile Include="System.Linq\WORKINPROGRESS\FunctionalProgramming.cs" />
 		<Compile Include="System.Net\DownloadStringCompletedEventArgs.cs" />
 		<Compile Include="System.Net\DownloadStringCompletedEventHandler.cs" />
 		<Compile Include="System.Net\UploadStringCompletedEventArgs.cs" />
@@ -392,22 +358,12 @@
 		<Compile Include="System.Windows.Messaging\WORKINPROGRESS\SendCompletedEventArgs.cs" />
 		<Compile Include="System.Windows\FullScreenOptions.cs" />
 		<Compile Include="System.Windows\InstallState.cs" />
-		<Compile Include="System.Windows\RoutedPropertyChangingEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\CleanUpVirtualizedItemEventHandler.cs" />
 		<Compile Include="System.Windows\UIElement.Automation.cs" />
 		<Compile Include="System.Windows\UIElement.Interfaces.cs" />
 		<Compile Include="System.Windows\UIElement.Layout.cs" />
+		<Compile Include="System.Windows\WindowStartupLocation.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\Analytics.cs" />
-		<Compile Include="System.Windows.Automation.Peers\ExpanderAutomationPeer.cs" />
-		<Compile Include="System.Windows.Automation.Peers\TreeViewAutomationPeer.cs" />
-		<Compile Include="System.Windows.Automation.Peers\TreeViewItemAutomationPeer.cs" />
-		<Compile Include="System.Windows.Controls\InteractionHelper.cs" />
-		<Compile Include="System.Windows.Controls\ItemsControlHelper.cs" />
-		<Compile Include="System.Windows.Controls\NumericExtensions.cs" />
-		<Compile Include="System.Windows.Controls\ScrollExtensions.cs" />
-		<Compile Include="System.Windows.Controls\TreeView.cs" />
-		<Compile Include="System.Windows.Controls\TreeViewItem.cs" />
-		<Compile Include="System.Windows.Controls\ScrollViewerExtensions.cs" />
 		<Compile Include="System.Windows.Documents\WORKINPROGRESS\Typography.cs" />
 		<Compile Include="System.Windows.Shapes\Polygon.cs" />
 		<Compile Include="System.Windows\Expression.cs" />
@@ -417,10 +373,7 @@
 		<Compile Include="System.Windows\FontStretches.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\NotificationWindow.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\WebRequestCreator.cs" />
-		<Compile Include="System.Windows\IntExtensions.cs" />
 		<Compile Include="System.Windows\LayoutManager.cs" />
-		<Compile Include="System.Windows\PointExtensions.cs" />
-		<Compile Include="System.Windows\DoubleExtensions.cs" />
 		<Compile Include="System.Windows.Automation.Peers\RangeBaseAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Peers\ScrollBarAutomationPeer.cs" />
 		<Compile Include="System.Windows.Automation.Provider\IDockProvider.cs" />
@@ -430,58 +383,40 @@
 		<Compile Include="System.Windows.Automation\MultipleViewPatternIdentifiers.cs" />
 		<Compile Include="System.Windows.Automation\TableItemPatternIdentifiers.cs" />
 		<Compile Include="System.Windows.Automation\TablePatternIdentifiers.cs" />
-		<Compile Include="System.Windows.Controls.Primitives\WORKINPROGRESS\VisualTreeExtensions.cs" />
-		<Compile Include="System.Windows.Controls\ExpandDirection.cs" />
 		<Compile Include="System.Windows.Controls\IGeneratorHost.cs" />
 		<Compile Include="System.Windows.Controls\RangeObservableCollection.cs" />
-		<Compile Include="System.Windows.Controls\TimePickerPopupTemplate.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\BusyIndicator.cs" />
 		<Compile Include="System.Windows.Controls\ContentChangedEventArgs.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\ContentChangedEventHandler.cs" />
-		<Compile Include="System.Windows.Controls\HeaderedItemsControl.cs" />
-		<Compile Include="System.Windows.Controls\ITimeFormat.cs" />
+		<Compile Include="System.Windows.Controls\ContentChangedEventHandler.cs" />
 		<Compile Include="System.Windows.Controls\IDefinitionBase.cs" />
-		<Compile Include="System.Windows.Controls\IUpdateVisualState.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\MediaElement.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\MultiScaleImage.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\MultiScaleSubImage.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\PopupTimeSelectionMode.cs" />
 		<Compile Include="System.Windows.Controls\RichTextBlock.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\RichTextBlockOverflow.cs" />
-		<Compile Include="System.Windows.Controls\Separator.cs" />
     <Compile Include="System.Windows.Controls\WORKINPROGRESS\SubImageEventHandler.cs" />
 		<Compile Include="System.Windows.Controls\WORKINPROGRESS\SubImageRoutedEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\TextSearch.cs" />
-		<Compile Include="OpenSilver\Controls\TimePicker.NotImplemented.cs" />
-		<Compile Include="OpenSilver\Controls\TimePickerPopup.cs" />
-		<Compile Include="System.Windows.Data\INTERNAL_PagedCollectionView.cs" />
 		<Compile Include="System.Windows.Data\CollectionView.cs" />
 		<Compile Include="System.Windows.Data\ListCollectionView.cs" />
-		<Compile Include="PagedCollectionView\PropertyGroupDescription.cs" />
+		<Compile Include="System.Windows.Data\PropertyGroupDescription.cs" />
+		<Compile Include="System.Windows.Data\CollectionViewGroupInternal.cs" />
+		<Compile Include="System.Windows.Data\CollectionViewGroupRoot.cs" />
 		<Compile Include="System.Windows.Documents\BlockCollection.cs" />
 		<Compile Include="System.Windows.Documents\WORKINPROGRESS\InlineUIContainer.cs" />
-		<Compile Include="System.Windows.Documents\WORKINPROGRESS\LogicalDirection.cs" />
+		<Compile Include="System.Windows.Documents\LogicalDirection.cs" />
 		<Compile Include="System.Windows.Documents\Paragraph.cs" />
-		<Compile Include="System.Windows.Documents\WORKINPROGRESS\Section.cs" />
-		<Compile Include="System.Windows.Documents\WORKINPROGRESS\TextPointer.cs" />
+		<Compile Include="System.Windows.Documents\Section.cs" />
+		<Compile Include="System.Windows.Documents\TextPointer.cs" />
 		<Compile Include="System.Windows.Documents\TextSelection.cs" />
 		<Compile Include="System.Windows.Media.Animation\BeginStoryboard.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\BounceEase.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\CircleEase.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\CubicEase.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\DiscretePointKeyFrame.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\EasingFunctionBase.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\ExponentialEase.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\PointAnimationUsingKeyFrames.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\PointKeyFrame.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\PointKeyFrameCollection.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\QuadraticEase.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\QuarticEase.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\QuinticEase.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\SineEase.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\SplinePointKeyFrame.cs" />
+		<Compile Include="System.Windows.Media.Animation\BounceEase.cs" />
+		<Compile Include="System.Windows.Media.Animation\DiscretePointKeyFrame.cs" />
+		<Compile Include="System.Windows.Media.Animation\PointAnimationUsingKeyFrames.cs" />
+		<Compile Include="System.Windows.Media.Animation\PointKeyFrame.cs" />
+		<Compile Include="System.Windows.Media.Animation\PointKeyFrameCollection.cs" />
+		<Compile Include="System.Windows.Media.Animation\SplinePointKeyFrame.cs" />
 		<Compile Include="System.Windows.Media.Animation\EasingColorKeyFrame.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\LinearColorKeyFrame.cs" />
+		<Compile Include="System.Windows.Media.Animation\LinearColorKeyFrame.cs" />
 		<Compile Include="System.Windows.Media\WORKINPROGRESS\MultiScaleTileSource.cs" />
 		<Compile Include="System.Windows.Media\WORKINPROGRESS\TextFormattingMode.cs" />
 		<Compile Include="System.Windows.Media\WORKINPROGRESS\TextHintingMode.cs" />
@@ -498,23 +433,21 @@
 		<Compile Include="System.Windows\WORKINPROGRESS\FontNumeralAlignment.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\FontNumeralStyle.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\FontVariants.cs" />
-		<Compile Include="System.Windows\TextMeasurementService.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\LineStackingStrategy.cs" />
+		<Compile Include="OpenSilver\Internal\TextMeasurementService.cs" />
+		<Compile Include="System.Windows\LineStackingStrategy.cs" />
 		<Compile Include="System.Windows\FrameworkPropertyMetadata.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\UIElement.cs" />
 		<Compile Include="System.Collections.Generic\WORKINPROGRESS\SynchronizedReadOnlyCollection.cs" />
 		<Compile Include="System.ComponentModel\ICollectionViewFactory.cs" />
-		<Compile Include="System.ComponentModel.Composition.Hosting\WORKINPROGRESS\ExportProvider.cs" />
 		<Compile Include="System.Reflection\ICustomTypeProvider.cs" />
 		<Compile Include="System.Windows\ApplicationServiceContext.cs" />
 		<Compile Include="System.Windows\DataFormats.cs" />
 		<Compile Include="System.Windows\DependencyObjectCollection_1.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\IApplicationLifetimeAware.cs" />
 		<Compile Include="System.Windows\IApplicationService.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\INativeCollectionWrapper.cs" />
 		<Compile Include="System.Windows\NullableBoolConverter.cs" />
 		<Compile Include="System.Windows\StyleTypedPropertyAttribute.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\SystemColors.cs" />
+		<Compile Include="System.Windows\SystemColors.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\SystemParameters.cs" />
 		<Compile Include="System.Windows.Automation\AutomationElementIdentifiers.cs" />
 		<Compile Include="System.Windows.Automation\AutomationProperties.cs" />
@@ -573,8 +506,8 @@
 		<Compile Include="System.Windows.Controls\ScrollContentPresenter.cs" />
 		<Compile Include="System.Windows.Controls\VirtualizingPanel.cs" />
 		<Compile Include="System.Windows.Controls\VirtualizingStackPanel.cs" />
-		<Compile Include="System.Windows.Controls.Primitives\WORKINPROGRESS\IItemContainerGenerator.cs" />
-		<Compile Include="System.Windows.Controls.Primitives\WORKINPROGRESS\IRecyclingItemContainerGenerator.cs" />
+		<Compile Include="System.Windows.Controls.Primitives\IItemContainerGenerator.cs" />
+		<Compile Include="System.Windows.Controls.Primitives\IRecyclingItemContainerGenerator.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\IScrollInfo.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\LayoutInformation.cs" />
 		<Compile Include="System.Windows.Data\CollectionViewGroup.cs" />
@@ -593,17 +526,17 @@
 		<Compile Include="System.Windows.Markup\XamlReader.cs" />
 		<Compile Include="System.Windows.Media\AlignmentX.cs" />
 		<Compile Include="System.Windows.Media\AlignmentY.cs" />
-		<Compile Include="System.Windows.Media\WORKINPROGRESS\CompositionTarget.cs" />
+		<Compile Include="System.Windows.Media\CompositionTarget.cs" />
 		<Compile Include="System.Windows.Media\WORKINPROGRESS\Fonts.cs" />
-		<Compile Include="System.Windows.Media\WORKINPROGRESS\GlyphTypeface.cs" />
+		<Compile Include="System.Windows.Media\GlyphTypeface.cs" />
 		<Compile Include="System.Windows.Media\ImageBrush.cs" />
 		<Compile Include="System.Windows.Media\WORKINPROGRESS\Matrix3DProjection.cs" />
 		<Compile Include="System.Windows.Media\WORKINPROGRESS\PlaneProjection.cs" />
 		<Compile Include="System.Windows.Media\TileBrush.cs" />
 		<Compile Include="System.Windows.Media\WORKINPROGRESS\Typeface.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\DiscreteDoubleKeyFrame.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\LinearDoubleKeyFrame.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\PointAnimation.cs" />
+		<Compile Include="System.Windows.Media.Animation\DiscreteDoubleKeyFrame.cs" />
+		<Compile Include="System.Windows.Media.Animation\LinearDoubleKeyFrame.cs" />
+		<Compile Include="System.Windows.Media.Animation\PointAnimation.cs" />
 		<Compile Include="System.Windows.Media.Effects\WORKINPROGRESS\PixelShader.cs" />
 		<Compile Include="System.Windows.Media.Effects\WORKINPROGRESS\SamplingMode.cs" />
 		<Compile Include="System.Windows.Media.Effects\WORKINPROGRESS\ShaderEffect.cs" />
@@ -615,66 +548,31 @@
 		<Compile Include="System.Windows.Threading\WORKINPROGRESS\DispatcherSynchronizationContext.cs" />
 		<Compile Include="APP_SUPPORT\ClientSideResourceManager.cs" />
 		<Compile Include="APP_SUPPORT\Cshtml5Initializer.cs" />
-		<Compile Include="APP_SUPPORT\StaticConstructorsCaller.cs" />
-		<Compile Include="Core\Events\HtmlEventProxy.cs" />
-		<Compile Include="Core\Events\INTERNAL_EventManager.cs" />
-		<Compile Include="Core\Events\INTERNAL_EventsHelper.cs" />
 		<Compile Include="Core\Main\INameScope.cs" />
-		<Compile Include="Core\Main\INTERNAL_ListsHelper.cs" />
-		<Compile Include="Core\Main\INTERNAL_PropertyStorage.cs" />
-		<Compile Include="Core\Main\INTERNAL_PropertyStore.cs" />
 		<Compile Include="Core\Main\INTERNAL_Simulator.cs" />
-		<Compile Include="Core\Main\INTERNAL_ExecuteJavaScript.cs" />
 		<Compile Include="Core\Main\INTERNAL_UriHelper.cs" />
 		<Compile Include="Core\Main\TypeFromStringConverters.cs" />
-		<Compile Include="Core\Other\HashSet2_1.cs" />
 		<Compile Include="Core\Other\INTERNAL_DispatcherHelpers.cs" />
-		<Compile Include="Core\Other\INTERNAL_XamlResourcesHandler.cs" />
-		<Compile Include="Core\Other\ISet2_1.cs" />
+		<Compile Include="OpenSilver\Internal\XamlResources.cs" />
 		<Compile Include="Core\Other\Performance.cs" />
 		<Compile Include="Core\Other\ServiceProvider.cs" />
-		<Compile Include="Core\Other\SilverlightAndWpfNamespaces.cs" />
-		<Compile Include="Core\Other\Tuple2.cs" />
-		<Compile Include="Core\Other\Tuple2_2.cs" />
-		<Compile Include="Core\Other\Tuple2_3.cs" />
-		<Compile Include="Core\Other\Tuple2_4.cs" />
-		<Compile Include="Core\Other\Tuple2_5.cs" />
-		<Compile Include="Core\Other\Tuple2_6.cs" />
-		<Compile Include="Core\Other\Windows.ApplicationModel.Activation.LaunchActivatedEventArgs.cs" />
+		<Compile Include="Core\Other\LaunchActivatedEventArgs.cs" />
 		<Compile Include="Core\Other\INTERNAL_DispatcherQueueHandler.cs" />
-		<Compile Include="Core\Rendering\INTERNAL_Html2dContextReference.cs" />
 		<Compile Include="Core\Rendering\INTERNAL_HtmlDomElementReference.cs" />
 		<Compile Include="Core\Rendering\INTERNAL_HtmlDomManager.cs" />
 		<Compile Include="Core\Rendering\INTERNAL_HtmlDomStyleReference.cs" />
-		<Compile Include="Core\Rendering\INTERNAL_PopupsManager.cs" />
-		<Compile Include="Core\Rendering\INTERNAL_VisualChildInformation.cs" />
+		<Compile Include="Core\Rendering\PopupsManager.cs" />
 		<Compile Include="Core\Rendering\INTERNAL_VisualTreeManager.cs" />
 		<Compile Include="Core\WebRequestHelper\INTERNAL_WebRequestHelper_JSOnly.cs" />
 		<Compile Include="Core\WebRequestHelper\INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventArgs.cs" />
 		<Compile Include="Core\WebRequestHelper\INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventHandler.cs" />
 		<Compile Include="Properties\AssemblyInfo.cs" />
-		<Compile Include="PublicAPI\CompilerIsSLMigrationAttribute.cs" />
-		<Compile Include="PublicAPI\CompilerVersionFriendlyNameAttribute.cs" />
-		<Compile Include="PublicAPI\CompilerVersionNumberAttribute.cs" />
-		<Compile Include="PublicAPI\CSharpXamlForHtml5_DomManagement.cs" />
-		<Compile Include="PublicAPI\CSharpXamlForHtml5_Environment.cs" />
-		<Compile Include="PublicAPI\DynamicDomElement.cs" />
-		<Compile Include="PublicAPI\DynamicDomElementChildrenCollection.cs" />
-		<Compile Include="PublicAPI\Internal\Attributes\IntermediateOutputPathAttribute.cs" />
-		<Compile Include="PublicAPI\Internal\Attributes\OutputAppFilesPathAttribute.cs" />
-		<Compile Include="PublicAPI\Internal\Attributes\OutputLibrariesPathAttribute.cs" />
-		<Compile Include="PublicAPI\Internal\Attributes\OutputResourcesPathAttribute.cs" />
-		<Compile Include="PublicAPI\Internal\Attributes\OutputRootPathAttribute.cs" />
-		<Compile Include="PublicAPI\Internal\Attributes\SettingsAttribute.cs" />
 		<Compile Include="PublicAPI\Internal\StartupAssemblyInfo.cs" />
 		<Compile Include="PublicAPI\Internal\TypeInstantiationHelper.cs" />
 		<Compile Include="PublicAPI\Interop\HtmlPresenter.cs" />
-		<Compile Include="PublicAPI\Interop\INTERNAL_InteropImplementation.cs" />
-		<Compile Include="PublicAPI\Interop\INTERNAL_JSObjectReference.cs" />
-		<Compile Include="PublicAPI\Interop\Interop.cs" />
+		<Compile Include="PublicAPI\Interop\JSObjectRef.cs" />
+		<Compile Include="OpenSilver\Interop.cs" />
 		<Compile Include="PublicAPI\Interop\OnCallBack.cs" />
-		<Compile Include="PublicAPI\MinimumRequiredCompilerVersionFriendlyNameAttribute.cs" />
-		<Compile Include="PublicAPI\MinimumRequiredCompilerVersionNumberAttribute.cs" />
 		<Compile Include="PublicAPI\Native.Html.Controls\ContainerElement.cs" />
 		<Compile Include="PublicAPI\Native.Html.Controls\ElementStyle.cs" />
 		<Compile Include="PublicAPI\Native.Html.Controls\HtmlCanvas.cs" />
@@ -703,23 +601,9 @@
 		<Compile Include="System.ComponentModel\SortDescription.cs" />
 		<Compile Include="System.ComponentModel\SortDescriptionCollection.cs" />
 		<Compile Include="System.IO.IsolatedStorage\IsolatedStorageSettings.cs" />
-		<Compile Include="System.IO.IsolatedStorage\IsolatedStorageSettingsForCSharp.cs" />
 		<Compile Include="System.IO.IsolatedStorage\WORKINPROGRESS\IsolatedStorageSettings.cs" />
 		<Compile Include="System.Net\CredentialsMode.cs" />
-		<Compile Include="System.Runtime.Serialization\CollectionDataContract2Attribute.cs" />
 		<Compile Include="System.Runtime.Serialization\DataContractSerializer.cs" />
-		<Compile Include="System.Runtime.Serialization\DataContractSerializer_Deserialization.cs" />
-		<Compile Include="System.Runtime.Serialization\DataContractSerializer_Helpers.cs" />
-		<Compile Include="System.Runtime.Serialization\DataContractSerializer_KnownTypes.cs" />
-		<Compile Include="System.Runtime.Serialization\DataContractSerializer_Serialization.cs" />
-		<Compile Include="System.Runtime.Serialization\DataContractSerializer_ValueTypesHandler.cs" />
-		<Compile Include="System.Runtime.Serialization\DataMember2Attribute.cs" />
-		<Compile Include="System.Runtime.Serialization\INTERNAL_DateTimeHelpers.cs" />
-		<Compile Include="System.Runtime.Serialization\INTERNAL_MemberInformation.cs" />
-		<Compile Include="System.Runtime.Serialization\INTERNAL_MemberInformationAndValue.cs" />
-		<Compile Include="System.Runtime.Serialization\INTERNAL_TypeInformation.cs" />
-		<Compile Include="System.Runtime.Serialization\Serializable2Attribute.cs" />
-		<Compile Include="System.Runtime.Serialization\SerializationType.cs" />
 		<Compile Include="System.ServiceModel\CSHTML5_ClientBase_1.cs" />
 		<Compile Include="System.ServiceModel\INTERNAL_AsyncResult.cs" />
 		<Compile Include="System.ServiceModel\INTERNAL_WebMethodsCaller.cs" />
@@ -727,7 +611,6 @@
 		<Compile Include="System.Windows.input\Cursors.cs" />
 		<Compile Include="System.Windows.input\Keyboard.cs" />
 		<Compile Include="System.Windows.input\MouseButtonEventArgs.cs" />
-		<Compile Include="System.Windows.Markup\MethodToTranslateXamlValueToCSharpAttribute.cs" />
 		<Compile Include="System.Windows.Markup\StaticResourceExtension.cs" />
 		<Compile Include="System.Windows.Markup\ThemeResourceExtension.cs" />
 		<Compile Include="System.Windows.Markup\XmlLanguage.cs" />
@@ -736,26 +619,9 @@
 		<Compile Include="System.Windows.Media.Effects\Effect.cs" />
 		<Compile Include="System.Windows.Resources\StreamResourceInfo.cs" />
 		<Compile Include="System.Windows\Clipboard.cs" />
-		<Compile Include="System.Windows\DataObject.cs" />
 		<Compile Include="System.Windows\Deployment.cs" />
-		<Compile Include="System.Windows\DragDrop.cs" />
-		<Compile Include="System.Windows\IDataObject.cs" />
 		<Compile Include="System.Windows\RoutedPropertyChangedEventArgs_1.cs" />
 		<Compile Include="System.Windows\RoutedPropertyChangedEventHandler.cs" />
-		<Compile Include="ToBeReviewed\GroupedEnumerable_3.cs" />
-		<Compile Include="ToBeReviewed\GroupedEnumerable_4.cs" />
-		<Compile Include="ToBeReviewed\Grouping_2.cs" />
-		<Compile Include="ToBeReviewed\OrderedEnumerable.cs" />
-		<Compile Include="TypeScriptDefinitionsSupportFiles\EmptyNamespaceDefinition.cs" />
-		<Compile Include="TypeScriptDefinitionsSupportFiles\JSArray_1.cs" />
-		<Compile Include="TypeScriptDefinitionsSupportFiles\JSObject.cs" />
-		<Compile Include="TypeScriptDefinitionsSupportFiles\Promise_1.cs" />
-		<Compile Include="TypeScriptDefinitionsSupportFiles\ToJavaScriptObjectExtender.cs" />
-		<Compile Include="TypeScriptDefinitionsSupportFiles\UnionType.cs" />
-		<Compile Include="TypeScriptDefinitionsSupportFiles\UnionType_2.cs" />
-		<Compile Include="TypeScriptDefinitionsSupportFiles\UnionType_3.cs" />
-		<Compile Include="TypeScriptDefinitionsSupportFiles\UnionType_4.cs" />
-		<Compile Include="TypeScriptDefinitionsSupportFiles\UnionType_5.cs" />
 		<Compile Include="System.Windows.Input\PointerDeviceType.cs" />
 		<Compile Include="System.Windows\Point.cs" />
 		<Compile Include="System.Windows\Rect.cs" />
@@ -769,7 +635,7 @@
 		<Compile Include="System.Windows\FontWeight.cs" />
 		<Compile Include="System.Windows\FontWeights.cs" />
 		<Compile Include="System.Windows\TextDecorations.cs" />
-		<Compile Include="System.Windows.Controls.Primitives\WORKINPROGRESS\ItemsChangedEventArgs.cs" />
+		<Compile Include="System.Windows.Controls.Primitives\ItemsChangedEventArgs.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\ButtonBase.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\DragCompletedEventArgs.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\DragCompletedEventHandler.cs" />
@@ -777,8 +643,6 @@
 		<Compile Include="System.Windows.Controls.Primitives\DragDeltaEventHandler.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\DragStartedEventArgs.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\DragStartedEventHandler.cs" />
-		<Compile Include="System.Windows.Controls.Primitives\MenuBase.cs" />
-		<Compile Include="System.Windows.Controls.Primitives\MultiSelector.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\PlacementMode.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\Popup.cs" />
 		<Compile Include="System.Windows.Controls.Primitives\PopupRoot.cs" />
@@ -798,51 +662,31 @@
 		<Compile Include="System.Windows.Controls\Button.cs" />
 		<Compile Include="System.Windows.Controls\Canvas.cs" />
 		<Compile Include="System.Windows.Controls\CheckBox.cs" />
-		<Compile Include="System.Windows.Controls\ChildWindow.cs" />
 		<Compile Include="System.Windows.Controls\ClickMode.cs" />
-		<Compile Include="OpenSilver\Controls\Clock.cs" />
 		<Compile Include="System.Windows.Controls\ColumnDefinition.cs" />
 		<Compile Include="System.Windows.Controls\ColumnDefinitionCollection.cs" />
 		<Compile Include="System.Windows.Controls\ComboBox.cs" />
 		<Compile Include="System.Windows.Controls\ComboBoxItem.cs" />
 		<Compile Include="System.Windows.Controls\ContentControl.cs" />
 		<Compile Include="System.Windows.Controls\ContentPresenter.cs" />
-		<Compile Include="System.Windows.Controls\ContextMenu.cs" />
 		<Compile Include="System.Windows.Controls\ContextMenuEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\ContextMenuEventHandler.cs" />
-		<Compile Include="System.Windows.Controls\ContextMenuService.cs" />
 		<Compile Include="System.Windows.Controls\Control.cs" />
 		<Compile Include="System.Windows.Controls\ControlTemplate.cs" />
-		<Compile Include="System.Windows.Controls\Dock.cs" />
-		<Compile Include="System.Windows.Controls\DockPanel.cs" />
-		<Compile Include="System.Windows.Controls\DragDropEffects.cs" />
-		<Compile Include="System.Windows.Controls\DragDropKeyStates.cs" />
-		<Compile Include="System.Windows.Controls\DragDropTarget_2.cs" />
-		<Compile Include="System.Windows.Controls\DragEventArgs.cs" />
-		<Compile Include="System.Windows.Controls\DragEventHandler.cs" />
-		<Compile Include="System.Windows.Controls\Expander.cs" />
-		<Compile Include="System.Windows.Controls\ExtendedRoutedEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\Grid.cs" />
-		<Compile Include="System.Windows.Controls\HeaderedContentControl.cs" />
 		<Compile Include="System.Windows.Controls\HyperlinkButton.cs" />
 		<Compile Include="System.Windows.Controls\Image.cs" />
 		<Compile Include="System.Windows.Controls\INavigate.cs" />
-		<Compile Include="System.Windows.Controls\INTERNAL_CalendarOrClockBase.cs" />
-		<Compile Include="System.Windows.Controls\INTERNAL_DateTimePickerBase.cs" />
 		<Compile Include="System.Windows.Controls\ItemCollection.cs" />
 		<Compile Include="System.Windows.Controls\ItemContainerGenerator.cs" />
-		<Compile Include="System.Windows.Controls\ItemDragEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\ItemsControl.cs" />
 		<Compile Include="System.Windows.Controls\ItemsPanelTemplate.cs" />
 		<Compile Include="System.Windows.Controls\ItemsPresenter.cs" />
 		<Compile Include="System.Windows.Controls\ListBox.cs" />
 		<Compile Include="System.Windows.Controls\ListBoxItem.cs" />
 		<Compile Include="System.Windows.Controls\MediaElement.cs" />
-		<Compile Include="System.Windows.Controls\MenuItem.cs" />
-		<Compile Include="System.Windows.Controls\NumericUpDown.cs" />
 		<Compile Include="System.Windows.Controls\Orientation.cs" />
 		<Compile Include="System.Windows.Controls\Panel.cs" />
-		<Compile Include="System.Windows.Controls\PanelDragDropTarget.cs" />
 		<Compile Include="System.Windows.Controls\PasswordBox.cs" />
 		<Compile Include="System.Windows.Controls\ProgressBar.cs" />
 		<Compile Include="System.Windows.Controls\RadioButton.cs" />
@@ -851,25 +695,16 @@
 		<Compile Include="System.Windows.Controls\ScrollBarVisibility.cs" />
 		<Compile Include="System.Windows.Controls\ScrollMode.cs" />
 		<Compile Include="System.Windows.Controls\ScrollViewer.cs" />
-		<Compile Include="System.Windows.Controls\Selection.cs" />
 		<Compile Include="System.Windows.Controls\SelectionChangedEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\SelectionChangedEventHandler.cs" />
-		<Compile Include="System.Windows.Controls\SelectionCollection.cs" />
 		<Compile Include="System.Windows.Controls\SelectionMode.cs" />
 		<Compile Include="System.Windows.Controls\Slider.cs" />
 		<Compile Include="System.Windows.Controls\StackPanel.cs" />
 		<Compile Include="System.Windows.Controls\StretchDirection.cs" />
-		<Compile Include="System.Windows.Controls\TabControl.cs" />
-		<Compile Include="System.Windows.Controls\TabItem.cs" />
-		<Compile Include="System.Windows.Controls.Primitives\TabPanel.cs" />
 		<Compile Include="System.Windows.Controls\TextBlock.cs" />
 		<Compile Include="System.Windows.Controls\TextBox.cs" />
 		<Compile Include="System.Windows.Controls\TextChangedEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\TextChangedEventHandler.cs" />
-		<Compile Include="OpenSilver\Controls\TimePicker.cs" />
-		<Compile Include="System.Windows.Controls\Toolkit\CollectionHelpers.cs" />
-		<Compile Include="System.Windows.Controls\Toolkit\EnumerableExtensions.cs" />
-		<Compile Include="System.Windows.Controls\Toolkit\ItemsControlExtensions.cs" />
 		<Compile Include="System.Windows.Controls\ToolTip.cs" />
 		<Compile Include="System.Windows.Controls\ToolTipService.cs" />
 		<Compile Include="System.Windows.Controls\UIElementCollection.cs" />
@@ -879,18 +714,14 @@
 		<Compile Include="System.Windows.Controls\ValidationErrorEventAction.cs" />
 		<Compile Include="System.Windows.Controls\ValidationErrorEventArgs.cs" />
 		<Compile Include="System.Windows.Controls\Viewbox.cs" />
-		<Compile Include="System.Windows.Controls\VisualStates.cs" />
 		<Compile Include="System.Windows.Controls\WebBrowser.cs" />
-		<Compile Include="System.Windows.Controls\WORKINPROGRESS\VirtualizationMode.cs" />
-		<Compile Include="System.Windows.Controls\WrapPanel.cs" />
+		<Compile Include="System.Windows.Controls\VirtualizationMode.cs" />
 		<Compile Include="System.Windows.Data\Binding.cs" />
 		<Compile Include="System.Windows.Data\BindingBase.cs" />
 		<Compile Include="System.Windows.Data\BindingExpression.cs" />
 		<Compile Include="System.Windows.Data\BindingMode.cs" />
 		<Compile Include="System.Windows.Data\BindingOperations.cs" />
-		<Compile Include="System.Windows.Data\INTERNAL_CollectionViewGroupInternal.cs" />
 		<Compile Include="System.Windows.Data\FilterEventArgs.cs" />
-		<Compile Include="System.Windows.Data\INTERNAL_DataOperations.cs" />
 		<Compile Include="System.Windows.Data\IValueConverter.cs" />
 		<Compile Include="System.Windows.Data\RelativeSource.cs" />
 		<Compile Include="System.Windows.Data\RelativeSourceMode.cs" />
@@ -925,10 +756,8 @@
 		<Compile Include="System.Windows.input\StylusDevice.cs" />
 		<Compile Include="System.Windows.input\TabletDeviceType.cs" />
 		<Compile Include="System.Windows.input\TextCompositionEventHandler.cs" />
-		<Compile Include="System.Windows.Media.Animation\AnimationHelpers.cs" />
 		<Compile Include="System.Windows.Media.Animation\AnimationTimeline.cs" />
 		<Compile Include="System.Windows.Media.Animation\CircleEase.cs" />
-		<Compile Include="System.Windows.Media.Animation\ClockState.cs" />
 		<Compile Include="System.Windows.Media.Animation\ColorAnimation.cs" />
 		<Compile Include="System.Windows.Media.Animation\CubicEase.cs" />
 		<Compile Include="System.Windows.Media.Animation\DiscreteObjectKeyFrame.cs" />
@@ -943,7 +772,6 @@
 		<Compile Include="System.Windows.Media.Animation\FillBehavior.cs" />
 		<Compile Include="System.Windows.Media.Animation\IEasingFunction.cs" />
 		<Compile Include="System.Windows.Media.Animation\IKeyFrame.cs" />
-		<Compile Include="System.Windows.Media.Animation\INTERNAL_ResolvedKeyFramesEntries_1.cs" />
 		<Compile Include="System.Windows.Media.Animation\KeyTime.cs" />
 		<Compile Include="System.Windows.Media.Animation\ObjectAnimationUsingKeyFrames.cs" />
 		<Compile Include="System.Windows.Media.Animation\ObjectKeyFrame.cs" />
@@ -957,20 +785,17 @@
 		<Compile Include="System.Windows.Media.Animation\Storyboard.cs" />
 		<Compile Include="System.Windows.Media.Animation\Timeline.cs" />
 		<Compile Include="System.Windows.Media.Animation\TimelineCollection.cs" />
-		<Compile Include="System.Windows.Media.Animation\Transition.cs" />
-		<Compile Include="System.Windows.Media.Animation\TransitionCollection.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\BackEase.cs" />
+		<Compile Include="System.Windows.Media.Animation\BackEase.cs" />
 		<Compile Include="System.Windows.Media.Animation\ColorAnimationUsingKeyFrames.cs" />
 		<Compile Include="System.Windows.Media.Animation\ColorKeyFrame.cs" />
 		<Compile Include="System.Windows.Media.Animation\ColorKeyFrameCollection.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\KeySpline.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\SplineColorKeyFrame.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\SplineDoubleKeyFrame.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\FillBehavior.cs" />
-		<Compile Include="System.Windows.Media.Animation\WORKINPROGRESS\ClockState.cs" />
+		<Compile Include="System.Windows.Media.Animation\KeySpline.cs" />
+		<Compile Include="System.Windows.Media.Animation\SplineColorKeyFrame.cs" />
+		<Compile Include="System.Windows.Media.Animation\SplineDoubleKeyFrame.cs" />
+		<Compile Include="System.Windows.Media.Animation\ClockState.cs" />
 		<Compile Include="System.Windows.Media.Imaging\BitmapImage.cs" />
 		<Compile Include="System.Windows.Media.Imaging\BitmapSource.cs" />
-		<Compile Include="System.Windows.Media.Imaging\WORKINPROGRESS\BitmapCreateOptions.cs" />
+		<Compile Include="System.Windows.Media.Imaging\BitmapCreateOptions.cs" />
 		<Compile Include="System.Windows.Media\ArcSegment.cs" />
 		<Compile Include="System.Windows.Media\BezierSegment.cs" />
 		<Compile Include="System.Windows.Media\Brush.cs" />
@@ -1036,7 +861,6 @@
 		<Compile Include="System.Windows\Content.cs" />
 		<Compile Include="System.Windows\ControlToWatch.cs" />
 		<Compile Include="System.Windows\CornerRadius.cs" />
-		<Compile Include="System.Windows\CSSEquivalent.cs" />
 		<Compile Include="System.Windows\DataTemplate.cs" />
 		<Compile Include="System.Windows\DependencyObject.cs" />
 		<Compile Include="System.Windows\DependencyProperty.cs" />
@@ -1053,7 +877,6 @@
 		<Compile Include="System.Windows\GridUnitType.cs" />
 		<Compile Include="System.Windows\HorizontalAlignment.cs" />
 		<Compile Include="System.Windows\Host.cs" />
-		<Compile Include="System.Windows\IHasAccessToPropertiesWhereItIsUsed.cs" />
 		<Compile Include="System.Windows\MessageBox.cs" />
 		<Compile Include="System.Windows\MessageBoxButton.cs" />
 		<Compile Include="System.Windows\MessageBoxResult.cs" />
@@ -1075,7 +898,6 @@
 		<Compile Include="System.Windows\StartupEventArgs.cs" />
 		<Compile Include="System.Windows\StartupEventHandler.cs" />
 		<Compile Include="System.Windows\Style.cs" />
-		<Compile Include="System.Windows\TemplateInstance.cs" />
 		<Compile Include="System.Windows\TemplatePartAttribute.cs" />
 		<Compile Include="System.Windows\TemplateVisualStateAttribute.cs" />
 		<Compile Include="System.Windows\TextAlignment.cs" />
@@ -1083,8 +905,6 @@
 		<Compile Include="System.Windows\Thickness.cs" />
 		<Compile Include="System.Windows\UIElement.cs" />
 		<Compile Include="System.Windows\UIElement_Events.cs" />
-		<Compile Include="System.Windows\ValueToHtmlConverter.cs" />
-		<Compile Include="System.Windows\ValueToMultipleValuesHtmlConverter.cs" />
 		<Compile Include="System.Windows\VerticalAlignment.cs" />
 		<Compile Include="System.Windows\Visibility.cs" />
 		<Compile Include="System.Windows\VisualState.cs" />
@@ -1096,11 +916,10 @@
 		<Compile Include="System.Windows\WindowSizeChangedEventHandler.cs" />
 		<Compile Include="System.Windows\FontStyle.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\Application.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\ApplicationUnhandledExceptionEventArgs.cs" />
+		<Compile Include="System.Windows\ApplicationUnhandledExceptionEventArgs.cs" />
 		<Compile Include="System.Windows\EventTrigger.cs" />
 		<Compile Include="System.Windows\FlowDirection.cs" />
 		<Compile Include="System.Windows\FontStretch.cs" />
-		<Compile Include="System.Windows\HierarchicalDataTemplate.cs" />
 		<Compile Include="System.Windows\PresentationFrameworkCollection_1.cs" />
 		<Compile Include="System.Windows\TextDecorationCollection.cs" />
 		<Compile Include="System.Windows\TextTrimming.cs" />
@@ -1110,169 +929,29 @@
 		<Compile Include="System.Windows\TriggerCollection.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\VisualTransition.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\WindowCollection.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\WindowStyle.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\OutOfBrowserSettings.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\WindowSettings.cs" />
+		<Compile Include="System.Windows\WindowStyle.cs" />
+		<Compile Include="System.Windows\OutOfBrowserSettings.cs" />
+		<Compile Include="System.Windows\WindowSettings.cs" />
 		<Compile Include="System.Windows\TemplateBindingExpression.cs" />
 		<Compile Include="System.Windows\WORKINPROGRESS\DragEventArgs.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\IDataObject.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\WindowState.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\WindowResizeEdge.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\AssemblyPart.cs" />
-		<Compile Include="System.Windows\WORKINPROGRESS\AssemblyPartCollection.cs" />
+		<Compile Include="System.Windows\IDataObject.cs" />
+		<Compile Include="System.Windows\WindowState.cs" />
+		<Compile Include="System.Windows\WindowResizeEdge.cs" />
+		<Compile Include="System.Windows\AssemblyPart.cs" />
+		<Compile Include="System.Windows\AssemblyPartCollection.cs" />
 		<Compile Include="System.Windows.Media\Colors.cs" />
-		<Compile Include="__COMPATIBILITY__\JSIL.Meta.dll ASSEMBLY\JSIL.Meta\JSIgnoreAttribute.cs" />
-		<Compile Include="__COMPATIBILITY__\JSIL.Meta.dll ASSEMBLY\JSIL.Meta\JSReplacementAttribute.cs" />
-		<Compile Include="__COMPATIBILITY__\JSIL.Meta.dll ASSEMBLY\JSIL\Verbatim.cs" />
 		<Compile Include="__SPECIFIC__\IJavaScriptExecutionHandler.cs" />
 	</ItemGroup>
 	<ItemGroup>
-    <Content Include="Themes\generic.xaml">
+    <Page Include="Themes\generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultButtonSpinnerStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultButtonStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultChildWindowStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultComboBoxStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultExpanderStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultHyperlinkButtonStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultNumericUpDownStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultSliderStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultScrollBarStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultTabControlStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultTabItemStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultThumbStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultTimePickerStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultToolTipStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultViewboxStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultItemsControlStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultRepeatButtonStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultHeaderedContentControlStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultListBoxStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-			<SubType>Designer</SubType>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultBusyIndicatorStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultPasswordBoxStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultTextBoxStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultContentControlStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultHeaderedItemsControlStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultTreeViewItemStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultTreeViewStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Content>
-		<Content Include="DefaultStyles\INTERNAL_DefaultProgressBarStyle.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Content>
-    <Content Include="DefaultStyles\INTERNAL_DefaultDragDecoratorStyle.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Content>
-    <Content Include="DefaultStyles\INTERNAL_DefaultTimePickerStyles.xaml">
+    </Page>
+    <Page Include="Themes\OpenSilver.xaml">
 	    <Generator>MSBuild:Compile</Generator>
-	  </Content>
-    <Content Include="DefaultStyles\INTERNAL_DefaultRichTextBoxStyle.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Content>
-    <Content Include="DefaultStyles\INTERNAL_DefaultGridSplitterStyle.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Content>
-    <Content Include="DefaultStyles\INTERNAL_ContextMenuStyles.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Content>
-    <Content Include="DefaultStyles\INTERNAL_DefaultDatePickerStyles.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Content>
-    <Content Include="DefaultStyles\INTERNAL_DefaultDatePickerStyle.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Content>
-	</ItemGroup>
-  <ItemGroup>
-	  <None Include="System.Windows.Controls\ListTimePickerPopup.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </None>
-	  <None Include="System.Windows.Controls\RangeTimePickerPopup.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </None>
-    <None Include="System.Windows.Controls\Picker.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </None>
-	  <None Include="System.Windows.Controls\TimePicker.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </None>
-	  <None Include="System.Windows.Controls\TimeUpDown.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </None>
-	  <None Include="System.Windows.Controls\GridSplitter\GridSplitter.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </None>
-	</ItemGroup>
-	<ItemGroup>
-		<EmbeddedResource Include="PagedCollectionView\PagedCollectionViewResources.resx" />
-	</ItemGroup>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
 	<ItemGroup>
 		<None Include="Runtime.licenseheader" />
 	</ItemGroup>
@@ -1280,8 +959,5 @@
 	<!-- See ths comment on the first <Import> -->
 	<Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 	<Import Project="$(OpenSilverTargets)" />
-	<ItemGroup>
-	  <UpToDateCheckInput Remove="Windows.UI.Input\**" />
-	</ItemGroup>
 
 </Project>

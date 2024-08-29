@@ -47,18 +47,18 @@ internal sealed class ResizeObserverAdapter
     /// <param name="callback">
     /// The action to call when resizing occurs.
     /// </param>
-    public void Observe(object elementReference, Action<Size> callback)
+    public void Observe(INTERNAL_HtmlDomElementReference elementReference, Action<Size> callback)
     {
         EnsureResizeObserverInitialized();
 
         if (!_isObserved)
         {
             _isObserved = true;
-            _sizeChangedCallback = JavaScriptCallback.Create((string arg) => callback(ParseSize(arg)), true);
+            _sizeChangedCallback = JavaScriptCallback.Create((string arg) => callback(ParseSize(arg)));
 
-            string sReference = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_observerJsReference);
-            string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(elementReference);
-            string sAction = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_sizeChangedCallback);
+            string sReference = Interop.GetVariableStringForJS(_observerJsReference);
+            string sElement = Interop.GetVariableStringForJS(elementReference);
+            string sAction = Interop.GetVariableStringForJS(_sizeChangedCallback);
 
             Interop.ExecuteJavaScriptVoid($"{sReference}.observe({sElement}, {sAction})");
         }
@@ -80,8 +80,8 @@ internal sealed class ResizeObserverAdapter
             _sizeChangedCallback.Dispose();
             _sizeChangedCallback = null;
 
-            string sReference = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_observerJsReference);
-            string sElement = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(elementReference);
+            string sReference = Interop.GetVariableStringForJS(_observerJsReference);
+            string sElement = Interop.GetVariableStringForJS(elementReference);
             Interop.ExecuteJavaScriptVoid($"{sReference}.unobserve({sElement})");
         }
     }

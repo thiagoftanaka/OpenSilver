@@ -20,6 +20,10 @@ namespace OpenSilver.Compiler
 {
     internal static class GettingInformationAboutXamlTypes
     {
+        private const string Using = "using:";
+        private const string ClrNamespace = "clr-namespace:";
+        private const string Assembly = ";assembly=";
+
         internal static void FixNamespaceForCompatibility(ref string assemblyName, ref string namespaceName)
         {
             if (assemblyName == null)
@@ -34,6 +38,9 @@ namespace OpenSilver.Compiler
                     return;
                 case "System.Windows.Controls.Data":
                     assemblyName = "OpenSilver.Controls.Data";
+                    return;
+                case "System.Windows.Controls.Data.Toolkit":
+                    assemblyName = "OpenSilver.Controls.Data.Toolkit";
                     return;
                 case "System.Windows.Controls.Data.DataForm.Toolkit":
                     assemblyName = "OpenSilver.Controls.Data.DataForm.Toolkit";
@@ -50,6 +57,45 @@ namespace OpenSilver.Compiler
                 case "System.Windows.Controls.Layout.Toolkit":
                     assemblyName = "OpenSilver.Controls.Layout.Toolkit";
                     return;
+                case "System.Windows.Controls.Theming.Toolkit":
+                    assemblyName = "OpenSilver.Controls.Theming.Toolkit";
+                    return;
+                case "System.Windows.Controls.Theming.BubbleCreme":
+                    assemblyName = "OpenSilver.Controls.Theming.BubbleCreme";
+                    return;
+                case "System.Windows.Controls.Theming.BureauBlack":
+                    assemblyName = "OpenSilver.Controls.Theming.BureauBlack";
+                    return;
+                case "System.Windows.Controls.Theming.BureauBlue":
+                    assemblyName = "OpenSilver.Controls.Theming.BureauBlue";
+                    return;
+                case "System.Windows.Controls.Theming.ExpressionDark":
+                    assemblyName = "OpenSilver.Controls.Theming.ExpressionDark";
+                    return;
+                case "System.Windows.Controls.Theming.ExpressionLight":
+                    assemblyName = "OpenSilver.Controls.Theming.ExpressionLight";
+                    return;
+                case "System.Windows.Controls.Theming.RainierOrange":
+                    assemblyName = "OpenSilver.Controls.Theming.RainierOrange";
+                    return;
+                case "System.Windows.Controls.Theming.RainierPurple":
+                    assemblyName = "OpenSilver.Controls.Theming.RainierPurple";
+                    return;
+                case "System.Windows.Controls.Theming.ShinyBlue":
+                    assemblyName = "OpenSilver.Controls.Theming.ShinyBlue";
+                    return;
+                case "System.Windows.Controls.Theming.ShinyRed":
+                    assemblyName = "OpenSilver.Controls.Theming.ShinyRed";
+                    return;
+                case "System.Windows.Controls.Theming.TwilightBlue":
+                    assemblyName = "OpenSilver.Controls.Theming.TwilightBlue";
+                    return;
+                case "System.Windows.Controls.Theming.WhistlerBlue":
+                    assemblyName = "OpenSilver.Controls.Theming.WhistlerBlue";
+                    return;
+                case "System.Windows.Controls.Theming.SystemColors":
+                    assemblyName = "OpenSilver.Controls.Theming.SystemColors";
+                    return;
                 case "System.Windows.Interactivity":
                     assemblyName = "OpenSilver.Interactivity";
                     return;
@@ -63,12 +109,40 @@ namespace OpenSilver.Compiler
                     assemblyName = "OpenRiaServices.Controls.DomainServices";
                     namespaceName = "OpenRiaServices.Controls";
                     return;
-                default:
-                    if (assemblyName == "System" || assemblyName.StartsWith("System."))
-                    {
-                        assemblyName = Constants.NAME_OF_CORE_ASSEMBLY_USING_BLAZOR;
-                    }
+                case "System":
+                case "System.Windows":
+                case "System.Windows.Browser":
+                case "System.Windows.Controls":
+                case "System.Windows.Controls.Toolkit":
+                case "System.Windows.Controls.Input.Toolkit":
+                case "System.Windows.Data":
+                    assemblyName = Constants.NAME_OF_CORE_ASSEMBLY_USING_BLAZOR;
                     return;
+            }
+        }
+
+        public static (string NamespaceName, string AssemblyName) GetClrNamespaceAndAssembly(string ns, bool enableImplicitAssemblyRedirect)
+        {
+            if (ns.StartsWith(Using, StringComparison.OrdinalIgnoreCase))
+            {
+                return (ns.Substring(Using.Length), null);
+            }
+            else if (ns.StartsWith(ClrNamespace, StringComparison.OrdinalIgnoreCase))
+            {
+                ParseClrNamespaceDeclaration(ns, out string clrNamespace, out string assemblyName);
+                if (enableImplicitAssemblyRedirect)
+                {
+                    FixNamespaceForCompatibility(ref assemblyName, ref clrNamespace);
+                }
+                return (clrNamespace, assemblyName);
+            }
+            else if (string.IsNullOrEmpty(ns))
+            {
+                return ("http://schemas.microsoft.com/winfx/2006/xaml/presentation", null);
+            }
+            else
+            {
+                return (ns, null);
             }
         }
 
@@ -79,42 +153,21 @@ namespace OpenSilver.Compiler
             out string localName,
             out string assemblyNameIfAny)
         {
-            namespaceName = xName.Namespace.NamespaceName;
             localName = xName.LocalName;
-            assemblyNameIfAny = null;
-            if (namespaceName.ToLower().StartsWith("using:"))
-            {
-                string ns = namespaceName.Substring("using:".Length);
-                namespaceName = ns;
-            }
-            else if (namespaceName.ToLower().StartsWith("clr-namespace:"))
-            {
-                ParseClrNamespaceDeclaration(namespaceName, out string ns, out assemblyNameIfAny);
-                namespaceName = ns;
-                if (enableImplicitAssemblyRedirect)
-                {
-                    FixNamespaceForCompatibility(ref assemblyNameIfAny, ref namespaceName);
-                }
-            }
-            else
-            {
-                // If namespace is empty, use the default XAML namespace:
-                if (string.IsNullOrEmpty(namespaceName))
-                    namespaceName = "http://schemas.microsoft.com/winfx/2006/xaml/presentation"; //todo: instead of hard-coding this, use the default namespace that applies to the current XML node.
-            }
+            (namespaceName, assemblyNameIfAny) = GetClrNamespaceAndAssembly(xName.NamespaceName, enableImplicitAssemblyRedirect);
         }
 
         public static void ParseClrNamespaceDeclaration(string input, out string ns, out string assemblyNameIfAny)
         {
             assemblyNameIfAny = null;
-            var str = input.Substring("clr-namespace:".Length);
+            var str = input.Substring(ClrNamespace.Length);
             int indexOfSemiColons = str.IndexOf(';');
             if (indexOfSemiColons > -1)
             {
                 ns = str.Substring(0, indexOfSemiColons);
                 var str2 = str.Substring(indexOfSemiColons);
-                if (str2.StartsWith(";assembly="))
-                    assemblyNameIfAny = str2.Substring(";assembly=".Length);
+                if (str2.StartsWith(Assembly))
+                    assemblyNameIfAny = str2.Substring(Assembly.Length);
             }
             else
             {

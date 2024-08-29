@@ -14,7 +14,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -36,6 +35,8 @@ namespace System.Windows.Controls
     {
         private UIElementCollection _uiElementCollection;
         private ItemContainerGenerator _itemContainerGenerator;
+        private WeakEventListener<Panel, Brush, EventArgs> _backgroundChangedListener;
+        private bool _refreshBackgroundOnSizeChange;
 
         /// <summary> 
         /// Returns enumerator to logical children.
@@ -156,14 +157,6 @@ namespace System.Windows.Controls
             set => _progressiveRenderingChunkSize = value;
         }
 
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        [Obsolete(Helper.ObsoleteMemberMessage + " Use ProgressiveRenderingChunkSize instead.")]
-        public bool EnableProgressiveRendering
-        {
-            get => ProgressiveRenderingChunkSize > 0;
-            set => ProgressiveRenderingChunkSize = 1;
-        }
-
         internal static int GlobalProgressiveRenderingChunkSize;
 
         private void OnChildrenCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -194,30 +187,32 @@ namespace System.Windows.Controls
 
         internal void OnChildrenReset()
         {
-            if (this.INTERNAL_VisualChildrenInformation != null)
+            if (VisualChildrenInformation != null)
             {
-                foreach (var oldChild in this.INTERNAL_VisualChildrenInformation.Keys.ToArray())
+                foreach (var oldChild in VisualChildrenInformation.ToArray())
                 {
                     INTERNAL_VisualTreeManager.DetachVisualChildIfNotNull(oldChild, this);
                 }
             }
 
-            if (!this.HasChildren)
+            if (!HasChildren)
             {
                 return;
             }
 
+            List<UIElement> children = InternalChildren;
+
             int chunkSize = ProgressiveRenderingChunkSize;
-            var enableProgressiveRendering = chunkSize > 0 && Children.Count > chunkSize;
+            var enableProgressiveRendering = chunkSize > 0 && children.Count > chunkSize;
             if (enableProgressiveRendering)
             {
-                this.ProgressivelyAttachChildren(this.Children);
+                ProgressivelyAttachChildren(children);
             }
             else
             {
-                for (int i = 0; i < this.Children.Count; ++i)
+                for (int i = 0; i < children.Count; ++i)
                 {
-                    INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(this.Children[i], this, i);
+                    INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(children[i], this, i);
                 }
             }
         }
@@ -247,15 +242,6 @@ namespace System.Windows.Controls
         #endregion Children Management
 
         /// <summary>
-        /// Gets or sets a Brush that is used to fill the panel.
-        /// </summary>
-        public Brush Background
-        {
-            get { return (Brush)GetValue(BackgroundProperty); }
-            set { SetValue(BackgroundProperty, value); }
-        }
-
-        /// <summary>
         /// Identifies the <see cref="Background"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty BackgroundProperty =
@@ -265,38 +251,62 @@ namespace System.Windows.Controls
                 typeof(Panel),
                 new PropertyMetadata(null, OnBackgroundChanged)
                 {
-                    MethodToUpdateDom2 = (d, oldValue, newValue) =>
-                    {
-                        var panel = (Panel)d;
-                        _ = RenderBackgroundAsync(panel, (Brush)newValue);
-                        SetPointerEvents(panel);
-                    },
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => _ = ((Panel)d).SetBackgroundAsync((Brush)newValue),
                 });
+
+        /// <summary>
+        /// Gets or sets a <see cref="Brush"/> that is used to fill the panel.
+        /// </summary>
+        /// <returns>
+        /// The brush used to fill the panel. The default is null.
+        /// </returns>
+        public Brush Background
+        {
+            get => (Brush)GetValue(BackgroundProperty);
+            set => SetValueInternal(BackgroundProperty, value);
+        }
 
         private static void OnBackgroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             Panel panel = (Panel)d;
-            panel.SizeChanged -= OnSizeChanged;
-            if (e.NewValue is LinearGradientBrush)
+
+            panel._refreshBackgroundOnSizeChange = e.NewValue is LinearGradientBrush;
+
+            if (panel._backgroundChangedListener != null)
             {
-                panel.SizeChanged += OnSizeChanged;
+                panel._backgroundChangedListener.Detach();
+                panel._backgroundChangedListener = null;
+            }
+
+            if (e.NewValue is Brush newBrush)
+            {
+                panel._backgroundChangedListener = new(panel, newBrush)
+                {
+                    OnEventAction = static (instance, sender, args) => instance.OnBackgroundChanged(sender, args),
+                    OnDetachAction = static (listener, source) => source.Changed -= listener.OnEvent,
+                };
+                newBrush.Changed += panel._backgroundChangedListener.OnEvent;
+            }
+
+            // Update pointer events
+            panel.CoerceIsHitTestable();
+        }
+
+        private void OnBackgroundChanged(object sender, EventArgs e)
+        {
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
+            {
+                _ = this.SetBackgroundAsync((Brush)sender);
             }
         }
 
-        private static void OnSizeChanged(object sender, SizeChangedEventArgs e)
+        internal sealed override void OnRenderSizeChanged(SizeChangedInfo info)
         {
-            Panel p = (Panel)sender;
-            _ = RenderBackgroundAsync(p, p.Background);
-        }
+            base.OnRenderSizeChanged(info);
 
-        internal static async Task RenderBackgroundAsync(UIElement uie, Brush brush)
-        {
-            Debug.Assert(uie != null);
-
-            if (uie.INTERNAL_OuterDomElement is not null)
+            if (_refreshBackgroundOnSizeChange && INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
             {
-                string background = brush is not null ? await brush.GetDataStringAsync(uie) : string.Empty;
-                INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(uie).background = background;
+                _ = this.SetBackgroundAsync(Background);
             }
         }
 
@@ -323,6 +333,17 @@ namespace System.Windows.Controls
                 return _uiElementCollection;
             }
         }
+
+        /// <summary>
+        /// Get the underlying <see cref="List{T}"/> used to back the <see cref="Children"/> 
+        /// collection.
+        /// </summary>
+        /// <remarks>
+        /// <b>IMPORTANT</b>: This property is dangerous and must be used very carefully. Read
+        /// operations (get accessor, GetEnumerator, Count...) are generally safe to use, but
+        /// write operations (Add, Remove, Clear...) will likely lead to unexpected behaviors.
+        /// </remarks>
+        internal List<UIElement> InternalChildren => Children.InternalItems;
 
         private bool VerifyBoundState()
         {
@@ -669,14 +690,6 @@ namespace System.Windows.Controls
             GenerateChildren();
         }
 
-        internal UIElementCollection InternalChildren
-        {
-            get
-            {
-                return _uiElementCollection;
-            }
-        }
-
         protected internal override void INTERNAL_OnAttachedToVisualTree()
         {
             base.INTERNAL_OnAttachedToVisualTree();
@@ -690,7 +703,7 @@ namespace System.Windows.Controls
             this.OnChildrenReset();
         }
 
-        private async void ProgressivelyAttachChildren(IList<UIElement> newChildren)
+        private async void ProgressivelyAttachChildren(List<UIElement> newChildren)
         {
             int chunkSize = ProgressiveRenderingChunkSize;
             int from = 0;
@@ -764,7 +777,7 @@ namespace System.Windows.Controls
         public bool IsItemsHost
         {
             get { return (bool)GetValue(IsItemsHostProperty); }
-            internal set { SetValue(IsItemsHostPropertyKey, value); }
+            internal set { SetValueInternal(IsItemsHostPropertyKey, value); }
         }
 
         private static void OnIsItemsHostChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

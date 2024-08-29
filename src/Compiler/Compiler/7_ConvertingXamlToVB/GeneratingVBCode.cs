@@ -18,7 +18,6 @@ using System.Linq;
 using System.Text;
 using System.Xml.Linq;
 using OpenSilver.Internal;
-using ILogger = OpenSilver.Compiler.Common.ILogger;
 
 namespace OpenSilver.Compiler
 {
@@ -88,8 +87,7 @@ namespace OpenSilver.Compiler
             AssembliesInspector reflectionOnSeparateAppDomain,
             bool isFirstPass,
             ConversionSettings settings,
-            string codeToPutInTheInitializeComponentOfTheApplicationClass,
-            ILogger logger)
+            string codeToPutInTheInitializeComponentOfTheApplicationClass)
         {
             ICodeGenerator generator;
             if (isFirstPass)
@@ -110,8 +108,7 @@ namespace OpenSilver.Compiler
                     rootNamespace,
                     reflectionOnSeparateAppDomain,
                     settings,
-                    codeToPutInTheInitializeComponentOfTheApplicationClass,
-                    logger);
+                    codeToPutInTheInitializeComponentOfTheApplicationClass);
             }
 
             return generator.Generate();
@@ -157,18 +154,8 @@ namespace OpenSilver.Compiler
             List<string> fieldsForNamedElements,
             string className,
             string namespaceStringIfAny,
-            string baseType,
-            bool addApplicationEntryPoint)
+            string baseType)
         {
-            string applicationEntryPointIfAny = string.Empty;
-            if (addApplicationEntryPoint)
-            {
-                applicationEntryPointIfAny = $@"
-Public Shared Fuction Main()
-    New {className}();
-End Function";
-            }
-
             string fieldsForNamedElementsMergedCode = string.Join(Environment.NewLine, fieldsForNamedElements);
 
             string classCodeFilled = $@"
@@ -185,8 +172,6 @@ Partial Public Class {className}
 {initializeComponentMethod}
 
 {connectMethod}
-
-{applicationEntryPointIfAny}
 
 End Class
 ";
@@ -364,5 +349,6 @@ End Namespace
         private const string IComponentConnectorClass = "Global.OpenSilver.Internal.Xaml.IComponentConnector";
         private const string XamlContextClass = "Global.OpenSilver.Internal.Xaml.Context.XamlContext";
         private const string IMarkupExtensionClass = "Global.System.Xaml.IMarkupExtension(Of Object)";
+        private const string XamlDesignerBridgeClass = "Global.OpenSilver.Internal.Xaml.XamlDesignerBridge";
     }
 }

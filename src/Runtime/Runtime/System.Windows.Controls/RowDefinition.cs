@@ -24,7 +24,8 @@ namespace System.Windows.Controls
         private double _effectiveMinSize;
         private double _sizeCache;
         private double _finalOffset;
-        internal Grid Parent;
+        private double _actualHeight;
+        private Grid _parent;
 
         public RowDefinition()
         {
@@ -54,7 +55,7 @@ namespace System.Windows.Controls
         public double MaxHeight
         {
             get => (double)GetValue(MaxHeightProperty);
-            set => SetValue(MaxHeightProperty, value);
+            set => SetValueInternal(MaxHeightProperty, value);
         }
 
         /// <summary>
@@ -70,7 +71,7 @@ namespace System.Windows.Controls
 
         private static void OnMaxHeightChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            ((RowDefinition)d).Parent?.InvalidateMeasure();
+            ((RowDefinition)d)._parent?.InvalidateMeasure();
         }
 
         /// <summary>
@@ -82,7 +83,7 @@ namespace System.Windows.Controls
         public double MinHeight
         {
             get => (double)GetValue(MinHeightProperty);
-            set => SetValue(MinHeightProperty, value);
+            set => SetValueInternal(MinHeightProperty, value);
         }
 
         /// <summary>
@@ -98,7 +99,7 @@ namespace System.Windows.Controls
 
         private static void OnMinHeightChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            ((RowDefinition)d).Parent?.InvalidateMeasure();
+            ((RowDefinition)d)._parent?.InvalidateMeasure();
         }
 
         /// <summary>
@@ -111,7 +112,7 @@ namespace System.Windows.Controls
         public GridLength Height
         {
             get => (GridLength)GetValue(HeightProperty);
-            set => SetValue(HeightProperty, value);
+            set => SetValueInternal(HeightProperty, value);
         }
 
         /// <summary>
@@ -126,15 +127,23 @@ namespace System.Windows.Controls
 
         private static void OnHeightChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            ((RowDefinition)d).Parent?.InvalidateMeasure();
+            ((RowDefinition)d)._parent?.InvalidateMeasure();
         }
+
+        private static readonly PropertyMetadata _actualHeightMetadata = new ReadOnlyPropertyMetadata(0.0, GetActualHeight);
 
         private static readonly DependencyPropertyKey ActualHeightPropertyKey =
             DependencyProperty.RegisterReadOnly(
                 nameof(ActualHeight),
                 typeof(double),
                 typeof(ColumnDefinition),
-                new PropertyMetadata(0.0));
+                _actualHeightMetadata);
+
+        private static object GetActualHeight(DependencyObject d)
+        {
+            RowDefinition row = (RowDefinition)d;
+            return row._actualHeight;
+        }
 
         [EditorBrowsable(EditorBrowsableState.Never)]
         public static readonly DependencyProperty ActualHeightProperty = ActualHeightPropertyKey.DependencyProperty;
@@ -147,9 +156,24 @@ namespace System.Windows.Controls
         /// </returns>
         public double ActualHeight
         {
-            get => (double)GetValue(ActualHeightProperty);
-            private set => SetValue(ActualHeightPropertyKey, value);
+            get => _actualHeight;
+            set
+            {
+                double previousHeight = _actualHeight;
+                if (previousHeight != value)
+                {
+                    _actualHeight = value;
+                    NotifyPropertyChange(
+                        new DependencyPropertyChangedEventArgs(
+                            previousHeight,
+                            value,
+                            ActualHeightProperty,
+                            _actualHeightMetadata));
+                }
+            }
         }
+
+        internal void SetParent(Grid parent) => _parent = parent;
 
         double IDefinitionBase.MinLength => MinHeight;
 

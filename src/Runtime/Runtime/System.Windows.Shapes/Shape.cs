@@ -11,12 +11,13 @@
 *  
 \*====================================================================================*/
 
-using OpenSilver.Internal;
 using System.Linq;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Windows.Media;
 using CSHTML5.Internal;
+using OpenSilver.Internal;
+using OpenSilver.Internal.Media;
 
 namespace System.Windows.Shapes
 {
@@ -26,6 +27,11 @@ namespace System.Windows.Shapes
     /// </summary>
     public abstract class Shape : FrameworkElement
     {
+        static Shape()
+        {
+            IsHitTestableProperty.OverrideMetadata(typeof(Shape), new PropertyMetadata(BooleanBoxes.TrueBox));
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Shape"/> class.
         /// </summary>
@@ -49,24 +55,9 @@ namespace System.Windows.Shapes
                 nameof(Fill),
                 typeof(Brush),
                 typeof(Shape),
-                new PropertyMetadata((object)null)
+                new PropertyMetadata(null, OnFillChanged)
                 {
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
-                    {
-                        Shape shape = (Shape)d;
-                        if (shape._fillBrush is not null)
-                        {
-                            shape._fillBrush.DestroyBrush(shape);
-                            shape._fillBrush = null;
-                            shape.RemoveSvgAttribute("fill");
-                        }
-
-                        if (newValue is Brush brush && brush.GetSvgElement() is ISvgBrush svgBrush)
-                        {
-                            shape._fillBrush = svgBrush;
-                            shape.SetSvgAttribute("fill", svgBrush.GetBrush(shape));
-                        }
-                    },
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => SetFill((Shape)d, (Brush)newValue),
                 });
 
         /// <summary>
@@ -80,7 +71,56 @@ namespace System.Windows.Shapes
         public Brush Fill
         {
             get => (Brush)GetValue(FillProperty);
-            set => SetValue(FillProperty, value);
+            set => SetValueInternal(FillProperty, value);
+        }
+
+        private static void OnFillChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var shape = (Shape)d;
+
+            if (shape._fillChangedListener != null)
+            {
+                shape._fillChangedListener.Detach();
+                shape._fillChangedListener = null;
+            }
+
+            if (e.NewValue is Brush newBrush)
+            {
+                shape._fillChangedListener = new(shape, newBrush)
+                {
+                    OnEventAction = static (instance, sender, args) => instance.OnFillChanged(sender, args),
+                    OnDetachAction = static (listener, source) => source.Changed -= listener.OnEvent,
+                };
+                newBrush.Changed += shape._fillChangedListener.OnEvent;
+            }
+        }
+
+        private void OnFillChanged(object sender, EventArgs e)
+        {
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
+            {
+                if (_fillBrush is ISvgBrush svgBrush)
+                {
+                    svgBrush.RenderBrush();
+                    SetSvgAttribute("fill", svgBrush.GetBrush(this));
+                }
+            }
+        }
+
+        private static void SetFill(Shape shape, Brush fill)
+        {
+            if (shape._fillBrush is not null)
+            {
+                shape._fillBrush.DestroyBrush(shape);
+                shape._fillBrush = null;
+                shape.RemoveSvgAttribute("fill");
+            }
+
+            if (fill is Brush brush && brush.GetSvgElement(shape) is ISvgBrush svgBrush)
+            {
+                shape._fillBrush = svgBrush;
+                shape.SetSvgAttribute("fill", svgBrush.GetBrush(shape));
+            }
         }
 
         /// <summary>
@@ -106,7 +146,7 @@ namespace System.Windows.Shapes
         public Stretch Stretch
         {
             get => (Stretch)GetValue(StretchProperty);
-            set => SetValue(StretchProperty, value);
+            set => SetValueInternal(StretchProperty, value);
         }
 
         /// <summary>
@@ -117,24 +157,9 @@ namespace System.Windows.Shapes
                 nameof(Stroke),
                 typeof(Brush),
                 typeof(Shape),
-                new PropertyMetadata((object)null)
+                new PropertyMetadata(null, OnStrokeChanged)
                 {
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
-                    {
-                        Shape shape = (Shape)d;
-                        if (shape._strokeBrush is not null)
-                        {
-                            shape._strokeBrush.DestroyBrush(shape);
-                            shape._strokeBrush = null;
-                            shape.RemoveSvgAttribute("stroke");
-                        }
-
-                        if (newValue is Brush brush && brush.GetSvgElement() is ISvgBrush svgBrush)
-                        {
-                            shape._strokeBrush = svgBrush;
-                            shape.SetSvgAttribute("stroke", svgBrush.GetBrush(shape));
-                        }
-                    },
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => SetStroke((Shape)d, (Brush)newValue),
                 });
 
         /// <summary>
@@ -148,7 +173,56 @@ namespace System.Windows.Shapes
         public Brush Stroke
         {
             get => (Brush)GetValue(StrokeProperty);
-            set => SetValue(StrokeProperty, value);
+            set => SetValueInternal(StrokeProperty, value);
+        }
+
+        private static void OnStrokeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var shape = (Shape)d;
+
+            if (shape._strokeChangedListener != null)
+            {
+                shape._strokeChangedListener.Detach();
+                shape._strokeChangedListener = null;
+            }
+
+            if (e.NewValue is Brush newBrush)
+            {
+                shape._strokeChangedListener = new(shape, newBrush)
+                {
+                    OnEventAction = static (instance, sender, args) => instance.OnStrokeChanged(sender, args),
+                    OnDetachAction = static (listener, source) => source.Changed -= listener.OnEvent,
+                };
+                newBrush.Changed += shape._strokeChangedListener.OnEvent;
+            }
+        }
+
+        private void OnStrokeChanged(object sender, EventArgs e)
+        {
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
+            {
+                if (_strokeBrush is ISvgBrush svgBrush)
+                {
+                    svgBrush.RenderBrush();
+                    SetSvgAttribute("stroke", svgBrush.GetBrush(this));
+                }
+            }
+        }
+
+        private static void SetStroke(Shape shape, Brush stroke)
+        {
+            if (shape._strokeBrush is not null)
+            {
+                shape._strokeBrush.DestroyBrush(shape);
+                shape._strokeBrush = null;
+                shape.RemoveSvgAttribute("stroke");
+            }
+
+            if (stroke is Brush brush && brush.GetSvgElement(shape) is ISvgBrush svgBrush)
+            {
+                shape._strokeBrush = svgBrush;
+                shape.SetSvgAttribute("stroke", svgBrush.GetBrush(shape));
+            }
         }
 
         /// <summary>
@@ -173,7 +247,7 @@ namespace System.Windows.Shapes
                         {
                             shape.SetSvgAttribute(
                                 "stroke-dasharray",
-                                string.Join(",", dashArray.Select(d => d.ToInvariantString())));
+                                string.Join(",", dashArray.InternalItems.Select(d => Math.Round(d, 2).ToInvariantString())));
                         }
                         else
                         {
@@ -192,7 +266,7 @@ namespace System.Windows.Shapes
         public DoubleCollection StrokeDashArray
         {
             get => (DoubleCollection)GetValue(StrokeDashArrayProperty);
-            set => SetValue(StrokeDashArrayProperty, value);
+            set => SetValueInternal(StrokeDashArrayProperty, value);
         }
 
         private static object CoerceStrokeDashArray(DependencyObject d, object baseValue)
@@ -236,7 +310,7 @@ namespace System.Windows.Shapes
         public PenLineCap StrokeDashCap
         {
             get => (PenLineCap)GetValue(StrokeDashCapProperty);
-            set => SetValue(StrokeDashCapProperty, value);
+            set => SetValueInternal(StrokeDashCapProperty, value);
         }
 
         /// <summary>
@@ -253,7 +327,7 @@ namespace System.Windows.Shapes
                     {
                         Shape shape = (Shape)d;
                         double offset = (double)newValue;
-                        shape.SetSvgAttribute("stroke-dashoffset", offset.ToInvariantString());
+                        shape.SetSvgAttribute("stroke-dashoffset", Math.Round(offset, 2).ToInvariantString());
                     },
                 });
 
@@ -268,7 +342,7 @@ namespace System.Windows.Shapes
         public double StrokeDashOffset
         {
             get => (double)GetValue(StrokeDashOffsetProperty);
-            set => SetValue(StrokeDashOffsetProperty, value);
+            set => SetValueInternal(StrokeDashOffsetProperty, value);
         }
 
         /// <summary>
@@ -294,7 +368,7 @@ namespace System.Windows.Shapes
         public PenLineCap StrokeEndLineCap
         {
             get => (PenLineCap)GetValue(StrokeEndLineCapProperty);
-            set => SetValue(StrokeEndLineCapProperty, value);
+            set => SetValueInternal(StrokeEndLineCapProperty, value);
         }
 
         /// <summary>
@@ -333,7 +407,7 @@ namespace System.Windows.Shapes
         public PenLineJoin StrokeLineJoin
         {
             get => (PenLineJoin)GetValue(StrokeLineJoinProperty);
-            set => SetValue(StrokeLineJoinProperty, value);
+            set => SetValueInternal(StrokeLineJoinProperty, value);
         }
 
         /// <summary>
@@ -350,7 +424,7 @@ namespace System.Windows.Shapes
                     {
                         Shape shape = (Shape)d;
                         double limit = (double)newValue;
-                        shape.SetSvgAttribute("stroke-miterlimit", limit.ToInvariantString());
+                        shape.SetSvgAttribute("stroke-miterlimit", Math.Round(limit, 2).ToInvariantString());
                     },
                 });
 
@@ -366,7 +440,7 @@ namespace System.Windows.Shapes
         public double StrokeMiterLimit
         {
             get => (double)GetValue(StrokeMiterLimitProperty);
-            set => SetValue(StrokeMiterLimitProperty, value);
+            set => SetValueInternal(StrokeMiterLimitProperty, value);
         }
 
         /// <summary>
@@ -392,7 +466,7 @@ namespace System.Windows.Shapes
         public PenLineCap StrokeStartLineCap
         {
             get => (PenLineCap)GetValue(StrokeStartLineCapProperty);
-            set => SetValue(StrokeStartLineCapProperty, value);
+            set => SetValueInternal(StrokeStartLineCapProperty, value);
         }
 
         /// <summary>
@@ -409,7 +483,7 @@ namespace System.Windows.Shapes
                     {
                         Shape shape = (Shape)d;
                         double thickness = GetComputedStrokeThickess((double)newValue);
-                        shape.SetSvgAttribute("stroke-width", thickness.ToInvariantString());
+                        shape.SetSvgAttribute("stroke-width", Math.Round(thickness, 2).ToInvariantString());
                     },
                 });
 
@@ -423,7 +497,7 @@ namespace System.Windows.Shapes
         public double StrokeThickness
         {
             get => (double)GetValue(StrokeThicknessProperty);
-            set => SetValue(StrokeThicknessProperty, value);
+            set => SetValueInternal(StrokeThicknessProperty, value);
         }
 
         internal double GetStrokeThickness()
@@ -654,10 +728,11 @@ namespace System.Windows.Shapes
 
         public sealed override object CreateDomElement(object parentRef, out object domElementWhereToPlaceChildren)
         {
-            (domElementWhereToPlaceChildren, SvgElement, DefsElement) = INTERNAL_HtmlDomManager.CreateShapeElementAndAppendIt(
+            domElementWhereToPlaceChildren = null;
+            (var outerDiv, SvgElement, DefsElement) = INTERNAL_HtmlDomManager.CreateShapeElementAndAppendIt(
                 (INTERNAL_HtmlDomElementReference)parentRef, this);
 
-            return domElementWhereToPlaceChildren;
+            return outerDiv;
         }
 
         protected internal sealed override void INTERNAL_OnDetachedFromVisualTree()
@@ -697,7 +772,7 @@ namespace System.Windows.Shapes
         {
             if (SvgElement is not null)
             {
-                string sDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(SvgElement);
+                string sDiv = OpenSilver.Interop.GetVariableStringForJS(SvgElement);
 
                 SVGRect bbox = JsonSerializer.Deserialize<SVGRect>(
                     OpenSilver.Interop.ExecuteJavaScriptString($"document.getBBox({sDiv});"));
@@ -707,9 +782,8 @@ namespace System.Windows.Shapes
             return new Rect();
         }
 
-        internal sealed override void SetPointerEventsImpl() =>
-            INTERNAL_HtmlDomManager.GetDomElementStyleForModification(SvgElement)
-                .pointerEvents = EnablePointerEvents ? "auto" : "none";
+        internal sealed override void SetPointerEvents(bool hitTestable) =>
+            SvgElement.Style.pointerEvents = hitTestable ? "auto" : "none";
 
         internal virtual string SvgTagName => "path";
 
@@ -723,6 +797,8 @@ namespace System.Windows.Shapes
 
         private ISvgBrush _fillBrush;
         private ISvgBrush _strokeBrush;
+        private WeakEventListener<Shape, Brush, EventArgs> _fillChangedListener;
+        private WeakEventListener<Shape, Brush, EventArgs> _strokeChangedListener;
 
         private struct SVGRect
         {

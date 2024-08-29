@@ -1,5 +1,4 @@
 ﻿
-
 /*===================================================================================
 * 
 *   Copyright (c) Userware/OpenSilver.net
@@ -12,15 +11,9 @@
 *  
 \*====================================================================================*/
 
-
-using CSHTML5.Internal;
 using OpenSilver.Internal;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DotNetForHtml5.Core
 {
@@ -28,27 +21,11 @@ namespace DotNetForHtml5.Core
     {
         // Note: all the properties here are populated by the Simulator, which "injects" stuff here when the application is launched in the Simulator.
 
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public static dynamic HtmlDocument { internal get; set; }
-
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public static dynamic DOMDocument { internal get; set; }
-
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public static dynamic WpfMediaElementFactory { internal get; set; }
-
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public static Func<object, object> ConvertBrowserResult { get; set; }
-
         // BeginInvoke of the WebControl's Dispatcher
         public static Action<Action> WebControlDispatcherBeginInvoke
         {
-            set;
             internal get;
+            set;
         }
         // internal static dynamic WebControlDispatcherBeginInvoke => webControl;
 
@@ -69,84 +46,27 @@ namespace DotNetForHtml5.Core
             get => WebAssemblyExecutionHandler;
             set
             {
-                IWebAssemblyExecutionHandler jsRuntime = null;
                 if (value is not null)
                 {
-                    if (value is IWebAssemblyExecutionHandler wasmHandler)
-                    {
-                        jsRuntime = wasmHandler;
-                        INTERNAL_ExecuteJavaScript.JavaScriptRuntime =
-                            new PendingJavascript(Cshtml5Initializer.PendingJsBufferSize, wasmHandler);
-                    }
-                    else
-                    {
-                        jsRuntime = new JSRuntimeWrapper(value);
-                        INTERNAL_ExecuteJavaScript.JavaScriptRuntime = new PendingJavascriptSimulator(value);
-                    }
+                    OpenSilver.Interop.SetRuntime(value);
                 }
                 
-                WebAssemblyExecutionHandler = jsRuntime;
-            }
-        }
-
-        internal static IWebAssemblyExecutionHandler WebAssemblyExecutionHandler
-        {
-            get;
-            set;
-        }
-
-        private static dynamic dynamicJavaScriptExecutionHandler;
-
-        public static dynamic DynamicJavaScriptExecutionHandler
-        {
-            internal get => dynamicJavaScriptExecutionHandler;
-            set // Intended to be called by the "Emulator" project to inject the JavaScriptExecutionHandler.
-            {
-                dynamicJavaScriptExecutionHandler = value;
-                if (dynamicJavaScriptExecutionHandler is not null)
+                WebAssemblyExecutionHandler = value switch
                 {
-                    WebAssemblyExecutionHandler = new SimulatorDynamicJSRuntime(value);
-                    INTERNAL_ExecuteJavaScript.JavaScriptRuntime = new PendingJavascriptSimulator(WebAssemblyExecutionHandler);
-                }
-                else
-                {
-                    WebAssemblyExecutionHandler = null;
-                }
+                    IWebAssemblyExecutionHandler wasmHandler => wasmHandler,
+                    IJavaScriptExecutionHandler jsHandler => new JSRuntimeWrapper(jsHandler),
+                    null => null,
+                };
             }
         }
 
-        static private dynamic webClientFactory;
-        public static dynamic WebClientFactory
-        {
-            get { return webClientFactory; }
-            set { webClientFactory = value; }
-        }
+        internal static IWebAssemblyExecutionHandler WebAssemblyExecutionHandler { get; private set; }
 
-        static dynamic clipboardHandler;
-        public static dynamic ClipboardHandler
-        {
-            set // Intended to be called by the "Emulator" project to inject the ClipboardHandler.
-            {
-                clipboardHandler = value;
-            }
-            internal get
-            {
-                return clipboardHandler;
-            }
-        }
+        public static dynamic WebClientFactory { get; set; }
 
-        static dynamic simulatorProxy;
-        public static dynamic SimulatorProxy
-        {
-            set // Intended to be called by the "Emulator" project to inject the SimulatorProxy.
-            {
-                simulatorProxy = value;
-            }
-            internal get
-            {
-                return simulatorProxy;
-            }
-        }
+        internal static IAsyncClipboard AsyncClipboard { get; set; }
+
+        public static dynamic SimulatorProxy { internal get; set; }
 
         public static bool IsRunningInTheSimulator_WorkAround
         {
@@ -154,28 +74,25 @@ namespace DotNetForHtml5.Core
             set;
         }
 
-        public static Action<object> SimulatorCallbackSetup
-        {
-            get;
-            set;
-        }
-
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static Action<Action> OpenSilverDispatcherBeginInvoke
         {
             set;
             internal get;
         }
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static Action<Action, TimeSpan> OpenSilverDispatcherInvoke
         {
             set;
             internal get;
         }
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static Func<bool> OpenSilverDispatcherCheckAccess
         {
             get;
-            internal set;
+            set;
         }
 
     }

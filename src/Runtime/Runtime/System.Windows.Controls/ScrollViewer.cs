@@ -97,7 +97,7 @@ namespace System.Windows.Controls
         public double HorizontalOffset
         {
             get => _xPositionISI;
-            private set => SetValue(HorizontalOffsetPropertyKey, value);
+            private set => SetValueInternal(HorizontalOffsetPropertyKey, value);
         }
 
         private static readonly DependencyPropertyKey HorizontalOffsetPropertyKey =
@@ -124,7 +124,7 @@ namespace System.Windows.Controls
         public ScrollBarVisibility HorizontalScrollBarVisibility
         {
             get => (ScrollBarVisibility)GetValue(HorizontalScrollBarVisibilityProperty);
-            set => SetValue(HorizontalScrollBarVisibilityProperty, value);
+            set => SetValueInternal(HorizontalScrollBarVisibilityProperty, value);
         }
 
         /// <summary>
@@ -159,7 +159,7 @@ namespace System.Windows.Controls
         public double VerticalOffset
         {
             get => _yPositionISI;
-            private set => SetValue(VerticalOffsetPropertyKey, value);
+            private set => SetValueInternal(VerticalOffsetPropertyKey, value);
         }
 
         private static readonly DependencyPropertyKey VerticalOffsetPropertyKey =
@@ -186,7 +186,7 @@ namespace System.Windows.Controls
         public ScrollBarVisibility VerticalScrollBarVisibility
         {
             get => (ScrollBarVisibility)GetValue(VerticalScrollBarVisibilityProperty);
-            set => SetValue(VerticalScrollBarVisibilityProperty, value);
+            set => SetValueInternal(VerticalScrollBarVisibilityProperty, value);
         }
 
         /// <summary>
@@ -260,7 +260,7 @@ namespace System.Windows.Controls
                 throw new ArgumentNullException(nameof(element));
             }
 
-            element.SetValue(HorizontalScrollBarVisibilityProperty, horizontalScrollBarVisibility);
+            element.SetValueInternal(HorizontalScrollBarVisibilityProperty, horizontalScrollBarVisibility);
         }
 
         /// <summary>
@@ -306,7 +306,7 @@ namespace System.Windows.Controls
                 throw new ArgumentNullException(nameof(element));
             }
 
-            element.SetValue(VerticalScrollBarVisibilityProperty, verticalScrollBarVisibility);
+            element.SetValueInternal(VerticalScrollBarVisibilityProperty, verticalScrollBarVisibility);
         }
 
         public override void OnApplyTemplate()
@@ -689,28 +689,28 @@ namespace System.Windows.Controls
                 if (!DoubleUtil.AreClose(oldViewportWidth, isi.ViewportWidth))
                 {
                     _xSize = isi.ViewportWidth;
-                    SetValue(ViewportWidthPropertyKey, _xSize);
+                    SetValueInternal(ViewportWidthPropertyKey, _xSize);
                     changed = true;
                 }
 
                 if (!DoubleUtil.AreClose(oldViewportHeight, isi.ViewportHeight))
                 {
                     _ySize = isi.ViewportHeight;
-                    SetValue(ViewportHeightPropertyKey, _ySize);
+                    SetValueInternal(ViewportHeightPropertyKey, _ySize);
                     changed = true;
                 }
 
                 if (!DoubleUtil.AreClose(oldExtentWidth, isi.ExtentWidth))
                 {
                     _xExtent = isi.ExtentWidth;
-                    SetValue(ExtentWidthPropertyKey, _xExtent);
+                    SetValueInternal(ExtentWidthPropertyKey, _xExtent);
                     changed = true;
                 }
 
                 if (!DoubleUtil.AreClose(oldExtentHeight, isi.ExtentHeight))
                 {
                     _yExtent = isi.ExtentHeight;
-                    SetValue(ExtentHeightPropertyKey, _yExtent);
+                    SetValueInternal(ExtentHeightPropertyKey, _yExtent);
                     changed = true;
                 }
 
@@ -718,14 +718,14 @@ namespace System.Windows.Controls
                 double scrollableWidth = ScrollableWidth;
                 if (!DoubleUtil.AreClose(oldScrollableWidth, ScrollableWidth))
                 {
-                    SetValue(ScrollableWidthPropertyKey, scrollableWidth);
+                    SetValueInternal(ScrollableWidthPropertyKey, scrollableWidth);
                     changed = true;
                 }
 
                 double scrollableHeight = ScrollableHeight;
                 if (!DoubleUtil.AreClose(oldScrollableHeight, ScrollableHeight))
                 {
-                    SetValue(ScrollableHeightPropertyKey, scrollableHeight);
+                    SetValueInternal(ScrollableHeightPropertyKey, scrollableHeight);
                     changed = true;
                 }
 
@@ -760,6 +760,8 @@ namespace System.Windows.Controls
                 {
                     X = position.X,
                     Y = position.Y,
+                    HorizontalOffset = ScrollInfo.HorizontalOffset,
+                    VerticalOffset = ScrollInfo.VerticalOffset,
                 };
             }
         }
@@ -775,7 +777,7 @@ namespace System.Windows.Controls
         {
             base.OnMouseMove(e);
 
-            if (!e.IsTouchEvent || Pointer.INTERNAL_captured is not null || ScrollInfo is null || _touchInfo is null)
+            if (!e.IsTouchEvent || Pointer.Captured is not null || ScrollInfo is null || _touchInfo is null)
             {
                 return;
             }
@@ -785,13 +787,15 @@ namespace System.Windows.Controls
             if (ComputedHorizontalScrollBarVisibility == Visibility.Visible)
             {
                 double deltaX = _touchInfo.X - position.X;
-                ScrollToHorizontalOffset(ScrollInfo.HorizontalOffset + deltaX * TouchInfo.ScrollMultiplier);
+                _touchInfo.HorizontalOffset += deltaX;
+                ScrollToHorizontalOffset(_touchInfo.HorizontalOffset);
             }
 
             if (ComputedVerticalScrollBarVisibility == Visibility.Visible)
             {
                 double deltaY = _touchInfo.Y - position.Y;
-                ScrollToVerticalOffset(ScrollInfo.VerticalOffset + deltaY * TouchInfo.ScrollMultiplier);
+                _touchInfo.VerticalOffset += deltaY;
+                ScrollToVerticalOffset(_touchInfo.VerticalOffset);
             }
 
             _touchInfo.X = position.X;
@@ -907,12 +911,12 @@ namespace System.Windows.Controls
                 if (_scrollVisibilityY != vv)
                 {
                     _scrollVisibilityY = vv;
-                    SetValue(ComputedVerticalScrollBarVisibilityPropertyKey, _scrollVisibilityY);
+                    SetValueInternal(ComputedVerticalScrollBarVisibilityPropertyKey, _scrollVisibilityY);
                 }
                 if (_scrollVisibilityX != hv)
                 {
                     _scrollVisibilityX = hv;
-                    SetValue(ComputedHorizontalScrollBarVisibilityPropertyKey, _scrollVisibilityX);
+                    SetValueInternal(ComputedHorizontalScrollBarVisibilityPropertyKey, _scrollVisibilityX);
                 }
 
                 if (isi != null)
@@ -936,7 +940,7 @@ namespace System.Windows.Controls
                         if (_scrollVisibilityX != Visibility.Visible)
                         {
                             _scrollVisibilityX = Visibility.Visible;
-                            SetValue(ComputedHorizontalScrollBarVisibilityPropertyKey, _scrollVisibilityX);
+                            SetValueInternal(ComputedHorizontalScrollBarVisibilityPropertyKey, _scrollVisibilityX);
                         }
                     }
 
@@ -945,7 +949,7 @@ namespace System.Windows.Controls
                         if (_scrollVisibilityY != Visibility.Visible)
                         {
                             _scrollVisibilityY = Visibility.Visible;
-                            SetValue(ComputedVerticalScrollBarVisibilityPropertyKey, _scrollVisibilityY);
+                            SetValueInternal(ComputedVerticalScrollBarVisibilityPropertyKey, _scrollVisibilityY);
                         }
                     }
 
@@ -971,7 +975,7 @@ namespace System.Windows.Controls
                             if (_scrollVisibilityX != Visibility.Visible)
                             {
                                 _scrollVisibilityX = Visibility.Visible;
-                                SetValue(ComputedHorizontalScrollBarVisibilityPropertyKey, _scrollVisibilityX);
+                                SetValueInternal(ComputedHorizontalScrollBarVisibilityPropertyKey, _scrollVisibilityX);
                             }
                         }
                         else if (makeVerticalBarVisible2) //only one can be true
@@ -979,7 +983,7 @@ namespace System.Windows.Controls
                             if (_scrollVisibilityY != Visibility.Visible)
                             {
                                 _scrollVisibilityY = Visibility.Visible;
-                                SetValue(ComputedVerticalScrollBarVisibilityPropertyKey, _scrollVisibilityY);
+                                SetValueInternal(ComputedVerticalScrollBarVisibilityPropertyKey, _scrollVisibilityY);
                             }
                         }
 
@@ -1030,11 +1034,28 @@ namespace System.Windows.Controls
             return size;
         }
 
+        internal void LineUp() => ScrollInfo?.LineUp();
+
+        internal void LineDown() => ScrollInfo?.LineDown();
+
+        internal void LineLeft() => ScrollInfo?.LineLeft();
+
+        internal void LineRight() => ScrollInfo?.LineRight();
+
+        internal void PageUp() => ScrollInfo?.PageUp();
+
+        internal void PageDown() => ScrollInfo?.PageDown();
+
+        internal void PageLeft() => ScrollInfo?.PageLeft();
+
+        internal void PageRight() => ScrollInfo?.PageRight();
+
         private sealed class TouchInfo
         {
-            public const int ScrollMultiplier = 5; // scrolling is very slow if do not increase the delta
             public double X;
             public double Y;
+            public double HorizontalOffset;
+            public double VerticalOffset;
         }
     }
 }

@@ -12,14 +12,16 @@
 \*====================================================================================*/
 
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Shapes;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
+using OpenSilver.Internal.Media;
 using OpenSilver.Internal.Media.Animation;
+using Stop = (double Offset, System.Windows.Media.Color Color);
 
 namespace System.Windows.Media
 {
@@ -82,7 +84,7 @@ namespace System.Windows.Media
         public Point EndPoint
         {
             get => (Point)GetValue(EndPointProperty);
-            set => SetValue(EndPointProperty, value);
+            set => SetValueInternal(EndPointProperty, value);
         }
 
         /// <summary>
@@ -105,7 +107,7 @@ namespace System.Windows.Media
         public Point StartPoint
         {
             get => (Point)GetValue(StartPointProperty);
-            set => SetValue(StartPointProperty, value);
+            set => SetValueInternal(StartPointProperty, value);
         }
 
         bool ICloneOnAnimation<LinearGradientBrush>.IsClone => _isClone;
@@ -120,46 +122,49 @@ namespace System.Windows.Media
             return (new Point(Math.Cos(angle), Math.Sin(angle)));
         }
 
-        internal override Task<string> GetDataStringAsync(UIElement parent)
-            => Task.FromResult(INTERNAL_ToHtmlString(parent));
+        internal override ValueTask<string> GetDataStringAsync(UIElement parent) => new(ToHtmlString(parent));
 
-        internal override ISvgBrush GetSvgElement() => new SvgLinearGradient(this);
+        internal override ISvgBrush GetSvgElement(Shape shape) => new SvgLinearGradient(shape, this);
 
-        private void ToHtmlStringForAbsoluteMappingMode(DependencyObject parent, out string gradientStopsString, out double alpha)
+        private (string Stops, double Alpha) ToHtmlStringForAbsoluteMappingMode(DependencyObject parent)
         {
             //Note: for a more detailed explanation on the maths in this method, see the non absolute mapping mode version.
 
+            Point start = StartPoint;
+            Point end = EndPoint;
+
             double startDistance;
             double endDistance;
+            double alpha;
 
-            if (EndPoint.X == StartPoint.X)
+            if (end.X == start.X)
             {
                 // vertical line: distance = their Y
-                startDistance = StartPoint.Y;
-                endDistance = EndPoint.Y;
+                startDistance = start.Y;
+                endDistance = end.Y;
                 // setting alpha:
                 alpha = -Math.PI / 2;
             }
-            else if (EndPoint.Y == StartPoint.Y)
+            else if (end.Y == start.Y)
             {
                 // horizontal line: distance = their X
 
-                startDistance = StartPoint.X;
-                endDistance = EndPoint.X;
+                startDistance = start.X;
+                endDistance = end.X;
                 alpha = 0;
             }
             else
             {
                 // this is the slope of the line L defined by StartPoint and EndPoint
-                double slope = (EndPoint.Y - StartPoint.Y) / (EndPoint.X - StartPoint.X);
+                double slope = (end.Y - start.Y) / (end.X - start.X);
                 // this is the slope of any line perpendicular to L
                 double perpSlope = -1 / slope; 
 
                 // this is k so that Y = perpSlope X + k is the line perpendicular P1 to
                 // L intersecting on StartPoint
-                double kStart = StartPoint.Y + 1 / slope * StartPoint.X;
+                double kStart = start.Y + 1 / slope * start.X;
                 // same for EndPoint (P2)
-                double kEnd = EndPoint.Y + 1 / slope * EndPoint.X; 
+                double kEnd = end.Y + 1 / slope * end.X; 
 
                 if (slope > 0)
                 {
@@ -185,12 +190,7 @@ namespace System.Windows.Media
                 {
                     //now we want the intersections between P1 and P2 and Y = height - slope * X
 
-                    double height = 1; //what do we do when parent is not a FrameworkElement ?
-                    if (!(parent == null) && parent is FrameworkElement)
-                    {
-                        FrameworkElement parentAsFrameworkElement = (FrameworkElement)parent;
-                        height = parentAsFrameworkElement.ActualHeight;
-                    }
+                    double height = parent is FrameworkElement fe ? fe.RenderSize.Height : 1;
 
                     double XIStart = (height - kStart) / (1 - 1 / slope);
                     // this is basically Y of the projection of StartPoint on the parallel to L,
@@ -208,8 +208,8 @@ namespace System.Windows.Media
                 }
 
                 // setting alpha:
-                double XVariation = (EndPoint.X - StartPoint.X);
-                double YVariation = (EndPoint.Y - StartPoint.Y);
+                double XVariation = (end.X - start.X);
+                double YVariation = (end.Y - start.Y);
                 if (XVariation < 0)
                 {
                     // Note: these are to "fix" the value returned by the ArcTan (the result
@@ -219,21 +219,14 @@ namespace System.Windows.Media
                 }
                 alpha = Math.Atan2(XVariation, YVariation) - Math.PI / 2;
             }
-            double startToEndDistance = endDistance - startDistance;
-            gradientStopsString = GetOffsetsString(startDistance, endDistance, startToEndDistance, "px");
+            string stops = GetOffsetsString(startDistance, endDistance, "px");
+
+            return (stops, alpha);
         }
 
-        private void ToHtmlStringForRelativeMappingMode(DependencyObject parent, out string gradientStopsString, out double alpha)
+        private (string Stops, double Alpha) ToHtmlStringForRelativeMappingMode(DependencyObject parent)
         {
-            double height = 1; //Note: 1 is ok since it is the ratio that is important
-            double width = 1;
-            if (!(parent == null) && parent is FrameworkElement)
-            {
-                FrameworkElement parentAsFrameworkElement = (FrameworkElement)parent;
-                Size actualSize = parentAsFrameworkElement.RenderSize;
-                width = actualSize.Width;
-                height = actualSize.Height;
-            }
+            Size size = parent is FrameworkElement fe ? fe.RenderSize : new Size(1, 1);
 
             double startX = StartPoint.X;
             double startY = StartPoint.Y;
@@ -303,8 +296,8 @@ namespace System.Windows.Media
             //      Oabsolute = startPointPercentage + (endPointPercentage - startPointPercentage) * O;
             //                  offset due to start     percentage considering the total percentage of the start and end points.
 
-            double XVariation = (endX - startX) * width;
-            double YVariation = (endY - startY) * height;
+            double XVariation = (endX - startX) * size.Width;
+            double YVariation = (endY - startY) * size.Height;
             if (XVariation < 0)
             {
                 // Note: these are to "fix" the value returned by the ArcTan (the result
@@ -312,10 +305,6 @@ namespace System.Windows.Media
                 XVariation = -XVariation; 
                 YVariation = -YVariation;
             }
-
-            // Note: this is basically _angle in radians, and that takes into consideration
-            // the possibility of width and height being different.
-            alpha = Math.Atan2(XVariation, YVariation) - Math.PI / 2;
 
             // this will be the longest distance inside the shape for a segment with the alpha angle.
             double D; 
@@ -408,216 +397,198 @@ namespace System.Windows.Media
 
             //end of test.
 
-            double startToEndPercentage = endPointPercentage - startPointPercentage; //this is only to avoid making this calculation for each gradientStop.
+            string stops = GetOffsetsString(startPointPercentage, endPointPercentage, "%");
+            // Note: this is basically _angle in radians, and that takes into consideration
+            // the possibility of width and height being different.
+            double alpha = Math.Atan2(XVariation, YVariation) - Math.PI / 2;
 
-            gradientStopsString = GetOffsetsString(startPointPercentage, endPointPercentage, startToEndPercentage, "%");
+            return (stops, alpha);
         }
 
-        internal string INTERNAL_ToHtmlString(DependencyObject parent)
+        internal string ToHtmlString(DependencyObject parent)
         {
-            double alpha;
-            string gradientStopsString;
+            List<GradientStop> stops = GradientStops.InternalItems;
+            if (stops.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            if (stops.Count == 1)
+            {
+                return stops[0].Color.ToHtmlString(Opacity);
+            }
+
             // In that case, we want the whole thing to be of the color of the gradientStop
             // with the biggest offset:
             if (StartPoint == EndPoint) 
             {
-                string color = null;
-                double biggestOffset = 0;
-                foreach (GradientStop gradientStop in GradientStops)
+                int max = 0;
+                double maxOffset = stops[0].Offset;
+                for (int i = 1; i < stops.Count; i++)
                 {
-                    if (gradientStop.Offset > biggestOffset)
+                    GradientStop stop = stops[i];
+                    double offset = stop.Offset;
+                    if (offset > maxOffset)
                     {
-                        biggestOffset = gradientStop.Offset;
-                        color = gradientStop.Color.INTERNAL_ToHtmlString(this.Opacity);
+                        max = i;
+                        maxOffset = offset;
                     }
                 }
-                gradientStopsString = color + " 0%, " + color + " 100%";
-                alpha = 0;
+
+                return stops[max].Color.ToHtmlString(Opacity);
+            }
+
+            (string stopsStr, double alpha) = MappingMode == BrushMappingMode.RelativeToBoundingBox ?
+                ToHtmlStringForRelativeMappingMode(parent) :
+                ToHtmlStringForAbsoluteMappingMode(parent);
+
+            string gradientType = SpreadMethod == GradientSpreadMethod.Repeat ? "repeating-linear-gradient" : "linear-gradient";
+            double angle = 360 - alpha * 180 / Math.PI + 90;
+            return $"{gradientType}({angle.ToInvariantString()}deg, {stopsStr})";
+        }
+
+        private string GetOffsetsString(double start, double end, string unit)
+        {
+            Debug.Assert(GradientStops.Count > 0);
+
+            Stop[] stops = GradientStops.GetSortedCollection();
+
+            double distance = end - start;
+            double minOffset = stops[0].Offset;
+            Color minColor = stops[0].Color;
+            double maxOffset = stops[stops.Length - 1].Offset;
+            Color maxColor = stops[stops.Length - 1].Color;
+            double opacity = Opacity;
+            bool isFirst = true;
+
+            StringBuilder sb = StringBuilderCache.Acquire();
+            
+            if (distance > 0)
+            {
+                if (minOffset != 0)
+                {
+                    sb.Append($"{minColor.ToHtmlString(opacity)} {start.ToInvariantString()}{unit}");
+                    isFirst = false;
+                }
+
+                int index = 0;
+                if (isFirst)
+                {
+                    Stop stop = stops[index];
+                    sb.Append($"{stop.Color.ToHtmlString(opacity)} {(start + stop.Offset * distance).ToInvariantString()}{unit}");
+                    index++;
+                }
+
+                for (; index < stops.Length; index++)
+                {
+                    Stop stop = stops[index];
+                    sb.Append(',');
+                    sb.Append($"{stop.Color.ToHtmlString(opacity)} {(start + stop.Offset * distance).ToInvariantString()}{unit}");
+                }
+
+                if (maxOffset != 1)
+                {
+                    sb.Append($", {maxColor.ToHtmlString(opacity)} {end.ToInvariantString()}{unit}");
+                }
             }
             else
             {
-                if (MappingMode == BrushMappingMode.RelativeToBoundingBox)
+                if (maxOffset != 1)
                 {
-                    ToHtmlStringForRelativeMappingMode(parent, out gradientStopsString, out alpha);
-                }
-                else
-                {
-                    ToHtmlStringForAbsoluteMappingMode(parent, out gradientStopsString, out alpha);
-                }
-            }
-
-            double angle = 360 - alpha * 180 / Math.PI + 90;
-
-            string gradientType = this.SpreadMethod == GradientSpreadMethod.Repeat ? "repeating-linear-gradient" : "linear-gradient";
-            string baseString = gradientType + "(" + angle.ToInvariantString() + "deg, " + gradientStopsString + ")";
-
-            return baseString;
-        }
-
-        private string GetOffsetsString(double startPointPercentage, double endPointPercentage, double startToEndPercentage, string percentageSymbol)
-        {
-            string gradientStopsString = "";
-            bool isFirst = true;
-            // Note: the offsets need to be in ascending order to work properly in html, therefore,
-            // we put them in order.
-            List<Tuple<double, string>> tempList = new List<Tuple<double, string>>();
-
-            // Note: the 4 variables defined below are required to mae sure we repeat the correct
-            // area in repeating gradien brushes (see the comment above "if (smallestOffset != 0)").
-            double smallestOffset = double.MaxValue;
-            string smallestColor = "";
-            double biggestOffset = double.MinValue;
-            string biggestColor = "";
-
-            foreach (GradientStop gradientStop in GradientStops)
-            {
-                string currentColor = gradientStop.Color.INTERNAL_ToHtmlString(this.Opacity);
-                string str = currentColor + " " + (startPointPercentage + gradientStop.Offset * startToEndPercentage).ToInvariantString() + percentageSymbol;
-                tempList.Add(new Tuple<double, string>(gradientStop.Offset, str));
-                if (smallestOffset > gradientStop.Offset)
-                {
-                    smallestOffset = gradientStop.Offset;
-                    smallestColor = currentColor;
-                }
-                if (biggestOffset <= gradientStop.Offset)
-                {
-                    biggestOffset = gradientStop.Offset;
-                    biggestColor = currentColor;
-                }
-            }
-
-            // Note: the expected behaviour in repeating gradient brushes is to repeat what is
-            // between startPoint and endPoint.
-            // In the browsers, they repeat what is between the first offset (percentage) to the
-            // last, so we need one for offset 0 and offset 1.
-            // This is why we have the test below (and its content):
-            if (startToEndPercentage > 0)
-            {
-                if (smallestOffset != 0)
-                {
-                    gradientStopsString = smallestColor + " " + startPointPercentage.ToInvariantString() + percentageSymbol;
+                    sb.Append($"{maxColor.ToHtmlString(opacity)} {end.ToInvariantString()}{unit}");
                     isFirst = false;
                 }
-            }
-            else // the end percentage is smaller than the start one so we want the biggest offset for the start and the smallest at the end.
-            {
-                if (biggestOffset != 1)
+
+                int index = stops.Length - 1;
+                if (isFirst)
                 {
-                    gradientStopsString = biggestColor + " " + endPointPercentage.ToInvariantString() + percentageSymbol;
-                    isFirst = false;
+                    Stop stop = stops[index];
+                    sb.Append($"{stop.Color.ToHtmlString(opacity)} {(start + stop.Offset * distance).ToInvariantString()}{unit}");
+                    index--;
+                }
+
+                for (; index > -1; index--)
+                {
+                    Stop stop = stops[index];
+                    sb.Append(',');
+                    sb.Append($"{stop.Color.ToHtmlString(opacity)} {(start + stop.Offset * distance).ToInvariantString()}{unit}");
+                }
+
+                if (minOffset != 0)
+                {
+                    sb.Append($", {minColor.ToHtmlString(opacity)} {distance.ToInvariantString()}{unit}");
                 }
             }
 
-            // todo-perf: it might be faster to sort the list then read it in order instead of going
-            // through it multiple times but I don't think it would do a big difference (we are talking
-            // about offsets in a LinearGradientBrush after all...)
-            while (tempList.Count > 0)
-            {
-                if (!isFirst)
-                {
-                    gradientStopsString += ", ";
-                }
-
-                int indexOfMin = 0;
-                double currentMin = tempList.ElementAt(0).Item1;
-
-                for (int i = 1; i < tempList.Count; ++i)
-                {
-                    if (startToEndPercentage > 0)
-                    {
-                        if (tempList.ElementAt(i).Item1 < currentMin)
-                        {
-                            indexOfMin = i;
-                            currentMin = tempList.ElementAt(i).Item1;
-                        }
-                    }
-                    else // we are going backwards.
-                    {
-                        if (tempList.ElementAt(i).Item1 > currentMin)
-                        {
-                            indexOfMin = i;
-                            currentMin = tempList.ElementAt(i).Item1;
-                        }
-                    }
-                }
-
-                gradientStopsString += tempList.ElementAt(indexOfMin).Item2;
-                tempList.RemoveAt(indexOfMin);
-                isFirst = false;
-            }
-
-            // same as mentionned above, this is required to repeat the correct area:
-            if (startToEndPercentage > 0)
-            {
-                if (biggestOffset != 1)
-                {
-                    gradientStopsString += ", " + biggestColor + " " + endPointPercentage.ToInvariantString() + percentageSymbol;
-                }
-            }
-            else // same as before, we want the smallest offset at the last position.
-            {
-                if (smallestOffset != 0)
-                {
-                    gradientStopsString += ", " + smallestColor + " " + startToEndPercentage.ToInvariantString() + percentageSymbol;
-                }
-            }
-            return gradientStopsString;
-        }
-
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public List<object> ConvertToCSSValues(DependencyObject parent)
-        {
-            string baseString = INTERNAL_ToHtmlString(parent);
-            return new List<object>(4)
-            {
-                "-webkit-" + baseString,
-                "-o-" + baseString,
-                "-moz-" + baseString,
-                baseString,
-            };
+            return StringBuilderCache.GetStringAndRelease(sb);
         }
 
         private sealed class SvgLinearGradient : ISvgBrush
         {
-            private readonly LinearGradientBrush _brush;
-            private INTERNAL_HtmlDomElementReference _gradientRef;
+            private readonly LinearGradientBrush _linearGradient;
+            private readonly INTERNAL_HtmlDomElementReference _gradientRef;
+            private readonly WeakEventListener<SvgLinearGradient, Brush, EventArgs> _transformChangedListener;
 
-            public SvgLinearGradient(LinearGradientBrush lgb)
+            public SvgLinearGradient(Shape shape, LinearGradientBrush lgb)
             {
-                _brush = lgb ?? throw new ArgumentNullException(nameof(lgb));
-            }
+                _linearGradient = lgb;
+                _gradientRef = INTERNAL_HtmlDomManager.CreateSvgElementAndAppendIt(shape.DefsElement, "linearGradient");
+                DrawLinearGradient();
 
-            public string GetBrush(Shape shape)
-            {
-                if (_gradientRef is null)
+                _transformChangedListener = new(this, lgb)
                 {
-                    _gradientRef = INTERNAL_HtmlDomManager.CreateSvgElementAndAppendIt(
-                        shape.DefsElement, "linearGradient");
-
-                    INTERNAL_HtmlDomManager.SetDomElementAttribute(_gradientRef, "x1", _brush.StartPoint.X.ToInvariantString());
-                    INTERNAL_HtmlDomManager.SetDomElementAttribute(_gradientRef, "y1", _brush.StartPoint.Y.ToInvariantString());
-                    INTERNAL_HtmlDomManager.SetDomElementAttribute(_gradientRef, "x2", _brush.EndPoint.X.ToInvariantString());
-                    INTERNAL_HtmlDomManager.SetDomElementAttribute(_gradientRef, "y2", _brush.EndPoint.Y.ToInvariantString());
-                    INTERNAL_HtmlDomManager.SetDomElementAttribute(_gradientRef, "gradientUnits", ConvertBrushMappingModeToString(_brush.MappingMode));
-                    INTERNAL_HtmlDomManager.SetDomElementAttribute(_gradientRef, "spreadMethod", ConvertSpreadMethodToString(_brush.SpreadMethod));
-
-                    var stops = _brush.GetGradientStops()
-                        .Select(stop => $"<stop offset=\"{stop.Offset.ToInvariantString()}\" style=\"stop-color:{stop.Color.INTERNAL_ToHtmlString(_brush.Opacity)}\" />");
-
-                    string sDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(_gradientRef);
-                    OpenSilver.Interop.ExecuteJavaScriptFastAsync($"{sDiv}.innerHTML = `{string.Join(Environment.NewLine, stops)}`;");
-                }
-
-                return $"url(#{_gradientRef.UniqueIdentifier})";
+                    OnEventAction = static (instance, sender, args) => instance.OnTransformChanged(sender, args),
+                    OnDetachAction = static (listener, source) => source.Changed -= listener.OnEvent,
+                };
+                lgb.TransformChanged += _transformChangedListener.OnEvent;
             }
+
+            public string GetBrush(Shape shape) => $"url(#{_gradientRef.UniqueIdentifier})";
+
+            public void RenderBrush() => DrawLinearGradient();
 
             public void DestroyBrush(Shape shape)
             {
-                Debug.Assert(_gradientRef is not null);
-
+                _transformChangedListener.Detach();
                 INTERNAL_HtmlDomManager.RemoveNodeNative(_gradientRef);
-                _gradientRef = null;
+            }
+
+            private void OnTransformChanged(object sender, EventArgs e)
+            {
+                Transform transform = ((Brush)sender).Transform;
+
+                if (transform is null || transform.IsIdentity)
+                {
+                    INTERNAL_HtmlDomManager.RemoveAttribute(_gradientRef, "gradientTransform");
+                }
+                else
+                {
+                    INTERNAL_HtmlDomManager.SetDomElementAttribute(_gradientRef,
+                        "gradientTransform",
+                        MatrixTransform.MatrixToHtmlString(transform.Matrix));
+                }
+            }
+
+            private void DrawLinearGradient()
+            {
+                Point start = _linearGradient.StartPoint;
+                Point end = _linearGradient.EndPoint;
+                string x1 = Math.Round(start.X, 2).ToInvariantString();
+                string y1 = Math.Round(start.Y, 2).ToInvariantString();
+                string x2 = Math.Round(end.X, 2).ToInvariantString();
+                string y2 = Math.Round(end.Y, 2).ToInvariantString();
+                string units = ConvertBrushMappingModeToString(_linearGradient.MappingMode);
+                string spreadMethod = ConvertSpreadMethodToString(_linearGradient.SpreadMethod);
+                string transform = _linearGradient.Transform is Transform t && !t.IsIdentity ?
+                    MatrixTransform.MatrixToHtmlString(t.Matrix) : string.Empty;
+                string opacity = Math.Round(_linearGradient.Opacity, 2).ToInvariantString();
+                string stops = string.Join(",",
+                    _linearGradient
+                    .GetGradientStops()
+                    .Select(s => $"{Math.Round(s.Offset, 2).ToInvariantString()},'{s.Color.ToHtmlString(1.0)}'"));
+
+                OpenSilver.Interop.ExecuteJavaScriptVoidAsync(
+                    $"document.drawSvgLinearGradient('{_gradientRef.UniqueIdentifier}',{x1},{y1},{x2},{y2},'{units}','{spreadMethod}','{transform}',{opacity},{stops})");
             }
         }
     }

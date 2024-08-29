@@ -63,9 +63,9 @@ document.WB_SmoothCanvasContext = function (ctx) {
             public Task CreateFromBitmapSourceAsync(BitmapSource source)
             {
                 _taskCompletion = new TaskCompletionSource<object>();
-                _imageRenderedCallback = JavaScriptCallback.Create(OnImageDataLoadedCallback, true);
+                _imageRenderedCallback = JavaScriptCallback.Create(OnImageDataLoadedCallback);
 
-                source.GetDataStringAsync(source.InheritanceContext as UIElement).ContinueWith(t =>
+                source.GetDataStringAsync(source.InheritanceContext as UIElement).AsTask().ContinueWith(t =>
                 {
                     var data = t.Result;
                     var javascript = @"
@@ -112,13 +112,13 @@ imageView.onload = function() {
                 int height,
                 Action<string, int, int, int> callback)
             {
-                if (element.INTERNAL_OuterDomElement is not INTERNAL_HtmlDomElementReference outerDiv)
+                if (element.OuterDiv is null)
                 {
                     return Task.CompletedTask;
                 }
 
                 _taskCompletion = new TaskCompletionSource<object>();
-                _imageRenderedCallback = JavaScriptCallback.Create(callback, true);
+                _imageRenderedCallback = JavaScriptCallback.Create(callback);
 
                 INTERNAL_Simulator.WebAssemblyExecutionHandler.InvokeUnmarshalled<int[], int>(
                     "document.WB_Copy32Buffer", _bitmap._pixels);
@@ -146,7 +146,7 @@ element.style.transform = currentTransform;
 
                 var data = new WB_Data
                 {
-                    Id = outerDiv.UniqueIdentifier,
+                    Id = element.OuterDiv.UniqueIdentifier,
                     Size = new WB_Size { Width = width, Height = height },
                 };
 
@@ -156,7 +156,7 @@ element.style.transform = currentTransform;
                 }
                 else
                 {
-                    Matrix m = transform.ValueInternal;
+                    Matrix m = transform.Matrix;
                     data.Transform = $"matrix({m.M11}, {m.M12}, {m.M21}, {m.M22}, {m.OffsetX}, {m.OffsetY})";
                 }
 

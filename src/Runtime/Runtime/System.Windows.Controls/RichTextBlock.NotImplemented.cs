@@ -11,6 +11,7 @@
 *  
 \*====================================================================================*/
 
+using OpenSilver.Internal;
 using System.Windows.Automation.Peers;
 using System.Windows.Documents;
 
@@ -23,11 +24,7 @@ namespace System.Windows.Controls
         /// </summary>
         [OpenSilver.NotImplemented]
         public static readonly DependencyProperty FontStretchProperty =
-            DependencyProperty.Register(
-                nameof(FontStretch),
-                typeof(FontStretch),
-                typeof(RichTextBlock),
-                new PropertyMetadata(FontStretches.Normal));
+            TextElement.FontStretchProperty.AddOwner(typeof(RichTextBlock));
 
         /// <summary>
         /// Gets or sets the degree to which a font is condensed or expanded on the screen.
@@ -40,7 +37,7 @@ namespace System.Windows.Controls
         public FontStretch FontStretch
         {
             get => (FontStretch)GetValue(FontStretchProperty);
-            set => SetValue(FontStretchProperty, value);
+            set => SetValueInternal(FontStretchProperty, value);
         }
 
         private static readonly DependencyPropertyKey HasOverflowContentPropertyKey =
@@ -67,7 +64,7 @@ namespace System.Windows.Controls
         public bool HasOverflowContent
         {
             get => (bool)GetValue(HasOverflowContentProperty);
-            private set => SetValue(HasOverflowContentPropertyKey, value);
+            private set => SetValueInternal(HasOverflowContentPropertyKey, value);
         }
 
         /// <summary>
@@ -89,59 +86,7 @@ namespace System.Windows.Controls
         public RichTextBlockOverflow OverflowContentTarget
         {
             get => (RichTextBlockOverflow)GetValue(OverflowContentTargetProperty);
-            set => SetValue(OverflowContentTargetProperty, value);
-        }
-
-        /// <summary>
-        /// Identifies the <see cref="LineHeight"/> dependency property.
-        /// </summary>
-        [OpenSilver.NotImplemented]
-        public static readonly DependencyProperty LineHeightProperty =
-            DependencyProperty.Register(
-                nameof(LineHeight),
-                typeof(double),
-                typeof(RichTextBlock),
-                new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsMeasure));
-
-        /// <summary>
-        ///  Gets or sets the height of each line of content.
-        /// </summary>
-        /// <returns>
-        /// The height of each line in pixels. A value of 0 indicates that the line height
-        /// is determined automatically from the current font characteristics. The default
-        /// is 0.
-        /// </returns>
-        [OpenSilver.NotImplemented]
-        public double LineHeight
-        {
-            get => (double)GetValue(LineHeightProperty);
-            set => SetValue(LineHeightProperty, value);
-        }
-
-        /// <summary>
-        /// Identifies the <see cref="LineStackingStrategy"/> dependency property.
-        /// </summary>
-        [OpenSilver.NotImplemented]
-        public static readonly DependencyProperty LineStackingStrategyProperty =
-            DependencyProperty.Register(
-                nameof(LineStackingStrategy),
-                typeof(LineStackingStrategy),
-                typeof(RichTextBlock),
-                new PropertyMetadata(LineStackingStrategy.MaxHeight));
-
-        /// <summary>
-        /// Gets or sets a value that indicates how a line box is determined for each line
-        /// of text in the <see cref="RichTextBlock"/>.
-        /// </summary>
-        /// <returns>
-        /// A value that indicates how a line box is determined for each line of text in
-        /// the <see cref="RichTextBlock"/>. The default is <see cref="LineStackingStrategy.MaxHeight"/>.
-        /// </returns>
-        [OpenSilver.NotImplemented]
-        public LineStackingStrategy LineStackingStrategy
-        {
-            get => (LineStackingStrategy)GetValue(LineStackingStrategyProperty);
-            set => SetValue(LineStackingStrategyProperty, value);
+            set => SetValueInternal(OverflowContentTargetProperty, value);
         }
 
         private static readonly DependencyPropertyKey SelectedTextPropertyKey =
@@ -167,7 +112,7 @@ namespace System.Windows.Controls
         public string SelectedText
         {
             get => (string)GetValue(SelectedTextProperty);
-            private set => SetValue(SelectedTextPropertyKey, value);
+            private set => SetValueInternal(SelectedTextPropertyKey, value);
         }
 
         /// <summary>
@@ -179,7 +124,7 @@ namespace System.Windows.Controls
         /// </returns>
         [OpenSilver.NotImplemented]
         public TextPointer ContentEnd { get; }
-        
+
         /// <summary>
         /// Gets a <see cref="TextPointer"/> that indicates the start of content
         /// in the <see cref="RichTextBlock"/>.
@@ -233,7 +178,7 @@ namespace System.Windows.Controls
         /// </returns>
         [OpenSilver.NotImplemented]
         public TextPointer GetPositionFromPoint(Point point) => null;
-        
+
         /// <summary>
         /// Selects the content between two positions indicated by textpointer objects.
         /// </summary>

@@ -31,11 +31,11 @@ namespace System.Windows.Interop
         {
             if (app is not null)
             {
-                _fullscreenchangeCallback = JavaScriptCallback.Create(FullScreenChangedCallback, true);
+                _fullscreenchangeCallback = JavaScriptCallback.Create(FullScreenChangedCallback);
 
                 // Hooks the FullScreenChanged event
                 OpenSilver.Interop.ExecuteJavaScriptVoid(
-                    $"document.addEventListener('fullscreenchange', {INTERNAL_InteropImplementation.GetVariableStringForJS(_fullscreenchangeCallback)})");
+                    $"document.addEventListener('fullscreenchange', {OpenSilver.Interop.GetVariableStringForJS(_fullscreenchangeCallback)})");
 
                 _resizeObserver = new ResizeObserverAdapter();
                 _resizeObserver.Observe(app.GetRootDiv(), OnContentSizeChanged);

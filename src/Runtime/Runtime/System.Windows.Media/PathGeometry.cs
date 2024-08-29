@@ -86,7 +86,7 @@ namespace System.Windows.Media
         public PathFigureCollection Figures
         {
             get => (PathFigureCollection)GetValue(FiguresProperty);
-            set => SetValue(FiguresProperty, value);
+            set => SetValueInternal(FiguresProperty, value);
         }
 
         private static void OnFiguresChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -134,7 +134,7 @@ namespace System.Windows.Media
         public FillRule FillRule
         {
             get => (FillRule)GetValue(FillRuleProperty);
-            set => SetValue(FillRuleProperty, value);
+            set => SetValueInternal(FillRuleProperty, value);
         }
 
         /// <summary>
@@ -172,12 +172,12 @@ namespace System.Windows.Media
 
             static IEnumerable<string> GenerateDataParts(PathFigureCollection figures, IFormatProvider formatProvider)
             {
-                foreach (var figure in figures)
+                foreach (var figure in figures.InternalItems)
                 {
                     // https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/d#moveto_path_commands
                     yield return $"M {figure.StartPoint.X.ToString(formatProvider)},{figure.StartPoint.Y.ToString(formatProvider)}";
 
-                    foreach (var segment in figure.Segments)
+                    foreach (var segment in figure.Segments.InternalItems)
                     {
                         foreach (var p in segment.ToDataStream(formatProvider))
                         {

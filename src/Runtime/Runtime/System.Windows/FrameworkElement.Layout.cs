@@ -11,9 +11,8 @@
 *  
 \*====================================================================================*/
 
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
+using System.Collections.Generic;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
 
@@ -24,7 +23,7 @@ namespace System.Windows
         /// <summary>
         /// Identifies the <see cref="CustomLayout"/> dependency property.
         /// </summary>
-        [Obsolete]
+        [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public static readonly DependencyProperty CustomLayoutProperty =
             DependencyProperty.Register(
@@ -36,18 +35,18 @@ namespace System.Windows
         /// <summary>
         /// Enable or disable measure/arrange layout system in a sub part
         /// </summary>
-        [Obsolete]
+        [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public bool CustomLayout
         {
             get => (bool)GetValue(CustomLayoutProperty);
-            set => SetValue(CustomLayoutProperty, value);
+            set => SetValueInternal(CustomLayoutProperty, value);
         }
 
         /// <summary>
         /// Identifies the <see cref="IsAutoWidthOnCustomLayout"/> dependency property.
         /// </summary>
-        [Obsolete]
+        [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public static readonly DependencyProperty IsAutoWidthOnCustomLayoutProperty =
             DependencyProperty.Register(
@@ -59,18 +58,18 @@ namespace System.Windows
         /// <summary>
         /// Gets or sets the Auto Width to the root of CustomLayout
         /// </summary>
-        [Obsolete]
+        [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public bool? IsAutoWidthOnCustomLayout
         {
             get => (bool?)GetValue(IsAutoWidthOnCustomLayoutProperty);
-            set => SetValue(IsAutoWidthOnCustomLayoutProperty, value);
+            set => SetValueInternal(IsAutoWidthOnCustomLayoutProperty, value);
         }
 
         /// <summary>
         /// Identifies the <see cref="IsAutoHeightOnCustomLayout"/> dependency property.
         /// </summary>
-        [Obsolete]
+        [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public static readonly DependencyProperty IsAutoHeightOnCustomLayoutProperty =
             DependencyProperty.Register(
@@ -82,12 +81,12 @@ namespace System.Windows
         /// <summary>
         /// Gets or sets the Auto Height to the root of CustomLayout
         /// </summary>
-        [Obsolete]
+        [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public bool? IsAutoHeightOnCustomLayout
         {
             get => (bool?)GetValue(IsAutoHeightOnCustomLayoutProperty);
-            set => SetValue(IsAutoHeightOnCustomLayoutProperty, value);
+            set => SetValueInternal(IsAutoHeightOnCustomLayoutProperty, value);
         }
 
         internal sealed override Size MeasureCore(Size availableSize)
@@ -482,8 +481,8 @@ namespace System.Windows
 
             if (cachedLayoutUpdatedItems == null)
             {
-                SetValue(LayoutUpdatedListItemsField, item);
-                SetValue(LayoutUpdatedHandlersField, handler);
+                SetValueInternal(LayoutUpdatedListItemsField, item);
+                SetValueInternal(LayoutUpdatedHandlersField, handler);
             }
             else
             {
@@ -502,7 +501,7 @@ namespace System.Windows
                     };
 
                     ClearValue(LayoutUpdatedHandlersField);
-                    SetValue(LayoutUpdatedListItemsField, list);
+                    SetValueInternal(LayoutUpdatedListItemsField, list);
                 }
                 else //already have a list
                 {
@@ -565,7 +564,7 @@ namespace System.Windows
         /// </summary>
         public event SizeChangedEventHandler SizeChanged;
 
-        internal sealed override void OnRenderSizeChanged(SizeChangedInfo info)
+        internal override void OnRenderSizeChanged(SizeChangedInfo info)
         {
             //first, invalidate ActualWidth and/or ActualHeight
             //Note: if any handler of invalidation will dirtyfy layout,
@@ -573,7 +572,6 @@ namespace System.Windows
             //we only guarantee cleaning between elements, not between handlers here
             if (info.WidthChanged)
             {
-                HasWidthEverChanged = true;
                 NotifyPropertyChange(
                     new DependencyPropertyChangedEventArgs(
                         info.PreviousSize.Width,
@@ -584,7 +582,6 @@ namespace System.Windows
 
             if (info.HeightChanged)
             {
-                HasHeightEverChanged = true;
                 NotifyPropertyChange(
                     new DependencyPropertyChangedEventArgs(
                         info.PreviousSize.Height,
@@ -663,18 +660,6 @@ namespace System.Windows
         {
             get { return ReadInternalFlag(InternalFlags.NeedsClipBounds); }
             set { WriteInternalFlag(InternalFlags.NeedsClipBounds, value); }
-        }
-
-        private bool HasWidthEverChanged
-        {
-            get { return ReadInternalFlag(InternalFlags.HasWidthEverChanged); }
-            set { WriteInternalFlag(InternalFlags.HasWidthEverChanged, value); }
-        }
-
-        private bool HasHeightEverChanged
-        {
-            get { return ReadInternalFlag(InternalFlags.HasHeightEverChanged); }
-            set { WriteInternalFlag(InternalFlags.HasHeightEverChanged, value); }
         }
 
         private Size _unclippedDesiredSize;

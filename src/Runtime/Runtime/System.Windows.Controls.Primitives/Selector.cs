@@ -17,7 +17,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Windows.Media;
 using OpenSilver.Internal;
 
 namespace System.Windows.Controls.Primitives
@@ -45,6 +44,9 @@ namespace System.Windows.Controls.Primitives
         // to avoid putting SelectedItems "in use" but we can't really expose this externally.
         private readonly InternalSelectedItemsStorage _selectedItems = new InternalSelectedItemsStorage(1, MatchExplicitEqualityComparer);
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Selector"/> class.
+        /// </summary>
         public Selector()
         {
             ItemContainerGenerator.StatusChanged += new EventHandler(OnGeneratorStatusChanged);
@@ -64,8 +66,8 @@ namespace System.Windows.Controls.Primitives
         /// </summary>
         public int SelectedIndex
         {
-            get { return (int)this.GetValue(SelectedIndexProperty); }
-            set { this.SetValue(SelectedIndexProperty, value); }
+            get { return (int)GetValue(SelectedIndexProperty); }
+            set { SetValueInternal(SelectedIndexProperty, value); }
         }
 
         /// <summary>
@@ -89,7 +91,9 @@ namespace System.Windows.Controls.Primitives
                 s.SelectionChange.SelectJustThisItem(s.ItemInfoFromIndex(newIndex), true /* assumeInItemsCollection */);
             }
 
+#pragma warning disable CS0618 // Type or member is obsolete
             s.ManageSelectedIndex_Changed(e);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         private static object CoerceSelectedIndex(DependencyObject d, object value)
@@ -108,8 +112,8 @@ namespace System.Windows.Controls.Primitives
         /// </summary>
         public object SelectedItem
         {
-            get { return this.GetValue(SelectedItemProperty); }
-            set { this.SetValue(SelectedItemProperty, value); }
+            get { return GetValue(SelectedItemProperty); }
+            set { SetValueInternal(SelectedItemProperty, value); }
         }
 
         /// <summary>
@@ -154,8 +158,8 @@ namespace System.Windows.Controls.Primitives
         /// </summary>
         public object SelectedValue
         {
-            get { return this.GetValue(SelectedValueProperty); }
-            set { this.SetValue(SelectedValueProperty, value); }
+            get { return GetValue(SelectedValueProperty); }
+            set { SetValueInternal(SelectedValueProperty, value); }
         }
 
         /// <summary>
@@ -225,8 +229,8 @@ namespace System.Windows.Controls.Primitives
         /// </summary>
         public string SelectedValuePath
         {
-            get { return (string)this.GetValue(SelectedValuePathProperty); }
-            set { this.SetValue(SelectedValuePathProperty, value); }
+            get { return (string)GetValue(SelectedValuePathProperty); }
+            set { SetValueInternal(SelectedValuePathProperty, value); }
         }
 
         /// <summary>
@@ -263,7 +267,7 @@ namespace System.Windows.Controls.Primitives
         public bool? IsSynchronizedWithCurrentItem
         {
             get { return (bool?)GetValue(IsSynchronizedWithCurrentItemProperty); }
-            set { SetValue(IsSynchronizedWithCurrentItemProperty, value); }
+            set { SetValueInternal(IsSynchronizedWithCurrentItemProperty, value); }
         }
 
         /// <summary>
@@ -553,7 +557,7 @@ namespace System.Windows.Controls.Primitives
                     // catastrophic update -- need to resynchronize everything.
 
                     // If we remove all the items we clear the deferred selection
-                    if (Items.CountInternal == 0)
+                    if (Items.Count == 0)
                         SelectionChange.CleanupDeferSelection();
 
                     SelectionChange.Begin();
@@ -1357,6 +1361,36 @@ namespace System.Windows.Controls.Primitives
             }
         }
 
+        internal static readonly DependencyPropertyKey IsSelectionActivePropertyKey =
+            DependencyProperty.RegisterAttachedReadOnly(
+                "IsSelectionActive",
+                typeof(bool),
+                typeof(Selector),
+                new PropertyMetadata(BooleanBoxes.FalseBox));
+
+        /// <summary>
+        /// Gets a value that indicates whether the specified <see cref="Selector"/>
+        /// has the focus.
+        /// </summary>
+        /// <param name="element">
+        /// The <see cref="Selector"/> to evaluate.
+        /// </param>
+        /// <returns>
+        /// true to indicate that the <see cref="Selector"/> has the focus; otherwise, false.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// element is null.
+        /// </exception>
+        public static bool GetIsSelectionActive(DependencyObject element)
+        {
+            if (element is null)
+            {
+                throw new ArgumentNullException(nameof(element));
+            }
+
+            return (bool)element.GetValue(IsSelectionActivePropertyKey.DependencyProperty);
+        }
+
         private class ChangeInfo
         {
             public ChangeInfo(InternalSelectedItemsStorage toAdd, InternalSelectedItemsStorage toRemove)
@@ -1371,115 +1405,21 @@ namespace System.Windows.Controls.Primitives
 
         #region Obsolete
 
+        [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual void ApplySelectedIndex(int index) { }
 
+        [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual void ManageSelectedIndex_Changed(DependencyPropertyChangedEventArgs e) { }
 
+        [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual void OnSelectedItemChanged(object selectedItem) { }
 
+        [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public virtual void NotifyItemMouseEnter(SelectorItem item) { }
-
-        /// <summary>
-        /// Gets or sets the bakground color of the selected Items.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public Brush SelectedItemBackground
-        {
-            get { return (Brush)this.GetValue(Selector.SelectedItemBackgroundProperty); }
-            set { this.SetValue(Selector.SelectedItemBackgroundProperty, value); }
-        }
-
-        /// <summary>
-        /// Identifies the SelectedItemBackground dependency property
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public static readonly DependencyProperty SelectedItemBackgroundProperty =
-            DependencyProperty.Register(
-                "SelectedItemBackground",
-                typeof(Brush),
-                typeof(Selector),
-                new PropertyMetadata(new SolidColorBrush(Color.INTERNAL_ConvertFromString("#FFBADDE9"))));
-
-        /// <summary>
-        /// Gets or sets the foreground color of the selected Items.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public Brush SelectedItemForeground
-        {
-            get { return (Brush)this.GetValue(Selector.SelectedItemForegroundProperty); }
-            set { this.SetValue(Selector.SelectedItemForegroundProperty, value); }
-        }
-
-        /// <summary>
-        /// Identifies the SelectedItemForeground dependency property
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public static readonly DependencyProperty SelectedItemForegroundProperty =
-            DependencyProperty.Register(
-                "SelectedItemForeground",
-                typeof(Brush),
-                typeof(Selector),
-                new PropertyMetadata(new SolidColorBrush(Colors.Black)));
-
-        /// <summary>
-        /// Gets or sets the bakground color of the Items that are not selected.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public Brush RowBackground
-        {
-            get { return (Brush)this.GetValue(Selector.RowBackgroundProperty); }
-            set { this.SetValue(Selector.RowBackgroundProperty, value); }
-        }
-
-        /// <summary>
-        /// Identifies the RowBackground dependency property
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public static readonly DependencyProperty RowBackgroundProperty =
-            DependencyProperty.Register(
-                "RowBackground",
-                typeof(Brush),
-                typeof(Selector),
-                new PropertyMetadata(new SolidColorBrush(Colors.White)));
-
-
-        /// <summary>
-        /// Gets or sets the foreground color of the Items that are not selected.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public Brush UnselectedItemForeground
-        {
-            get { return (Brush)this.GetValue(Selector.UnselectedItemForegroundProperty); }
-            set { this.SetValue(Selector.UnselectedItemForegroundProperty, value); }
-        }
-
-        /// <summary>
-        /// Identifies the UnselectedItemForeground dependency property
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public static readonly DependencyProperty UnselectedItemForegroundProperty =
-            DependencyProperty.Register(
-                "UnselectedItemForeground",
-                typeof(Brush),
-                typeof(Selector),
-                new PropertyMetadata((Brush)null));
-
-        /// <summary>
-        /// Gets or sets the bakground color of the Items that are not selected.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public Brush UnselectedItemBackground
-        {
-            get { return this.RowBackground; }
-            set { this.RowBackground = value; }
-        }
-
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        protected bool ChangingSelectionProgrammatically { get; set; }
 
         #endregion Obsolete
     }

@@ -43,29 +43,14 @@ namespace System.Windows.Controls
         private FrameworkElement _contentElement;
         private ITextViewHost<PasswordBoxView> _textViewHost;
 
-        static PasswordBox()
-        {
-            CharacterSpacingProperty.OverrideMetadata(
-                typeof(PasswordBox),
-                new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
-                {
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
-                    {
-                        var pwb = (PasswordBox)d;
-                        double value = (int)newValue / 1000.0;
-                        var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(pwb.INTERNAL_OuterDomElement);
-                        style.letterSpacing = $"{value.ToInvariantString()}em";
-                    },
-                });
-        }
-
         public PasswordBox()
         {
             DefaultStyleKey = typeof(PasswordBox);
             IsEnabledChanged += (o, e) => UpdateVisualStates();
         }
 
-        internal sealed override object GetFocusTarget() => _textViewHost?.View?.InputDiv ?? base.GetFocusTarget();
+        internal sealed override INTERNAL_HtmlDomElementReference GetFocusTarget()
+            => _textViewHost?.View?.OuterDiv ?? base.GetFocusTarget();
 
         /// <summary>
         /// Identifies the <see cref="PasswordChar"/> dependency property.
@@ -83,7 +68,7 @@ namespace System.Windows.Controls
         public char PasswordChar
         {
             get => (char)GetValue(PasswordCharProperty);
-            set => SetValue(PasswordCharProperty, value);
+            set => SetValueInternal(PasswordCharProperty, value);
         }
 
         /// <summary>
@@ -97,7 +82,7 @@ namespace System.Windows.Controls
         public int MaxLength
         {
             get => (int)GetValue(MaxLengthProperty);
-            set => SetValue(MaxLengthProperty, value);
+            set => SetValueInternal(MaxLengthProperty, value);
         }
 
         /// <summary>
@@ -120,6 +105,34 @@ namespace System.Windows.Controls
         private static bool MaxLengthValidateValue(object value) => (int)value >= 0;
 
         /// <summary>
+        /// Identifies the <see cref="CaretBrush"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty CaretBrushProperty =
+            DependencyProperty.Register(
+                nameof(CaretBrush),
+                typeof(Brush),
+                typeof(PasswordBox),
+                new PropertyMetadata(new SolidColorBrush(Colors.Black), OnCaretBrushChanged));
+
+        /// <summary>
+        /// Gets or sets the brush that is used to render the vertical bar that indicates the
+        /// insertion point.
+        /// </summary>
+        /// <returns>
+        /// The brush that is used to render the vertical bar that indicates the insertion point.
+        /// </returns>
+        public Brush CaretBrush
+        {
+            get => (Brush)GetValue(CaretBrushProperty);
+            set => SetValueInternal(CaretBrushProperty, value);
+        }
+
+        private static void OnCaretBrushChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            ((PasswordBox)d)._textViewHost?.View.SetCaretBrush((Brush)e.NewValue);
+        }
+
+        /// <summary>
         /// Gets or sets the password currently held by the <see cref="PasswordBox"/>.
         /// </summary>
         /// <returns>
@@ -139,7 +152,7 @@ namespace System.Windows.Controls
                     throw new ArgumentNullException(nameof(value));
                 }
 
-                SetValue(PasswordProperty, value);
+                SetValueInternal(PasswordProperty, value);
             }
         }
 
@@ -330,24 +343,6 @@ namespace System.Windows.Controls
         #region Not supported yet
 
         [OpenSilver.NotImplemented]
-        public static readonly DependencyProperty CaretBrushProperty =
-            DependencyProperty.Register(
-                nameof(CaretBrush),
-                typeof(Brush),
-                typeof(PasswordBox),
-                null);
-
-        /// <summary>
-        /// Gets or sets the brush that is used to render the vertical bar that indicates the insertion point.
-        /// </summary>
-        [OpenSilver.NotImplemented]
-        public Brush CaretBrush
-        {
-            get => (Brush)GetValue(CaretBrushProperty);
-            set => SetValue(CaretBrushProperty, value);
-        }
-
-        [OpenSilver.NotImplemented]
         public static readonly DependencyProperty SelectionBackgroundProperty =
             DependencyProperty.Register(
                 nameof(SelectionBackground),
@@ -362,7 +357,7 @@ namespace System.Windows.Controls
         public Brush SelectionBackground
         {
             get => (Brush)GetValue(SelectionBackgroundProperty);
-            set => SetValue(SelectionBackgroundProperty, value);
+            set => SetValueInternal(SelectionBackgroundProperty, value);
         }
 
         /// <summary>
@@ -384,7 +379,7 @@ namespace System.Windows.Controls
         public Brush SelectionForeground
         {
             get => (Brush)GetValue(SelectionForegroundProperty);
-            set => SetValue(SelectionForegroundProperty, value);
+            set => SetValueInternal(SelectionForegroundProperty, value);
         }
 
         #endregion

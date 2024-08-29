@@ -11,104 +11,87 @@
 *  
 \*====================================================================================*/
 
-using CSHTML5.Internal;
+namespace System.Windows.Documents;
 
-namespace System.Windows.Documents
+/// <summary>
+/// An abstract class that provides a base for all block-level content elements.
+/// </summary>
+public abstract class Block : TextElement
 {
-	/// <summary>
-	/// An abstract class that provides a base for all block-level content elements.
-	/// </summary>
-	public abstract class Block : TextElement
-	{
-		/// <summary>
-		/// Initializes a new instance of the <see cref="Block" /> class. 
-		/// </summary>
-		protected Block()
-		{
-		}
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Block" /> class. 
+    /// </summary>
+    protected Block() { }
 
-		/// <summary>
-		/// Identifies the <see cref="LineHeight" /> dependency property.
-		/// </summary>
-		public static readonly DependencyProperty LineHeightProperty =
-			DependencyProperty.Register(
-				nameof(LineHeight),
-				typeof(double),
-				typeof(Block),
-				new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsMeasure));
+    /// <summary>
+    /// Identifies the <see cref="LineHeight" /> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty LineHeightProperty =
+        DependencyProperty.RegisterAttached(
+            nameof(LineHeight),
+            typeof(double),
+            typeof(Block),
+            new PropertyMetadata(0.0) { Inherits = true, },
+            IsValidLineHeight);
 
-		/// <summary>
-		/// Gets or sets the height of each line of content.
-		/// </summary>
-		/// <returns>
-		/// The height of each line in pixels. A value of 0 indicates that the line
-		/// height is determined automatically from the current font characteristics. 
-		/// The default is 0.
-		/// </returns>
-        [OpenSilver.NotImplemented]
-		public double LineHeight
-		{
-			get => (double)GetValue(LineHeightProperty);
-			set => SetValue(LineHeightProperty, value);
-		}
+    /// <summary>
+    /// Gets or sets the height of each line of content.
+    /// </summary>
+    /// <returns>
+    /// The height of each line in pixels. A value of 0 indicates that the line
+    /// height is determined automatically from the current font characteristics. 
+    /// The default is 0.
+    /// </returns>
+    public double LineHeight
+    {
+        get => (double)GetValue(LineHeightProperty);
+        set => SetValueInternal(LineHeightProperty, value);
+    }
 
-		/// <summary>
-		/// Identifies the <see cref="LineStackingStrategy" /> dependency property.
-		/// </summary>
-        [OpenSilver.NotImplemented]
-		public static readonly DependencyProperty LineStackingStrategyProperty =
-			DependencyProperty.Register(
-				nameof(LineStackingStrategy),
-				typeof(LineStackingStrategy),
-				typeof(Block),
-				new PropertyMetadata(LineStackingStrategy.MaxHeight));
+    private static bool IsValidLineHeight(object o)
+    {
+        double d = (double)o;
+        return !double.IsNaN(d) && d >= 0;
+    }
 
-		/// <summary>
-		/// Gets or sets a value that indicates how a line box is determined for each 
-		/// line of text in a <see cref="Block" />.
-		/// The default is <see cref="LineStackingStrategy.MaxHeight" />.
-		/// </summary>
-        [OpenSilver.NotImplemented]
-		public LineStackingStrategy LineStackingStrategy
-		{
-			get => (LineStackingStrategy)GetValue(LineStackingStrategyProperty);
-			set => SetValue(LineStackingStrategyProperty, value);
-		}
+    /// <summary>
+    /// Identifies the <see cref="LineStackingStrategy" /> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty LineStackingStrategyProperty =
+        DependencyProperty.RegisterAttached(
+            nameof(LineStackingStrategy),
+            typeof(LineStackingStrategy),
+            typeof(Block),
+            new PropertyMetadata(LineStackingStrategy.MaxHeight) { Inherits = true, });
 
-		/// <summary>
-		/// Identifies the <see cref="TextAlignment" /> dependency property.
-		/// </summary>
-		public static readonly DependencyProperty TextAlignmentProperty =
-			DependencyProperty.Register(
-				nameof(TextAlignment),
-				typeof(TextAlignment),
-				typeof(Block),
-				new PropertyMetadata(TextAlignment.Left)
-				{
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
-                    {
-                        var block = (Block)d;
-                        var style = INTERNAL_HtmlDomManager.GetDomElementStyleForModification(block.INTERNAL_OuterDomElement);
-                        style.textAlign = (TextAlignment)newValue switch
-                        {
-                            TextAlignment.Center => "center",
-                            TextAlignment.Right => "right",
-                            TextAlignment.Justify => "justify",
-                            _ => "left",
-                        };
-                    },
-                });
+    /// <summary>
+    /// Gets or sets a value that indicates how a line box is determined for each 
+    /// line of text in a <see cref="Block" />.
+    /// The default is <see cref="LineStackingStrategy.MaxHeight" />.
+    /// </summary>
+    public LineStackingStrategy LineStackingStrategy
+    {
+        get => (LineStackingStrategy)GetValue(LineStackingStrategyProperty);
+        set => SetValueInternal(LineStackingStrategyProperty, value);
+    }
 
-		/// <summary>
-		/// Gets or sets the horizontal alignment of the text content. 
-		/// The default is <see cref="TextAlignment.Left" />.
-		/// </summary>
-		public TextAlignment TextAlignment
-		{
-			get => (TextAlignment)GetValue(TextAlignmentProperty);
-			set => SetValue(TextAlignmentProperty, value);
-		}
+    /// <summary>
+    /// Identifies the <see cref="TextAlignment" /> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty TextAlignmentProperty =
+        DependencyProperty.RegisterAttached(
+            nameof(TextAlignment),
+            typeof(TextAlignment),
+            typeof(Block),
+            new PropertyMetadata(TextAlignment.Left) { Inherits = true, });
 
-		internal abstract string GetContainerText();
-	}
+    /// <summary>
+    /// Gets or sets the horizontal alignment of the text content. 
+    /// The default is <see cref="TextAlignment.Left" />.
+    /// </summary>
+    public TextAlignment TextAlignment
+    {
+        get => (TextAlignment)GetValue(TextAlignmentProperty);
+        set => SetValueInternal(TextAlignmentProperty, value);
+    }
 }

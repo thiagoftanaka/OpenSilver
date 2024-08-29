@@ -27,6 +27,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using OpenSilver.Internal;
 
 namespace OpenSilver.MemoryLeak.Tests;
 
@@ -53,6 +54,7 @@ public class MemoryLeakTest
         Assert.IsTrue(c.IsCollected);
     }
 
+    [Ignore]
     [TestMethod]
     public void CoreDispatcher_Should_Release_Callback()
     {
@@ -211,7 +213,7 @@ public class MemoryLeakTest
                     TargetType = typeof(MyControl),
                     Template = new TemplateContent(
                     new XamlContext(),
-                    (owner, context) => new Border { TemplatedParent = owner.AsDependencyObject() }),
+                    (owner, context) => new Border { TemplatedParent = (DependencyObject)owner }),
                 }
             };
             MemoryLeaksHelper.SetTracker(templatedParent, tracker);

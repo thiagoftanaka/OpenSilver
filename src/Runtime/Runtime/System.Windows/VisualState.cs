@@ -11,19 +11,18 @@
 *  
 \*====================================================================================*/
 
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Markup;
 using System.Windows.Media.Animation;
+using System.Xaml.Markup;
 
 namespace System.Windows
 {
     /// <summary>
-    /// Represents the visual appearance of the control when it is in a specific
-    /// state.
+    /// Represents the visual appearance of the control when it is in a specific state.
     /// </summary>
     [ContentProperty(nameof(Storyboard))]
+    [RuntimeNameProperty(nameof(Name))]
     public sealed class VisualState : DependencyObject
     {
         /// <summary>
@@ -32,13 +31,16 @@ namespace System.Windows
         public VisualState() { }
 
         /// <summary>
-        /// Gets the name of the VisualState.
+        /// Gets the name of the <see cref="VisualState"/>.
         /// </summary>
+        /// <returns>
+        /// The name of the <see cref="VisualState"/>.
+        /// </returns>
         public string Name
         {
             get => (string)GetValue(FrameworkElement.NameProperty);
             [EditorBrowsable(EditorBrowsableState.Never)]
-            set => SetValue(FrameworkElement.NameProperty, value);
+            set => SetValueInternal(FrameworkElement.NameProperty, value);
         }
 
         private static readonly DependencyProperty StoryboardProperty =
@@ -49,41 +51,17 @@ namespace System.Windows
                 null);
 
         /// <summary>
-        /// Gets or sets a <see cref="Media.Animation.Storyboard"/> that defines the appearance 
-        /// of the control when it is the state that is represented by the <see cref="VisualState"/>.
+        /// Gets or sets a <see cref="Storyboard"/> that defines the appearance of the control 
+        /// when it is the state that is represented by the <see cref="VisualState"/>.
         /// </summary>
+        /// <returns>
+        /// A Storyboard that defines the appearance of the control when it is the state that 
+        /// is represented by the <see cref="VisualState"/>.
+        /// </returns>
         public Storyboard Storyboard
         {
             get => (Storyboard)GetValue(StoryboardProperty);
-            set => SetValue(StoryboardProperty, value);
-        }
-
-        internal Dictionary<Tuple<string, string>, Timeline> GetPropertiesChangedByStoryboard()
-        {
-            if (Storyboard != null)
-            {
-                return Storyboard.GetPropertiesChanged();
-            }
-            return null;
-        }
-
-        internal Dictionary<Tuple<string, string>, Timeline> ApplyStoryboard(FrameworkElement frameworkElement, bool useTransitions)
-        {
-            Dictionary<Tuple<string, string>, Timeline> propertiesChanged = null;
-            if (Storyboard != null)
-            {
-                Storyboard.Begin(frameworkElement);
-                propertiesChanged = Storyboard.GetPropertiesChanged();
-            }
-            return propertiesChanged;
-        }
-
-        internal void StopStoryBoard(FrameworkElement frameworkElement)
-        {
-            if (Storyboard != null)
-            {
-                Storyboard.Stop(frameworkElement);
-            }
+            set => SetValueInternal(StoryboardProperty, value);
         }
     }
 }

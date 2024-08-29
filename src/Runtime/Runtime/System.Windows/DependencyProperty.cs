@@ -2,10 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows.Data;
@@ -1197,10 +1195,6 @@ namespace System.Windows
             private int _hashCode;
         }
 
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public DependencyProperty() { }
-
         private DependencyProperty(
             string name,
             Type propertyType,
@@ -1322,22 +1316,6 @@ namespace System.Windows
                     }
                 }
             }
-        }
-    }
-
-    internal sealed class DependencyPropertyComparer : IEqualityComparer<DependencyProperty>
-    {
-        public static DependencyPropertyComparer Default { get; } = new DependencyPropertyComparer();
-
-        public bool Equals(DependencyProperty x, DependencyProperty y)
-        {
-            return ReferenceEquals(x, y);
-        }
-
-        public int GetHashCode(DependencyProperty dp)
-        {
-            Debug.Assert(dp != null);
-            return dp.GlobalIndex;
         }
     }
 }

@@ -20,7 +20,6 @@ using System.Windows.Media;
 using System.Windows.Data;
 using CSHTML5.Internal;
 using DotNetForHtml5.Core;
-using OpenSilver.Internal;
 using OpenSilver.Internal.Controls;
 
 namespace System.Windows.Controls.Primitives
@@ -36,7 +35,6 @@ namespace System.Windows.Controls.Primitives
         //      - The reference point is determined by the Placement and placement target. If the PlacementTarget property is not set, the placement target is the popup's parent. If the popup does not have a parent, then it is the top-left corner of the window (In wpf, it is the top-left corner of the screen but we're in a browser so we cannot do that).
         // Therefore, in order to correctly place the Popup, Horizontal and VerticalOffset should only be user-defined, and the only coordinates that should be internally set are those of the reference point.
 
-        private static int _currentZIndex = 0; //This int is to be able to put newly created popups in front of the former ones, as well as allowing to click on a Modal ChildWindow to put it in front of the others.
         private PopupRoot _popupRoot;
 
         // Note: we use a ContentPresenter because we need a container that does not force its child
@@ -73,7 +71,7 @@ namespace System.Windows.Controls.Primitives
         public UIElement PlacementTarget
         {
             get { return (UIElement)GetValue(PlacementTargetProperty); }
-            set { SetValue(PlacementTargetProperty, value); }
+            set { SetValueInternal(PlacementTargetProperty, value); }
         }
 
         /// <summary>
@@ -92,7 +90,7 @@ namespace System.Windows.Controls.Primitives
         public PlacementMode Placement
         {
             get { return (PlacementMode)GetValue(PlacementProperty); }
-            set { SetValue(PlacementProperty, value); }
+            set { SetValueInternal(PlacementProperty, value); }
         }
 
         /// <summary>
@@ -120,10 +118,6 @@ namespace System.Windows.Controls.Primitives
                 || value == PlacementMode.Left
                 || value == PlacementMode.Top;
         }
-
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public bool INTERNAL_AllowDisableClickTransparency = true;
 
         protected override AutomationPeer OnCreateAutomationPeer()
             => new PopupRootAutomationPeer(this);
@@ -180,7 +174,7 @@ namespace System.Windows.Controls.Primitives
         public UIElement Child
         {
             get { return (UIElement)GetValue(ChildProperty); }
-            set { SetValue(ChildProperty, value); }
+            set { SetValueInternal(ChildProperty, value); }
         }
 
         /// <summary>
@@ -225,7 +219,7 @@ namespace System.Windows.Controls.Primitives
         public bool IsOpen
         {
             get { return (bool)GetValue(IsOpenProperty); }
-            set { SetValue(IsOpenProperty, value); }
+            set { SetValueInternal(IsOpenProperty, value); }
         }
 
         /// <summary>
@@ -295,7 +289,7 @@ namespace System.Windows.Controls.Primitives
         public double HorizontalOffset
         {
             get { return (double)GetValue(HorizontalOffsetProperty); }
-            set { SetValue(HorizontalOffsetProperty, value); }
+            set { SetValueInternal(HorizontalOffsetProperty, value); }
         }
 
         /// <summary>
@@ -318,7 +312,7 @@ namespace System.Windows.Controls.Primitives
         public double VerticalOffset
         {
             get { return (double)GetValue(VerticalOffsetProperty); }
-            set { SetValue(VerticalOffsetProperty, value); }
+            set { SetValueInternal(VerticalOffsetProperty, value); }
         }
 
         /// <summary>
@@ -346,7 +340,7 @@ namespace System.Windows.Controls.Primitives
         public HorizontalAlignment HorizontalContentAlignment
         {
             get { return (HorizontalAlignment)GetValue(HorizontalContentAlignmentProperty); }
-            set { SetValue(HorizontalContentAlignmentProperty, value); }
+            set { SetValueInternal(HorizontalContentAlignmentProperty, value); }
         }
 
         /// <summary>
@@ -378,7 +372,7 @@ namespace System.Windows.Controls.Primitives
         public VerticalAlignment VerticalContentAlignment
         {
             get { return (VerticalAlignment)GetValue(VerticalContentAlignmentProperty); }
-            set { SetValue(VerticalContentAlignmentProperty, value); }
+            set { SetValueInternal(VerticalContentAlignmentProperty, value); }
         }
 
         /// <summary>
@@ -406,7 +400,7 @@ namespace System.Windows.Controls.Primitives
         public bool StaysWithinScreenBounds
         {
             get { return (bool)GetValue(StaysWithinScreenBoundsProperty); }
-            set { SetValue(StaysWithinScreenBoundsProperty, value); }
+            set { SetValueInternal(StaysWithinScreenBoundsProperty, value); }
         }
 
         /// <summary>
@@ -590,7 +584,7 @@ namespace System.Windows.Controls.Primitives
                 Window parentWindow = GetParentWindowOfPopup();
 
                 // Create the popup root:
-                _popupRoot = INTERNAL_PopupsManager.CreateAndAppendNewPopupRoot(this, parentWindow);
+                _popupRoot = PopupsManager.CreateAndAppendNewPopupRoot(this, parentWindow);
 
                 UpdatePopupParent();
 
@@ -613,12 +607,10 @@ namespace System.Windows.Controls.Primitives
                     _controlToWatch = PopupService.PositionsWatcher.AddControlToWatch(target, OnTargetPositionChanged);
                 }
 
-                // Show the popup in front of any potential previously displayed popup:
-                PutPopupInFront();
-
                 // Force layout update to prevent the popup content from briefly appearing in
                 // the top left corner of the screen.
                 UpdateLayout();
+                OpenSilver.Interop.JavaScriptRuntime.Flush();
             }
         }
 
@@ -651,20 +643,11 @@ namespace System.Windows.Controls.Primitives
                 }
 
                 //---------------------
-                // If the popup being closed is the one with the highest zIndex, we decrement it to reduce the chances of reaching the maximum value:
-                //---------------------
-                int closingPopupZIndex = Canvas.GetZIndex(_popupRoot);
-                if (closingPopupZIndex == _currentZIndex)
-                {
-                    --_currentZIndex;
-                }
-
-                //---------------------
                 // Hide the PopupRoot:
                 //---------------------
                 var popupRoot = _popupRoot;
                 popupRoot.Content = null;
-                INTERNAL_PopupsManager.RemovePopupRoot(popupRoot);
+                PopupsManager.RemovePopupRoot(popupRoot);
                 _popupRoot = null;
                 _outerBorder.Content = null;
                 _outerBorder = null;
@@ -694,9 +677,9 @@ namespace System.Windows.Controls.Primitives
         {
             // If the popup has a placement target, and the latter is in the visual tree,
             // we get the window from there. Otherwise, if the popup itself is inthe visual
-            // tree, "Popup.INTERNAL_ParentWindow" should be populated. Otherwise, we use
-            // the default window (MainWindow) to display the popup.
-            return PlacementTarget?.INTERNAL_ParentWindow ?? INTERNAL_ParentWindow ?? Application.Current.MainWindow;
+            // tree, "Popup.ParentWindow" should be populated. Otherwise, we use the default
+            // window (MainWindow) to display the popup.
+            return PlacementTarget?.ParentWindow ?? ParentWindow ?? Application.Current.MainWindow;
         }
 
         public event EventHandler ClosedDueToOutsideClick;
@@ -741,22 +724,7 @@ namespace System.Windows.Controls.Primitives
             }
         }
 
-        internal void PutPopupInFront()
-        {
-            if (_popupRoot == null)
-                return;
-
-            if (Canvas.MaxZIndex > _currentZIndex)
-            {
-                _currentZIndex = Canvas.MaxZIndex;
-            }
-
-            bool needsZIndexChange = _currentZIndex == 0 ? true : (Canvas.GetZIndex(_popupRoot) != _currentZIndex);
-            if (needsZIndexChange)
-            {
-                Canvas.SetZIndex(_popupRoot, ++_currentZIndex);
-            }
-        }
+        internal void PutPopupInFront() => _popupRoot?.PutPopupInFront();
         
         [OpenSilver.NotImplemented]
         public void SetWindow(Window associatedWindow)

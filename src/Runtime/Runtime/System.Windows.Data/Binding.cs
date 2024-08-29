@@ -13,7 +13,6 @@
 
 using System.ComponentModel;
 using System.Windows.Markup;
-using OpenSilver.Internal;
 using System.Globalization;
 
 namespace System.Windows.Data
@@ -66,10 +65,9 @@ namespace System.Windows.Data
     /// MyTextBox.DataContext = myPlanet;
     /// </code>
     /// </example>
-    [ContentProperty("Path")]
-    public partial class Binding : BindingBase
+    [ContentProperty(nameof(Path))]
+    public class Binding : BindingBase
     {
-        internal bool _isInStyle;
         private IValueConverter _converter;
         private CultureInfo _culture;
         private object _converterParameter;
@@ -129,7 +127,6 @@ namespace System.Windows.Data
                 TargetNullValue = original.TargetNullValue;
                 StringFormat = original.StringFormat;
 
-                _isInStyle = original._isInStyle;
                 _converter = original._converter;
                 _culture = original._culture;
                 _converterParameter = original._converterParameter;
@@ -257,13 +254,6 @@ namespace System.Windows.Data
             return new Binding(this);
         }
 
-        /// <summary>
-        /// Do not use this property.
-        /// </summary>
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public TemplateInstance TemplateOwner { get; set; }
-
 #region Validation
 
         /// <summary>
@@ -285,16 +275,6 @@ namespace System.Windows.Data
             get { return _notifyOnValidationError; }
             set { CheckSealed(); _notifyOnValidationError = value; }
         }
-
-        /// <summary>
-        /// True to force the property to go through the Validation process when the Binding is set or when the Target is added in the Visual tree.
-        /// This way, if the source property has an Invalid value when setting the Binding, it will immediately be marked as Invalid instead of waiting
-        /// for a value change that keeps/makes it Invalid (which is what happens on Silverlight).
-        /// Defaults to False since it is the behaviour of Silverlight and WPF.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool ValidatesOnLoad { get; set; }
 
         /// <summary>
         /// Indicates whether data binding debugging is enabled.
@@ -344,5 +324,8 @@ namespace System.Windows.Data
         }
 
         #endregion
+
+        internal sealed override BindingExpressionBase CreateBindingExpressionOverride(DependencyObject target, DependencyProperty dp) =>
+            BindingExpression.CreateBindingExpression(dp, this);
     }
 }

@@ -11,42 +11,14 @@
 *  
 \*====================================================================================*/
 
-using System;
-using System.Windows;
 using System.Windows.Documents;
 
 namespace OpenSilver.Internal.Documents;
 
-internal abstract class TextContainer<T> : ITextContainer
-    where T : DependencyObject
-{
-    protected TextContainer(T parent)
-    {
-        Parent = parent ?? throw new ArgumentNullException(nameof(parent));
-    }
-
-    internal T Parent { get; }
-
-    public abstract string Text { get; }
-
-    public virtual void BeginChange() { }
-
-    public virtual void EndChange() { }
-
-    public void OnTextAdded(TextElement textElement) => OnTextAddedOverride(textElement);
-
-    public void OnTextRemoved(TextElement textElement) => OnTextRemovedOverride(textElement);
-
-    protected abstract void OnTextAddedOverride(TextElement textElement);
-
-    protected abstract void OnTextRemovedOverride(TextElement textElement);
-}
-
 internal interface ITextContainer
 {
     string Text { get; }
-    void BeginChange();
-    void EndChange();
-    void OnTextAdded(TextElement textElement);
+    void OnTextContentChanged();
+    void OnTextAdded(TextElement textElement, int index);
     void OnTextRemoved(TextElement textElement);
 }

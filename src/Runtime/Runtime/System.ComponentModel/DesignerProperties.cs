@@ -52,7 +52,7 @@ namespace System.ComponentModel
         {
             if (element == null)
                 throw new ArgumentNullException("The element parameter cannot be null");
-            element.SetValue(IsInDesignModeProperty, value);
+            element.SetValueInternal(IsInDesignModeProperty, value);
         }
         /// <summary>
         /// Identifies the System.ComponentModel.DesignerProperties.IsInDesignMode attached
@@ -67,7 +67,7 @@ namespace System.ComponentModel
         /// Gets a value that indicates whether the element is running in the context
         /// of a designer.
         /// </summary>
-        public static bool IsInDesignTool { get { return false; } } //Note: In SL, it seems that there is an accessible "set" but I don't see the point so I removed it for now.
+        public static bool IsInDesignTool { get; set; }
 
         ///// <summary>
         ///// Gets or sets a value that indicates whether all the metadata associated with

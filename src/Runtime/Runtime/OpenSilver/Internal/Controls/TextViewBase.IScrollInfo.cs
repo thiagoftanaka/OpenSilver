@@ -16,10 +16,11 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using CSHTML5.Internal;
 
 namespace OpenSilver.Internal.Controls;
 
-internal partial class TextViewBase<T> : IScrollInfo
+internal partial class TextViewBase : IScrollInfo
 {
     private ScrollData _scrollData;
 
@@ -156,10 +157,9 @@ internal partial class TextViewBase<T> : IScrollInfo
         if (!IsScrollClient) return;
         if (!_scrollData.CanHorizontallyScroll) return;
 
-        if (INTERNAL_OuterDomElement is not null)
+        if (OuterDiv is not null)
         {
-            string sDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(INTERNAL_OuterDomElement);
-            Interop.ExecuteJavaScriptFastAsync($"{sDiv}.scrollLeft = {offset.ToInvariantString()};");
+            INTERNAL_HtmlDomManager.SetDomElementProperty(OuterDiv, "scrollLeft", offset);
         }
     }
 
@@ -168,10 +168,9 @@ internal partial class TextViewBase<T> : IScrollInfo
         if (!IsScrollClient) return;
         if (!_scrollData.CanVerticallyScroll) return;
 
-        if (INTERNAL_OuterDomElement is not null)
+        if (OuterDiv is not null)
         {
-            string sDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(INTERNAL_OuterDomElement);
-            Interop.ExecuteJavaScriptFastAsync($"{sDiv}.scrollTop = {offset.ToInvariantString()};");
+            INTERNAL_HtmlDomManager.SetDomElementProperty(OuterDiv, "scrollTop", offset);
         }
     }
 
@@ -212,7 +211,7 @@ internal partial class TextViewBase<T> : IScrollInfo
         }
     }
 
-    private void UpdateOffsets(Point offset)
+    internal void UpdateOffsets(Point offset)
     {
         Debug.Assert(IsScrollClient);
 

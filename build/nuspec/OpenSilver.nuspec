@@ -48,6 +48,15 @@
     <file src="../../src/Runtime/Controls.Layout.Toolkit/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Layout.Toolkit.dll" target="lib/netstandard2.0/OpenSilver.Controls.Layout.Toolkit.dll" />
     <file src="../../src/Runtime/Controls.Layout.Toolkit/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Layout.Toolkit.pdb" target="lib/netstandard2.0/OpenSilver.Controls.Layout.Toolkit.pdb" />
     <file src="../../src/Runtime/Controls.Layout.Toolkit/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Layout.Toolkit.xml" target="lib/netstandard2.0/OpenSilver.Controls.Layout.Toolkit.xml" />
+    <file src="../../src/Runtime/Controls.Data/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Data.dll" target="lib/netstandard2.0/OpenSilver.Controls.Data.dll" />
+    <file src="../../src/Runtime/Controls.Data/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Data.pdb" target="lib/netstandard2.0/OpenSilver.Controls.Data.pdb" />
+    <file src="../../src/Runtime/Controls.Data/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Data.xml" target="lib/netstandard2.0/OpenSilver.Controls.Data.xml" />
+    <file src="../../src/Runtime/Controls.Data.Toolkit/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Data.Toolkit.dll" target="lib/netstandard2.0/OpenSilver.Controls.Data.Toolkit.dll" />
+    <file src="../../src/Runtime/Controls.Data.Toolkit/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Data.Toolkit.pdb" target="lib/netstandard2.0/OpenSilver.Controls.Data.Toolkit.pdb" />
+    <file src="../../src/Runtime/Controls.Data.Toolkit/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Data.Toolkit.xml" target="lib/netstandard2.0/OpenSilver.Controls.Data.Toolkit.xml" />
+    <file src="../../src/Runtime/Controls.Theming.Toolkit/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Theming.Toolkit.dll" target="lib/netstandard2.0/OpenSilver.Controls.Theming.Toolkit.dll" />
+    <file src="../../src/Runtime/Controls.Theming.Toolkit/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Theming.Toolkit.pdb" target="lib/netstandard2.0/OpenSilver.Controls.Theming.Toolkit.pdb" />
+    <file src="../../src/Runtime/Controls.Theming.Toolkit/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Theming.Toolkit.xml" target="lib/netstandard2.0/OpenSilver.Controls.Theming.Toolkit.xml" />
     <file src="../../src/Runtime/Blend/Interactivity/bin/$Configuration$/netstandard2.0/OpenSilver.Interactivity.dll" target="lib/netstandard2.0/OpenSilver.Interactivity.dll" />
     <file src="../../src/Runtime/Blend/Interactivity/bin/$Configuration$/netstandard2.0/OpenSilver.Interactivity.pdb" target="lib/netstandard2.0/OpenSilver.Interactivity.pdb" />
     <file src="../../src/Runtime/Blend/Interactivity/bin/$Configuration$/netstandard2.0/OpenSilver.Interactivity.xml" target="lib/netstandard2.0/OpenSilver.Interactivity.xml" />
@@ -57,23 +66,21 @@
     <file src="../../src/Runtime/Blend/Effects/bin/$Configuration$/netstandard2.0/OpenSilver.Expression.Effects.dll" target="lib/netstandard2.0/OpenSilver.Expression.Effects.dll" />
     <file src="../../src/Runtime/Blend/Effects/bin/$Configuration$/netstandard2.0/OpenSilver.Expression.Effects.pdb" target="lib/netstandard2.0/OpenSilver.Expression.Effects.pdb" />
     <file src="../../src/Runtime/Blend/Effects/bin/$Configuration$/netstandard2.0/OpenSilver.Expression.Effects.xml" target="lib/netstandard2.0/OpenSilver.Expression.Effects.xml" />
-    <file src="../../src/Runtime/Controls.Data/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Data.dll" target="lib/netstandard2.0/OpenSilver.Controls.Data.dll" />
-    <file src="../../src/Runtime/Controls.Data/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Data.pdb" target="lib/netstandard2.0/OpenSilver.Controls.Data.pdb" />
-    <file src="../../src/Runtime/Controls.Data/bin/$Configuration$/netstandard2.0/OpenSilver.Controls.Data.xml" target="lib/netstandard2.0/OpenSilver.Controls.Data.xml" />
+    <file src="../../src/Runtime/MEF/System.ComponentModel.Composition.Initialization/bin/$Configuration$/netstandard2.0/System.ComponentModel.Composition.Initialization.dll" target="lib/netstandard2.0/System.ComponentModel.Composition.Initialization.dll" />
+    <file src="../../src/Runtime/MEF/System.ComponentModel.Composition.Initialization/bin/$Configuration$/netstandard2.0/System.ComponentModel.Composition.Initialization.pdb" target="lib/netstandard2.0/System.ComponentModel.Composition.Initialization.pdb" />
+    <file src="../../src/Runtime/MEF/System.ComponentModel.Composition.Initialization/bin/$Configuration$/netstandard2.0/System.ComponentModel.Composition.Initialization.xml" target="lib/netstandard2.0/System.ComponentModel.Composition.Initialization.xml" />
 
     <!-- OpenSilver targets -->
     <file src="../../src/Targets/OpenSilver.targets" target="build/OpenSilver.targets" />
     <file src="../../src/Targets/OpenSilver.Common.targets" target="build/OpenSilver.Common.targets" />
     <file src="../../src/Targets/OpenSilver.GenerateAssemblyInfo.targets" target="build/OpenSilver.GenerateAssemblyInfo.targets" />
+    <file src="../../src/Compiler/Compiler/bin/$Configuration$/netstandard2.0/OpenSilver.Common.Config.targets" target="build/OpenSilver.Common.Config.targets" />
 
     <!-- OpenSilver compiler -->
-    <file src="../../src/Compiler/Compiler/bin/$Configuration$/net461/Mono.Cecil.dll" target="tools/Mono.Cecil.dll" />
-    <file src="../../src/Compiler/Compiler/bin/$Configuration$/net461/Mono.Cecil.Rocks.dll" target="tools/Mono.Cecil.Rocks.dll" />
-    <file src="../../src/Compiler/Compiler/bin/$Configuration$/net461/OpenSilver.Compiler.dll" target="tools/OpenSilver.Compiler.dll" />
-    <file src="../../src/Compiler/Compiler.Common/bin/$Configuration$/net461/OpenSilver.Compiler.Common.dll" target="tools/OpenSilver.Compiler.Common.dll" />
-    <file src="../../src/Compiler/Compiler.ResourcesExtractor/bin/$Configuration$/net461/OpenSilver.Compiler.Resources.dll" target="tools/OpenSilver.Compiler.Resources.dll" />
-    <file src="../../src/Compiler/Compiler.ProgressDialog/bin/$Configuration$/net461/OpenSilver.Compiler.ProgressDialog.dll" target="tools/OpenSilver.Compiler.ProgressDialog.dll" />
-    <file src="../../src/Compiler/Compiler.TypeScriptDefToCSharp/bin/$Configuration$/net461/OpenSilver.Compiler.TypeScriptDefToCSharp.dll" target="tools/OpenSilver.Compiler.TypeScriptDefToCSharp.dll" />
+    <file src="../../src/Compiler/Compiler/bin/$Configuration$/netstandard2.0/Mono.Cecil.dll" target="tools/Mono.Cecil.dll" />
+    <file src="../../src/Compiler/Compiler/bin/$Configuration$/netstandard2.0/Mono.Cecil.Rocks.dll" target="tools/Mono.Cecil.Rocks.dll" />
+    <file src="../../src/Compiler/Compiler/bin/$Configuration$/netstandard2.0/OpenSilver.Compiler.$OpenSilverBuildUUID$.dll" target="tools/OpenSilver.Compiler.$OpenSilverBuildUUID$.dll" />
+    <file src="../../src/Compiler/Compiler.ResourcesExtractor/bin/$Configuration$/netstandard2.0/OpenSilver.Compiler.Resources.$OpenSilverBuildUUID$.dll" target="tools/OpenSilver.Compiler.Resources.$OpenSilverBuildUUID$.dll" />
 
     <!-- OpenSilver analyzers -->
     <file src="../../src/Analyzers/NotImplemented/bin/$Configuration$/netstandard2.0/OpenSilver.Analyzers.dll" target="analyzers/dotnet/cs/OpenSilver.Analyzers.dll" />
@@ -82,12 +89,9 @@
     <file src="../../src/Runtime/Scripts/opensilver.js" target="js_css/opensilver.js" />
     <file src="../../src/Runtime/Scripts/cshtml5.css" target="js_css/cshtml5.css" />
     <file src="../../src/Runtime/Scripts/cshtml5.js" target="js_css/cshtml5.js" />
-    <file src="../../src/Runtime/Scripts/flatpickr.css" target="js_css/flatpickr.css" />
-    <file src="../../src/Runtime/Scripts/flatpickr.js" target="js_css/flatpickr.js" />
-    <file src="../../src/Runtime/Scripts/velocity.js" target="js_css/velocity.js" />
     <file src="../../src/Runtime/Scripts/ResizeObserver.js" target="js_css/ResizeObserver.js" />
-	  <file src="../../src/Runtime/Scripts/quill.min.js" target="js_css/quill.min.js" />
-	  <file src="../../src/Runtime/Scripts/quill.core.css" target="js_css/quill.core.css" />
+    <file src="../../src/Runtime/Scripts/quill.min.js" target="js_css/quill.min.js" />
+    <file src="../../src/Runtime/Scripts/quill.core.css" target="js_css/quill.core.css" />
     <file src="../../src/Runtime/Scripts/html2canvas.js" target="js_css/html2canvas.js" />
     <file src="../../src/Runtime/Scripts/FileSaver.min.js" target="js_css/FileSaver.min.js" />
 

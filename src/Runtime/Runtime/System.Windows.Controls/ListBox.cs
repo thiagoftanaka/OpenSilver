@@ -17,7 +17,6 @@ using System.Windows.Input;
 using System.Diagnostics;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls.Primitives;
-using System.Windows.Media;
 using OpenSilver.Internal;
 
 namespace System.Windows.Controls
@@ -25,14 +24,23 @@ namespace System.Windows.Controls
     /// <summary>
     /// Contains a list of selectable items.
     /// </summary>
-    [TemplatePart(Name = "ScrollViewer", Type = typeof(ScrollViewer))]
-    [TemplateVisualState(Name = "InvalidFocused", GroupName = "ValidationStates")]
-    [TemplateVisualState(Name = "InvalidUnfocused", GroupName = "ValidationStates")]
-    [TemplateVisualState(Name = "Valid", GroupName = "ValidationStates")]
+    [TemplatePart(Name = ScrollViewerTemplateName, Type = typeof(ScrollViewer))]
+    [TemplateVisualState(Name = VisualStates.StateInvalidFocused, GroupName = VisualStates.GroupValidation)]
+    [TemplateVisualState(Name = VisualStates.StateInvalidUnfocused, GroupName = VisualStates.GroupValidation)]
+    [TemplateVisualState(Name = VisualStates.StateValid, GroupName = VisualStates.GroupValidation)]
     public partial class ListBox : Selector
     {
+        private const string ScrollViewerTemplateName = "ScrollViewer";
+
         private ScrollViewer _scrollHost;
         private ItemInfo _anchorItem;
+
+        static ListBox()
+        {
+            IsSelectionActivePropertyKey.OverrideMetadata(
+                typeof(ListBox),
+                new PropertyMetadata(BooleanBoxes.FalseBox, OnIsSelectionActiveChanged));
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ListBox"/> class.
@@ -67,7 +75,7 @@ namespace System.Windows.Controls
         public SelectionMode SelectionMode
         {
             get { return (SelectionMode)GetValue(SelectionModeProperty); }
-            set { SetValue(SelectionModeProperty, value); }
+            set { SetValueInternal(SelectionModeProperty, value); }
         }
 
         /// <summary>
@@ -104,11 +112,33 @@ namespace System.Windows.Controls
         }
 
         /// <summary>
-        /// Identifies the <see cref="ItemContainerStyle"/> dependency
-        /// property.
+        /// Identifies the <see cref="ItemContainerStyle"/> dependency property.
         /// </summary>
         public static readonly new DependencyProperty ItemContainerStyleProperty =
             ItemsControl.ItemContainerStyleProperty;
+
+        /// <summary>
+        /// Identifies the IsSelectionActive dependency property.
+        /// </summary>
+        public static readonly DependencyProperty IsSelectionActiveProperty =
+            IsSelectionActivePropertyKey.DependencyProperty;
+
+        private static void OnIsSelectionActiveChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var listbox = (ListBox)d;
+            foreach (ItemInfo item in listbox.SelectedItemsInternal)
+            {
+                if (item.Index < 0)
+                {
+                    continue;
+                }
+
+                if (listbox.ItemContainerGenerator.ContainerFromIndex(item.Index) is ListBoxItem listboxItem)
+                {
+                    listboxItem.UpdateVisualStates();
+                }
+            }
+        }
 
         /// <summary>
         /// Causes the object to scroll into view.
@@ -139,7 +169,7 @@ namespace System.Windows.Controls
         public override void OnApplyTemplate()
         {
             // _scrollHost must be set before calling base
-            _scrollHost = GetTemplateChild("ScrollViewer") as ScrollViewer;
+            _scrollHost = GetTemplateChild(ScrollViewerTemplateName) as ScrollViewer;
 
             base.OnApplyTemplate();
         }
@@ -265,6 +295,20 @@ namespace System.Windows.Controls
             }
         }
 
+        /// <inheritdoc />
+        protected override void OnLostFocus(RoutedEventArgs e)
+        {
+            base.OnLostFocus(e);
+            SetValueInternal(IsSelectionActivePropertyKey, false);
+        }
+
+        /// <inheritdoc />
+        protected override void OnGotFocus(RoutedEventArgs e)
+        {
+            base.OnGotFocus(e);
+            SetValueInternal(IsSelectionActivePropertyKey, true);
+        }
+
         /// <summary>
         /// Returns a <see cref="ListBoxAutomationPeer"/> for the Silverlight automation 
         /// infrastructure.
@@ -280,7 +324,7 @@ namespace System.Windows.Controls
             // Base will actually focus the item
             bool returnValue = base.FocusItem(info);
 
-            if (info.Container is ListBoxItem listItem)
+            if ((info.Container ?? ItemContainerGenerator.ContainerFromIndex(info.Index)) is ListBoxItem listItem)
             {
                 MakeKeyboardSelection(listItem);
             }
@@ -514,37 +558,5 @@ namespace System.Windows.Controls
                 }
             }
         }
-
-        #region Obsoletes
-
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public Brush SelectedItemBackgroundBrush
-        {
-            get { return SelectedItemBackground; }
-            set { SelectedItemBackground = value; }
-        }
-
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public Brush SelectedItemForegroundBrush
-        {
-            get { return SelectedItemForeground; }
-            set { SelectedItemForeground = value; }
-        }
-
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public Brush UnselectedItemBackgroundBrush
-        {
-            get { return RowBackground; }
-            set { RowBackground = value; }
-        }
-
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        public Brush UnselectedItemForegroundBrush
-        {
-            get { return UnselectedItemForeground; }
-            set { UnselectedItemForeground = value; }
-        }
-
-        #endregion Obsoletes
     }
 }

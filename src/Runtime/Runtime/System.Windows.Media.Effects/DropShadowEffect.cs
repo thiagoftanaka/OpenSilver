@@ -53,7 +53,7 @@ namespace System.Windows.Media.Effects
         public double BlurRadius
         {
             get => (double)GetValue(BlurRadiusProperty);
-            set => SetValue(BlurRadiusProperty, value);
+            set => SetValueInternal(BlurRadiusProperty, value);
         }
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace System.Windows.Media.Effects
         public Color Color
         {
             get => (Color)GetValue(ColorProperty);
-            set => SetValue(ColorProperty, value);
+            set => SetValueInternal(ColorProperty, value);
         }
 
         /// <summary>
@@ -99,7 +99,7 @@ namespace System.Windows.Media.Effects
         public double Direction
         {
             get => (double)GetValue(DirectionProperty);
-            set => SetValue(DirectionProperty, value);
+            set => SetValueInternal(DirectionProperty, value);
         }
 
         /// <summary>
@@ -122,7 +122,7 @@ namespace System.Windows.Media.Effects
         public double Opacity
         {
             get => (double)GetValue(OpacityProperty);
-            set => SetValue(OpacityProperty, value);
+            set => SetValueInternal(OpacityProperty, value);
         }
 
         /// <summary>
@@ -146,7 +146,7 @@ namespace System.Windows.Media.Effects
         public double ShadowDepth
         {
             get => (double)GetValue(ShadowDepthProperty);
-            set => SetValue(ShadowDepthProperty, value);
+            set => SetValueInternal(ShadowDepthProperty, value);
         }
 
         private static void OnPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -156,16 +156,13 @@ namespace System.Windows.Media.Effects
         {
             if (renderTarget != null && INTERNAL_VisualTreeManager.IsElementInVisualTree(renderTarget))
             {
-                var domStyle = INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(renderTarget);
+                var domStyle = renderTarget.OuterDiv.Style;
 
-                double x = Math.Cos(Direction * Math.PI / 180d) * ShadowDepth;
-                double y = -(Math.Sin(Direction * Math.PI / 180d) * ShadowDepth);
-                double opacity = Math.Max(Math.Min(1.0, Opacity), 0.0);
+                double x = Math.Round(Math.Cos(Direction * Math.PI / 180d) * ShadowDepth, 2);
+                double y = Math.Round(-(Math.Sin(Direction * Math.PI / 180d) * ShadowDepth), 2);
+                Color color = Color.FromRgb(Color.R, Color.G, Color.B);
 
-                string shadowString = x.ToInvariantString() + "px " +
-                    y.ToInvariantString() + "px " +
-                    BlurRadius.ToInvariantString() + "px " +
-                    Color.FromArgb(Convert.ToByte(opacity * 255d), Color.R, Color.G, Color.B).INTERNAL_ToHtmlString(1d);
+                string shadowString = $"{x.ToInvariantString()}px {y.ToInvariantString()}px {BlurRadius.ToInvariantString()}px {color.ToHtmlString(Opacity)}";
 
                 if (renderTarget is TextBlock)
                 {
@@ -174,9 +171,6 @@ namespace System.Windows.Media.Effects
                 else
                 {
                     domStyle.boxShadow = shadowString;
-
-                    domStyle.borderCollapse = "separate"; // This is required for IE only. If this property is not set or equal to "collapse", the shadow does not render at all on IE. See: http://stackoverflow.com/questions/9949396/css-box-shadow-not-working-in-ie
-                    domStyle.borderSpacing = "0px"; // This is required to fix a bug that comes with the line above: a 2 px margin appears around the children of the element, which can lead to some elements overflowing relative to those children when they shouldn't.
                 }
             }
         }
@@ -185,7 +179,7 @@ namespace System.Windows.Media.Effects
         {
             if (renderTarget != null && INTERNAL_VisualTreeManager.IsElementInVisualTree(renderTarget))
             {
-                var domStyle = INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(renderTarget);
+                var domStyle = renderTarget.OuterDiv.Style;
                 if (renderTarget is TextBlock)
                 {
                     domStyle.textShadow = string.Empty;
@@ -193,8 +187,6 @@ namespace System.Windows.Media.Effects
                 else
                 {
                     domStyle.boxShadow = string.Empty;
-                    domStyle.borderCollapse = string.Empty;
-                    domStyle.borderSpacing = string.Empty;
                 }
             }
         }

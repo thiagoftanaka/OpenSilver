@@ -21,12 +21,13 @@ namespace System.Windows.Media
     /// </summary>
     public abstract class Transform : GeneralTransform
     {
+        private Matrix? _matrix;
+
         internal Transform() { }
 
-        ///<summary>
-        /// Return the current transformation value.
-        ///</summary>
-        internal abstract Matrix ValueInternal { get; }
+        internal Matrix Matrix => _matrix ??= GetMatrixCore();
+
+        private protected abstract Matrix GetMatrixCore();
 
         ///<summary>
         /// Returns true if transformation if the transformation is definitely an identity.  There are cases where it will
@@ -51,14 +52,24 @@ namespace System.Windows.Media
         /// </returns>
         public override bool TryTransform(Point inPoint, out Point outPoint)
         {
-            Matrix m = ValueInternal;
+            Matrix m = Matrix;
             outPoint = m.Transform(inPoint);
             return true;
         }
 
+        /// <summary>
+        /// Transforms the specified bounding box and returns an axis-aligned bounding box
+        /// that is exactly large enough to contain it.
+        /// </summary>
+        /// <param name="rect">
+        /// The bounding box to transform.
+        /// </param>
+        /// <returns>
+        /// The smallest axis-aligned bounding box that can contain the transformed rect.
+        /// </returns>
         public override Rect TransformBounds(Rect rect)
         {
-            Matrix matrix = ValueInternal;
+            Matrix matrix = Matrix;
             MatrixUtil.TransformRect(ref rect, ref matrix);
             return rect;
         }
@@ -73,7 +84,7 @@ namespace System.Windows.Media
         {
             get
             {
-                Matrix matrix = ValueInternal;
+                Matrix matrix = Matrix;
                 if (!matrix.HasInverse)
                 {
                     return null;
@@ -96,70 +107,17 @@ namespace System.Windows.Media
             return new MatrixTransform(matrix);
         }
 
-        // Must be implemented by the concrete class:
-        internal abstract void INTERNAL_ApplyTransform();
-        internal abstract void INTERNAL_UnapplyTransform();
-
         internal event EventHandler Changed;
 
-        internal void RaiseTransformChanged()
+        internal static void OnPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
+            ((Transform)d).OnTransformChanged();
+        }
+
+        internal void OnTransformChanged()
+        {
+            _matrix = null;
             Changed?.Invoke(this, EventArgs.Empty);
-        }
-
-        internal static void ProcessChanged(UIElement uiElement, Transform oldValue, Transform newValue)
-        {
-            if (oldValue != null)
-            {
-                oldValue.INTERNAL_UnapplyTransform();
-                oldValue.INTERNAL_parent = null;
-            }
-            if (uiElement != null && INTERNAL_VisualTreeManager.IsElementInVisualTree(uiElement))
-            {
-                if (newValue != null)
-                {
-                    newValue.INTERNAL_parent = uiElement;
-                    if (newValue is TransformGroup transformGroup)
-                    {
-                        foreach (var child in transformGroup.Children)
-                        {
-                            child.INTERNAL_parent = uiElement;
-                        }
-                    }
-                    newValue.INTERNAL_ApplyTransform();
-
-                    // Ensure that the default RenderTransformOrigin is (0,0) like in normal XAML, instead of (0.5,0.5) like in CSS:
-                    if (!uiElement.INTERNAL_RenderTransformOriginHasBeenApplied)
-                        ApplyRenderTransformOrigin(uiElement, new Point(0d, 0d));
-                }
-                else
-                {
-                    var domStyle = INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(uiElement);
-
-                    try
-                    {
-                        domStyle.transform = "";
-                    }
-                    catch
-                    {
-                    }
-                }
-            }
-        }
-
-        internal static void ApplyRenderTransformOrigin(UIElement uiElement, Point newValue)
-        {
-            var domStyle = INTERNAL_HtmlDomManager.GetFrameworkElementOuterStyleForModification(uiElement);
-            string transformOriginValue = $"{(newValue.X * 100).ToString(CultureInfo.InvariantCulture)}% {(newValue.Y * 100).ToString(CultureInfo.InvariantCulture)}%";
-
-            try
-            {
-                domStyle.transformOrigin = transformOriginValue;
-            }
-            catch
-            {
-            }
-            uiElement.INTERNAL_RenderTransformOriginHasBeenApplied = true;
         }
     }
 }

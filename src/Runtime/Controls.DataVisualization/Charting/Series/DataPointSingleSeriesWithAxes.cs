@@ -162,7 +162,7 @@ namespace System.Windows.Controls.DataVisualization.Charting
         {
             if (!CustomTitleInUse && (null == GetBindingExpression(TitleProperty)))
             {
-                Title = newValue.HasValue ? string.Format(CultureInfo.CurrentCulture, OpenSilver.Controls.DataVisualization.Properties.Resources.Series_OnGlobalSeriesIndexPropertyChanged_UntitledSeriesFormatString, newValue.Value + 1) : null;
+                Title = newValue.HasValue ? string.Format(CultureInfo.CurrentCulture, Properties.Resources.Series_OnGlobalSeriesIndexPropertyChanged_UntitledSeriesFormatString, newValue.Value + 1) : null;
                 // Setting Title will set CustomTitleInUse; reset it now
                 CustomTitleInUse = false;
             }
@@ -249,6 +249,10 @@ namespace System.Windows.Controls.DataVisualization.Charting
             dataPoint.SetBinding(DataPoint.StyleProperty, new Binding(ActualDataPointStyleName) { Source = this });
             // Start DataContext null to avoid Binding warnings in the output window
             LegendItem.DataContext = null;
+
+#if OPENSILVER
+            LegendItem.DataContext = dataPoint;
+#else
 #if !SILVERLIGHT
             if (null == LegendItem.Parent)
             {
@@ -264,6 +268,7 @@ namespace System.Windows.Controls.DataVisualization.Charting
             {
                 LegendItem.DataContext = dataPoint;
             }
+#endif
 #endif
         }
 

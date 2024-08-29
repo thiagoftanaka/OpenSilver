@@ -13,11 +13,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
 using CSHTML5.Internal;
 
 namespace OpenSilver.Internal.Media;
@@ -41,7 +38,7 @@ internal sealed class FontFace
                 var rootDiv = Application.Current?.GetRootDiv();
                 if (rootDiv is not null)
                 {
-                    string sDiv = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(rootDiv);
+                    string sDiv = Interop.GetVariableStringForJS(rootDiv);
                     _defaultCssFontFamily = Interop.ExecuteJavaScriptString(
                         $"window.getComputedStyle({sDiv}).getPropertyValue('font-family');");
                 }
@@ -51,9 +48,9 @@ internal sealed class FontFace
         }
     }
 
-    internal static FontFace GetFontFace(string source, UIElement relativeTo)
+    internal static FontFace GetFontFace(string source)
     {
-        (string fontName, string fontUrl) = ParseFontSource(source, relativeTo);
+        (string fontName, string fontUrl) = ParseFontSource(source);
 
         if (!_fontFacesCache.TryGetValue(fontName, out FontFace face))
         {
@@ -85,7 +82,7 @@ internal sealed class FontFace
         _measureList.Add(new WeakReference<UIElement>(uie));
     }
 
-    internal async Task<bool> LoadAsync()
+    internal async ValueTask<bool> LoadAsync()
     {
         if (IsLoaded) return true;
 
@@ -95,8 +92,8 @@ internal sealed class FontFace
 
             var loadCallback = JavaScriptCallbackHelper.CreateSelfDisposedJavaScriptCallback<bool>(OnFontLoaded);
 
-            string uriEscaped = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(CssFontUrl);
-            string sCallback = CSHTML5.INTERNAL_InteropImplementation.GetVariableStringForJS(loadCallback);
+            string uriEscaped = Interop.GetVariableStringForJS(CssFontUrl);
+            string sCallback = Interop.GetVariableStringForJS(loadCallback);
             Interop.ExecuteJavaScriptVoid(
                 $"document.loadFont('{CssFontName}', 'url({uriEscaped})', {sCallback});");
         }
@@ -124,24 +121,16 @@ internal sealed class FontFace
                     continue;
                 }
 
-                switch (uie)
-                {
-                    case TextBlock tb:
-                        tb.InvalidateCacheAndMeasure();
-                        break;
-                    default:
-                        uie.InvalidateMeasure();
-                        break;
-                }
+                UIElementHelpers.InvalidateMeasure(uie);
             }
         }
 
         _measureList = null;
     }
 
-    private static (string CssFontName, string CssFontUrl) ParseFontSource(string fontSource, UIElement relativeTo)
+    private static (string CssFontName, string CssFontUrl) ParseFontSource(string fontSource)
     {
-        string fontPath = fontSource.Trim().ToLower();
+        string fontPath = fontSource.Trim().ToLowerInvariant();
 
         // Note: if the path does not contain the character '.', then it means that there is no
         // specified file. It is therefore a default font or thet path to a folder containing
@@ -163,17 +152,16 @@ internal sealed class FontFace
         // specifically defined otherwise: (basically add a prefix ms-appx if there is none)
         // Note: we should not enter the "if" below if the path was defined in xaml. This cas
         // is already handled during compilation.
-        if (!fontUrl.StartsWith(@"ms-appx:/") &&
-            !fontUrl.StartsWith(@"http://") &&
-            !fontUrl.StartsWith(@"https://") &&
-            !fontUrl.Contains(@";component/"))
+        if (!AppResourcesManager.IsMsAppxUri(fontUrl) &&
+            !AppResourcesManager.IsHttpUri(fontUrl) &&
+            !AppResourcesManager.IsHttpsUri(fontUrl) &&
+            !AppResourcesManager.IsComponentUri(fontUrl))
         {
             fontUrl = $"ms-appx:/{fontUrl}";
         }
 
         // Get a path that will lead to the position of the file
-        string relativeFontPath = INTERNAL_UriHelper.ConvertToHtml5Path(fontUrl, relativeTo);
-        relativeFontPath = relativeFontPath.Replace('\\', '/');
+        string relativeFontPath = INTERNAL_UriHelper.ConvertToHtml5Path(fontUrl, null);
         if (relativeFontPath.StartsWith("/"))
         {
             relativeFontPath = relativeFontPath.Substring(1);

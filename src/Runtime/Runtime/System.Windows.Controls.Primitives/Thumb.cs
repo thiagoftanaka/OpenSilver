@@ -70,7 +70,7 @@ namespace System.Windows.Controls.Primitives
         public bool IsDragging
         {
             get { return (bool)GetValue(IsDraggingProperty); }
-            private set { SetValue(IsDraggingPropertyKey, value); }
+            private set { SetValueInternal(IsDraggingPropertyKey, value); }
         }
 
         private static void OnIsDraggingPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -104,7 +104,7 @@ namespace System.Windows.Controls.Primitives
         public bool IsFocused
         {
             get { return (bool)GetValue(IsFocusedProperty); }
-            private set { SetValue(IsFocusedPropertyKey, value); }
+            private set { SetValueInternal(IsFocusedPropertyKey, value); }
         }
 
         /// <summary> 
@@ -145,9 +145,7 @@ namespace System.Windows.Controls.Primitives
                 CaptureMouse();
                 IsDragging = true;
 
-                Debug.Assert(Parent is UIElement);
-
-                _origin = _previousPosition = e.GetPosition((UIElement)Parent);
+                _origin = _previousPosition = e.GetPosition(null);
 
                 // Raise the DragStarted event 
                 bool success = false;
@@ -171,7 +169,7 @@ namespace System.Windows.Controls.Primitives
         {
             base.OnMouseLeftButtonUp(e);
 
-            if (Pointer.INTERNAL_captured == this)
+            if (Pointer.Captured == this)
             {
                 ReleaseMouseCapture();
             }
@@ -217,9 +215,7 @@ namespace System.Windows.Controls.Primitives
 
             if (IsDragging)
             {
-                Debug.Assert(Parent is UIElement);
-
-                Point position = e.GetPosition((UIElement)Parent);
+                Point position = e.GetPosition(null);
 
                 if (position != _previousPosition)
                 {
