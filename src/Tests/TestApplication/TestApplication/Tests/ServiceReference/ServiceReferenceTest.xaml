@@ -10,6 +10,12 @@
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="LegacyBasicHttpGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
 
+        <TextBlock Text="Enter message:" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+        <TextBox Name="LegacyBasicHttpEchoMessageTextBox" Width="300"/>
+        <Button Content="Legacy BasicHttp Echo()" Click="LegacyBasicHttpEchoButton_OnClick" Width="350"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="LegacyBasicHttpEchoResultTextBlock" HorizontalAlignment="Center"/>
+
         <Button Content="Legacy Binary GetTestString() - Event Based" Click="LegacyBinaryGetTestStringButton_OnClick" Width="300" Margin="0,20,0,0"/>
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="LegacyBinaryGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
@@ -23,12 +29,18 @@
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="BinaryGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
 
-        <TextBlock Margin="0,30,0,0" Text="Custom clients that use Message:"/>
-        <Button Content="CustomClient Legacy BasicHttp GetTestString()" Click="CustomClientBasicHttpGetTestStringButton_OnClick" Width="300"/>
+        <TextBlock Margin="0,30,0,0" Text="Custom clients:"/>
+        <Button Content="Custom Client Legacy BasicHttp GetTestString()" Click="CustomClientLegacyBasicHttpGetTestStringButton_OnClick" Width="300"/>
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="CustomClientBasicHttpGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
 
-        <Button Content="CustomClient Legacy Binary GetTestString()" Click="CustomClientBinaryGetTestStringButton_OnClick" Width="300" Margin="0,20,0,0"/>
+        <TextBlock Text="Enter message:" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+        <TextBox Name="CustomClientLegacyBasicHttpEchoMessageTextBox" Width="300"/>
+        <Button Content="Custom Client Legacy BasicHttp Echo() Using Message" Click="CustomClientLegacyBasicHttpEchoButton_OnClick" Width="350"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="CustomClientBasicHttpEchoResultTextBlock" HorizontalAlignment="Center"/>
+
+        <Button Content="Custom Client Legacy Binary GetTestString()" Click="CustomClientLegacyBinaryGetTestStringButton_OnClick" Width="300" Margin="0,20,0,0"/>
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="CustomClientBinaryGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
     </StackPanel>

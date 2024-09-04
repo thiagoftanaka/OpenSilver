@@ -22,6 +22,11 @@ namespace TestApplication.LegacyBasicHttpServiceReference {
         System.IAsyncResult BeginGetTestString(System.AsyncCallback callback, object asyncState);
         
         string EndGetTestString(System.IAsyncResult result);
+        
+        [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="urn:BasicHttpService/Echo", ReplyAction="urn:BasicHttpService/EchoResponse")]
+        System.IAsyncResult BeginEcho(string message, System.AsyncCallback callback, object asyncState);
+        
+        string EndEcho(System.IAsyncResult result);
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -49,6 +54,25 @@ namespace TestApplication.LegacyBasicHttpServiceReference {
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
+    public partial class EchoCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+        
+        private object[] results;
+        
+        public EchoCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+                base(exception, cancelled, userState) {
+            this.results = results;
+        }
+        
+        public string Result {
+            get {
+                base.RaiseExceptionIfNecessary();
+                return ((string)(this.results[0]));
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
     public partial class BasicHttpServiceClient : System.ServiceModel.ClientBase<TestApplication.LegacyBasicHttpServiceReference.BasicHttpService>, TestApplication.LegacyBasicHttpServiceReference.BasicHttpService {
         
         private BeginOperationDelegate onBeginGetTestStringDelegate;
@@ -56,6 +80,12 @@ namespace TestApplication.LegacyBasicHttpServiceReference {
         private EndOperationDelegate onEndGetTestStringDelegate;
         
         private System.Threading.SendOrPostCallback onGetTestStringCompletedDelegate;
+        
+        private BeginOperationDelegate onBeginEchoDelegate;
+        
+        private EndOperationDelegate onEndEchoDelegate;
+        
+        private System.Threading.SendOrPostCallback onEchoCompletedDelegate;
         
         private BeginOperationDelegate onBeginOpenDelegate;
         
@@ -112,6 +142,8 @@ namespace TestApplication.LegacyBasicHttpServiceReference {
         
         public event System.EventHandler<GetTestStringCompletedEventArgs> GetTestStringCompleted;
         
+        public event System.EventHandler<EchoCompletedEventArgs> EchoCompleted;
+        
         public event System.EventHandler<System.ComponentModel.AsyncCompletedEventArgs> OpenCompleted;
         
         public event System.EventHandler<System.ComponentModel.AsyncCompletedEventArgs> CloseCompleted;
@@ -158,6 +190,52 @@ namespace TestApplication.LegacyBasicHttpServiceReference {
                 this.onGetTestStringCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnGetTestStringCompleted);
             }
             base.InvokeAsync(this.onBeginGetTestStringDelegate, null, this.onEndGetTestStringDelegate, this.onGetTestStringCompletedDelegate, userState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        System.IAsyncResult TestApplication.LegacyBasicHttpServiceReference.BasicHttpService.BeginEcho(string message, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginEcho(message, callback, asyncState);
+        }
+        
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+        string TestApplication.LegacyBasicHttpServiceReference.BasicHttpService.EndEcho(System.IAsyncResult result) {
+            return base.Channel.EndEcho(result);
+        }
+        
+        private System.IAsyncResult OnBeginEcho(object[] inValues, System.AsyncCallback callback, object asyncState) {
+            string message = ((string)(inValues[0]));
+            return ((TestApplication.LegacyBasicHttpServiceReference.BasicHttpService)(this)).BeginEcho(message, callback, asyncState);
+        }
+        
+        private object[] OnEndEcho(System.IAsyncResult result) {
+            string retVal = ((TestApplication.LegacyBasicHttpServiceReference.BasicHttpService)(this)).EndEcho(result);
+            return new object[] {
+                    retVal};
+        }
+        
+        private void OnEchoCompleted(object state) {
+            if ((this.EchoCompleted != null)) {
+                InvokeAsyncCompletedEventArgs e = ((InvokeAsyncCompletedEventArgs)(state));
+                this.EchoCompleted(this, new EchoCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+        
+        public void EchoAsync(string message) {
+            this.EchoAsync(message, null);
+        }
+        
+        public void EchoAsync(string message, object userState) {
+            if ((this.onBeginEchoDelegate == null)) {
+                this.onBeginEchoDelegate = new BeginOperationDelegate(this.OnBeginEcho);
+            }
+            if ((this.onEndEchoDelegate == null)) {
+                this.onEndEchoDelegate = new EndOperationDelegate(this.OnEndEcho);
+            }
+            if ((this.onEchoCompletedDelegate == null)) {
+                this.onEchoCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnEchoCompleted);
+            }
+            base.InvokeAsync(this.onBeginEchoDelegate, new object[] {
+                        message}, this.onEndEchoDelegate, this.onEchoCompletedDelegate, userState);
         }
         
         private System.IAsyncResult OnBeginOpen(object[] inValues, System.AsyncCallback callback, object asyncState) {
@@ -245,6 +323,19 @@ namespace TestApplication.LegacyBasicHttpServiceReference {
             public string EndGetTestString(System.IAsyncResult result) {
                 object[] _args = new object[0];
                 string _result = ((string)(base.EndInvoke("GetTestString", _args, result)));
+                return _result;
+            }
+            
+            public System.IAsyncResult BeginEcho(string message, System.AsyncCallback callback, object asyncState) {
+                object[] _args = new object[1];
+                _args[0] = message;
+                System.IAsyncResult _result = base.BeginInvoke("Echo", _args, callback, asyncState);
+                return _result;
+            }
+            
+            public string EndEcho(System.IAsyncResult result) {
+                object[] _args = new object[0];
+                string _result = ((string)(base.EndInvoke("Echo", _args, result)));
                 return _result;
             }
         }

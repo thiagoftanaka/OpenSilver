@@ -1,5 +1,6 @@
 ﻿using System.ServiceModel;
 using System.ServiceModel.Activation;
+using System.ServiceModel.Web;
 
 namespace TestApplication.Silverlight.Web
 {
@@ -11,6 +12,13 @@ namespace TestApplication.Silverlight.Web
         public string GetTestString()
         {
             return "This is a basic http test.";
+        }
+
+        [OperationContract]
+        [WebInvoke]
+        public string Echo(string message)
+        {
+            return message;
         }
     }
 }

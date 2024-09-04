@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
+using System.Xml;
 
 namespace TestApplication.OpenSilver.Tests.ServiceReference
 {
@@ -14,6 +15,7 @@ namespace TestApplication.OpenSilver.Tests.ServiceReference
         LegacyBasicHttpServiceReference.BasicHttpService
     {
         public event EventHandler<GetTestStringCompletedEventArgs> GetTestStringCompleted;
+        public event EventHandler<GetTestStringCompletedEventArgs> EchoCompleted;
 
         protected override LegacyBasicHttpServiceReference.BasicHttpService CreateChannel()
         {
@@ -55,6 +57,43 @@ namespace TestApplication.OpenSilver.Tests.ServiceReference
             return Channel.EndGetTestString(result);
         }
 
+        public void EchoUsingMessageAsync(string message)
+        {
+            Message messageInstance = Message.CreateMessage(Endpoint?.Binding?.MessageVersion ?? MessageVersion.Default,
+                "urn:BasicHttpService/Echo", new EchoBodyWriter(message));
+            InvokeAsync(OnBeginEcho, new object[] { messageInstance }, OnEndEcho, OnEchoCompleted, null);
+        }
+
+        private IAsyncResult OnBeginEcho(object[] parameters, AsyncCallback callback, object asyncState)
+        {
+            return BeginEcho(parameters[0] as string, callback, asyncState);
+        }
+
+        private object[] OnEndEcho(IAsyncResult result)
+        {
+            return new object[] { EndEcho(result) };
+        }
+
+        private void OnEchoCompleted(object state)
+        {
+            InvokeAsyncCompletedEventArgs e = state as InvokeAsyncCompletedEventArgs;
+            if (e != null)
+            {
+                EchoCompleted?.Invoke(this,
+                    new GetTestStringCompletedEventArgs(e.Results, e.Error, e.Cancelled, e.UserState));
+            }
+        }
+
+        public IAsyncResult BeginEcho(string message, AsyncCallback callback, object asyncState)
+        {
+            return Channel.BeginEcho(message, callback, asyncState);
+        }
+
+        public string EndEcho(IAsyncResult result)
+        {
+            return Channel.EndEcho(result);
+        }
+
         private class CustomLegacyBasicHttpServiceReferenceClientChannel :
             ChannelBase<LegacyBasicHttpServiceReference.BasicHttpService>,
             LegacyBasicHttpServiceReference.BasicHttpService
@@ -78,11 +117,21 @@ namespace TestApplication.OpenSilver.Tests.ServiceReference
             {
                 return (string)EndInvoke("GetTestString", new object[0], result);
             }
+
+            public IAsyncResult BeginEcho(string message, AsyncCallback callback, object asyncState)
+            {
+                return BeginInvoke("Echo", new object[] { message }, callback, asyncState);
+            }
+
+            public string EndEcho(IAsyncResult result)
+            {
+                return (string)EndInvoke("Echo", new object[0], result);
+            }
         }
 
         public class GetTestStringCompletedEventArgs : AsyncCompletedEventArgs
         {
-            private object[] _result;
+            private readonly object[] _result;
 
             public string Result
             {
@@ -99,6 +148,25 @@ namespace TestApplication.OpenSilver.Tests.ServiceReference
                 {
                     _result = result;
                 }
+            }
+        }
+
+        private class EchoBodyWriter : BodyWriter
+        {
+            private readonly string _message;
+
+            public EchoBodyWriter(string message) : base(true)
+            {
+                _message = message;
+            }
+
+            protected override void OnWriteBodyContents(XmlDictionaryWriter writer)
+            {
+                writer.WriteStartElement("Echo");
+                writer.WriteStartElement("message");
+                writer.WriteString(_message);
+                writer.WriteEndElement();
+                writer.WriteEndElement();
             }
         }
     }

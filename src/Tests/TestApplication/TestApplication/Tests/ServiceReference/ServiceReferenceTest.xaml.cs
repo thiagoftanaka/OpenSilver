@@ -18,6 +18,7 @@ namespace TestApplication.Tests
             this.InitializeComponent();
         }
 
+        #region Legacy
         private void LegacyBasicHttpGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
         {
             LegacyBasicHttpServiceReference.BasicHttpServiceClient basicHttpServiceClient =
@@ -28,19 +29,14 @@ namespace TestApplication.Tests
             basicHttpServiceClient.GetTestStringAsync();
         }
 
-#if OPENSILVER
-        private async void BasicHttpGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
-#else
-        private void BasicHttpGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
-#endif
+        private void LegacyBasicHttpEchoButton_OnClick(object sender, RoutedEventArgs e)
         {
-#if OPENSILVER
-            BasicHttpServiceReference.BasicHttpServiceClient basicHttpServiceClient = new BasicHttpServiceReference.BasicHttpServiceClient();
-            string testString = await basicHttpServiceClient.GetTestStringAsync();
-#else
-            string testString = "Not possible to add modern ServiceReference in Silverlight.";
-#endif
-            BasicHttpGetTestStringResultTextBlock.Text = testString;
+            LegacyBasicHttpServiceReference.BasicHttpServiceClient basicHttpServiceClient =
+                new LegacyBasicHttpServiceReference.BasicHttpServiceClient();
+            basicHttpServiceClient.EchoCompleted +=
+                (_, ee) =>
+                    LegacyBasicHttpEchoResultTextBlock.Text = ee.Error?.Message ?? ee.Result;
+            basicHttpServiceClient.EchoAsync(LegacyBasicHttpEchoMessageTextBox.Text);
         }
 
         private void LegacyBinaryGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
@@ -51,23 +47,38 @@ namespace TestApplication.Tests
                 (_, ee) => LegacyBinaryGetTestStringResultTextBlock.Text = ee.Error?.Message ?? ee.Result;
             binaryServiceClient.GetTestStringAsync();
         }
+        #endregion
+
+        #region Modern
+#if OPENSILVER
+        private async void BasicHttpGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            BasicHttpServiceReference.BasicHttpServiceClient basicHttpServiceClient = new BasicHttpServiceReference.BasicHttpServiceClient();
+            string testString = await basicHttpServiceClient.GetTestStringAsync();
+#else
+        private void BasicHttpGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            string testString = "Not possible to add modern ServiceReference in Silverlight.";
+#endif
+            BasicHttpGetTestStringResultTextBlock.Text = testString;
+        }
 
 #if OPENSILVER
         private async void BinaryGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
-#else
-        private void BinaryGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
-#endif
         {
-#if OPENSILVER
             BinaryServiceReference.BinaryServiceClient binaryServiceClient = new BinaryServiceReference.BinaryServiceClient();
             string testString = await binaryServiceClient.GetTestStringAsync();
 #else
+        private void BinaryGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
+        {
             string testString = "Not possible to add modern ServiceReference in Silverlight.";
 #endif
             BinaryGetTestStringResultTextBlock.Text = testString;
         }
+        #endregion
 
-        private void CustomClientBasicHttpGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
+        #region Custom Client
+        private void CustomClientLegacyBasicHttpGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
         {
             CustomLegacyBasicHttpServiceReferenceClient customLegacyBasicHttpServiceReferenceClient =
                 new CustomLegacyBasicHttpServiceReferenceClient();
@@ -76,9 +87,19 @@ namespace TestApplication.Tests
             customLegacyBasicHttpServiceReferenceClient.GetTestStringAsync();
         }
 
-        private void CustomClientBinaryGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
+        private void CustomClientLegacyBinaryGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
         {
 
         }
+
+        private void CustomClientLegacyBasicHttpEchoButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            CustomLegacyBasicHttpServiceReferenceClient customLegacyBasicHttpServiceReferenceClient =
+                new CustomLegacyBasicHttpServiceReferenceClient();
+            customLegacyBasicHttpServiceReferenceClient.EchoCompleted +=
+                (_, ee) => CustomClientBasicHttpEchoResultTextBlock.Text = ee.Error?.Message ?? ee.Result;
+            customLegacyBasicHttpServiceReferenceClient.EchoUsingMessageAsync(CustomClientLegacyBasicHttpEchoMessageTextBox.Text);
+        }
+        #endregion
     }
 }

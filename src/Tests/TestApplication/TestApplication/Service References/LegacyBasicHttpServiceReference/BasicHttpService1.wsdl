@@ -12,10 +12,20 @@
   <wsdl:message name="BasicHttpService_GetTestString_OutputMessage">
     <wsdl:part name="parameters" element="GetTestStringResponse" />
   </wsdl:message>
+  <wsdl:message name="BasicHttpService_Echo_InputMessage">
+    <wsdl:part name="parameters" element="Echo" />
+  </wsdl:message>
+  <wsdl:message name="BasicHttpService_Echo_OutputMessage">
+    <wsdl:part name="parameters" element="EchoResponse" />
+  </wsdl:message>
   <wsdl:portType name="BasicHttpService">
     <wsdl:operation name="GetTestString">
       <wsdl:input wsaw:Action="urn:BasicHttpService/GetTestString" message="BasicHttpService_GetTestString_InputMessage" />
       <wsdl:output wsaw:Action="urn:BasicHttpService/GetTestStringResponse" message="BasicHttpService_GetTestString_OutputMessage" />
+    </wsdl:operation>
+    <wsdl:operation name="Echo">
+      <wsdl:input wsaw:Action="urn:BasicHttpService/Echo" message="BasicHttpService_Echo_InputMessage" />
+      <wsdl:output wsaw:Action="urn:BasicHttpService/EchoResponse" message="BasicHttpService_Echo_OutputMessage" />
     </wsdl:operation>
   </wsdl:portType>
 </wsdl:definitions>
