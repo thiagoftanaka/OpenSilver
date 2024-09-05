@@ -4,7 +4,7 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<AssemblyName>OpenSilver</AssemblyName>
-    <AssemblyVersion>3.0.0</AssemblyVersion>
+    <AssemblyVersion>3.0.1</AssemblyVersion>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<NoWarn>$(NoWarn);CS1591;CS0067</NoWarn>
 		<EnableDefaultItems>false</EnableDefaultItems>
@@ -235,6 +235,7 @@
 		<Compile Include="System.Windows.Media.Animation\KeySplineConverter.cs" />
 		<Compile Include="System.Windows.Media.Animation\KeyTimeType.cs" />
 		<Compile Include="System.Windows.Media.Animation\LinearPointKeyFrame.cs" />
+		<Compile Include="System.Windows.Media.Imaging\Base64Image.cs" />
 		<Compile Include="System.Windows.Media.Imaging\PngEncoder.cs" />
 		<Compile Include="System.Windows.Media.Imaging\WriteableBitmap.Wasm.cs" />
 		<Compile Include="System.Windows.Media.Imaging\WriteableBitmap.Simulator.cs" />

@@ -1175,7 +1175,7 @@ document.createTextviewManager = function (inputCallback, scrollCallback) {
             if (!view) return;
             view.addEventListener('keydown', function (e) {
                 const acceptsReturn = this.getAttribute('data-acceptsreturn');
-                const maxLength = this.getAttribute('maxlength');
+                var maxLength = this.getAttribute('maxlength');
                 const acceptsTab = this.getAttribute('data-acceptstab');
 
                 if (maxLength == null) maxLength = 0;
@@ -1684,10 +1684,10 @@ document.createRichTextViewManager = function (selectionChangedCallback, content
             if (!ql) return null;
 
             const format = ql.getFormat()[property];
-            if (!Array.isArray(format)) {
+            if (typeof format === 'string') {
                 return format;
             }
-            return '';
+            return null;
         },
     };
 };

@@ -40,7 +40,7 @@ namespace System.Windows.Controls
     {
         private INTERNAL_HtmlDomElementReference _imageDiv;
         private Size _naturalSize;
-        private WeakEventListener<Image, BitmapImage, EventArgs> _sourceChangedListener;
+        private WeakEventListener<Image, ImageSource, EventArgs> _sourceChangedListener;
 
         static Image()
         {
@@ -84,20 +84,20 @@ namespace System.Windows.Controls
                 image._sourceChangedListener = null;
             }
 
-            if (e.NewValue is BitmapImage bmi)
+            if (e.NewValue is ImageSource source)
             {
-                image._sourceChangedListener = new(image, bmi)
+                image._sourceChangedListener = new(image, source)
                 {
-                    OnEventAction = static (instance, sender, args) => instance.OnBitmapImageSourceChanged(sender, args),
-                    OnDetachAction = static (listener, source) => source.UriSourceChanged -= listener.OnEvent,
+                    OnEventAction = static (instance, sender, args) => instance.OnSourceChanged(sender, args),
+                    OnDetachAction = static (listener, source) => source.Changed -= listener.OnEvent,
                 };
-                bmi.UriSourceChanged += image._sourceChangedListener.OnEvent;
+                source.Changed += image._sourceChangedListener.OnEvent;
             }
         }
 
         private static void UpdateDomOnSourceChanged(DependencyObject d, object oldValue, object newValue)
         {
-            _ = ((Image)d).RefreshSource();
+            ((Image)d).RefreshSource();
         }
 
         /// <summary>
@@ -239,19 +239,19 @@ namespace System.Windows.Controls
             _imageDiv.Style.objectPosition = $"{hPos} {vPos}";
         }
 
-        private void OnBitmapImageSourceChanged(object sender, EventArgs e)
-        {
-            _ = RefreshSource();
-        }
+        private void OnSourceChanged(object sender, EventArgs e) => RefreshSource();
 
-        private async ValueTask RefreshSource()
+        private void RefreshSource()
         {
             _naturalSize = new Size();
 
-            if (Source != null)
+            if (Source is ImageSource source)
             {
-                var imageSrc = await Source.GetDataStringAsync(this);
-                INTERNAL_HtmlDomManager.SetDomElementAttribute(_imageDiv, "src", imageSrc ?? string.Empty, true);
+                var task = source.GetDataStringAsync(this);
+                if (task.IsCompletedSuccessfully)
+                {
+                    INTERNAL_HtmlDomManager.SetDomElementAttribute(_imageDiv, "src", task.Result ?? string.Empty, true);
+                }
             }
             else
             {
