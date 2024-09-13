@@ -243,6 +243,10 @@ namespace System.Windows.Controls
 
         private void RefreshSource()
         {
+            if (!IsLoaded)
+            {
+                return;
+            }
             _naturalSize = new Size();
 
             if (Source is ImageSource source)
