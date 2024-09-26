@@ -84,7 +84,7 @@ namespace TestApplication.OpenSilver.Tests.ServiceReference
             }
         }
 
-        public IAsyncResult BeginEcho(string message, AsyncCallback callback, object asyncState)
+        public IAsyncResult BeginEcho(Message message, AsyncCallback callback, object asyncState)
         {
             return Channel.BeginEcho(message, callback, asyncState);
         }

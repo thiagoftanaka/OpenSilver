@@ -229,6 +229,10 @@ namespace System.ServiceModel
 
         internal MessageVersion GetMessageVersion(string forceSoapVersion)
         {
+            if (Endpoint?.Binding?.MessageVersion != null)
+            {
+                return Endpoint.Binding.MessageVersion;
+            }
             switch (forceSoapVersion)
             {
                 case "1.1":
@@ -236,7 +240,7 @@ namespace System.ServiceModel
                 case "1.2":
                     return MessageVersion.Soap12WSAddressing10;
                 default:
-                    return ChannelFactory?.Endpoint?.Binding?.MessageVersion ?? MessageVersion.Soap11;
+                    return MessageVersion.Soap11;
             }
         }
 
@@ -1425,7 +1429,7 @@ namespace System.ServiceModel
                            XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
                     using (StreamReader streamReader = new StreamReader(memoryStream))
                     {
-                        header.WriteHeader(xmlDictionaryWriter, MessageVersion.Default);
+                        header.WriteHeader(xmlDictionaryWriter, messageVersion);
                         xmlDictionaryWriter.Flush();
                         memoryStream.Position = 0;
                         messageHeaders.Append(streamReader.ReadToEnd());
@@ -1462,8 +1466,7 @@ namespace System.ServiceModel
                     }
                     else
                     {
-                        binaryMessage = Message.CreateMessage(client.ChannelFactory.Endpoint.Binding.MessageVersion,
-                            soapAction, methodNameElement);
+                        binaryMessage = Message.CreateMessage(messageVersion, soapAction, methodNameElement);
 
                         string xmlMessage = string.Format(requestFormat, elementAsString, messageHeaders);
                         MessageHeaders messageEnvelopeHeaders = GetEnvelopeHeaders(xmlMessage,
@@ -1703,7 +1706,6 @@ namespace System.ServiceModel
                 }
                 else
                 {
-                    Debug.Assert(soapVersion == "1.2", $"Unexpected soap version ({soapVersion}) !");
                     NS = "http://www.w3.org/2003/05/soap-envelope";
                 }
 

@@ -39,9 +39,5 @@
         <Button Content="Custom Client Legacy BasicHttp Echo() Using Message" Click="CustomClientLegacyBasicHttpEchoButton_OnClick" Width="350"/>
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="CustomClientBasicHttpEchoResultTextBlock" HorizontalAlignment="Center"/>
-
-        <Button Content="Custom Client Legacy Binary GetTestString()" Click="CustomClientLegacyBinaryGetTestStringButton_OnClick" Width="300" Margin="0,20,0,0"/>
-        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
-        <TextBlock Name="CustomClientBinaryGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
     </StackPanel>
 </sdk:Page>
