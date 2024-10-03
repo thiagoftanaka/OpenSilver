@@ -18,6 +18,9 @@ namespace BasicHttpServiceReference
         
         [System.ServiceModel.OperationContractAttribute(Action="urn:BasicHttpService/GetTestString", ReplyAction="urn:BasicHttpService/GetTestStringResponse")]
         System.Threading.Tasks.Task<string> GetTestStringAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="urn:BasicHttpService/Echo", ReplyAction="urn:BasicHttpService/EchoResponse")]
+        System.Threading.Tasks.Task<System.ServiceModel.Channels.Message> EchoAsync(System.ServiceModel.Channels.Message request);
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.1.0")]
@@ -73,6 +76,11 @@ namespace BasicHttpServiceReference
         public System.Threading.Tasks.Task<string> GetTestStringAsync()
         {
             return base.Channel.GetTestStringAsync();
+        }
+        
+        public System.Threading.Tasks.Task<System.ServiceModel.Channels.Message> EchoAsync(System.ServiceModel.Channels.Message request)
+        {
+            return base.Channel.EchoAsync(request);
         }
         
         public virtual System.Threading.Tasks.Task OpenAsync()

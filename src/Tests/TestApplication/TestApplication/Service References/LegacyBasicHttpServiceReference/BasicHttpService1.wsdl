@@ -4,6 +4,7 @@
     <xsd:schema targetNamespace="/Imports">
       <xsd:import schemaLocation="http://localhost:50506/BasicHttpService.svc?xsd=xsd0" />
       <xsd:import schemaLocation="http://localhost:50506/BasicHttpService.svc?xsd=xsd1" namespace="http://schemas.microsoft.com/2003/10/Serialization/" />
+      <xsd:import schemaLocation="http://localhost:50506/BasicHttpService.svc?xsd=xsd2" namespace="http://schemas.microsoft.com/Message" />
     </xsd:schema>
   </wsdl:types>
   <wsdl:message name="BasicHttpService_GetTestString_InputMessage">
@@ -13,10 +14,10 @@
     <wsdl:part name="parameters" element="GetTestStringResponse" />
   </wsdl:message>
   <wsdl:message name="BasicHttpService_Echo_InputMessage">
-    <wsdl:part name="parameters" element="Echo" />
+    <wsdl:part xmlns:q1="http://schemas.microsoft.com/Message" name="message" type="q1:MessageBody" />
   </wsdl:message>
   <wsdl:message name="BasicHttpService_Echo_OutputMessage">
-    <wsdl:part name="parameters" element="EchoResponse" />
+    <wsdl:part xmlns:q2="http://schemas.microsoft.com/Message" name="EchoResult" type="q2:MessageBody" />
   </wsdl:message>
   <wsdl:portType name="BasicHttpService">
     <wsdl:operation name="GetTestString">

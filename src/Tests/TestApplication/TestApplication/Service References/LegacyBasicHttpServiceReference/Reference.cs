@@ -24,9 +24,9 @@ namespace TestApplication.LegacyBasicHttpServiceReference {
         string EndGetTestString(System.IAsyncResult result);
         
         [System.ServiceModel.OperationContractAttribute(AsyncPattern=true, Action="urn:BasicHttpService/Echo", ReplyAction="urn:BasicHttpService/EchoResponse")]
-        System.IAsyncResult BeginEcho(string message, System.AsyncCallback callback, object asyncState);
+        System.IAsyncResult BeginEcho(System.ServiceModel.Channels.Message request, System.AsyncCallback callback, object asyncState);
         
-        string EndEcho(System.IAsyncResult result);
+        System.ServiceModel.Channels.Message EndEcho(System.IAsyncResult result);
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -63,10 +63,10 @@ namespace TestApplication.LegacyBasicHttpServiceReference {
             this.results = results;
         }
         
-        public string Result {
+        public System.ServiceModel.Channels.Message Result {
             get {
                 base.RaiseExceptionIfNecessary();
-                return ((string)(this.results[0]));
+                return ((System.ServiceModel.Channels.Message)(this.results[0]));
             }
         }
     }
@@ -193,22 +193,22 @@ namespace TestApplication.LegacyBasicHttpServiceReference {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        System.IAsyncResult TestApplication.LegacyBasicHttpServiceReference.BasicHttpService.BeginEcho(string message, System.AsyncCallback callback, object asyncState) {
-            return base.Channel.BeginEcho(message, callback, asyncState);
+        System.IAsyncResult TestApplication.LegacyBasicHttpServiceReference.BasicHttpService.BeginEcho(System.ServiceModel.Channels.Message request, System.AsyncCallback callback, object asyncState) {
+            return base.Channel.BeginEcho(request, callback, asyncState);
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        string TestApplication.LegacyBasicHttpServiceReference.BasicHttpService.EndEcho(System.IAsyncResult result) {
+        System.ServiceModel.Channels.Message TestApplication.LegacyBasicHttpServiceReference.BasicHttpService.EndEcho(System.IAsyncResult result) {
             return base.Channel.EndEcho(result);
         }
         
         private System.IAsyncResult OnBeginEcho(object[] inValues, System.AsyncCallback callback, object asyncState) {
-            string message = ((string)(inValues[0]));
-            return ((TestApplication.LegacyBasicHttpServiceReference.BasicHttpService)(this)).BeginEcho(message, callback, asyncState);
+            System.ServiceModel.Channels.Message request = ((System.ServiceModel.Channels.Message)(inValues[0]));
+            return ((TestApplication.LegacyBasicHttpServiceReference.BasicHttpService)(this)).BeginEcho(request, callback, asyncState);
         }
         
         private object[] OnEndEcho(System.IAsyncResult result) {
-            string retVal = ((TestApplication.LegacyBasicHttpServiceReference.BasicHttpService)(this)).EndEcho(result);
+            System.ServiceModel.Channels.Message retVal = ((TestApplication.LegacyBasicHttpServiceReference.BasicHttpService)(this)).EndEcho(result);
             return new object[] {
                     retVal};
         }
@@ -220,11 +220,11 @@ namespace TestApplication.LegacyBasicHttpServiceReference {
             }
         }
         
-        public void EchoAsync(string message) {
-            this.EchoAsync(message, null);
+        public void EchoAsync(System.ServiceModel.Channels.Message request) {
+            this.EchoAsync(request, null);
         }
         
-        public void EchoAsync(string message, object userState) {
+        public void EchoAsync(System.ServiceModel.Channels.Message request, object userState) {
             if ((this.onBeginEchoDelegate == null)) {
                 this.onBeginEchoDelegate = new BeginOperationDelegate(this.OnBeginEcho);
             }
@@ -235,7 +235,7 @@ namespace TestApplication.LegacyBasicHttpServiceReference {
                 this.onEchoCompletedDelegate = new System.Threading.SendOrPostCallback(this.OnEchoCompleted);
             }
             base.InvokeAsync(this.onBeginEchoDelegate, new object[] {
-                        message}, this.onEndEchoDelegate, this.onEchoCompletedDelegate, userState);
+                        request}, this.onEndEchoDelegate, this.onEchoCompletedDelegate, userState);
         }
         
         private System.IAsyncResult OnBeginOpen(object[] inValues, System.AsyncCallback callback, object asyncState) {
@@ -326,16 +326,16 @@ namespace TestApplication.LegacyBasicHttpServiceReference {
                 return _result;
             }
             
-            public System.IAsyncResult BeginEcho(string message, System.AsyncCallback callback, object asyncState) {
+            public System.IAsyncResult BeginEcho(System.ServiceModel.Channels.Message request, System.AsyncCallback callback, object asyncState) {
                 object[] _args = new object[1];
-                _args[0] = message;
+                _args[0] = request;
                 System.IAsyncResult _result = base.BeginInvoke("Echo", _args, callback, asyncState);
                 return _result;
             }
             
-            public string EndEcho(System.IAsyncResult result) {
+            public System.ServiceModel.Channels.Message EndEcho(System.IAsyncResult result) {
                 object[] _args = new object[0];
-                string _result = ((string)(base.EndInvoke("Echo", _args, result)));
+                System.ServiceModel.Channels.Message _result = ((System.ServiceModel.Channels.Message)(base.EndInvoke("Echo", _args, result)));
                 return _result;
             }
         }

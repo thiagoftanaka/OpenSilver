@@ -106,6 +106,7 @@
     </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="System.Windows.Browser" />
+    <Reference Include="System.Xml.Linq, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Xml.Serialization, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
   </ItemGroup>
   <ItemGroup>
@@ -421,12 +422,16 @@
     <Content Include="Images\arrow_right.png" />
     <Content Include="Images\arrow_right_and_left.png" />
     <Content Include="Images\Logo1.png" />
+    <None Include="Properties_Silverlight\DataSources\System.ServiceModel.Channels.Message.datasource" />
     <None Include="Properties_Silverlight\OutOfBrowserSettings.xml" />
     <ApplicationDefinition Include="App.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </ApplicationDefinition>
     <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService.disco" />
+    <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService2.xsd">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Service References\LegacyBasicHttpServiceReference\configuration91.svcinfo" />
     <None Include="Service References\LegacyBasicHttpServiceReference\configuration.svcinfo" />
     <None Include="Service References\LegacyBasicHttpServiceReference\Reference.svcmap">

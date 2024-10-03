@@ -23,11 +23,12 @@
     <MetadataSource Address="http://localhost:50506/BasicHttpService.svc" Protocol="http" SourceId="1" />
   </MetadataSources>
   <Metadata>
-    <MetadataFile FileName="BasicHttpService.wsdl" MetadataType="Wsdl" ID="5f798e36-31d7-47b6-a36d-dd714b6e6f46" SourceId="1" SourceUrl="http://localhost:50506/BasicHttpService.svc?wsdl" />
-    <MetadataFile FileName="BasicHttpService.xsd" MetadataType="Schema" ID="77459775-feed-4769-8db4-a472d4dfa572" SourceId="1" SourceUrl="http://localhost:50506/BasicHttpService.svc?xsd=xsd1" />
-    <MetadataFile FileName="BasicHttpService1.wsdl" MetadataType="Wsdl" ID="f309e467-5bd1-4c91-be8a-624167e8822c" SourceId="1" SourceUrl="http://localhost:50506/BasicHttpService.svc?wsdl=wsdl0" />
     <MetadataFile FileName="BasicHttpService1.xsd" MetadataType="Schema" ID="ce939745-aa91-4d35-af37-68ed3f36d9c5" SourceId="1" SourceUrl="http://localhost:50506/BasicHttpService.svc?xsd=xsd0" />
     <MetadataFile FileName="BasicHttpService.disco" MetadataType="Disco" ID="26b0326f-ba3d-4fe5-b7b9-e716ca2538a3" SourceId="1" SourceUrl="http://localhost:50506/BasicHttpService.svc?disco" />
+    <MetadataFile FileName="BasicHttpService2.xsd" MetadataType="Schema" ID="f03af59b-e677-47b3-b2fd-8140a53105cb" SourceId="1" SourceUrl="http://localhost:50506/BasicHttpService.svc?xsd=xsd2" />
+    <MetadataFile FileName="BasicHttpService.xsd" MetadataType="Schema" ID="77459775-feed-4769-8db4-a472d4dfa572" SourceId="1" SourceUrl="http://localhost:50506/BasicHttpService.svc?xsd=xsd1" />
+    <MetadataFile FileName="BasicHttpService1.wsdl" MetadataType="Wsdl" ID="f309e467-5bd1-4c91-be8a-624167e8822c" SourceId="1" SourceUrl="http://localhost:50506/BasicHttpService.svc?wsdl=wsdl0" />
+    <MetadataFile FileName="BasicHttpService.wsdl" MetadataType="Wsdl" ID="5f798e36-31d7-47b6-a36d-dd714b6e6f46" SourceId="1" SourceUrl="http://localhost:50506/BasicHttpService.svc?wsdl" />
   </Metadata>
   <Extensions>
     <ExtensionFile FileName="configuration91.svcinfo" Name="configuration91.svcinfo" />

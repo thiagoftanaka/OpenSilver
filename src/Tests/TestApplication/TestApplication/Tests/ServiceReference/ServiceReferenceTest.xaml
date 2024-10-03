@@ -25,6 +25,12 @@
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="BasicHttpGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
 
+        <TextBlock Text="Enter message:" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+        <TextBox Name="BasicHttpEchoMessageTextBox" Width="300"/>
+        <Button Content="Legacy BasicHttp Echo()" Click="BasicHttpEchoButton_OnClick" Width="350"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="BasicHttpEchoResultTextBlock" HorizontalAlignment="Center"/>
+
         <Button Content="Binary GetTestString() - async await" Click="BinaryGetTestStringButton_OnClick" Width="300" Margin="0,20,0,0"/>
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="BinaryGetTestStringResultTextBlock" HorizontalAlignment="Center"/>

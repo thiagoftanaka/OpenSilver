@@ -1,9 +1,12 @@
 ﻿using System;
+using System.ServiceModel.Channels;
 using System.Windows;
 using System.Windows.Controls;
 using TestApplication.LegacyBasicHttpServiceReference;
 using TestApplication.LegacyBinaryServiceReference;
 using TestApplication.OpenSilver.Tests.ServiceReference;
+using static TestApplication.OpenSilver.Tests.ServiceReference.CustomLegacyBasicHttpServiceReferenceClient;
+
 #if OPENSILVER
 using BasicHttpServiceReference;
 using BinaryServiceReference;
@@ -35,8 +38,17 @@ namespace TestApplication.Tests
                 new LegacyBasicHttpServiceReference.BasicHttpServiceClient();
             basicHttpServiceClient.EchoCompleted +=
                 (_, ee) =>
-                    LegacyBasicHttpEchoResultTextBlock.Text = ee.Error?.Message ?? ee.Result;
-            basicHttpServiceClient.EchoAsync(LegacyBasicHttpEchoMessageTextBox.Text);
+                    LegacyBasicHttpEchoResultTextBlock.Text = ee.Error?.Message ?? ee.Result.GetBody<EchoMessage>().Message;
+
+            Message message = Message.CreateMessage(
+#if OPENSILVER
+                // BasicHttpBinding is transformed into a CustomBinding without MessageVersion, so it has to be set explicitly here
+                MessageVersion.Soap11,
+#else
+                basicHttpServiceClient.Endpoint.Binding.MessageVersion,
+#endif
+                "urn:BasicHttpService/Echo", new EchoMessage(LegacyBasicHttpEchoMessageTextBox.Text));
+            basicHttpServiceClient.EchoAsync(message);
         }
 
         private void LegacyBinaryGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
@@ -47,7 +59,7 @@ namespace TestApplication.Tests
                 (_, ee) => LegacyBinaryGetTestStringResultTextBlock.Text = ee.Error?.Message ?? ee.Result;
             binaryServiceClient.GetTestStringAsync();
         }
-        #endregion
+#endregion
 
         #region Modern
 #if OPENSILVER
@@ -64,6 +76,31 @@ namespace TestApplication.Tests
         }
 
 #if OPENSILVER
+        private async void BasicHttpEchoButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            BasicHttpServiceReference.BasicHttpServiceClient basicHttpServiceClient =
+                new BasicHttpServiceReference.BasicHttpServiceClient();
+            Message message = Message.CreateMessage(
+#if OPENSILVER
+                // BasicHttpBinding is transformed into a CustomBinding without MessageVersion, so it has to be set explicitly here
+                MessageVersion.Soap11,
+#else
+                basicHttpServiceClient.Endpoint.Binding.MessageVersion,
+#endif
+                "urn:BasicHttpService/Echo", new EchoBodyWriter(BasicHttpEchoMessageTextBox.Text));
+
+            Message response = await basicHttpServiceClient.EchoAsync(message);
+
+            string responseString = EchoResponseSerializer.Serialize(response);
+#else
+        private void BasicHttpEchoButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            string responseString = "Not possible to add modern ServiceReference in Silverlight.";
+#endif
+            BasicHttpEchoResultTextBlock.Text = responseString;
+        }
+
+#if OPENSILVER
         private async void BinaryGetTestStringButton_OnClick(object sender, RoutedEventArgs e)
         {
             BinaryServiceReference.BinaryServiceClient binaryServiceClient = new BinaryServiceReference.BinaryServiceClient();
@@ -75,7 +112,7 @@ namespace TestApplication.Tests
 #endif
             BinaryGetTestStringResultTextBlock.Text = testString;
         }
-        #endregion
+#endregion
 
         #region Custom Client
         private void CustomClientLegacyBasicHttpGetTestStringButton_OnClick(object sender, RoutedEventArgs e)

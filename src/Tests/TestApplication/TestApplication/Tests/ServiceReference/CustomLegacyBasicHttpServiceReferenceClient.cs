@@ -1,8 +1,11 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Runtime.Serialization;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
+using System.Windows;
 using System.Xml;
+using System.Xml.Linq;
 
 namespace TestApplication.OpenSilver.Tests.ServiceReference
 {
@@ -66,7 +69,7 @@ namespace TestApplication.OpenSilver.Tests.ServiceReference
 
         private IAsyncResult OnBeginEcho(object[] parameters, AsyncCallback callback, object asyncState)
         {
-            return BeginEcho(parameters[0] as string, callback, asyncState);
+            return BeginEcho(parameters[0] as Message, callback, asyncState);
         }
 
         private object[] OnEndEcho(IAsyncResult result)
@@ -89,7 +92,7 @@ namespace TestApplication.OpenSilver.Tests.ServiceReference
             return Channel.BeginEcho(message, callback, asyncState);
         }
 
-        public string EndEcho(IAsyncResult result)
+        public Message EndEcho(IAsyncResult result)
         {
             return Channel.EndEcho(result);
         }
@@ -118,14 +121,14 @@ namespace TestApplication.OpenSilver.Tests.ServiceReference
                 return (string)EndInvoke("GetTestString", new object[0], result);
             }
 
-            public IAsyncResult BeginEcho(string message, AsyncCallback callback, object asyncState)
+            public IAsyncResult BeginEcho(Message message, AsyncCallback callback, object asyncState)
             {
                 return BeginInvoke("Echo", new object[] { message }, callback, asyncState);
             }
 
-            public string EndEcho(IAsyncResult result)
+            public Message EndEcho(IAsyncResult result)
             {
-                return (string)EndInvoke("Echo", new object[0], result);
+                return (Message)EndInvoke("Echo", new object[0], result);
             }
         }
 
@@ -151,7 +154,7 @@ namespace TestApplication.OpenSilver.Tests.ServiceReference
             }
         }
 
-        private class EchoBodyWriter : BodyWriter
+        public class EchoBodyWriter : BodyWriter
         {
             private readonly string _message;
 
@@ -167,6 +170,27 @@ namespace TestApplication.OpenSilver.Tests.ServiceReference
                 writer.WriteString(_message);
                 writer.WriteEndElement();
                 writer.WriteEndElement();
+            }
+        }
+
+        public class EchoResponseSerializer
+        {
+            public static string Serialize(Message message)
+            {
+                XDocument rstr = XDocument.Parse(message.ToString());
+                return string.Empty;
+            }
+        }
+
+        [DataContract]
+        public class EchoMessage
+        {
+            [DataMember]
+            public string Message { get; set; }
+
+            public EchoMessage(string message)
+            {
+                Message = message;
             }
         }
     }
