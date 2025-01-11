@@ -187,7 +187,7 @@ namespace System.Windows.Controls
             }
             else
             {
-                tb._textViewHost?.View.SetTextNative((string)e.NewValue);
+                tb._textViewHost?.View.SetTextNative((string)e.NewValue, tb._isProcessingInput);
             }
 
             tb.OnTextChanged(new TextChangedEventArgs() { OriginalSource = tb });

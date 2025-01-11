@@ -180,7 +180,7 @@ internal sealed class RichTextBoxView : TextViewBase
         return new Size();
     }
 
-    protected internal override void OnInput() => OnContentChanged(true);
+    protected internal override void OnInput(string data) => OnContentChanged(true);
 
     internal void InvalidateUI()
     {

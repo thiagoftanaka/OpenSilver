@@ -975,7 +975,7 @@ document.getSystemColor = function (color) {
     return '';
 };
 
-document.createTextviewManager = function (inputCallback, scrollCallback) {
+document.createTextviewManager = function (inputCallback, scrollCallback, copyCallback) {
     if (document.textviewManager) return;
 
     function getSelectionLength(view) {
@@ -1092,7 +1092,17 @@ document.createTextviewManager = function (inputCallback, scrollCallback) {
             view.setAttribute('tabindex', -1);
 
             view.addEventListener('input', function (e) {
-                inputCallback(id);
+                inputCallback(id, e.data);
+            });
+
+            view.addEventListener('copy', function (e) {
+                let modifiedContent = copyCallback(id);
+
+                console.log(modifiedContent);
+                if (modifiedContent) {
+                    e.preventDefault();
+                    e.clipboardData.setData('text/plain', modifiedContent);
+                }
             });
 
             view.addEventListener('scroll', function (e) {

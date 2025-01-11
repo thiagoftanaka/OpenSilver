@@ -62,7 +62,7 @@ internal sealed class RichTextViewManager
     {
         if (INTERNAL_HtmlDomManager.GetElementById(id) is RichTextBoxView view)
         {
-            view.OnInput();
+            view.OnInput(null);
         }
     }
 

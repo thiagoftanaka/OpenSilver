@@ -14,6 +14,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
+using System.Xaml.Markup;
 using CSHTML5.Internal;
 
 namespace OpenSilver.Internal.Controls;
@@ -22,14 +23,17 @@ internal sealed class TextViewManager
 {
     private readonly JavaScriptCallback _inputHandler;
     private readonly JavaScriptCallback _scrollHandler;
+    private readonly JavaScriptCallback _copyHandler;
 
     private TextViewManager()
     {
         _inputHandler = JavaScriptCallback.Create(OnInputNative);
         _scrollHandler = JavaScriptCallback.Create(OnScrollNative);
+        _copyHandler = JavaScriptCallback.Create(OnCopyNative);
         string sInputHandler = Interop.GetVariableStringForJS(_inputHandler);
         string sScrollHandler = Interop.GetVariableStringForJS(_scrollHandler);
-        Interop.ExecuteJavaScriptVoidAsync($"document.createTextviewManager({sInputHandler},{sScrollHandler})");
+        string sCopyHandler = Interop.GetVariableStringForJS(_copyHandler);
+        Interop.ExecuteJavaScriptVoidAsync($"document.createTextviewManager({sInputHandler},{sScrollHandler},{sCopyHandler})");
     }
 
     public static TextViewManager Instance { get; } = new();
@@ -99,11 +103,11 @@ internal sealed class TextViewManager
         Interop.ExecuteJavaScriptVoid($"document.textviewManager.setSelectedText({sElement}, {sText})");
     }
 
-    private static void OnInputNative(string id)
+    private static void OnInputNative(string id, string data)
     {
         if (INTERNAL_HtmlDomManager.GetElementById(id) is TextViewBase textview)
         {
-            textview.OnInput();
+            textview.OnInput(data);
         }
     }
 
@@ -119,5 +123,15 @@ internal sealed class TextViewManager
 
             textview.UpdateOffsets(new Point(scrollLeft, scrollTop));
         }
+    }
+
+    private static string OnCopyNative(string id)
+    {
+        if (INTERNAL_HtmlDomManager.GetElementById(id) is TextBoxView textview)
+        {
+            return textview.OnCopy();
+        }
+
+        return null;
     }
 }

@@ -12,12 +12,20 @@
 \*====================================================================================*/
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel.Design;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Xaml.Markup;
 using CSHTML5.Internal;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace OpenSilver.Internal.Controls;
 
@@ -114,19 +122,118 @@ internal sealed class TextBoxView : TextViewBase
         }
     }
 
-    internal protected sealed override void OnInput()
+    internal protected sealed override void OnInput(string data)
     {
-        Host.UpdateTextProperty(GetText());
+        string text = GetText();
+        ReplaceSilverlightSpecialCharacters(text, data);
+
+        Host.UpdateTextProperty(_textWithoutSubstitutes.Length > 0 ? _textWithoutSubstitutes.ToString() : text);
+
         InvalidateMeasure();
     }
 
-    internal void SetTextNative(string text)
+    private readonly StringBuilder _textWithoutSubstitutes = new();
+    private string _lastText;
+
+    internal string OnCopy()
+    {
+        string selectedOriginalText = _textWithoutSubstitutes.ToString(SelectionStart, SelectionLength);
+        if (selectedOriginalText.Contains((char)173))
+        {
+            return selectedOriginalText;
+        }
+
+        return null;
+    }
+
+    private void ReplaceSilverlightSpecialCharacters(string text, string data)
+    {
+        if (_textWithoutSubstitutes.ToString().Contains((char)173) || data?.Contains((char)173) == true)
+        {
+            if (_textWithoutSubstitutes.Length > 0)
+            {
+                UpdateTextWithoutSubstitutes(text, data);
+
+                int oldSelectionStart = SelectionStart;
+                SetTextNative(text, true);
+                SelectionStart = oldSelectionStart;
+
+                Console.WriteLine($"Set _textWithoutSubstitutes {_textWithoutSubstitutes} _lastText {_lastText}");
+                _lastText = text;
+            }
+            else
+            {
+                int oldSelectionStart = SelectionStart;
+                SetTextNative(text, false);
+                SelectionStart = oldSelectionStart;
+            }
+        }
+    }
+
+    private void UpdateTextWithoutSubstitutes(string text, string insertedText)
+    {
+        if (!string.IsNullOrEmpty(insertedText))
+        {
+            // Text could be replaced, so old portion is removed first
+            int removedCount = insertedText.Length - (text.Length - _lastText.Length);
+            Console.WriteLine($"Removing at index {SelectionStart - insertedText.Length} length {removedCount}");
+            _textWithoutSubstitutes.Remove(SelectionStart - insertedText.Length, removedCount);
+
+            Console.WriteLine($"Inserting at index {SelectionStart - insertedText.Length}, text {insertedText}");
+            _textWithoutSubstitutes.Insert(SelectionStart - insertedText.Length, insertedText);
+        }
+        else
+        {
+            int textIndex = 0;
+            int lastTextIndex = 0;
+            int diffStart = -1;
+            int diffEnd = -1;
+            while (textIndex < text.Length || lastTextIndex < _lastText.Length)
+            {
+                if (textIndex >= text.Length || _lastText[lastTextIndex] != text[textIndex])
+                {
+                    if (diffStart == -1)
+                    {
+                        diffStart = lastTextIndex;
+                    }
+                    diffEnd = lastTextIndex;
+                }
+                else if (_lastText[lastTextIndex] == text[textIndex])
+                {
+                    textIndex++;
+                }
+                lastTextIndex++;
+            }
+
+            Console.WriteLine($"DiffStart {diffStart} diffEnd {diffEnd}");
+            if (diffStart > -1 && diffEnd > -1)
+            {
+                Console.WriteLine($"Removing index {diffStart} length {diffEnd - diffStart + 1}");
+                _textWithoutSubstitutes.Remove(diffStart, diffEnd - diffStart + 1);
+            }
+        }
+    }
+
+    internal void SetTextNative(string text, bool isProcessingInput)
     {
         if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
         {
+            string escapedText = INTERNAL_HtmlDomManager.EscapeStringForUseInJavaScript(text);
             string sElement = Interop.GetVariableStringForJS(OuterDiv);
             Interop.ExecuteJavaScriptVoid(
-                $"{sElement}.value = \"{INTERNAL_HtmlDomManager.EscapeStringForUseInJavaScript(text)}\";");
+                $"{sElement}.value = \"{escapedText}\";");
+
+            if (!isProcessingInput)
+            {
+                _textWithoutSubstitutes.Clear();
+
+                if (!string.IsNullOrEmpty(text) && text.Contains((char)173))
+                {
+                    _textWithoutSubstitutes.Append(text);
+                    Console.WriteLine($"Initialize _textWithoutSubstitutes {_textWithoutSubstitutes} _lastText {escapedText}");
+                    _lastText = escapedText;
+                }
+            }
 
             InvalidateMeasure();
         }
@@ -165,7 +272,7 @@ internal sealed class TextBoxView : TextViewBase
             Interop.ExecuteJavaScriptVoidAsync($"document.textviewManager.handleKeyDownFromSimulator({sElement})");
         }
 
-        SetTextNative(host.Text);
+        SetTextNative(host.Text, false);
     }
 
     internal void ProcessKeyDown(KeyEventArgs e)
