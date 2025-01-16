@@ -1519,6 +1519,12 @@ document.createRichTextViewManager = function (selectionChangedCallback, content
                 }, 0, this);
             });
 
+            view.addEventListener('copy', function (e) {
+                e.preventDefault();
+                console.log("Nativecopy " + e.clipboardData.getData('text/plain'));
+                e.clipboardData.setData('text/plain', 'test');
+            });
+
             const ql = new Quill(view, Options);
 
             // we can't use the 'selection-change' event because it does not fire when the user types in the editor
@@ -1534,9 +1540,29 @@ document.createRichTextViewManager = function (selectionChangedCallback, content
             });
             ql.on('text-change', function (delta, oldDelta, source) {
                 if (source === Quill.sources.USER) {
-                    contentChangedCallback(id);
+                    console.log('text-change');
+                    console.log(delta);
+                    console.log(oldDelta);
+                    contentChangedCallback(id, JSON.stringify(delta.ops), JSON.stringify(oldDelta.ops));
                 }
             });
+
+            //ql.clipboard.addMatcher(Node.TEXT_NODE, (node, delta) => {
+            //    console.log("Matcher TEXT " + node.data);
+            //    console.log(node);
+            //    console.log(delta);
+            //    if (delta.ops.length > 0 && delta.ops[0].insert) {
+            //        delta.ops[0].insert = 'test';
+            //    }
+            //    return delta;
+            //});
+
+            //ql.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
+            //    console.log("Matcher ELEMENT " + node.data);
+            //    console.log(node);
+            //    console.log(delta);
+            //    return delta;
+            //});
 
             parent.appendChild(view);
         },

@@ -152,7 +152,7 @@ internal sealed class TextBoxView : TextViewBase
         {
             if (_textWithoutSubstitutes.Length > 0)
             {
-                UpdateTextWithoutSubstitutes(text, data);
+                UpdateTextWithoutSubstitutes(text);
 
                 int oldSelectionStart = SelectionStart;
                 SetTextNative(text, true);
@@ -170,48 +170,103 @@ internal sealed class TextBoxView : TextViewBase
         }
     }
 
-    private void UpdateTextWithoutSubstitutes(string text, string insertedText)
+    private void UpdateTextWithoutSubstitutes(string text)
     {
-        if (!string.IsNullOrEmpty(insertedText))
-        {
-            // Text could be replaced, so old portion is removed first
-            int removedCount = insertedText.Length - (text.Length - _lastText.Length);
-            Console.WriteLine($"Removing at index {SelectionStart - insertedText.Length} length {removedCount}");
-            _textWithoutSubstitutes.Remove(SelectionStart - insertedText.Length, removedCount);
+        //if (!string.IsNullOrEmpty(insertedText))
+        //{
+        //    // Text could be replaced, so old portion is removed first
+        //    int removedCount = insertedText.Length - (text.Length - _lastText.Length);
+        //    Console.WriteLine($"Removing at index {SelectionStart - insertedText.Length} length {removedCount}");
+        //    _textWithoutSubstitutes.Remove(SelectionStart - insertedText.Length, removedCount);
 
+        //    Console.WriteLine($"Inserting at index {SelectionStart - insertedText.Length}, text {insertedText}");
+        //    _textWithoutSubstitutes.Insert(SelectionStart - insertedText.Length, insertedText);
+        //}
+        //else
+        //{
+        //    int textIndex = 0;
+        //    int lastTextIndex = 0;
+        //    int diffStart = -1;
+        //    int diffEnd = -1;
+        //    while (textIndex < text.Length || lastTextIndex < _lastText.Length)
+        //    {
+        //        if (textIndex >= text.Length || _lastText[lastTextIndex] != text[textIndex])
+        //        {
+        //            if (diffStart == -1)
+        //            {
+        //                diffStart = lastTextIndex;
+        //            }
+        //            diffEnd = lastTextIndex;
+        //        }
+        //        else if (_lastText[lastTextIndex] == text[textIndex])
+        //        {
+        //            textIndex++;
+        //        }
+        //        lastTextIndex++;
+        //    }
+
+        //    Console.WriteLine($"DiffStart {diffStart} diffEnd {diffEnd}");
+        //    if (diffStart > -1 && diffEnd > -1)
+        //    {
+        //        Console.WriteLine($"Removing index {diffStart} length {diffEnd - diffStart + 1}");
+        //        _textWithoutSubstitutes.Remove(diffStart, diffEnd - diffStart + 1);
+        //    }
+        //}
+
+        (int diffStart, int diffEnd) = GetDifferenceIndices(text, _lastText);
+        if (diffStart == -1 && diffEnd == -1)
+        {
+            return;
+        }
+        
+        int diffLength = diffEnd - diffStart;
+        int removedCount = diffLength - (text.Length - _lastText.Length);
+        if (removedCount > 0)
+        {
+            /// Remove a lot and replace with softhyphen
+            Console.WriteLine($"Removing at index {SelectionStart - removedCount} length {removedCount}");
+            _textWithoutSubstitutes.Remove(SelectionStart - diffLength, removedCount);
+        }
+
+        if (diffLength > 0)
+        {
+            string insertedText = text.Substring(diffStart, diffLength);
             Console.WriteLine($"Inserting at index {SelectionStart - insertedText.Length}, text {insertedText}");
-            _textWithoutSubstitutes.Insert(SelectionStart - insertedText.Length, insertedText);
+            _textWithoutSubstitutes.Insert(SelectionStart - diffLength, insertedText);
         }
-        else
-        {
-            int textIndex = 0;
-            int lastTextIndex = 0;
-            int diffStart = -1;
-            int diffEnd = -1;
-            while (textIndex < text.Length || lastTextIndex < _lastText.Length)
-            {
-                if (textIndex >= text.Length || _lastText[lastTextIndex] != text[textIndex])
-                {
-                    if (diffStart == -1)
-                    {
-                        diffStart = lastTextIndex;
-                    }
-                    diffEnd = lastTextIndex;
-                }
-                else if (_lastText[lastTextIndex] == text[textIndex])
-                {
-                    textIndex++;
-                }
-                lastTextIndex++;
-            }
+    }
 
-            Console.WriteLine($"DiffStart {diffStart} diffEnd {diffEnd}");
-            if (diffStart > -1 && diffEnd > -1)
+    static (int, int) GetDifferenceIndices(string str1, string str2)
+    {
+        int minLength = Math.Min(str1.Length, str2.Length);
+
+        // Find the start of the difference
+        int start = -1;
+        for (int i = 0; i < minLength; i++)
+        {
+            if (str1[i] != str2[i])
             {
-                Console.WriteLine($"Removing index {diffStart} length {diffEnd - diffStart + 1}");
-                _textWithoutSubstitutes.Remove(diffStart, diffEnd - diffStart + 1);
+                start = i;
+                break;
             }
         }
+
+        // If no differences were found within the common length
+        if (start == -1)
+        {
+            return str1.Length == str2.Length ? (-1, -1) : (minLength, Math.Max(str1.Length, str2.Length) - 1);
+        }
+
+        // Find the end of the difference
+        int end1 = str1.Length - 1;
+        int end2 = str2.Length - 1;
+        while (end1 >= start && end2 >= start && str1[end1] == str2[end2])
+        {
+            end1--;
+            end2--;
+        }
+
+        return (start, Math.Max(end1, end2));
     }
 
     internal void SetTextNative(string text, bool isProcessingInput)

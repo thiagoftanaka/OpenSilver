@@ -11,7 +11,10 @@
 *  
 \*====================================================================================*/
 
+using System;
 using System.Diagnostics;
+using System.Linq;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
 using CSHTML5.Internal;
@@ -20,6 +23,12 @@ namespace OpenSilver.Internal.Controls;
 
 internal sealed class RichTextViewManager
 {
+    private static JsonSerializerOptions SerializerOptions { get; } =
+        new JsonSerializerOptions
+        {
+            IgnoreNullValues = true,
+        };
+
     private readonly JavaScriptCallback _selectionChangedHandler;
     private readonly JavaScriptCallback _contentChangedHandler;
     private readonly JavaScriptCallback _scrollHandler;
@@ -58,11 +67,22 @@ internal sealed class RichTextViewManager
         }
     }
 
-    private static void OnContentChangedNative(string id)
+    private static void OnContentChangedNative(string id, string sDelta, string sOldDelta)
     {
         if (INTERNAL_HtmlDomManager.GetElementById(id) is RichTextBoxView view)
         {
-            view.OnInput(null);
+            QuillDelta[] delta = sDelta switch
+            {
+                "" or null => Array.Empty<QuillDelta>(),
+                string contents => JsonSerializer.Deserialize<QuillDelta[]>(contents, SerializerOptions)
+            };
+            QuillDelta[] oldDelta = sOldDelta switch
+            {
+                "" or null => Array.Empty<QuillDelta>(),
+                string contents => JsonSerializer.Deserialize<QuillDelta[]>(contents, SerializerOptions)
+            };
+
+            view.OnInput(string.Join("\n", delta.Where(o => o.Text != null)));
         }
     }
 
