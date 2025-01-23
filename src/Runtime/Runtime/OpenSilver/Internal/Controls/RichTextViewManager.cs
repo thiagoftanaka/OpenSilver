@@ -32,16 +32,19 @@ internal sealed class RichTextViewManager
     private readonly JavaScriptCallback _selectionChangedHandler;
     private readonly JavaScriptCallback _contentChangedHandler;
     private readonly JavaScriptCallback _scrollHandler;
+    private readonly JavaScriptCallback _copyHandler;
 
     private RichTextViewManager()
     {
         _selectionChangedHandler = JavaScriptCallback.Create(OnSelectionChangedNative);
         _contentChangedHandler = JavaScriptCallback.Create(OnContentChangedNative);
         _scrollHandler = JavaScriptCallback.Create(OnScrollNative);
+        _copyHandler = JavaScriptCallback.Create(OnCopyNative);
         string sSelectionChangedHandler = Interop.GetVariableStringForJS(_selectionChangedHandler);
         string sContentChangedHandler = Interop.GetVariableStringForJS(_contentChangedHandler);
         string sScrollHandler = Interop.GetVariableStringForJS(_scrollHandler);
-        Interop.ExecuteJavaScriptVoidAsync($"document.createRichTextViewManager({sSelectionChangedHandler}, {sContentChangedHandler}, {sScrollHandler})");
+        string sCopyHandler = Interop.GetVariableStringForJS(_copyHandler);
+        Interop.ExecuteJavaScriptVoidAsync($"document.createRichTextViewManager({sSelectionChangedHandler}, {sContentChangedHandler}, {sScrollHandler}, {sCopyHandler})");
     }
 
     public static RichTextViewManager Instance { get; } = new();
@@ -82,7 +85,7 @@ internal sealed class RichTextViewManager
                 string contents => JsonSerializer.Deserialize<QuillDelta[]>(contents, SerializerOptions)
             };
 
-            view.OnInput(string.Join("\n", delta.Where(o => o.Text != null)));
+            view.OnInput(delta);
         }
     }
 
@@ -98,5 +101,15 @@ internal sealed class RichTextViewManager
 
             view.UpdateOffsets(new Point(scrollLeft, scrollTop));
         }
+    }
+
+    private static string OnCopyNative(string id)
+    {
+        if (INTERNAL_HtmlDomManager.GetElementById(id) is RichTextBoxView view)
+        {
+            return view.OnCopy();
+        }
+
+        return null;
     }
 }

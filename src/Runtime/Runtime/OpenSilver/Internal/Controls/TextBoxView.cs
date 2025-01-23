@@ -31,6 +31,9 @@ namespace OpenSilver.Internal.Controls;
 
 internal sealed class TextBoxView : TextViewBase
 {
+    private readonly StringBuilder _textWithoutSubstitutes = new();
+    private string _lastText;
+
     static TextBoxView()
     {
         TextElement.CharacterSpacingProperty.AddOwner(
@@ -122,18 +125,15 @@ internal sealed class TextBoxView : TextViewBase
         }
     }
 
-    internal protected sealed override void OnInput(string data)
+    internal protected sealed override void OnInput(object data)
     {
         string text = GetText();
-        ReplaceSilverlightSpecialCharacters(text, data);
+        ReplaceSilverlightSpecialCharacters(text, data as string);
 
         Host.UpdateTextProperty(_textWithoutSubstitutes.Length > 0 ? _textWithoutSubstitutes.ToString() : text);
 
         InvalidateMeasure();
     }
-
-    private readonly StringBuilder _textWithoutSubstitutes = new();
-    private string _lastText;
 
     internal string OnCopy()
     {
@@ -158,7 +158,6 @@ internal sealed class TextBoxView : TextViewBase
                 SetTextNative(text, true);
                 SelectionStart = oldSelectionStart;
 
-                Console.WriteLine($"Set _textWithoutSubstitutes {_textWithoutSubstitutes} _lastText {_lastText}");
                 _lastText = text;
             }
             else
@@ -172,47 +171,6 @@ internal sealed class TextBoxView : TextViewBase
 
     private void UpdateTextWithoutSubstitutes(string text)
     {
-        //if (!string.IsNullOrEmpty(insertedText))
-        //{
-        //    // Text could be replaced, so old portion is removed first
-        //    int removedCount = insertedText.Length - (text.Length - _lastText.Length);
-        //    Console.WriteLine($"Removing at index {SelectionStart - insertedText.Length} length {removedCount}");
-        //    _textWithoutSubstitutes.Remove(SelectionStart - insertedText.Length, removedCount);
-
-        //    Console.WriteLine($"Inserting at index {SelectionStart - insertedText.Length}, text {insertedText}");
-        //    _textWithoutSubstitutes.Insert(SelectionStart - insertedText.Length, insertedText);
-        //}
-        //else
-        //{
-        //    int textIndex = 0;
-        //    int lastTextIndex = 0;
-        //    int diffStart = -1;
-        //    int diffEnd = -1;
-        //    while (textIndex < text.Length || lastTextIndex < _lastText.Length)
-        //    {
-        //        if (textIndex >= text.Length || _lastText[lastTextIndex] != text[textIndex])
-        //        {
-        //            if (diffStart == -1)
-        //            {
-        //                diffStart = lastTextIndex;
-        //            }
-        //            diffEnd = lastTextIndex;
-        //        }
-        //        else if (_lastText[lastTextIndex] == text[textIndex])
-        //        {
-        //            textIndex++;
-        //        }
-        //        lastTextIndex++;
-        //    }
-
-        //    Console.WriteLine($"DiffStart {diffStart} diffEnd {diffEnd}");
-        //    if (diffStart > -1 && diffEnd > -1)
-        //    {
-        //        Console.WriteLine($"Removing index {diffStart} length {diffEnd - diffStart + 1}");
-        //        _textWithoutSubstitutes.Remove(diffStart, diffEnd - diffStart + 1);
-        //    }
-        //}
-
         (int diffStart, int diffEnd) = GetDifferenceIndices(text, _lastText);
         if (diffStart == -1 && diffEnd == -1)
         {
@@ -223,15 +181,12 @@ internal sealed class TextBoxView : TextViewBase
         int removedCount = diffLength - (text.Length - _lastText.Length);
         if (removedCount > 0)
         {
-            /// Remove a lot and replace with softhyphen
-            Console.WriteLine($"Removing at index {SelectionStart - removedCount} length {removedCount}");
             _textWithoutSubstitutes.Remove(SelectionStart - diffLength, removedCount);
         }
 
         if (diffLength > 0)
         {
             string insertedText = text.Substring(diffStart, diffLength);
-            Console.WriteLine($"Inserting at index {SelectionStart - insertedText.Length}, text {insertedText}");
             _textWithoutSubstitutes.Insert(SelectionStart - diffLength, insertedText);
         }
     }

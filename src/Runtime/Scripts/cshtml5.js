@@ -1098,7 +1098,6 @@ document.createTextviewManager = function (inputCallback, scrollCallback, copyCa
             view.addEventListener('copy', function (e) {
                 let modifiedContent = copyCallback(id);
 
-                console.log(modifiedContent);
                 if (modifiedContent) {
                     e.preventDefault();
                     e.clipboardData.setData('text/plain', modifiedContent);
@@ -1274,7 +1273,7 @@ document.createTextviewManager = function (inputCallback, scrollCallback, copyCa
     };
 };
 
-document.createRichTextViewManager = function (selectionChangedCallback, contentChangedCallback, scrollCallback) {
+document.createRichTextViewManager = function (selectionChangedCallback, contentChangedCallback, scrollCallback, copyCallback) {
     if (document.richTextViewManager) return;
 
     const ACCEPTS_TAB_ATTR = 'data-acceptstab';
@@ -1520,9 +1519,12 @@ document.createRichTextViewManager = function (selectionChangedCallback, content
             });
 
             view.addEventListener('copy', function (e) {
-                e.preventDefault();
-                console.log("Nativecopy " + e.clipboardData.getData('text/plain'));
-                e.clipboardData.setData('text/plain', 'test');
+                let modifiedContent = copyCallback(id);
+
+                if (modifiedContent) {
+                    e.preventDefault();
+                    e.clipboardData.setData('text/plain', modifiedContent);
+                }
             });
 
             const ql = new Quill(view, Options);
@@ -1546,23 +1548,6 @@ document.createRichTextViewManager = function (selectionChangedCallback, content
                     contentChangedCallback(id, JSON.stringify(delta.ops), JSON.stringify(oldDelta.ops));
                 }
             });
-
-            //ql.clipboard.addMatcher(Node.TEXT_NODE, (node, delta) => {
-            //    console.log("Matcher TEXT " + node.data);
-            //    console.log(node);
-            //    console.log(delta);
-            //    if (delta.ops.length > 0 && delta.ops[0].insert) {
-            //        delta.ops[0].insert = 'test';
-            //    }
-            //    return delta;
-            //});
-
-            //ql.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
-            //    console.log("Matcher ELEMENT " + node.data);
-            //    console.log(node);
-            //    console.log(delta);
-            //    return delta;
-            //});
 
             parent.appendChild(view);
         },

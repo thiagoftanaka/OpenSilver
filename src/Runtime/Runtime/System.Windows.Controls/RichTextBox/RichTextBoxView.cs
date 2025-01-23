@@ -26,6 +26,7 @@ using System.Windows.Threading;
 using System.Xml;
 using CSHTML5.Internal;
 using OpenSilver.Internal.Media;
+using System.Text;
 
 namespace OpenSilver.Internal.Controls;
 
@@ -112,6 +113,7 @@ internal sealed class RichTextBoxView : TextViewBase
 
     private DispatcherOperation _refreshOp;
     private WeakEventListener<RichTextBoxView, Brush, EventArgs> _foregroundChangedListener;
+    private readonly StringBuilder _textWithoutSubstitutes = new();
 
     public RichTextBoxView(RichTextBox rtb)
         : base(rtb)
@@ -180,7 +182,77 @@ internal sealed class RichTextBoxView : TextViewBase
         return new Size();
     }
 
-    protected internal override void OnInput(string data) => OnContentChanged(true);
+    protected internal override void OnInput(object data)
+    {
+        ReplaceSilverlightSpecialCharacters(data as QuillDelta[]);
+
+        OnContentChanged(true);
+    }
+
+    internal string OnCopy()
+    {
+        TextSelection selection = Host?.Selection;
+        if (selection == null)
+        {
+            return null;
+        }
+
+        string selectedOriginalText = _textWithoutSubstitutes.ToString(selection.Start.Offset,
+            selection.End.Offset - selection.Start.Offset);
+        if (selectedOriginalText.Contains((char)173))
+        {
+            return selectedOriginalText;
+        }
+
+        return null;
+    }
+
+    private void ReplaceSilverlightSpecialCharacters(QuillDelta[] delta)
+    {
+        if (delta == null)
+        {
+            return;
+        }
+
+        int retain = 0;
+        // Set _text when setting initial text
+        foreach (QuillDelta d in delta)
+        {
+            if (d.Delete > 0)
+            {
+                _textWithoutSubstitutes.Remove(retain, d.Delete.Value);
+            }
+            else if (!string.IsNullOrEmpty(d.Text))
+            {
+                _textWithoutSubstitutes.Insert(retain, d.Text);
+
+                if (d.Text.Contains((char)173))
+                {
+                    QuillDelta[] replaceDeltas = new[]
+                    {
+                        new QuillDelta
+                        {
+                            Retain = retain
+                        },
+                        new QuillDelta
+                        {
+                            Text = d.Text.Replace((char)173, '-'),
+                            Attributes = d.Attributes
+                        },
+                        new QuillDelta
+                        {
+                            Delete = d.Text.Length
+                        }
+                    };
+
+                    Interop.ExecuteJavaScriptVoid($"document.richTextViewManager.updateContents('{OuterDiv.UniqueIdentifier}',{JsonSerializer.Serialize(replaceDeltas, SerializerOptions)})");
+                }
+
+                retain += d.Text.Length;
+            }
+            retain += d.Retain ?? 0;
+        }
+    }
 
     internal void InvalidateUI()
     {

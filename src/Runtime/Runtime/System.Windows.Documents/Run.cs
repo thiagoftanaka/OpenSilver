@@ -127,6 +127,7 @@ public sealed class Run : Inline
 
     private static void OnTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
+        Console.WriteLine(Environment.StackTrace);
         ((Run)d).TextContainer.OnTextContentChanged();
     }
 

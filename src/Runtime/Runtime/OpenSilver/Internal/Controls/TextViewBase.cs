@@ -37,7 +37,7 @@ internal abstract partial class TextViewBase : FrameworkElement
 
     protected abstract Size MeasureContent(Size constraint);
 
-    internal protected abstract void OnInput(string data);
+    internal protected abstract void OnInput(object data);
 
     protected sealed override Size MeasureOverride(Size availableSize)
     {

@@ -100,7 +100,7 @@ internal sealed class PasswordBoxView : TextViewBase
         }
     }
 
-    internal protected sealed override void OnInput(string data)
+    internal protected sealed override void OnInput(object data)
     {
         Host.UpdatePasswordProperty(GetPassword());
         InvalidateMeasure();
