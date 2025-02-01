@@ -30,6 +30,9 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
 {
     public static class INTERNAL_HtmlDomManager // Note: this class is "internal" but still visible to the Simulator because of the "InternalsVisibleTo" flag in "Assembly.cs".
     {
+        internal const char SoftHyphen = (char)173;
+        internal const char SoftHyphenPlaceholder = (char)8208;
+
         //------
         // All JavaScript functions (called through dynamic objects) for manipulating the DOM should go here.
         //------
@@ -473,9 +476,9 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
 
                 // Soft hyphen (dec 173 in Unicode) does not display a visible symbol on modern browsers, but
                 // shows a regular hyphen in Silverlight.
-                if (c == 173)
+                if (c == SoftHyphen)
                 {
-                    c = '-';
+                    c = SoftHyphenPlaceholder;
                 }
 
                 switch (c)

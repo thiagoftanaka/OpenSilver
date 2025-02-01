@@ -12,6 +12,7 @@
 \*====================================================================================*/
 
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -116,7 +117,21 @@ internal sealed class TextBoxView : TextViewBase
 
     internal protected sealed override void OnInput()
     {
-        Host.UpdateTextProperty(GetText());
+        string nativeText = GetText();
+
+        // The Text Property must not be impacted by soft hyphen placeholders
+        string textWithoutPlaceholders = nativeText.Replace(INTERNAL_HtmlDomManager.SoftHyphenPlaceholder,
+            INTERNAL_HtmlDomManager.SoftHyphen);
+        Host.UpdateTextProperty(textWithoutPlaceholders);
+
+        if (nativeText.Contains(INTERNAL_HtmlDomManager.SoftHyphen))
+        {
+            // SetTextNative is called to replace soft hyphens with placeholders
+            int selectionStart = SelectionStart;
+            SetTextNative(nativeText);
+            SelectionStart = selectionStart;
+        }
+
         InvalidateMeasure();
     }
 
