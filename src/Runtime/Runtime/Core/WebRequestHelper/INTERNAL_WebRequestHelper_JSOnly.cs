@@ -83,7 +83,7 @@ namespace System
                 Debug.WriteLine(string.Format("CSHTML5.Internal.WebRequestsHelper.MakeRequest({0}, {1}, {2}, {3}, {4});",
                     EscapeStringAndSurroundWithQuotes(address.ToString()),
                     EscapeStringAndSurroundWithQuotes(Method),
-                    body is string bodyString ? EscapeStringAndSurroundWithQuotes(bodyString) : "<binary message>",
+                    EscapeStringAndSurroundWithQuotes(body?.ToString()),
                     headersCode,
                     "false"
                     ));
@@ -155,11 +155,11 @@ namespace System
                 SaveParameters(address, Method, sender, headers, callbackMethod, body, isAsync);
 
                 // safe request, will resend the request with different settings if it crashes.
-                return SendUnsafeRequest(address.OriginalString, Method, isAsync, body.ToString(), isBinaryRequest);
+                return SendUnsafeRequest(address.OriginalString, Method, isAsync, body?.ToString(), isBinaryRequest);
             }
             else
             {
-                SendRequest((object)_xmlHttpRequest, address.OriginalString, Method, isAsync, body.ToString());
+                SendRequest((object)_xmlHttpRequest, address.OriginalString, Method, isAsync, body?.ToString());
             }
 
             string result;
@@ -335,7 +335,7 @@ namespace System
 
         internal static void SetResponseType(object xmlHttpRequest, string responseType)
         {
-            OpenSilver.Interop.ExecuteJavaScript("$0.responseType = $1", xmlHttpRequest, responseType);
+            OpenSilver.Interop.ExecuteJavaScriptVoid("$0.responseType = $1", xmlHttpRequest, responseType);
         }
 
         internal static string GetResponseType(object xmlHttpRequest)

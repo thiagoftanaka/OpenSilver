@@ -8,9 +8,18 @@ namespace TestApplication.Silverlight.Web
     public class BinaryService
     {
         [OperationContract]
-        public string GetTestString()
+        public string Echo(string message)
         {
-            return "This is a binary test.";
+            return $"Binary response to '{message}'";
+        }
+
+        [OperationContract]
+        public BodyMemberResponseMessage BodyMember(BodyMemberRequestMessage message)
+        {
+            return new BodyMemberResponseMessage
+            {
+                Response = $"Binary response to '{message.Request}'."
+            };
         }
     }
 }
