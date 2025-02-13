@@ -534,7 +534,7 @@ namespace OpenSilver.Compiler
     @"
             {11}
             {6}System.ServiceModel.INTERNAL_WebMethodsCaller.{8}CallWebMethod{0}{7}
-                <{1}{2}>({9}, ""{3}"", {4}, ""{10}"");
+                <{1}{2}>({9}, ""{3}"", {4}, ""{10}"", this);
 ",
      ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
      ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
@@ -557,7 +557,7 @@ namespace OpenSilver.Compiler
                     newBody = string.Format(
     @"
             {6}System.ServiceModel.INTERNAL_WebMethodsCaller.{8}CallWebMethod{0}{7}
-                <{1}{2}>({9}, ""{3}"", {4}, ""{10}"");
+                <{1}{2}>({9}, ""{3}"", {4}, ""{10}"", this);
 ",
      ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
      ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
