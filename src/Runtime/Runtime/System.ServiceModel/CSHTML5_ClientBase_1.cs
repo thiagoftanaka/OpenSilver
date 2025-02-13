@@ -23,6 +23,8 @@ using System.ServiceModel.Channels;
 using System.IO;
 using System.Threading.Tasks;
 using System.Runtime.Serialization;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using System.Xml;
 using System.Windows;
@@ -75,10 +77,23 @@ namespace System.ServiceModel
     public abstract partial class CSHTML5_ClientBase<TChannel> /*: ICommunicationObject, IDisposable*/ where TChannel : class
     {
         //Note: Adding this because they are in the file generated when adding a Service Reference through the "Add Connected Service" for OpenSilver.
-        public Description.ServiceEndpoint Endpoint { get; } = new Description.ServiceEndpoint(new Description.ContractDescription("none"));
+        public Description.ServiceEndpoint Endpoint => ChannelFactory.Endpoint;
         public Description.ClientCredentials ClientCredentials { get; } = new Description.ClientCredentials();
 
-        public TChannel Channel { get; }
+        private TChannel channel;
+        public TChannel Channel
+        {
+            get
+            {
+                if (channel == null)
+                {
+                    channel = CreateChannel();
+                }
+                return channel;
+            }
+        }
+
+        public ChannelFactory<TChannel> ChannelFactory { get; set; }
 
         /// <summary>
         /// Provides support for implementing the event-based asynchronous pattern.
@@ -210,6 +225,56 @@ namespace System.ServiceModel
 
         public string INTERNAL_RemoteAddressAsString { get; }
 
+        internal MessageVersion GetMessageVersion(string forceSoapVersion)
+        {
+            if (Endpoint.Binding.MessageVersion != null)
+            {
+                return Endpoint.Binding.MessageVersion;
+            }
+            switch (forceSoapVersion)
+            {
+                case "1.1":
+                    return MessageVersion.Soap11;
+                case "1.2":
+                    return MessageVersion.Soap12WSAddressing10;
+                default:
+                    return MessageVersion.Soap11;
+            }
+        }
+
+        public string GetEnvelopeHeaders(ICollection<MessageHeader> messageHeaders, string soapVersion)
+        {
+            if (messageHeaders == null || !messageHeaders.Any())
+            {
+                return "";
+            }
+
+            var settings = new XmlWriterSettings { OmitXmlDeclaration = true };
+
+            return string.Join("", messageHeaders.Select(mh =>
+            {
+                using (var sw = new StringWriter())
+                using (var xw = XmlWriter.Create(sw, settings))
+                {
+                    mh.WriteHeader(xw, GetMessageVersion(soapVersion));
+
+                    xw.Flush();
+                    return sw.ToString();
+                }
+            }));
+        }
+
+        private MessageHeaders GetEnvelopeHeaders(string incomingMessageString, string soapVersion)
+        {
+            using (var reader = XmlReader.Create(new StringReader(incomingMessageString)))
+            {
+                var incomingMessage = Message.CreateMessage(reader, int.MaxValue, GetMessageVersion(soapVersion));
+                return incomingMessage.Headers;
+            }
+        }
+
+        public IList<MessageHeader> MessageHeaders => (Channel as ChannelBase<TChannel>)?.MessageHeaders;
+
         /// <summary>
         /// Initializes a new instance of the System.ServiceModel.ClientBase`1
         /// class using the default target endpoint from the application configuration
@@ -221,7 +286,149 @@ namespace System.ServiceModel
         /// </exception>
         protected CSHTML5_ClientBase()
         {
-            throw new NotSupportedException("Please specify the Binding and Endpoint programmatically. See http://www.cshtml5.com/links/wcf-limitations-and-tutorials.aspx for details.");
+            // we get the name of the contract we are looking for
+            string contractConfigurationName = null;
+            Type interfacetype = this.GetType().BaseType.GetGenericArguments()[0];
+            foreach (ServiceContractAttribute attr in interfacetype.GetCustomAttributes(typeof(ServiceContractAttribute), false))
+            {
+                if (attr.ConfigurationName != null)
+                {
+                    contractConfigurationName = attr.ConfigurationName;
+                    break;
+                }
+            }
+            if (contractConfigurationName == null)
+            {
+                throw new Exception(
+                    string.Format("Could not find a suitable ServiceContractAttribute to get the default endpoint in the type: '{0}'.",
+                                  interfacetype.FullName));
+            }
+
+            // Attempt to read the WCF endpoint address by first looking into the 
+            // "ServiceReferences.ClientConfig" file, and then the "App.Config" file
+            string endpointAddress;
+            Binding binding;
+            using (var serviceReferencesClientConfig = OpenSilver.Interop.ExecuteJavaScript("window.ServiceReferencesClientConfig")) {
+                if (TryReadEndpoint(serviceReferencesClientConfig,
+                        "ServiceReferences.ClientConfig",
+                        contractConfigurationName,
+                        false /* throw if not found */,
+                        out endpointAddress,
+                        out binding))
+                {
+                    INTERNAL_RemoteAddressAsString = endpointAddress;
+                }
+                else
+                {
+                    using (var appConfig = OpenSilver.Interop.ExecuteJavaScript("window.AppConfig")) {
+                        if (TryReadEndpoint(appConfig,
+                                "App.Config",
+                                contractConfigurationName,
+                                true /* throw if not found */,
+                                out endpointAddress,
+                                out binding))
+                        {
+                            INTERNAL_RemoteAddressAsString = endpointAddress;
+                        }
+                        else
+                        {
+                            throw new Exception(
+                                string.Format("Could not find the default WCF endpoint element that references the contract '{0}' in the ServiceModel client configuration section.",
+                                    contractConfigurationName));
+                        }
+                    }
+                }
+            }
+
+            ChannelFactory = new ChannelFactory<TChannel>(binding, new EndpointAddress(endpointAddress));
+        }
+
+    private static bool TryReadEndpoint(
+            object configFileContent,
+            string fileName,
+            string contractConfigurationName,
+            bool throwIfFileNotFound,
+            out string endpointAddress,
+            out Binding binding)
+        {
+            bool isNullOrUndefined = OpenSilver.Interop.ExecuteJavaScriptBoolean(
+                $"!{OpenSilver.Interop.GetVariableStringForJS(configFileContent)}");
+            if (!isNullOrUndefined)
+            {
+                string fileContentAsString = Convert.ToString(configFileContent);
+
+                XDocument doc = XDocument.Parse(fileContentAsString);
+
+                endpointAddress = null;
+                binding = null;
+                string bindingConfiguration = null;
+                // Attempt to find the elements that contain the correct Binding and endpointAddress:
+                foreach (XElement endpointXElement in doc.Descendants("endpoint"))
+                {
+                    XAttribute contractXAttribute = endpointXElement.Attributes("contract").FirstOrDefault();
+                    if (contractXAttribute != null &&
+                        contractXAttribute.Value == contractConfigurationName)
+                    {
+                        XAttribute addressXAttribute = endpointXElement.Attributes("address").FirstOrDefault();
+                        if (addressXAttribute != null)
+                        {
+                            endpointAddress = addressXAttribute.Value;
+                        }
+
+                        XAttribute bindingConfigurationXAttribute = endpointXElement
+                            .Attributes("bindingConfiguration").FirstOrDefault();
+                        if (bindingConfigurationXAttribute != null)
+                        {
+                            bindingConfiguration = bindingConfigurationXAttribute.Value;
+                        }
+                    }
+                }
+
+                if (bindingConfiguration != null)
+                {
+                    foreach (XElement bindingXElement in doc.Descendants("binding"))
+                    {
+                        XAttribute bindingNameXAttribute = bindingXElement.Attributes("name").FirstOrDefault();
+                        if (bindingNameXAttribute != null &&
+                            bindingNameXAttribute.Value == bindingConfiguration)
+                        {
+                            BindingElementCollection collection = new BindingElementCollection();
+                            if (bindingXElement.Descendants("binaryMessageEncoding").Any())
+                            {
+                                collection.Add(new BinaryMessageEncodingBindingElement());
+                            }
+
+                            binding = new CustomBinding(collection.ToArray());
+                            break;
+                        }
+                    }
+                }
+
+                if (endpointAddress != null && binding != null)
+                {
+                    return true;
+                }
+                return false;
+            }
+            else
+            {
+                //--------------------------
+                // FILE NOT FOUND
+                //--------------------------
+
+                if (throwIfFileNotFound)
+                {
+                    throw new FileNotFoundException(
+                        string.Format("Could not find the '{0}' file to get the default endpoint. Please make sure that you have added your service reference through 'Add service reference' or use the constructor that allows you to set the Binding and Endpoint programmatically.\nSee http://www.cshtml5.com/links/wcf-limitations-and-tutorials.aspx for details.",
+                                      fileName));
+                }
+                else
+                {
+                    endpointAddress = null;
+                    binding = null;
+                    return false;
+                }
+            }
         }
 
         /// <summary>
@@ -265,7 +472,7 @@ namespace System.ServiceModel
 
             INTERNAL_RemoteAddressAsString = remoteAddress.Uri.OriginalString;
 
-            //todo: finish the implementation.
+            ChannelFactory = new ChannelFactory<TChannel>(binding, remoteAddress);
         }
 
         /// <summary>
@@ -322,13 +529,16 @@ namespace System.ServiceModel
 
             INTERNAL_WebRequestHelper_JSOnly _webRequestHelper_JSVersion = new INTERNAL_WebRequestHelper_JSOnly();
 
+            private readonly CSHTML5_ClientBase<TChannel> _client;
+
             /// <summary>
             /// Constructor for the WebMethodsCaller's class
             /// </summary>
             /// <param name="addressOfService">The address of the WebService</param>
-            public WebMethodsCaller(string addressOfService)
+            public WebMethodsCaller(string addressOfService, CSHTML5_ClientBase<TChannel> client)
             {
                 _addressOfService = addressOfService;
+                _client = client;
             }
 
             public void BeginCallWebMethod(
@@ -353,8 +563,8 @@ namespace System.ServiceModel
                 string soapVersion)
             {
                 BeginCallWebMethod(webMethodName, interfaceType, methodReturnType, null,
-                    GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), soapVersion), originalRequestObject,
-                    callback, soapVersion);
+                    _client.GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), soapVersion),
+                    originalRequestObject, callback, soapVersion);
             }
 
             public void BeginCallWebMethod(
@@ -384,7 +594,7 @@ namespace System.ServiceModel
                 bool isXmlSerializer = IsXmlSerializer(webMethodName, methodReturnType, method);
 
                 Dictionary<string, string> headers;
-                string request;
+                object request;
                 PrepareRequest(
                     webMethodName,
                     method,
@@ -537,7 +747,9 @@ namespace System.ServiceModel
                             ((WebMethodAsyncResult)asyncResponseResult).XmlReturnedFromTheServer,
                             soapVersion);
 
-                        var messageHeaders = GetEnvelopeHeaders(((WebMethodAsyncResult)asyncResponseResult).XmlReturnedFromTheServer, soapVersion);
+                        var messageHeaders = _client.GetEnvelopeHeaders(
+                            ((WebMethodAsyncResult)asyncResponseResult).XmlReturnedFromTheServer,
+                            soapVersion);
 
                         tcs.SetResult((result, messageHeaders));
                     }
@@ -592,10 +804,11 @@ namespace System.ServiceModel
                 // (if possible) and change the parameterName to a string[].
                 MethodInfo method = ResolveMethod(interfaceType, webMethodName, webMethodName + "Async");
                 bool isXmlSerializer = IsXmlSerializer(webMethodName, methodReturnType, method);
-                string outgoingMessageHeadersString = GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), soapVersion);
+                string outgoingMessageHeadersString = _client.GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(),
+                    soapVersion);
 
                 Dictionary<string, string> headers;
-                string request;
+                object request;
                 PrepareRequest(
                     webMethodName,
                     method,
@@ -657,7 +870,7 @@ namespace System.ServiceModel
                 bool isXmlSerializer = IsXmlSerializer(webMethodName, methodReturnType, method);
 
                 Dictionary<string, string> headers;
-                string request;
+                object request;
                 PrepareRequest(
                     webMethodName,
                     method,
@@ -751,7 +964,7 @@ namespace System.ServiceModel
                 bool isXmlSerializer = IsXmlSerializer(webMethodName, methodReturnType, method);
 
                 Dictionary<string, string> headers;
-                string request;
+                object request;
                 PrepareRequest(
                     webMethodName,
                     method,
@@ -840,10 +1053,11 @@ namespace System.ServiceModel
 
                 MethodInfo method = ResolveMethod(interfaceType, webMethodName, webMethodName, "Begin" + webMethodName);
                 bool isXmlSerializer = IsXmlSerializer(webMethodName, methodReturnType, method);
-                var outgoingMessageHeadersString = GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), soapVersion);
+                var outgoingMessageHeadersString = _client.GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(),
+                    soapVersion);
 
                 Dictionary<string, string> headers;
-                string request;
+                object request;
                 PrepareRequest(
                     webMethodName,
                     method,
@@ -876,12 +1090,12 @@ namespace System.ServiceModel
                     isXmlSerializer,
                     soapVersion);
 
-                var incomingMessageHeaders = GetEnvelopeHeaders(response, soapVersion);
+                var incomingMessageHeaders = _client.GetEnvelopeHeaders(response, soapVersion);
 
                 return (typedResponseBody, incomingMessageHeaders);
             }
 
-            private static MethodInfo ResolveMethod(Type interfaceType, string webMethodName, string methodName1, string methodName2 = null)
+            internal static MethodInfo ResolveMethod(Type interfaceType, string webMethodName, string methodName1, string methodName2 = null)
             {
                 if (interfaceType.GetMethod(methodName1) is MethodInfo method1)
                 {
@@ -903,8 +1117,9 @@ namespace System.ServiceModel
             {
                 if (methodReturnType != null)
                 {
-                    if (methodReturnType.Name == webMethodName + "Response" &&
-                        methodReturnType.GetField("Body") != null)
+                    if (Regex.IsMatch(methodReturnType.Name, $@"{webMethodName}Response\d*$") &&
+                        (methodReturnType.GetField("Body") != null ||
+                            methodReturnType.GetCustomAttribute<MessageContractAttribute>(true) != null))
                     {
                         return true;
                     }
@@ -915,44 +1130,17 @@ namespace System.ServiceModel
                     ParameterInfo[] parameterInfos = method.GetParameters();
                     if (methodReturnType == typeof(IAsyncResult) &&
                        (parameterInfos != null && parameterInfos.Length > 0) &&
-                        parameterInfos[0].ParameterType.Name == webMethodName + "Request")
+                        Regex.IsMatch(parameterInfos[0].ParameterType.Name, $@"{webMethodName}Request\d*$"))
                     {
-                        return true;
+                        if (parameterInfos[0].ParameterType
+                            .GetCustomAttribute<MessageContractAttribute>(true) == null)
+                        {
+                            return true;
+                        }
                     }
                 }
 
                 return false;
-            }
-
-            private static string GetEnvelopeHeaders(ICollection<MessageHeader> messageHeaders, string soapVersion)
-            {
-                if (messageHeaders == null || !messageHeaders.Any())
-                {
-                    return "";
-                }
-
-                var settings = new XmlWriterSettings { OmitXmlDeclaration = true };
-
-                return string.Join("", messageHeaders.Select(mh =>
-                {
-                    using (var sw = new StringWriter())
-                    using (var xw = XmlWriter.Create(sw, settings))
-                    {
-                        mh.WriteHeader(xw, soapVersion == "1.1" ? MessageVersion.Soap11 : MessageVersion.Soap12WSAddressing10);
-
-                        xw.Flush();
-                        return sw.ToString();
-                    }
-                }));
-            }
-
-            private static MessageHeaders GetEnvelopeHeaders(string incomingMessageString, string soapVersion)
-            {
-                using (var reader = XmlReader.Create(new StringReader(incomingMessageString)))
-                {
-                    var incomingMessage = Message.CreateMessage(reader, int.MaxValue, soapVersion == "1.1" ? MessageVersion.Soap11 : MessageVersion.Soap12WSAddressing10);
-                    return incomingMessage.Headers;
-                }
             }
 
             private void ProcessNode(XElement node, Action<XElement> action)
@@ -975,7 +1163,7 @@ namespace System.ServiceModel
                 string soapVersion,
                 bool isXmlSerializer,
                 out Dictionary<string, string> headers,
-                out string request)
+                out object request)
             {
                 headers = new Dictionary<string, string>();
 
@@ -994,13 +1182,21 @@ namespace System.ServiceModel
                     }
                 }
 
+                BinaryMessageEncodingBindingElement binaryBindingElement = _client.Endpoint.Binding
+                    .CreateBindingElements().Find<BinaryMessageEncodingBindingElement>();
+                bool isBinaryBinding = binaryBindingElement != null;
+
                 // in every case, we want the name of the method as a XElement
                 var methodNameElement = new XElement(XNamespace.Get(interfaceTypeNamespace).GetName(webMethodName));
+
+                request = null;
+
+                Message message = requestParameters?.Values.OfType<Message>().FirstOrDefault();
 
                 // Note: now we want to add the parameters of the method
                 // to do that, we basically get the serialized version of the objects, 
                 // and replace their tag that should have the type with the parameter name.
-                if (requestParameters != null)
+                if (message == null && requestParameters != null)
                 {
                     ParameterInfo[] parameterInfos = method.GetParameters();
                     int parametersCount = requestParameters != null ?
@@ -1026,13 +1222,43 @@ namespace System.ServiceModel
                             {
                                 var paramNameElement = new XElement(XNamespace.Get(interfaceTypeNamespace).GetName(parameterInfos[i].Name));
 
+                                bool isBodyMemberSerialization = false;
+                                if (requestBody.GetType().GetCustomAttribute<MessageContractAttribute>(true) != null)
+                                {
+                                    FieldInfo fieldInfo = requestBody.GetType()
+                                        .GetFields()
+                                        .FirstOrDefault(p => Attribute.IsDefined(p, typeof(MessageBodyMemberAttribute)));
+                                    if (fieldInfo == null)
+                                    {
+                                        throw new ArgumentException(
+                                            "Unable to find MessageBodyMemberAttribute of MessageContractAttribute contract");
+                                    }
+
+                                    isBodyMemberSerialization = true;
+                                    methodNameElement = new XElement(XNamespace.Get(interfaceTypeNamespace)
+                                        .GetName(requestBody.GetType().Name));
+                                }
+
                                 // we don't want to add this in the case of an XmlSerializer 
                                 // because it would be <request> which is not what we want. 
-                                // The correct parameter name is alread in the Request body.
-                                methodNameElement.Add(paramNameElement);
+                                // The correct parameter name is already in the Request body.
+                                if (!isBodyMemberSerialization)
+                                {
+                                    methodNameElement.Add(paramNameElement);
+                                }
+
                                 foreach (XNode currentNode in xdoc.Root.Nodes())
                                 {
-                                    paramNameElement.Add(currentNode);
+                                    if (!isBodyMemberSerialization)
+                                    {
+                                        paramNameElement.Add(currentNode);
+                                    }
+                                    else if(currentNode is XElement currentElement)
+                                    {
+                                        currentElement.Name = methodNameElement.Name.Namespace +
+                                                              currentElement.Name.LocalName;
+                                        methodNameElement.Add(currentElement);
+                                    }
                                 }
                                 foreach (XAttribute currentAttribute in xdoc.Root.Attributes())
                                 {
@@ -1040,7 +1266,14 @@ namespace System.ServiceModel
                                     // because it breaks the request.
                                     if (currentAttribute.Name.LocalName != "xmlns")
                                     {
-                                        paramNameElement.Add(currentAttribute);
+                                        if (!isBodyMemberSerialization)
+                                        {
+                                            paramNameElement.Add(currentAttribute);
+                                        }
+                                        else
+                                        {
+                                            methodNameElement.Add(currentAttribute);
+                                        }
                                     }
                                 }
                             }
@@ -1091,28 +1324,116 @@ namespace System.ServiceModel
                     soapAction = $"{interfaceTypeNamespace.Trim('/')}/{interfaceTypeName.Trim('/')}/{webMethodName}";
                 }
 
-                switch (soapVersion)
+                string requestFormat = null;
+                IDictionary<string, MessageHeader> allHeaders = new Dictionary<string, MessageHeader>();
+                MessageVersion messageVersion = _client.GetMessageVersion(soapVersion);
+                if (Equals(messageVersion, MessageVersion.Soap11) ||
+                    Equals(messageVersion, MessageVersion.Soap11WSAddressingAugust2004))
                 {
-                    case "1.1":
-                        headers.Add("Content-Type", "text/xml; charset=utf-8");
-                        headers.Add("SOAPAction", soapAction);
+                    headers.Add("Content-Type", "text/xml; charset=utf-8");
+                    headers.Add("SOAPAction", soapAction);
 
-                        if (!string.IsNullOrEmpty(envelopeHeaders))
+                    if (!string.IsNullOrEmpty(envelopeHeaders))
+                    {
+                        envelopeHeaders = "<s:Header>" + envelopeHeaders + "</s:Header>";
+                    }
+
+                    requestFormat = $"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">{(envelopeHeaders ?? string.Empty)}<s:Body>{{0}}</s:Body></s:Envelope>";
+                }
+                else if (Equals(messageVersion, MessageVersion.Soap12WSAddressing10) ||
+                         Equals(messageVersion, MessageVersion.Soap12WSAddressingAugust2004))
+                {
+                    if (isBinaryBinding)
+                    {
+                        headers.Add("Content-Type", "application/soap+msbin1");
+                    }
+                    else
+                    {
+                        headers.Add("Content-Type", "application/soap+xml; charset=utf-8");
+                    }
+
+                    requestFormat = $"<s:Envelope xmlns:a=\"http://www.w3.org/2005/08/addressing\" xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Header>{(envelopeHeaders ?? string.Empty)}{{1}}</s:Header><s:Body>{{0}}</s:Body></s:Envelope>";
+                    allHeaders["Action"] = MessageHeader.CreateHeader("Action", "http://www.w3.org/2005/08/addressing", soapAction);
+                    allHeaders["To"] = MessageHeader.CreateHeader("To", "http://www.w3.org/2005/08/addressing", _addressOfService);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"SOAP version not supported: {soapVersion}");
+                }
+
+                if (message != null)
+                {
+                    foreach (MessageHeader header in message.Headers)
+                    {
+                        allHeaders[header.Name] = header;
+                    }
+                }
+
+                StringBuilder messageHeaders = new StringBuilder();
+                foreach (MessageHeader header in allHeaders.Values)
+                {
+                    using (MemoryStream memoryStream = new MemoryStream())
+                    using (XmlDictionaryWriter xmlDictionaryWriter =
+                           XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
+                    using (StreamReader streamReader = new StreamReader(memoryStream))
+                    {
+                        header.WriteHeader(xmlDictionaryWriter, messageVersion);
+                        xmlDictionaryWriter.Flush();
+                        memoryStream.Position = 0;
+                        messageHeaders.Append(streamReader.ReadToEnd());
+                    }
+                }
+
+                if (message == null)
+                {
+                    request = string.Format(requestFormat, elementAsString, messageHeaders);
+                }
+                else
+                {
+                    string bodyContents;
+                    using (MemoryStream memoryStream = new MemoryStream())
+                    using (XmlDictionaryWriter xmlDictionaryWriter =
+                        XmlDictionaryWriter.CreateTextWriter(memoryStream, Text.Encoding.UTF8, false))
+                    using (StreamReader streamReader = new StreamReader(memoryStream))
+                    {
+                        message.WriteBodyContents(xmlDictionaryWriter);
+                        xmlDictionaryWriter.Flush();
+                        memoryStream.Position = 0;
+                        bodyContents = streamReader.ReadToEnd();
+                    }
+
+                    request = string.Format(requestFormat, bodyContents, messageHeaders);
+                }
+
+                if (isBinaryBinding)
+                {
+                    Message binaryMessage;
+                    if (message != null)
+                    {
+                        binaryMessage = message;
+                    }
+                    else
+                    {
+                        binaryMessage = Message.CreateMessage(messageVersion, soapAction, methodNameElement);
+
+                        string xmlMessage = string.Format(requestFormat, elementAsString, messageHeaders);
+                        MessageHeaders messageEnvelopeHeaders = _client.GetEnvelopeHeaders(xmlMessage, soapVersion);
+
+                        binaryMessage.Headers.Clear();
+                        foreach (MessageHeader messageHeader in messageEnvelopeHeaders)
                         {
-                            envelopeHeaders = "<s:Header>" + envelopeHeaders + "</s:Header>";
+                            binaryMessage.Headers.Add(messageHeader);
                         }
 
-                        request = $"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">{(envelopeHeaders ?? string.Empty)}<s:Body>{elementAsString}</s:Body></s:Envelope>";
-                        break;
+                        if (binaryMessage.Headers.To == null)
+                        {
+                            binaryMessage.Headers.To = _client.ChannelFactory.Endpoint.Address.Uri;
+                        }
+                    }
+                    MessageEncoder messageEncoder = binaryBindingElement.CreateMessageEncoderFactory().Encoder;
 
-                    case "1.2":
-                        headers.Add("Content-Type", "application/soap+xml; charset=utf-8");
-
-                        request = $"<s:Envelope xmlns:a=\"http://www.w3.org/2005/08/addressing\" xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\"><s:Header><a:Action>{soapAction}</a:Action>{(envelopeHeaders ?? string.Empty)}<a:To>{_addressOfService}</a:To></s:Header><s:Body>{elementAsString}</s:Body></s:Envelope>";
-                        break;
-
-                    default:
-                        throw new InvalidOperationException($"SOAP version not supported: {soapVersion}");
+                    request = messageEncoder.WriteMessage(binaryMessage, int.MaxValue,
+                        BufferManager.CreateBufferManager(2147483647, 2147483647)).ToArray();
                 }
             }
 
@@ -1173,7 +1494,8 @@ namespace System.ServiceModel
                     // which triggered a call to TrySetException (above).
                     if (!taskCompletionSource.Task.IsCompleted)
                     {
-                        taskCompletionSource.SetResult((requestResponse, GetEnvelopeHeaders(e.Result, soapVersion)));
+                        taskCompletionSource.SetResult((requestResponse, _client.GetEnvelopeHeaders(e.Result,
+                            soapVersion)));
                     }
                 }
                 else
@@ -1261,7 +1583,7 @@ namespace System.ServiceModel
                 }
             }
 
-            private static object ReadAndPrepareResponse(
+            private object ReadAndPrepareResponse(
                 string responseAsString,
                 Type interfaceType,
                 Type requestResponseType,
@@ -1309,14 +1631,41 @@ namespace System.ServiceModel
 
                 VerifyThatResponseIsNotNullOrEmpty(responseAsString);
                 string NS;
-                if (soapVersion == "1.1")
+                MessageVersion messageVersion = _client.GetMessageVersion(soapVersion);
+                if (messageVersion.Equals(MessageVersion.Soap11) ||
+                    messageVersion.Equals(MessageVersion.Soap11WSAddressingAugust2004))
                 {
                     NS = "http://schemas.xmlsoap.org/soap/envelope/";
                 }
                 else
                 {
-                    Debug.Assert(soapVersion == "1.2", $"Unexpected soap version ({soapVersion}) !");
                     NS = "http://www.w3.org/2003/05/soap-envelope";
+                }
+
+                BinaryMessageEncodingBindingElement binaryBindingElement = _client.Endpoint.Binding
+                    .CreateBindingElements().Find<BinaryMessageEncodingBindingElement>();
+                bool isBinaryBinding = binaryBindingElement != null;
+
+                if (isBinaryBinding)
+                {
+                    string base64response = responseAsString;
+                    byte[] response = Convert.FromBase64String(base64response);
+                    MessageEncoder messageEncoder = binaryBindingElement.CreateMessageEncoderFactory().Encoder;
+
+                    Message message;
+                    using (MemoryStream readingMemoryStream = new MemoryStream(response))
+                    using (MemoryStream writingMemoryStream = new MemoryStream())
+                    using (XmlDictionaryWriter xmlDictionaryWriter =
+                        XmlDictionaryWriter.CreateTextWriter(writingMemoryStream, Text.Encoding.UTF8, false))
+                    using (StreamReader streamReader = new StreamReader(writingMemoryStream))
+                    {
+                        message = messageEncoder.ReadMessage(readingMemoryStream, int.MaxValue);
+
+                        message.WriteMessage(xmlDictionaryWriter);
+                        xmlDictionaryWriter.Flush();
+                        writingMemoryStream.Position = 0;
+                        responseAsString = streamReader.ReadToEnd();
+                    }
                 }
 
                 XElement envelopeElement = null;
@@ -1549,7 +1898,7 @@ namespace System.ServiceModel
                 return requestResponse;
             }
 
-            private static object ReadResponseReferenceType(XElement envelopeElement,
+            private object ReadResponseReferenceType(XElement envelopeElement,
                 XElement bodyElement,
                 Type interfaceType,
                 Type requestResponseType,
@@ -1584,11 +1933,31 @@ namespace System.ServiceModel
                     }
                 }
 
+                bool isBodyMemberSerialization = false;
                 Type typeToDeserialize = requestResponseType;
                 if (isXmlSerializer)
                 {
                     bodyFieldInfo = requestResponseType.GetField("Body");
-                    typeToDeserialize = bodyFieldInfo.FieldType;
+                    if (bodyFieldInfo != null)
+                    {
+                        typeToDeserialize = bodyFieldInfo.FieldType;
+                    }
+                    else if (requestResponseType.GetCustomAttribute<MessageContractAttribute>(true) != null)
+                    {
+                        isBodyMemberSerialization = true;
+
+                        FieldInfo fieldInfo = requestResponseType
+                            .GetFields()
+                            .FirstOrDefault(p => Attribute.IsDefined(p, typeof(MessageBodyMemberAttribute)));
+                        if (fieldInfo == null)
+                        {
+                            throw new ArgumentException(
+                                "Unable to find MessageBodyMemberAttribute of MessageContractAttribute contract");
+                        }
+
+                        typeToDeserialize = fieldInfo.FieldType;
+                        bodyFieldInfo = fieldInfo;
+                    }
                 }
 
                 // get the known types from the interface type
@@ -1625,7 +1994,19 @@ namespace System.ServiceModel
                     xElement = xElement.Elements().FirstOrDefault() ?? xElement; //move inside of the <Body> tag
                 }
 
-                if (!isXmlSerializer)
+                if (requestResponseType == typeof(Message))
+                {
+                    using (MemoryStream memoryStream = new MemoryStream())
+                    {
+                        string envelopeElementAsString = DataContractSerializerCustom.XElementToString(envelopeElement);
+                        XmlDictionaryReader xmlDictionaryReader = XmlDictionaryReader.CreateTextReader(
+                            Text.Encoding.UTF8.GetBytes(envelopeElementAsString),
+                            new XmlDictionaryReaderQuotas());
+                        Message message = Message.CreateMessage(xmlDictionaryReader, 4096, _client.GetMessageVersion(soapVersion));
+                        requestResponse = message;
+                    }
+                }
+                else if (!isXmlSerializer)
                 {
                     if (typeToDeserialize.GetCustomAttribute<MessageContractAttribute>() != null)
                     {
@@ -1646,6 +2027,11 @@ namespace System.ServiceModel
                 }
                 else
                 {
+                    if (isBodyMemberSerialization)
+                    {
+                        xElement = xElement.Elements().FirstOrDefault() ?? xElement;
+                    }
+
                     requestResponse = Activator.CreateInstance(requestResponseType);
                     object requestResponseBody = deSerializer.DeserializeFromXElement(xElement);
                     bodyFieldInfo.SetValue(requestResponse, requestResponseBody);
@@ -1682,7 +2068,10 @@ namespace System.ServiceModel
 		[OpenSilver.NotImplemented]
         public IClientChannel InnerChannel
         {
-            get { return null; }
+            get
+            {
+                return (IClientChannel)Channel;
+            }
         }
 
         [OpenSilver.NotImplemented]
@@ -1702,7 +2091,6 @@ namespace System.ServiceModel
         //    /// Returns a new channel to the service.
         //    /// </summary>
         //    /// <returns>A channel of the type of the service contract.</returns>
-        [OpenSilver.NotImplemented]
         protected virtual TChannel CreateChannel()
         {
             return null;
@@ -1724,18 +2112,23 @@ namespace System.ServiceModel
         /// </summary>
         /// <typeparam name="T"></typeparam>
         //protected class ChannelBase<T> : IOutputChannel, IRequestChannel, IClientChannel, IDisposable, IContextChannel, IChannel, ICommunicationObject, IExtensibleObject<IContextChannel> where T : class
-        [OpenSilver.NotImplemented]
-        protected class ChannelBase<T> where T : class
+        protected class ChannelBase<T> : IOutputChannel, IRequestChannel, IClientChannel, IDisposable, IContextChannel, IChannel, ICommunicationObject, IExtensibleObject<IContextChannel> where T : class
         {
+            private CSHTML5_ClientBase<T> _client;
+
+            public IList<MessageHeader> MessageHeaders
+            {
+                get;
+            } = new List<MessageHeader>();
+
             /// <summary>
             /// Initializes a new instance of the <see cref="System.ServiceModel.ClientBase{TChannel}.ChannelBase{T}"/>
             /// class from an existing instance of the class.
             /// </summary>
             /// <param name="client">The object used to initialize the new instance of the class.</param>
-		    [OpenSilver.NotImplemented]
             protected ChannelBase(CSHTML5_ClientBase<T> client)
             {
-
+                _client = client;
             }
 
             /// <summary>
@@ -1747,10 +2140,35 @@ namespace System.ServiceModel
             /// <param name="state">The state object.</param>
             /// <returns>The System.IAsyncResult that references the asynchronous method invoked.</returns>
             //[SecuritySafeCritical]
-            [OpenSilver.NotImplemented]
             protected IAsyncResult BeginInvoke(string methodName, object[] args, AsyncCallback callback, object state)
             {
-                return null;
+                MethodInfo methodInfo = CSHTML5_ClientBase<T>.WebMethodsCaller.ResolveMethod(typeof(T), methodName,
+                    "Begin" + methodName);
+                ParameterInfo[] parameterInfos = methodInfo.GetParameters()
+                    .Where(p => p.Name != INTERNAL_WebMethodsCaller.CallbackParameterName &&
+                        p.Name != INTERNAL_WebMethodsCaller.AsyncStateParameterName)
+                    .ToArray();
+                if (parameterInfos.Length != args.Length)
+                {
+                    throw new ArgumentException("Arg count does not match method parameter count");
+                }
+
+                Dictionary<string, object> parameters = new Dictionary<string, object>();
+                for (int i = 0; i < parameterInfos.Length; ++i)
+                {
+                    parameters[parameterInfos[i].Name] = args[i];
+                }
+                parameters[INTERNAL_WebMethodsCaller.CallbackParameterName] = callback;
+                parameters[INTERNAL_WebMethodsCaller.AsyncStateParameterName] = state;
+
+                return INTERNAL_WebMethodsCaller.BeginCallWebMethod<T>(RemoteAddress.Uri.ToString(),
+                    methodName,
+                    typeof(IAsyncResult),
+                    null,
+                    _client.GetEnvelopeHeaders(MessageHeaders, null),
+                    parameters,
+                    null,
+                    _client);
             }
 
             /// <summary>
@@ -1761,10 +2179,181 @@ namespace System.ServiceModel
             /// <param name="result">The result returned by a call.</param>
             /// <returns>The System.Object output by the method invoked.</returns>
             //[SecuritySafeCritical]
-            [OpenSilver.NotImplemented]
             protected object EndInvoke(string methodName, object[] args, IAsyncResult result)
             {
-                return null;
+                MethodInfo methodInfo = CSHTML5_ClientBase<T>.WebMethodsCaller.ResolveMethod(typeof(T), methodName,
+                    "End" + methodName);
+
+                return INTERNAL_WebMethodsCaller.EndCallWebMethod(RemoteAddress.Uri.ToString(),
+                    methodName,
+                    methodInfo.ReturnType,
+                    new Dictionary<string, object>()
+                    {
+                        { "result", result },
+                    },
+                    null,
+                    _client);
+            }
+
+            public bool AllowInitializationUI { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+            public bool DidInteractiveInitialization => throw new NotImplementedException();
+
+            public Uri Via => RemoteAddress.Uri;
+
+            public bool AllowOutputBatching { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+            public IInputSession InputSession => throw new NotImplementedException();
+
+            public EndpointAddress LocalAddress => throw new NotImplementedException();
+
+            public TimeSpan OperationTimeout { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+            public IOutputSession OutputSession => throw new NotImplementedException();
+
+            public EndpointAddress RemoteAddress => new(_client.INTERNAL_RemoteAddressAsString);
+
+            public string SessionId => throw new NotImplementedException();
+
+            public CommunicationState State => throw new NotImplementedException();
+
+            public IExtensionCollection<IContextChannel> Extensions => throw new NotImplementedException();
+
+            public event EventHandler<UnknownMessageReceivedEventArgs> UnknownMessageReceived;
+            public event EventHandler Closed;
+            public event EventHandler Closing;
+            public event EventHandler Faulted;
+            public event EventHandler Opened;
+            public event EventHandler Opening;
+
+            public void Abort()
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginClose(AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginClose(TimeSpan timeout, AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginDisplayInitializationUI(AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginOpen(AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginOpen(TimeSpan timeout, AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Close()
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Close(TimeSpan timeout)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void DisplayInitializationUI()
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Dispose()
+            {
+                throw new NotImplementedException();
+            }
+
+            public void EndClose(IAsyncResult result)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void EndDisplayInitializationUI(IAsyncResult result)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void EndOpen(IAsyncResult result)
+            {
+                throw new NotImplementedException();
+            }
+
+            public T1 GetProperty<T1>() where T1 : class
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Open()
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Open(TimeSpan timeout)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginSend(Message message, AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginSend(Message message, TimeSpan timeout, AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void EndSend(IAsyncResult result)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Send(Message message)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Send(Message message, TimeSpan timeout)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginRequest(Message message, AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAsyncResult BeginRequest(Message message, TimeSpan timeout, AsyncCallback callback, object state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Message EndRequest(IAsyncResult result)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Message Request(Message message)
+            {
+                throw new NotImplementedException();
+            }
+
+            public Message Request(Message message, TimeSpan timeout)
+            {
+                throw new NotImplementedException();
             }
         }
 
