@@ -474,13 +474,6 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
             {
                 char c = s[i];
 
-                // Soft hyphen (dec 173 in Unicode) does not display a visible symbol on modern browsers, but
-                // shows a regular hyphen in Silverlight.
-                if (c == SoftHyphen)
-                {
-                    c = SoftHyphenPlaceholder;
-                }
-
                 switch (c)
                 {
                     case '\\':
@@ -649,6 +642,18 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
             }
 
             return new Size();
+        }
+
+        internal static string ReplaceInvisibleCharacters(string text)
+        {
+            // Soft hyphen (dec 173 in Unicode) does not display a visible symbol on modern browsers, but
+            // shows a regular hyphen in Silverlight. A placeholder of a hyphen symbol is used to approximate Silverlight.
+            return text.Replace(SoftHyphen, SoftHyphenPlaceholder);
+        }
+
+        internal static string RestoreInvisibleCharacters(string text)
+        {
+            return text.Replace(SoftHyphenPlaceholder, SoftHyphen);
         }
     }
 }

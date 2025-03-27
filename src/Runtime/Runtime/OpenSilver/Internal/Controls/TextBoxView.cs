@@ -120,8 +120,7 @@ internal sealed class TextBoxView : TextViewBase
         string nativeText = GetText();
 
         // The Text Property must not be impacted by soft hyphen placeholders
-        string textWithoutPlaceholders = nativeText.Replace(INTERNAL_HtmlDomManager.SoftHyphenPlaceholder,
-            INTERNAL_HtmlDomManager.SoftHyphen);
+        string textWithoutPlaceholders = INTERNAL_HtmlDomManager.RestoreInvisibleCharacters(nativeText);
         Host.UpdateTextProperty(textWithoutPlaceholders);
 
         if (nativeText.Contains(INTERNAL_HtmlDomManager.SoftHyphen))
@@ -140,8 +139,10 @@ internal sealed class TextBoxView : TextViewBase
         if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
         {
             string sElement = Interop.GetVariableStringForJS(OuterDiv);
-            Interop.ExecuteJavaScriptVoid(
-                $"{sElement}.value = \"{INTERNAL_HtmlDomManager.EscapeStringForUseInJavaScript(text)}\";");
+            string textWithoutInvisibleCharacters = INTERNAL_HtmlDomManager.ReplaceInvisibleCharacters(text);
+            string escapedText = INTERNAL_HtmlDomManager.EscapeStringForUseInJavaScript(textWithoutInvisibleCharacters);
+
+            Interop.ExecuteJavaScriptVoid($"{sElement}.value = \"{escapedText}\";");
 
             InvalidateMeasure();
         }

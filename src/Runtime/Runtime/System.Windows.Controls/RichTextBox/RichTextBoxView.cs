@@ -204,8 +204,8 @@ internal sealed class RichTextBoxView : TextViewBase
             return string.Empty;
         }
 
-        return Interop.ExecuteJavaScriptString($"document.richTextViewManager.getSelectedText('{OuterDiv.UniqueIdentifier}')")?
-            .Replace(INTERNAL_HtmlDomManager.SoftHyphenPlaceholder, INTERNAL_HtmlDomManager.SoftHyphen);
+        string nativeSelectedText = Interop.ExecuteJavaScriptString($"document.richTextViewManager.getSelectedText('{OuterDiv.UniqueIdentifier}')");
+        return INTERNAL_HtmlDomManager.RestoreInvisibleCharacters(nativeSelectedText);
     }
 
     internal int GetContentLength()
@@ -648,8 +648,8 @@ internal sealed class RichTextBoxView : TextViewBase
         return Interop.ExecuteJavaScriptString($"document.richTextViewManager.getContents('{OuterDiv.UniqueIdentifier}')") switch
         {
             "" or null => Array.Empty<QuillDelta>(),
-            string contents => JsonSerializer.Deserialize<QuillDelta[]>(contents
-                .Replace(INTERNAL_HtmlDomManager.SoftHyphenPlaceholder, INTERNAL_HtmlDomManager.SoftHyphen),
+            string contents => JsonSerializer.Deserialize<QuillDelta[]>(
+                INTERNAL_HtmlDomManager.RestoreInvisibleCharacters(contents),
                 SerializerOptions),
         };
     }
@@ -664,8 +664,8 @@ internal sealed class RichTextBoxView : TextViewBase
         return Interop.ExecuteJavaScriptString($"document.richTextViewManager.getContents('{OuterDiv.UniqueIdentifier}', {start.ToInvariantString()}, {length.ToInvariantString()})") switch
         {
             "" or null => Array.Empty<QuillDelta>(),
-            string contents => JsonSerializer.Deserialize<QuillDelta[]>(contents
-                .Replace(INTERNAL_HtmlDomManager.SoftHyphenPlaceholder, INTERNAL_HtmlDomManager.SoftHyphen),
+            string contents => JsonSerializer.Deserialize<QuillDelta[]>(
+                INTERNAL_HtmlDomManager.RestoreInvisibleCharacters(contents),
                 SerializerOptions)
         };
     }

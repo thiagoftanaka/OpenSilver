@@ -1548,6 +1548,7 @@ document.createRichTextViewManager = function (selectionChangedCallback, content
                 const newContents = ql.getContents()
                     .map((op) => {
                         if (typeof op.insert === 'string') {
+                            // Replacing soft hyphens with placeholders (hyphen)
                             op.insert = op.insert.replaceAll('\u00AD', '\u2010');
                         }
                         return op;
