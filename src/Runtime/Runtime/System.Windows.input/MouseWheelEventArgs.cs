@@ -11,29 +11,35 @@
 *  
 \*====================================================================================*/
 
-namespace System.Windows.Input
+namespace System.Windows.Input;
+
+/// <summary>
+/// Provides data for the <see cref="UIElement.MouseWheel"/> routed event.
+/// </summary>
+public class MouseWheelEventArgs : MouseEventArgs
 {
-    public class MouseWheelEventArgs : MouseEventArgs
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MouseWheelEventArgs"/> class.
+    /// </summary>
+    public MouseWheelEventArgs() { }
+
+    internal MouseWheelEventArgs(bool isTouchDevice, ModifierKeys keyModifiers, double x, double y, int delta)
+        : base(isTouchDevice, keyModifiers, x, y)
     {
-        internal override void InvokeHandler(Delegate handler, object target)
-        {
-            ((MouseWheelEventHandler)handler)(target, this);
-        }
-
-        public new int Delta { get; internal set; }
-
-        internal static int GetPointerWheelDelta(object jsEventArg)
-        {
-            string sJsArg = OpenSilver.Interop.GetVariableStringForJS(jsEventArg);
-            return OpenSilver.Interop.ExecuteJavaScriptInt32(
-                $"(function (wheelArg) {{ if (wheelArg.wheelDelta != undefined) return wheelArg.wheelDelta; else return (wheelArg.delta || 0); }})({sJsArg})");
-
-            // Note: wheelDelta originated from the js mousewheel event which is deprecated. It still exists in the js wheel event but should still be considered deprecated (it also has never existed on FireFox).
-            // We're using it because I could not find another way of getting the values in the same way as was returned in Silverlight.
-            // What happens is as follows:
-            // Scroll on the physical device --> A certain scroll value --> value translated in the impact value (depends on settings - see below) --> impact value registered in the js eventArgs.
-            //                            SL returns this ↑, wheelDelta (deprecated) as well                                                              delta returns this ↑
-            // If we change the mouse settings in Windows so the mouse wheel scrolls more or fewer lines, wheelDelta WILL NOT change, delta WILL change.
-        }
+        Delta = delta;
     }
+
+    /// <inheritdoc />
+    protected override void InvokeEventHandler(Delegate genericHandler, object genericTarget) =>
+        ((MouseWheelEventHandler)genericHandler)(genericTarget, this);
+
+    /// <summary>
+    /// Gets a value that indicates the amount that the mouse wheel rotated relative to its starting 
+    /// state or to the last occurrence of the event.
+    /// </summary>
+    /// <returns>
+    /// An integer value that provides a factor of how much the mouse wheel rotated. This value can 
+    /// be a negative integer.
+    /// </returns>
+    public int Delta { get; }
 }

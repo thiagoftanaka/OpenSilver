@@ -40,13 +40,7 @@ public partial class FrameworkElement : IInternalFrameworkElement
 
     IEnumerator IInternalFrameworkElement.LogicalChildren => LogicalChildren;
 
-    RoutedEvent IInternalFrameworkElement.LoadedEvent => LoadedEvent;
-
-    DependencyObject IInternalFrameworkElement.TemplatedParent
-    {
-        get => TemplatedParent;
-        set => TemplatedParent = value;
-    }
+    DependencyObject IInternalFrameworkElement.TemplatedParent => TemplatedParent;
 
     IFrameworkElement IInternalFrameworkElement.TemplateChild
     {
@@ -60,9 +54,21 @@ public partial class FrameworkElement : IInternalFrameworkElement
         remove => InheritedPropertyChanged -= value;
     }
 
+    event EventHandler IInternalFrameworkElement.ResourcesChanged
+    {
+        add => ResourcesChanged += value;
+        remove => ResourcesChanged -= value;
+    }
+
+    void IInternalFrameworkElement.OnResourcesChanged(ResourcesChangeInfo info) => OnResourcesChanged(info);
+
+    void IInternalFrameworkElement.OnAncestorChangedInternal(TreeChangeInfo info) => OnAncestorChangedInternal(info);
+
     void IInternalFrameworkElement.AddLogicalChild(object child) => AddLogicalChild(child);
 
     void IInternalFrameworkElement.ChangeLogicalParent(DependencyObject newParent) => ChangeLogicalParent(newParent);
 
     void IInternalFrameworkElement.RemoveLogicalChild(object child) => RemoveLogicalChild(child);
+
+    void IInternalFrameworkElement.SetTemplatedParent(WeakReference<DependencyObject> templatedParent) => SetTemplatedParent(templatedParent);
 }

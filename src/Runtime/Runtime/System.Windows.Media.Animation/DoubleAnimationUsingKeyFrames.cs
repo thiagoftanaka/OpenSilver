@@ -11,7 +11,6 @@
 *  
 \*====================================================================================*/
 
-using System.ComponentModel;
 using System.Windows.Markup;
 using OpenSilver.Internal.Media.Animation;
 
@@ -39,16 +38,65 @@ public sealed class DoubleAnimationUsingKeyFrames : AnimationTimeline, IKeyFrame
     /// </returns>
     public DoubleKeyFrameCollection KeyFrames
     {
-        get => _frames ??= new DoubleKeyFrameCollection(this);
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        set => _frames = value;
+        get
+        {
+            if (_frames is null)
+            {
+                SetKeyFrames(new());
+            }
+            return _frames;
+        }
+        set { SetKeyFrames(value); }
     }
 
     IKeyFrameCollection<double> IKeyFrameAnimation<double>.KeyFrames => _frames;
 
+    /// <inheritdoc />
+    public sealed override Type TargetPropertyType => typeof(double);
+
     protected sealed override Duration GetNaturalDurationCore() =>
         KeyFrameAnimationHelpers.GetLargestTimeSpanKeyTime(this);
 
-    internal sealed override TimelineClock CreateClock(bool isRoot) =>
-       new AnimationClock<double>(this, isRoot, new KeyFramesAnimator<double>(this));
+    internal sealed override TimelineClock CreateClock() =>
+       new AnimationClock<double>(this, new KeyFramesAnimator<double>(this));
+
+    private void SetKeyFrames(DoubleKeyFrameCollection keyFrames)
+    {
+        if (_frames is not null)
+        {
+            RemoveSelfAsInheritanceContext(_frames, null);
+        }
+
+        _frames = keyFrames;
+
+        if (_frames is not null)
+        {
+            ProvideSelfAsInheritanceContext(_frames, null);
+        }
+    }
+}
+
+/// <summary>
+/// Represents a collection of <see cref="DoubleKeyFrame"/> objects that can be individually accessed by index.
+/// </summary>
+public sealed class DoubleKeyFrameCollection : PresentationFrameworkCollection<DoubleKeyFrame>, IKeyFrameCollection<double>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DoubleKeyFrameCollection"/> class.
+    /// </summary>
+    public DoubleKeyFrameCollection() { }
+
+    internal override void AddOverride(DoubleKeyFrame keyFrame) => AddDependencyObjectInternal(keyFrame);
+
+    internal override void ClearOverride() => ClearDependencyObjectInternal();
+
+    internal override void InsertOverride(int index, DoubleKeyFrame keyFrame) => InsertDependencyObjectInternal(index, keyFrame);
+
+    internal override void RemoveAtOverride(int index) => RemoveAtDependencyObjectInternal(index);
+
+    internal override DoubleKeyFrame GetItemOverride(int index) => GetItemInternal(index);
+
+    internal override void SetItemOverride(int index, DoubleKeyFrame keyFrame) => SetItemDependencyObjectInternal(index, keyFrame);
+
+    IKeyFrame<double> IKeyFrameCollection<double>.this[int index] => GetItemInternal(index);
 }

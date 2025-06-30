@@ -18,7 +18,6 @@ using System.Text.Json;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
-using DotNetForHtml5.Core;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
 
@@ -91,7 +90,7 @@ namespace System.Windows.Media
         /// <returns>
         /// The parent object of the reference object in the visual tree.
         /// </returns>
-        public static DependencyObject GetParent(UIElement reference) => reference?.VisualParent;
+        public static DependencyObject GetParent(UIElement reference) => reference?.InternalVisualParent;
 
         /// <summary>
         /// Returns the number of children that exist in an object's child collection in the visual tree.
@@ -105,7 +104,7 @@ namespace System.Windows.Media
                 return uie.VisualChildrenCount;
             }
 
-            throw new InvalidOperationException("Reference is not a valid visual DependencyObject.");
+            throw new InvalidOperationException(string.Format(Strings.UIElement_NotAnUIElement, nameof(reference)));
         }
 
         /// <summary>
@@ -121,10 +120,10 @@ namespace System.Windows.Media
         {
             if (reference is null)
             {
-                throw new InvalidOperationException("Reference is not a valid visual DependencyObject.");
+                throw new ArgumentNullException(nameof(reference));
             }
 
-            return reference.VisualChildrenCount;
+            return reference.InternalVisualChildrenCount;
         }
 
         /// <summary>
@@ -140,17 +139,17 @@ namespace System.Windows.Media
                 return uie.GetVisualChild(childIndex);
             }
             
-            throw new InvalidOperationException("Reference is not a valid visual DependencyObject.");
+            throw new InvalidOperationException(string.Format(Strings.UIElement_NotAnUIElement, nameof(reference)));
         }
 
         public static DependencyObject GetChild(UIElement reference, int childIndex)
         {
             if (reference is null)
             {
-                throw new InvalidOperationException("Reference is not a valid visual DependencyObject.");
+                throw new ArgumentNullException(nameof(reference));
             }
 
-            return reference.GetVisualChild(childIndex);
+            return reference.InternalGetVisualChild(childIndex);
         }
 
         /// <summary>
@@ -226,10 +225,10 @@ namespace System.Windows.Media
 
             static IEnumerable<UIElement> GetChildren(UIElement element)
             {
-                int childrenCount = element.VisualChildrenCount;
+                int childrenCount = element.InternalVisualChildrenCount;
                 for (int i = childrenCount - 1; i >= 0; i--)
                 {
-                    UIElement child = element.GetVisualChild(i);
+                    UIElement child = element.InternalGetVisualChild(i);
                     if (child is null or Inline)
                     {
                         continue;
@@ -243,7 +242,7 @@ namespace System.Windows.Media
             {
                 string[] ids = JsonSerializer.Deserialize<string[]>(
                     OpenSilver.Interop.ExecuteJavaScriptString(
-                        $"document.elementsFromPointOpenSilver({intersectingPoint.X.ToInvariantString()}, {intersectingPoint.Y.ToInvariantString()});"));
+                        $"document.elementsFromPointOpenSilver({intersectingPoint.X.ToInvariantString()}, {intersectingPoint.Y.ToInvariantString()})"));
 
                 var hashset = new HashSet<UIElement>();
                 foreach (string id in ids)
@@ -299,13 +298,13 @@ namespace System.Windows.Media
 
             if (window is not null)
             {
-                foreach (PopupRoot root in PopupsManager.GetActivePopupRoots())
+                foreach (PopupRoot root in PopupRoot.GetActivePopupRoots())
                 {
                     if (root.ParentWindow == window &&
-                        root.ParentPopup.IsOpen &&
-                        root.ParentPopup.Child != null)
+                        root.Popup.IsOpen &&
+                        root.Popup.Child != null)
                     {
-                        result.Add(root.ParentPopup);
+                        result.Add(root.Popup);
                     }
                 }
             }

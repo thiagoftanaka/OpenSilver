@@ -5,7 +5,6 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Core.DevToolsProtocolExtension;
 using Microsoft.Web.WebView2.Wpf;
 using Microsoft.Win32;
-using OpenSilver;
 using OpenSilver.Simulator;
 using OpenSilver.Simulator.XamlInspection;
 using System.Diagnostics;
@@ -17,9 +16,9 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Path = System.IO.Path;
+using Settings = OpenSilver.Simulator.Properties.Settings;
 
 namespace DotNetForHtml5.EmulatorWithoutJavascript
 {
@@ -28,7 +27,6 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
-        public const string TipToCopyToClipboard = "TIP: You can copy the content of this message box by pressing Ctrl+C now.";
         string _pathOfAssemblyThatContainsEntryPoint;
         JavaScriptExecutionHandler _javaScriptExecutionHandler;
         bool _htmlHasBeenLoaded = false;
@@ -43,11 +41,12 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
         Dispatcher _openSilverRuntimeDispatcher;
         string _lastExecutedJavaScript = "";
 
-        const string NAME_FOR_STORING_COOKIES = "ms_cookies_for_user_application"; // This is an arbitrary name used to store the cookies in the registry
         const string NAME_OF_TEMP_CACHE_FOLDER = "simulator-temp-cache";
 
         //https is used because of XR# requirement to host on https.
-        private const string OpenSilverSimulator = "https://simulator.opensilver/";
+        private const string DefaultSimulatorUrl = "https://simulator.opensilver/";
+        private readonly string _simulatorUrl;
+
         private const string OutputRootPath = "wwwroot";
         private const string OutputResourcesPath = "resources";
 
@@ -63,13 +62,13 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
             InitializeComponent();
             Instance = this;
 
-            Icon = new BitmapImage(new Uri("pack://application:,,,/OpenSilver.Simulator;component/OpenSilverIcon.ico"));
             Title = "Simulator II - OpenSilver";
 
             _appCreationDelegate = appCreationDelegate ?? throw new ArgumentNullException(nameof(appCreationDelegate));
             _simulatorLaunchParameters = simulatorLaunchParameters;
             _entryPointAssembly = appAssembly;
             _pathOfAssemblyThatContainsEntryPoint = _entryPointAssembly.Location;
+            _simulatorUrl = simulatorLaunchParameters?.SimulatorUrl ?? DefaultSimulatorUrl;
 
             MainWebBrowser = new WebView2
             {
@@ -79,9 +78,6 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
             MainWebBrowser.SizeChanged += MainWebBrowser_SizeChanged;
 
             simulatorLaunchParameters?.BrowserCreatedCallback?.Invoke(MainWebBrowser);
-
-            //Note: The following line was an attempt to persist the Microsoft login cookies (for use by user applications that required AAD login), but it is no longer necessary because we changed the DotNetBrowser "StorageType" from "MEMORY" to "DISK", so cookies are now automatically persisted.
-            //CookiesHelper.LoadMicrosoftCookies(MainWebBrowser, NAME_FOR_STORING_COOKIES);
 
             BrowserContainer.Child = MainWebBrowser;
 
@@ -109,7 +105,7 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
             _openSilverRuntimeThread.Start();
         }
 
-        void App_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             SimulatorProxy.ShowExceptionStatic(e.Exception);
             e.Handled = true;
@@ -165,6 +161,8 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
 
         async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            RestoreWindowState();
+
             while (_openSilverRuntimeDispatcher == null)
             {
                 await Task.Yield();
@@ -204,9 +202,17 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
             catch { }
         }
 
+        private static string GetFullPathForFile(string fileName)
+        {
+            string assemblyPath = Assembly.GetExecutingAssembly().Location;
+            string directoryPath = Path.GetDirectoryName(assemblyPath);
+
+            return Path.Combine(directoryPath, fileName);
+        }
+
         private string PrepareIndexFile()
         {
-            string simulatorRootHtml = File.ReadAllText("simulator_root.html");
+            string simulatorRootHtml = File.ReadAllText(GetFullPathForFile("simulator_root.html"));
 
             string outputPathAbsolute = GetOutputPathAbsoluteAndReadAssemblyAttributes();
 
@@ -284,12 +290,12 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
             MainWebBrowser.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
             MainWebBrowser.CoreWebView2.WebResourceRequested += CoreWebView2_WebResourceRequested;
 
-            MainWebBrowser.CoreWebView2.Navigate(OpenSilverSimulator);
+            MainWebBrowser.CoreWebView2.Navigate(_simulatorUrl);
         }
 
         private void SyncXamlInspectorVisibility()
         {
-            bool xamlInspectorVisible = Properties.Settings.Default.XamlInspectorVisible;
+            bool xamlInspectorVisible = Settings.Default.XamlInspectorVisible;
             if (xamlInspectorVisible &&
                 _entryPointAssembly != null &&
                 XamlInspectionTreeViewInstance.TryRefresh(_entryPointAssembly, XamlPropertiesPaneInstance))
@@ -307,6 +313,16 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
             return $"Content-Type:{MimeTypesMap.GetMimeType(fileName)}";
         }
 
+        private static bool AreUrlsEqual(string url1, string url2)
+        {
+            Uri uri1 = new Uri(url1);
+            Uri uri2 = new Uri(url2);
+
+            return uri1.Scheme == uri2.Scheme &&
+                   uri1.Host == uri2.Host &&
+                   uri1.AbsolutePath.TrimEnd('/') == uri2.AbsolutePath.TrimEnd('/');
+        }
+
         private void CoreWebView2_WebResourceRequested(object sender, CoreWebView2WebResourceRequestedEventArgs e)
         {
             var environment = MainWebBrowser.CoreWebView2.Environment;
@@ -317,12 +333,12 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
                 return;
             }
 
-            if (!uriString.StartsWith(OpenSilverSimulator))
+            if (!uriString.StartsWith(_simulatorUrl))
             {
                 return;
             }
 
-            if (uriString == OpenSilverSimulator)
+            if (AreUrlsEqual(uriString, _simulatorUrl))
             {
                 var response = environment.CreateWebResourceResponse(
                     new MemoryStream(Encoding.UTF8.GetBytes(PrepareIndexFile())),
@@ -341,6 +357,8 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
                 {
                     localPath = Path.Combine(OutputRootPath, localPath);
                 }
+
+                localPath = GetFullPathForFile(localPath);
 
                 if (File.Exists(localPath))
                 {
@@ -370,9 +388,6 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
 
                 // Start the app:
                 ShowLoadingMessage();
-
-                //We check if the key used by the user is still valid:
-                CheckKeysValidity();
 
                 await WaitForDocumentToBeFullyLoadedAsync(); // Note: without this, we got errors when running rokjs (with localhost as base url) without any breakpoints.
 
@@ -442,25 +457,6 @@ namespace DotNetForHtml5.EmulatorWithoutJavascript
             {
                 Debug.WriteLine("Initialization: The document was still not loaded after timeout.");
             }
-        }
-
-        private void CheckKeysValidity()
-        {
-            Thread thread = new Thread(() =>
-            {
-                bool isAllOK = CheckFeatureValidity(Constants.ENTERPRISE_EDITION_FEATURE_ID, Constants.ENTERPRISE_EDITION_FRIENDLY_NAME);
-                isAllOK = isAllOK && CheckFeatureValidity(Constants.SL_MIGRATION_EDITION_FEATURE_ID, Constants.SL_MIGRATION_EDITION_FRIENDLY_NAME);
-                isAllOK = isAllOK && CheckFeatureValidity(Constants.PROFESSIONAL_EDITION_FEATURE_ID, Constants.PROFESSIONAL_EDITION_FRIENDLY_NAME);
-                isAllOK = isAllOK && CheckFeatureValidity(Constants.COMMERCIAL_EDITION_S_FEATURE_ID, Constants.COMMERCIAL_EDITION_S_FRIENDLY_NAME);
-                isAllOK = isAllOK && CheckFeatureValidity(Constants.COMMERCIAL_EDITION_L_FEATURE_ID, Constants.COMMERCIAL_EDITION_L_FRIENDLY_NAME);
-                isAllOK = isAllOK && CheckFeatureValidity(Constants.PREMIUM_SUPPORT_EDITION_FEATURE_ID, Constants.PREMIUM_SUPPORT_EDITION_FRIENDLY_NAME);
-            });
-            thread.Start();
-        }
-
-        private bool CheckFeatureValidity(string featureId, string editionName)
-        {
-            return true;
         }
 
         private async void ButtonStats_Click(object sender, RoutedEventArgs e)
@@ -584,7 +580,6 @@ Click OK to continue.";
 
                     File.Copy(Path.Combine(simulatorJsCssPath, "cshtml5.css"), Path.Combine(destinationPath, "cshtml5.css"), true);
                     File.Copy(Path.Combine(simulatorJsCssPath, "cshtml5.js"), Path.Combine(destinationPath, "cshtml5.js"), true);
-                    File.Copy(Path.Combine(simulatorJsCssPath, "ResizeObserver.js"), Path.Combine(destinationPath, "ResizeObserver.js"), true);
                     File.Copy(Path.Combine(simulatorJsCssPath, "FileSaver.min.js"), Path.Combine(destinationPath, "FileSaver.min.js"), true);
 
                     // Create "interopcalls.js" which contains all the JS executed by the Simulator so far:
@@ -625,7 +620,6 @@ Click OK to continue.";
                 InteropHelpers.InjectSimulatorProxy(
                     new SimulatorProxy(MainWebBrowser,
                         Console,
-                        MainWebBrowser.Dispatcher,
                         _openSilverRuntimeDispatcher,
                         _javaScriptExecutionHandler));
 
@@ -711,7 +705,7 @@ Click OK to continue.";
             // Determine the output path by reading the "OutputRootPath" attribute that the compiler has injected into the entry assembly:
             if (_outputRootPath == null)
             {
-                ReflectionInUserAssembliesHelper.GetOutputPathsByReadingAssemblyAttributes(_entryPointAssembly, out _outputRootPath, out _, out _, out _outputResourcesPath, out _);
+                ReflectionInUserAssembliesHelper.GetOutputPathsByReadingAssemblyAttributes(out _outputRootPath, out _outputResourcesPath);
             }
 
             string outputRootPathFixed = _outputRootPath.Replace('/', '\\');
@@ -744,7 +738,6 @@ Click OK to continue.";
 
         void ButtonClearCookiesAndCache_Click(object sender, RoutedEventArgs e)
         {
-            CookiesHelper.ClearCookies(MainWebBrowser, NAME_FOR_STORING_COOKIES);
             try
             {
                 if (!string.IsNullOrWhiteSpace(_browserUserDataDir)
@@ -754,7 +747,7 @@ Click OK to continue.";
                         = MessageBox.Show("To fully clear the Simulator cache, please close the Simulator and manually delete the following folder:" + Environment.NewLine + Environment.NewLine + _browserUserDataDir + Environment.NewLine + Environment.NewLine + "Click OK to see this folder in Windows Explorer.", "Confirm?", MessageBoxButton.OKCancel);
                     if (result == MessageBoxResult.OK)
                     {
-                        System.Diagnostics.Process.Start(_browserUserDataDir);
+                        Process.Start(_browserUserDataDir);
                     }
                 }
             }
@@ -847,14 +840,13 @@ Click OK to continue.";
         {
             base.OnClosed(e);
 
-            //Note: The following line was an attempt to persist the Microsoft login cookies (for use by user applications that required AAD login), but it is no longer necessary because we changed the DotNetBrowser "StorageType" from "MEMORY" to "DISK", so cookies are now automatically persisted.
-            //CookiesHelper.SaveMicrosoftCookies(MainWebBrowser, NAME_FOR_STORING_COOKIES);
-
             // Destroy the WebControl and its underlying view:
             _openSilverRuntimeDispatcher?.BeginInvokeShutdown(DispatcherPriority.Normal);
 
             _javaScriptExecutionHandler.MarkWebControlAsDisposed();
             MainWebBrowser.Dispose();
+
+            SaveWindowState();
 
             // Kill the process to avoid having the Simulator process that remains open due to a MessageBox or something else:
             Application.Current.Shutdown();
@@ -881,10 +873,10 @@ Click OK to continue.";
         private async void DisplaySize_Click(object sender, RoutedEventArgs e)
         {
             SaveDisplaySize();
-            await UpdateWebBrowserAndWebPageSizeBasedOnCurrentState();
+            await UpdateWebBrowserAndWebPageSizeBasedOnCurrentState(true);
         }
 
-        private async Task UpdateWebBrowserAndWebPageSizeBasedOnCurrentState()
+        private async Task UpdateWebBrowserAndWebPageSizeBasedOnCurrentState(bool forceResize = false)
         {
             if (DisplaySize_Phone.IsChecked == true)
             {
@@ -959,11 +951,15 @@ Click OK to continue.";
 
                 SetWebBrowserSize(double.NaN, double.NaN);
                 ContainerForMainWebBrowserAndHighlightElement.Margin = new Thickness(0, 0, 0, 0);
-                await Dispatcher.BeginInvoke(() =>
+
+                if (forceResize)
                 {
-                    Width = 1024;
-                    Height = 768;
-                });
+                    await Dispatcher.BeginInvoke(() =>
+                    {
+                        Width = 1024;
+                        Height = 768;
+                    });
+                }
 
                 await SetTouchEmulation(false);
             }
@@ -991,8 +987,8 @@ Click OK to continue.";
                 ButtonHideXamlTree.Visibility = Visibility.Visible;
 
                 // Save opened state
-                Properties.Settings.Default.XamlInspectorVisible = true;
-                Properties.Settings.Default.Save();
+                Settings.Default.XamlInspectorVisible = true;
+                Settings.Default.Save();
 
                 // We activate the element picker by default:
                 StartElementPickerForInspection();
@@ -1026,8 +1022,8 @@ Click OK to continue.";
             ColumnForXamlPropertiesPane.Width = GridLength.Auto;
 
             // Save closed state
-            Properties.Settings.Default.XamlInspectorVisible = false;
-            Properties.Settings.Default.Save();
+            Settings.Default.XamlInspectorVisible = false;
+            Settings.Default.Save();
 
             // Ensure that the element picker is not activated:
             StopElementPickerForInspection();
@@ -1065,7 +1061,7 @@ Click OK to continue.";
                 displaySize = 1;
             else if (DisplaySize_Desktop.IsChecked == true)
                 displaySize = 2;
-            Properties.Settings.Default.DisplaySize = displaySize;
+            Settings.Default.DisplaySize = displaySize;
 
             //-----------
             // Phone orientation (Portrait or Landscape)
@@ -1075,7 +1071,7 @@ Click OK to continue.";
                 displaySize_Phone_Orientation = 0;
             else if (DisplaySize_Phone_Landscape.IsChecked == true)
                 displaySize_Phone_Orientation = 1;
-            Properties.Settings.Default.DisplaySize_Phone_Orientation = displaySize_Phone_Orientation;
+            Settings.Default.DisplaySize_Phone_Orientation = displaySize_Phone_Orientation;
 
             //-----------
             // Tablet orientation (Portrait or Landscape)
@@ -1085,10 +1081,10 @@ Click OK to continue.";
                 displaySize_Tablet_Orientation = 0;
             else if (DisplaySize_Tablet_Landscape.IsChecked == true)
                 displaySize_Tablet_Orientation = 1;
-            Properties.Settings.Default.DisplaySize_Tablet_Orientation = displaySize_Tablet_Orientation;
+            Settings.Default.DisplaySize_Tablet_Orientation = displaySize_Tablet_Orientation;
 
             // SAVE:
-            Properties.Settings.Default.Save();
+            Settings.Default.Save();
         }
 
         void LoadDisplaySize()
@@ -1096,7 +1092,7 @@ Click OK to continue.";
             //-----------
             // Display size (Phone, Tablet, or Desktop)
             //-----------
-            int displaySize = Properties.Settings.Default.DisplaySize;
+            int displaySize = Settings.Default.DisplaySize;
             switch (displaySize)
             {
                 case 0:
@@ -1114,7 +1110,7 @@ Click OK to continue.";
             //-----------
             // Phone orientation (Portrait or Landscape)
             //-----------
-            int displaySize_Phone_Orientation = Properties.Settings.Default.DisplaySize_Phone_Orientation;
+            int displaySize_Phone_Orientation = Settings.Default.DisplaySize_Phone_Orientation;
             switch (displaySize_Phone_Orientation)
             {
                 case 1:
@@ -1129,7 +1125,7 @@ Click OK to continue.";
             //-----------
             // Tablet orientation (Portrait or Landscape)
             //-----------
-            int displaySize_Tablet_Orientation = Properties.Settings.Default.DisplaySize_Tablet_Orientation;
+            int displaySize_Tablet_Orientation = Settings.Default.DisplaySize_Tablet_Orientation;
             switch (displaySize_Tablet_Orientation)
             {
                 case 1:
@@ -1142,16 +1138,24 @@ Click OK to continue.";
             }
         }
 
-        private class CustomResponseEventArgs : EventArgs
+        private void RestoreWindowState()
         {
-            public string Url { get; private set; }
-
-            public CustomResponseEventArgs(string url)
-            {
-                this.Url = url;
-            }
+            Left = Settings.Default.WindowPositionLeft;
+            Top = Settings.Default.WindowPositionTop;
+            Width = Settings.Default.WindowWidth;
+            Height = Settings.Default.WindowHeight;
+            WindowState = Settings.Default.WindowState;
         }
-        private delegate void CustomResponseHandler(object sender, CustomResponseEventArgs e);
+
+        private void SaveWindowState()
+        {
+            Settings.Default.WindowPositionLeft = Left;
+            Settings.Default.WindowPositionTop = Top;
+            Settings.Default.WindowWidth = Width;
+            Settings.Default.WindowHeight = Height;
+            Settings.Default.WindowState = WindowState;
+            Settings.Default.Save();
+        }
 
         #region Element Picker for XAML Inspection
 

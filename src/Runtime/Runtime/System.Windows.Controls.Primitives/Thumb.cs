@@ -145,7 +145,8 @@ namespace System.Windows.Controls.Primitives
                 CaptureMouse();
                 IsDragging = true;
 
-                _origin = _previousPosition = e.GetPosition(null);
+                _transformToOriginal = GetTransformToOriginal();
+                _origin = _previousPosition = _transformToOriginal.Transform(e.GetPosition(null));
 
                 // Raise the DragStarted event 
                 bool success = false;
@@ -163,6 +164,24 @@ namespace System.Windows.Controls.Primitives
                     }
                 }
             }
+        }
+
+        private Matrix GetTransformToOriginal()
+        {
+            Matrix transform = Parent switch
+            {
+                Popup => InternalTransformToAncestor(null),
+                UIElement parent => parent.InternalTransformToAncestor(null),
+                _ => Matrix.Identity,
+            };
+
+            if (transform.HasInverse)
+            {
+                transform.Invert();
+                return transform;
+            }
+
+            return Matrix.Identity;
         }
 
         protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
@@ -215,7 +234,7 @@ namespace System.Windows.Controls.Primitives
 
             if (IsDragging)
             {
-                Point position = e.GetPosition(null);
+                Point position = _transformToOriginal.Transform(e.GetPosition(null));
 
                 if (position != _previousPosition)
                 {
@@ -231,14 +250,14 @@ namespace System.Windows.Controls.Primitives
         protected override void OnGotFocus(RoutedEventArgs e)
         {
             base.OnGotFocus(e);
-            FocusChanged(HasFocus());
+            FocusChanged(FocusManager.HasFocus(this, false));
         }
 
         /// <inheritdoc />
         protected override void OnLostFocus(RoutedEventArgs e)
         {
             base.OnLostFocus(e);
-            FocusChanged(HasFocus());
+            FocusChanged(FocusManager.HasFocus(this, false));
         }
 
         /// <inheritdoc />
@@ -303,18 +322,6 @@ namespace System.Windows.Controls.Primitives
             return VisualStateManager.GoToState(this, stateName, useTransitions);
         }
 
-        private bool HasFocus()
-        {
-            for (DependencyObject doh = FocusManager.GetFocusedElement() as DependencyObject;
-                doh != null;
-                doh = VisualTreeHelper.GetParent(doh))
-            {
-                if (ReferenceEquals(doh, this))
-                    return true;
-            }
-            return false;
-        }
-
         /// <summary>
         /// Raise the DragCompleted event.
         /// </summary> 
@@ -353,5 +360,7 @@ namespace System.Windows.Controls.Primitives
         /// Last position of the thumb while during a drag operation.
         /// </summary> 
         private Point _previousPosition;
+
+        private Matrix _transformToOriginal;
     }
 }

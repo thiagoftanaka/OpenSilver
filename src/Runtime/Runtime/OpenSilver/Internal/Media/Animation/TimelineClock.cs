@@ -22,15 +22,14 @@ namespace OpenSilver.Internal.Media.Animation;
 
 internal abstract class TimelineClock
 {
-    private ClockHandle _handle;
+    private WeakReference<TimelineClock> _weakReference;
     private TimelineClock _parent;
     private ClockFlags _flags = 0;
 
-    protected TimelineClock(Timeline owner, bool isRoot)
+    protected TimelineClock(Timeline owner)
     {
         Debug.Assert(owner is not null);
         Timeline = owner;
-        IsRoot = isRoot;
         Clock = new ControllableStopwatch();
         CurrentState = ClockState.Stopped;
     }
@@ -43,27 +42,9 @@ internal abstract class TimelineClock
 
     public TimeSpan CurrentTime { get; private set; }
 
-    public double CurrentProgress
-    {
-        get
-        {
-            Duration duration = IterationDuration;
+    public bool IsPaused => IsInteractivelyPaused;
 
-            if (duration == Duration.Forever)
-            {
-                return 0.0;
-            }
-
-            Debug.Assert(duration.HasTimeSpan);
-
-            if (duration.TimeSpan == TimeSpan.Zero)
-            {
-                return 1.0;
-            }
-
-            return Math.Min((double)CurrentTime.Ticks / duration.TimeSpan.Ticks, 1.0);
-        }
-    }
+    public double CurrentProgress { get; private set; }
 
     public int CurrentIteration { get; private set; }
 
@@ -110,7 +91,7 @@ internal abstract class TimelineClock
         }
     }
 
-    public void Begin(bool alignedToLastTick)
+    internal void InternalBegin(bool alignedToLastTick)
     {
         EnsureRootClock();
 
@@ -126,7 +107,7 @@ internal abstract class TimelineClock
         }
     }
 
-    public void Pause()
+    internal void InternalPause()
     {
         EnsureRootClock();
 
@@ -140,7 +121,7 @@ internal abstract class TimelineClock
         }
     }
 
-    public void Resume()
+    internal void InternalResume()
     {
         EnsureRootClock();
 
@@ -150,29 +131,33 @@ internal abstract class TimelineClock
         {
             IsInteractivelyPaused = false;
             Clock.Start();
-            RequestNextFrames(true);
+
+            if (CurrentState == ClockState.Active)
+            {
+                RequestNextFrames(true);
+            }
         }
     }
 
-    public void Seek(TimeSpan offset)
+    internal void InternalSeek(TimeSpan offset)
     {
         EnsureRootClock();
 
         if (!IsActive) return;
 
-        InternalSeek(offset, false);
+        InternalSeek(offset + BeginTime, false);
     }
 
-    public void SeekAlignedToLastTick(TimeSpan offset)
+    internal void InternalSeekAlignedToLastTick(TimeSpan offset)
     {
         EnsureRootClock();
 
         if (!IsActive) return;
 
-        InternalSeek(offset, true);
+        InternalSeek(offset + BeginTime, true);
     }
 
-    public void SkipToFill()
+    internal void InternalSkipToFill()
     {
         EnsureRootClock();
 
@@ -181,30 +166,44 @@ internal abstract class TimelineClock
         Duration effectiveDuration = EffectiveDuration;
         if (effectiveDuration == Duration.Forever)
         {
-            throw new InvalidOperationException("Cannot determine Storyboard Duration.");
+            throw new InvalidOperationException(Strings.Timing_SkipToFillDestinationIndefinite);
         }
 
         InternalSeek(effectiveDuration.TimeSpan + BeginTime, true);
     }
 
-    public void Stop()
+    internal void InternalStop()
     {
         EnsureRootClock();
 
         if (!IsActive) return;
 
-        if (!IsInteractivelyStopped)
-        {
-            IsInteractivelyStopped = true;
-            RequestNextFrames(false);
-            OnStop();
-        }
+        InternalStop(false);
     }
 
-    public void SetParent(TimelineClock parent) => _parent = parent;
+    internal void InternalRemove()
+    {
+        EnsureRootClock();
+
+        if (!IsActive) return;
+
+        InternalStop(true);
+    }
+
+    internal void SetParent(TimelineClock parent) => _parent = parent;
 
     public void OnFrame(TimeSpan frameTime)
     {
+        if (_parent is not null && _parent.CurrentState == ClockState.Stopped)
+        {
+            if (CurrentState != ClockState.Stopped)
+            {
+                ResetCachedStateToStopped();
+                OnFrameCore();
+            }
+            return;
+        }
+
         if (frameTime < BeginTime)
         {
             ResetCachedStateToStopped();
@@ -223,24 +222,41 @@ internal abstract class TimelineClock
 
     public void OnStop()
     {
-        CurrentState = ClockState.Stopped;
+        ResetCachedStateToStopped();
         OnStopCore();
     }
-
-    public abstract void SetContext(DependencyObject target, PropertyPath targetProperty);
 
     protected abstract void OnFrameCore();
 
     protected abstract void OnStopCore();
 
-    internal ClockHandle Handle => ClockHandle.Get(this);
+    internal ClockController Controller
+    {
+        get
+        {
+            if (IsRoot && HasControllableRoot)
+            {
+                return new ClockController(this);
+            }
+
+            return default;
+        }
+    }
+
+    internal WeakReference<TimelineClock> WeakReference => _weakReference ??= new(this);
 
     internal TimeSpan BeginTime => Timeline.BeginTime ?? TimeSpan.Zero;
 
     internal bool IsRoot
     {
         get => ReadFlag(ClockFlags.IsRoot);
-        private set => SetFlag(ClockFlags.IsRoot, value);
+        set => SetFlag(ClockFlags.IsRoot, value);
+    }
+
+    internal bool HasControllableRoot
+    {
+        get => ReadFlag(ClockFlags.HasControllableRoot);
+        set => SetFlag(ClockFlags.HasControllableRoot, value);
     }
 
     private bool IsActive
@@ -279,6 +295,21 @@ internal abstract class TimelineClock
         set => SetFlag(ClockFlags.IsCompleted, value);
     }
 
+    private void InternalStop(bool raiseCompleted)
+    {
+        if (!IsInteractivelyStopped)
+        {
+            IsInteractivelyStopped = true;
+            RequestNextFrames(false);
+            OnStop();
+
+            if (raiseCompleted)
+            {
+                RaiseCompletedForRoot();
+            }
+        }
+    }
+
     private void InternalSeek(TimeSpan offset, bool align)
     {
         IsCompleted = false;
@@ -312,8 +343,13 @@ internal abstract class TimelineClock
         {
             SetCompletedForRoot();
 
-            CurrentState = ClockState.Filling;
+            if (Timeline.FillBehavior == FillBehavior.Stop)
+            {
+                ResetCachedStateToStopped();
+                return;
+            }
 
+            CurrentState = ClockState.Filling;
             localTime = effectiveDuration.TimeSpan;
         }
         else
@@ -326,15 +362,25 @@ internal abstract class TimelineClock
         {
             CurrentIteration = 1;
             CurrentTime = localTime;
+            CurrentProgress = 0;
             return;
         }
 
         Debug.Assert(iterationDuration.HasTimeSpan);
 
-        if (iterationDuration.TimeSpan == TimeSpan.Zero || localTime == TimeSpan.Zero)
+        if (iterationDuration.TimeSpan == TimeSpan.Zero)
         {
             CurrentIteration = 1; // Arbitrary value
             CurrentTime = TimeSpan.Zero;
+            CurrentProgress = 1;
+            return;
+        }
+
+        if (localTime == TimeSpan.Zero)
+        {
+            CurrentIteration = 1;
+            CurrentTime = TimeSpan.Zero;
+            CurrentProgress = 0;
             return;
         }
 
@@ -349,12 +395,15 @@ internal abstract class TimelineClock
             CurrentIteration = nbIterations + 1;
             CurrentTime = TimeSpan.FromTicks(currentTimeTicks);
         }
+
+        CurrentProgress = Math.Min((double)CurrentTime.Ticks / iterationDuration.TimeSpan.Ticks, 1.0);
     }
 
     private void ResetCachedStateToStopped()
     {
-        CurrentIteration = 1;
+        CurrentIteration = 0;
         CurrentTime = TimeSpan.Zero;
+        CurrentProgress = 0;
         CurrentState = ClockState.Stopped;
     }
 
@@ -416,22 +465,8 @@ internal abstract class TimelineClock
     {
         if (!IsRoot)
         {
-            throw new InvalidOperationException("Operation is not allowed on a non-root Storyboard.");
+            throw new InvalidOperationException(Strings.Timing_MustBeRoot);
         }
-    }
-
-    internal sealed class ClockHandle
-    {
-        private readonly WeakReference<TimelineClock> _weakReference;
-
-        private ClockHandle(TimelineClock clock)
-        {
-            _weakReference = new(clock);
-        }
-
-        public static ClockHandle Get(TimelineClock clock) => clock._handle ??= new(clock);
-
-        public bool TryGetTarget(out TimelineClock clock) => _weakReference.TryGetTarget(out clock);
     }
 
     [Flags]
@@ -444,5 +479,6 @@ internal abstract class TimelineClock
         NextFrameRequested = 1 << 4,
         CompletedEventRaised = 1 << 5,
         IsCompleted = 1 << 6,
+        HasControllableRoot = 1 << 7,
     }
 }

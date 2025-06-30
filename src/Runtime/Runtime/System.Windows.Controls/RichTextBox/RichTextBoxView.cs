@@ -37,7 +37,7 @@ internal sealed class RichTextBoxView : TextViewBase
     internal const string FontSizeName = "size";
     internal const string FontColorName = "color";
     internal const string LetterSpacingName = "spacing";
-    internal const string LineHeightName = "height";
+    internal const string LineHeightName = "lineheight";
     internal const string TextAlignmentName = "align";
     internal const string TextDecorationName = "decoration";
 
@@ -49,51 +49,6 @@ internal sealed class RichTextBoxView : TextViewBase
 
     static RichTextBoxView()
     {
-        TextElement.CharacterSpacingProperty.AddOwner(
-            typeof(RichTextBoxView),
-            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
-            {
-                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((RichTextBoxView)d).SetCharacterSpacing((int)newValue),
-            });
-
-        TextElement.FontFamilyProperty.AddOwner(
-            typeof(RichTextBoxView),
-            new FrameworkPropertyMetadata(FontFamily.Default, FrameworkPropertyMetadataOptions.Inherits, OnFontFamilyChanged)
-            {
-                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((RichTextBoxView)d).SetFontFamily((FontFamily)newValue),
-            });
-
-        TextElement.FontSizeProperty.AddOwner(
-            typeof(RichTextBoxView),
-            new FrameworkPropertyMetadata(11d, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
-            {
-                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((RichTextBoxView)d).SetFontSize((double)newValue),
-            });
-
-        TextElement.FontStyleProperty.AddOwner(
-            typeof(RichTextBoxView),
-            new FrameworkPropertyMetadata(FontStyles.Normal, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
-            {
-                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetFontStyle((FontStyle)newValue),
-            });
-
-        TextElement.FontWeightProperty.AddOwner(
-           typeof(RichTextBoxView),
-           new FrameworkPropertyMetadata(FontWeights.Normal, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
-           {
-               MethodToUpdateDom2 = static (d, oldValue, newValue) => ((RichTextBoxView)d).SetFontWeight((FontWeight)newValue),
-           });
-
-        TextElement.ForegroundProperty.AddOwner(
-            typeof(RichTextBoxView),
-            new FrameworkPropertyMetadata(
-                TextElement.ForegroundProperty.DefaultMetadata.DefaultValue,
-                FrameworkPropertyMetadataOptions.Inherits,
-                OnForegroundChanged)
-            {
-                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((RichTextBoxView)d).SetForeground(oldValue as Brush, (Brush)newValue),
-            });
-
         Block.LineHeightProperty.AddOwner(
             typeof(RichTextBoxView),
             new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
@@ -107,11 +62,9 @@ internal sealed class RichTextBoxView : TextViewBase
             {
                 MethodToUpdateDom2 = static (d, oldValue, newValue) => ((RichTextBoxView)d).SetTextAlignment((TextAlignment)newValue),
             });
-        IsHitTestableProperty.OverrideMetadata(typeof(RichTextBoxView), new PropertyMetadata(BooleanBoxes.TrueBox));
     }
 
     private DispatcherOperation _refreshOp;
-    private WeakEventListener<RichTextBoxView, Brush, EventArgs> _foregroundChangedListener;
 
     public RichTextBoxView(RichTextBox rtb)
         : base(rtb)
@@ -129,7 +82,7 @@ internal sealed class RichTextBoxView : TextViewBase
         return INTERNAL_HtmlDomManager.CreateRichTextBoxViewDomElementAndAppendIt((INTERNAL_HtmlDomElementReference)parentRef, this);
     }
 
-    protected sealed internal override void INTERNAL_OnAttachedToVisualTree()
+    protected internal sealed override void INTERNAL_OnAttachedToVisualTree()
     {
         base.INTERNAL_OnAttachedToVisualTree();
 
@@ -139,6 +92,15 @@ internal sealed class RichTextBoxView : TextViewBase
         {
             InputManager.SetFocusNative(OuterDiv);
         }
+    }
+
+    protected internal sealed override void INTERNAL_OnDetachedFromVisualTree()
+    {
+        base.INTERNAL_OnDetachedFromVisualTree();
+
+        Host.Synchronize();
+
+        Interop.ExecuteJavaScriptVoidAsync($"document.richTextViewManager.deleteView('{OuterDiv.UniqueIdentifier}')");
     }
 
     private void SetProperties()
@@ -291,6 +253,7 @@ internal sealed class RichTextBoxView : TextViewBase
                 "underline" => TextDecorations.Underline,
                 "line-through" => TextDecorations.Strikethrough,
                 "overline" => TextDecorations.OverLine,
+                "none" => null,
                 _ => GetValue(Inline.TextDecorationsProperty),
             };
         }
@@ -457,11 +420,11 @@ internal sealed class RichTextBoxView : TextViewBase
 
     internal string GetXaml(int start, int length) => GetXaml(GetContents(start, length));
 
-    private string GetXaml(QuillDelta[] contents)
+    private string GetXaml(QuillDelta[] deltas)
     {
-        var deltas = RemoveTrailingLineBreak(contents);
+        var parser = new QuillContentParser(deltas);
 
-        if (deltas.Length == 0)
+        if (!parser.MoveToNextBlock())
         {
             return string.Empty;
         }
@@ -469,37 +432,28 @@ internal sealed class RichTextBoxView : TextViewBase
         var xaml = new XmlDocument();
         xaml.LoadXml("<Section xml:space=\"preserve\" xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"></Section>");
 
-        var parser = new QuillContentParser(deltas);
+        bool done;
+        bool isEmpty = true;
 
-        while (parser.MoveToNextBlock())
+        do
         {
-            xaml.DocumentElement.AppendChild(CreateParagraph(xaml, parser.BlockFormat, parser.Inlines));
-        }
+            var p = CreateParagraph(xaml, parser.BlockFormat, parser.Inlines);
 
-        return xaml.OuterXml;
+            done = !parser.MoveToNextBlock();
 
-        static Span<QuillDelta> RemoveTrailingLineBreak(Span<QuillDelta> deltas)
-        {
-            if (deltas.Length > 0)
+            if (!done || !p.IsEmpty)
             {
-                ref QuillDelta delta = ref deltas[deltas.Length - 1];
-
-                if (delta.Text == "\n" && !delta.Attributes.HasValue)
-                {
-                    return deltas.Slice(0, deltas.Length - 1);
-                }
-
-                if (delta.Text.EndsWith("\n"))
-                {
-                    delta.Text = delta.Text.Substring(0, delta.Text.Length - 1);
-                }
+                // SL drops the last paragraph if it is empty.
+                xaml.DocumentElement.AppendChild(p.Paragraph);
+                isEmpty = false;
             }
-
-            return deltas;
         }
+        while (!done);
+
+        return isEmpty ? string.Empty : xaml.OuterXml;
     }
 
-    private XmlElement CreateParagraph(XmlDocument document, QuillRangeFormat format, IEnumerable<QuillDelta> deltas)
+    private (XmlElement Paragraph, bool IsEmpty) CreateParagraph(XmlDocument document, QuillRangeFormat format, IEnumerable<QuillDelta> deltas)
     {
         var paragraph = document.CreateElement(nameof(Paragraph), document.DocumentElement.NamespaceURI);
         paragraph.SetAttribute(nameof(Block.TextAlignment), format.TextAlignment switch
@@ -515,15 +469,18 @@ internal sealed class RichTextBoxView : TextViewBase
             _ => format.LineHeight.Substring(0, format.LineHeight.Length - 2), // Remove 'px'
         });
 
+        bool isEmpty = true;
+
         foreach (QuillDelta d in deltas)
         {
             if (!string.IsNullOrEmpty(d.Text))
             {
+                isEmpty = false;
                 paragraph.AppendChild(CreateRun(document, d));
             }
         }
 
-        return paragraph;
+        return (paragraph, isEmpty);
     }
 
     private XmlElement CreateRun(XmlDocument document, QuillDelta delta)
@@ -536,6 +493,7 @@ internal sealed class RichTextBoxView : TextViewBase
         run.SetAttribute(nameof(TextElement.FontFamily), format.FontFamily switch
         {
             null or "" => ((FontFamily)GetValue(TextElement.FontFamilyProperty)).Source,
+            string s when s == FontFace.DefaultCssFontFamily => FontFamily.Default.Source,
             _ => format.FontFamily,
         });
 
@@ -597,7 +555,7 @@ internal sealed class RichTextBoxView : TextViewBase
                 {
                     TextDecorationLocation.Underline => nameof(TextDecorations.Underline),
                     TextDecorationLocation.Strikethrough => nameof(TextDecorations.Strikethrough),
-                    TextDecorationLocation.OverLine => nameof(TextDecorations.OverLine),
+                    TextDecorationLocation.Overline => nameof(TextDecorations.OverLine),
                     _ => "None",
                 },
             }
@@ -688,7 +646,7 @@ internal sealed class RichTextBoxView : TextViewBase
             return;
         }
 
-        QuillDelta[] deltas = GetDeltas(Host.GetBlocksCache()).ToArray();
+        QuillDelta[] deltas = GetDeltas(Host.InternalBlocks).ToArray();
 
         Interop.ExecuteJavaScriptVoid(
             $"document.richTextViewManager.setContents('{OuterDiv.UniqueIdentifier}', {JsonSerializer.Serialize(deltas, SerializerOptions)})");
@@ -763,7 +721,7 @@ internal sealed class RichTextBoxView : TextViewBase
     {
         return block switch
         {
-            Section section when section.Blocks.Count > 0 => GetDeltas(section.Blocks),
+            Section section when section.Blocks.InternalCount > 0 => GetDeltas(section.Blocks),
             Section section => GetDeltas(section.Blocks).Append(CloseBlock(section)),
             Paragraph paragraph => GetDeltas(paragraph.Inlines).Append(CloseBlock(paragraph)),
             _ => Enumerable.Empty<QuillDelta>(),
@@ -813,6 +771,20 @@ internal sealed class RichTextBoxView : TextViewBase
 
             case LineBreak:
                 yield return new QuillDelta { Text = "\n" };
+                break;
+
+            case InlineImageContainer image:
+                yield return new QuillDelta
+                {
+                    Image = new QuillImage { ImageData = image.GetImageData() },
+                    Attributes = new QuillRangeFormat
+                    {
+                        Width = double.IsNaN(image.Width) ? string.Empty : image.Width.ToInvariantString(),
+                        Height = double.IsNaN(image.Height) ? string.Empty : image.Height.ToInvariantString(),
+                        OriginalSource = image.GetOriginalSource(),
+                        ObjectFit = InlineImageContainer.ConvertStretch(image.Stretch),
+                    },
+                };
                 break;
         }
     }
@@ -875,41 +847,6 @@ internal sealed class RichTextBoxView : TextViewBase
 
     private void SetAcceptsTab(bool value) =>
         Interop.ExecuteJavaScriptVoidAsync($"document.richTextViewManager.setAcceptsTab('{OuterDiv.UniqueIdentifier}', '{(value ? "true" : "false")}')");
-
-    private static void OnFontFamilyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        UIElementHelpers.InvalidateMeasureOnFontFamilyChanged((RichTextBoxView)d, (FontFamily)e.NewValue);
-    }
-
-    private static void OnForegroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        var view = (RichTextBoxView)d;
-
-        if (view._foregroundChangedListener != null)
-        {
-            view._foregroundChangedListener.Detach();
-            view._foregroundChangedListener = null;
-        }
-
-        if (e.NewValue is Brush newBrush)
-        {
-            view._foregroundChangedListener = new(view, newBrush)
-            {
-                OnEventAction = static (instance, sender, args) => instance.OnForegroundChanged(sender, args),
-                OnDetachAction = static (listener, source) => source.Changed -= listener.OnEvent,
-            };
-            newBrush.Changed += view._foregroundChangedListener.OnEvent;
-        }
-    }
-
-    private void OnForegroundChanged(object sender, EventArgs e)
-    {
-        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
-        {
-            var foreground = (Brush)sender;
-            this.SetForeground(foreground, foreground);
-        }
-    }
 
     private void OnContentChanged(bool invalidateModel)
     {

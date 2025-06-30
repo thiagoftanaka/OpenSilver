@@ -6,10 +6,10 @@
     <OutputPath>bin\OpenSilver\$(Configuration)\</OutputPath>
   </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="OpenSilver" Version="3.0.0" />
-		<PackageReference Include="System.ServiceModel.Http" Version="4.10.0" />
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="OpenSilver" Version="3.1.1" />
+    <PackageReference Include="System.ServiceModel.Http" Version="4.10.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Include="App.xaml.cs">
@@ -32,7 +32,7 @@
     <Compile Include="Tests\Events\KeyDownTest.xaml.cs" />
     <Compile Include="Tests\Events\XTextBox.cs" />
     <Compile Include="Tests\InkPresenterTest.xaml.cs" />
-    <Compile Include="Tests\OpenFileDialogTest.xaml.cs" />
+    <Compile Include="Tests\FileDialogTest.xaml.cs" />
     <Compile Include="Tests\PopupWindowTest.xaml.cs" />
     <Compile Include="Tests\PrintDocumentTest.xaml.cs" />
     <Compile Include="Registry\ITreeItem.cs" />
@@ -655,7 +655,7 @@
     <Page Include="Tests\InkPresenterTest.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Tests\OpenFileDialogTest.xaml">
+    <Page Include="Tests\FileDialogTest.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Tests\PopupWindowTest.xaml">

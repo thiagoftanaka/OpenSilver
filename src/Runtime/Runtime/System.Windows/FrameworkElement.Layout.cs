@@ -12,96 +12,327 @@
 \*====================================================================================*/
 
 using System.ComponentModel;
-using System.Collections.Generic;
+using System.Windows.Media;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
 
-namespace System.Windows
+namespace System.Windows;
+
+public partial class FrameworkElement
 {
-    public partial class FrameworkElement
+    /// <summary>
+    /// Identifies the <see cref="HorizontalAlignment"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty HorizontalAlignmentProperty =
+        DependencyProperty.Register(
+            nameof(HorizontalAlignment),
+            typeof(HorizontalAlignment),
+            typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(HorizontalAlignment.Stretch, FrameworkPropertyMetadataOptions.AffectsArrange));
+
+    /// <summary>
+    /// Gets or sets the horizontal alignment characteristics that are applied to a <see cref="FrameworkElement"/>
+    /// when it is composed in a layout parent, such as a panel or items control.
+    /// </summary>
+    /// <returns>
+    /// A horizontal alignment setting, as a value of the enumeration. The default is <see cref="HorizontalAlignment.Stretch"/>.
+    /// </returns>
+    public HorizontalAlignment HorizontalAlignment
     {
-        /// <summary>
-        /// Identifies the <see cref="CustomLayout"/> dependency property.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public static readonly DependencyProperty CustomLayoutProperty =
-            DependencyProperty.Register(
-                nameof(CustomLayout),
-                typeof(bool),
-                typeof(FrameworkElement),
-                new PropertyMetadata(true));
+        get => (HorizontalAlignment)GetValue(HorizontalAlignmentProperty);
+        set => SetValueInternal(HorizontalAlignmentProperty, value);
+    }
 
-        /// <summary>
-        /// Enable or disable measure/arrange layout system in a sub part
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool CustomLayout
+    /// <summary>
+    /// Identifies the <see cref="VerticalAlignment"/> dependency  property.
+    /// </summary>
+    public static readonly DependencyProperty VerticalAlignmentProperty =
+        DependencyProperty.Register(
+            nameof(VerticalAlignment),
+            typeof(VerticalAlignment),
+            typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(VerticalAlignment.Stretch, FrameworkPropertyMetadataOptions.AffectsArrange));
+
+    /// <summary>
+    /// Gets or sets the vertical alignment characteristics that are applied to a <see cref="FrameworkElement"/>
+    /// when it is composed in a parent object such as a panel or items control.
+    /// </summary>
+    /// <returns>
+    /// A vertical alignment setting. The default is <see cref="VerticalAlignment.Stretch"/>.
+    /// </returns>
+    public VerticalAlignment VerticalAlignment
+    {
+        get => (VerticalAlignment)GetValue(VerticalAlignmentProperty);
+        set => SetValueInternal(VerticalAlignmentProperty, value);
+    }
+
+    /// <summary>
+    /// Identifies the <see cref="Margin"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty MarginProperty =
+        DependencyProperty.Register(
+            nameof(Margin),
+            typeof(Thickness),
+            typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(new Thickness(), FrameworkPropertyMetadataOptions.AffectsMeasure),
+            IsMarginValid);
+
+    /// <summary>
+    /// Gets or sets the outer margin of a <see cref="FrameworkElement"/>.
+    /// </summary>
+    /// <returns>
+    /// Provides margin values for the object. The default value is a default <see cref="Thickness"/> 
+    /// with all properties (dimensions) equal to 0.
+    /// </returns>
+    public Thickness Margin
+    {
+        get => (Thickness)GetValue(MarginProperty);
+        set => SetValueInternal(MarginProperty, value);
+    }
+
+    private static bool IsMarginValid(object value)
+    {
+        Thickness m = (Thickness)value;
+        return Thickness.IsValid(m, true, false, false, false);
+    }
+
+    /// <summary>
+    /// Identifies the <see cref="Width"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty WidthProperty =
+        DependencyProperty.Register(
+            nameof(Width),
+            typeof(double),
+            typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(double.NaN, FrameworkPropertyMetadataOptions.AffectsMeasure),
+            IsWidthHeightValid);
+
+    /// <summary>
+    /// Gets or sets the width of a <see cref="FrameworkElement"/>.
+    /// </summary>
+    /// <returns>
+    /// The width of the object, in pixels. The default is <see cref="double.NaN"/>. Except
+    /// for the special <see cref="double.NaN"/> value, this value must be equal to or greater
+    /// than 0.
+    /// </returns>
+    [TypeConverter(typeof(OpenSilver.Internal.LengthConverter))]
+    public double Width
+    {
+        get => (double)GetValue(WidthProperty);
+        set => SetValueInternal(WidthProperty, value);
+    }
+
+    /// <summary>
+    /// Identifies the <see cref="MinWidth"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty MinWidthProperty =
+        DependencyProperty.Register(
+            nameof(MinWidth),
+            typeof(double),
+            typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsMeasure),
+            IsMinWidthHeightValid);
+
+    /// <summary>
+    /// Gets or sets the minimum width constraint of a <see cref="FrameworkElement"/>.
+    /// </summary>
+    /// <returns>
+    /// The minimum width of the object, in pixels. The default is 0. This value can be any value 
+    /// equal to or greater than 0. However, <see cref="double.PositiveInfinity"/> is not valid.
+    /// </returns>
+    public double MinWidth
+    {
+        get => (double)GetValue(MinWidthProperty);
+        set => SetValueInternal(MinWidthProperty, value);
+    }
+
+    /// <summary>
+    /// Identifies the <see cref="MaxWidth"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty MaxWidthProperty =
+        DependencyProperty.Register(
+            nameof(MaxWidth),
+            typeof(double),
+            typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(double.PositiveInfinity, FrameworkPropertyMetadataOptions.AffectsMeasure),
+            IsMaxWidthHeightValid);
+
+    /// <summary>
+    /// Gets or sets the maximum width constraint of a <see cref="FrameworkElement"/>.
+    /// </summary>
+    /// <returns>
+    /// The maximum width of the object, in pixels. The default is <see cref="double.PositiveInfinity"/>.
+    /// This value can be any value equal to or greater than 0. <see cref="double.PositiveInfinity"/> is also valid.
+    /// </returns>
+    public double MaxWidth
+    {
+        get => (double)GetValue(MaxWidthProperty);
+        set => SetValueInternal(MaxWidthProperty, value);
+    }
+
+    /// <summary>
+    /// Identifies the <see cref="Height"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty HeightProperty =
+        DependencyProperty.Register(
+            nameof(Height),
+            typeof(double),
+            typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(double.NaN, FrameworkPropertyMetadataOptions.AffectsMeasure),
+            IsWidthHeightValid);
+
+    /// <summary>
+    /// Gets or sets the suggested height of a <see cref="FrameworkElement"/>.
+    /// </summary>
+    /// <returns>
+    /// The height, in pixels, of the object. The default is <see cref="double.NaN"/>. Except
+    /// for the special <see cref="double.NaN"/> value, this value must be equal to or greater
+    /// than 0.
+    /// </returns>
+    [TypeConverter(typeof(OpenSilver.Internal.LengthConverter))]
+    public double Height
+    {
+        get => (double)GetValue(HeightProperty);
+        set => SetValueInternal(HeightProperty, value);
+    }
+
+    /// <summary>
+    /// Identifies the <see cref="MinHeight"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty MinHeightProperty =
+        DependencyProperty.Register(
+            nameof(MinHeight),
+            typeof(double),
+            typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsMeasure),
+            IsMinWidthHeightValid);
+
+    /// <summary>
+    /// Gets or sets the minimum height constraint of a <see cref="FrameworkElement"/>.
+    /// </summary>
+    /// <returns>
+    /// The minimum height of the object, in pixels. The default is 0. This value can be any value 
+    /// equal to or greater than 0. However, <see cref="double.PositiveInfinity"/> is not valid.
+    /// </returns>
+    public double MinHeight
+    {
+        get => (double)GetValue(MinHeightProperty);
+        set => SetValueInternal(MinHeightProperty, value);
+    }
+
+    /// <summary>
+    /// Identifies the <see cref="MaxHeight"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty MaxHeightProperty =
+        DependencyProperty.Register(
+            nameof(MaxHeight),
+            typeof(double),
+            typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(double.PositiveInfinity, FrameworkPropertyMetadataOptions.AffectsMeasure),
+            IsMaxWidthHeightValid);
+
+    /// <summary>
+    /// Gets or sets the maximum height constraint of a <see cref="FrameworkElement"/>.
+    /// </summary>
+    /// <returns>
+    /// The maximum height of the object, in pixels. The default value is <see cref="double.PositiveInfinity"/>.
+    /// This value can be any value equal to or greater than 0. <see cref="double.PositiveInfinity"/> is also valid.
+    /// </returns>
+    public double MaxHeight
+    {
+        get => (double)GetValue(MaxHeightProperty);
+        set => SetValueInternal(MaxHeightProperty, value);
+    }
+
+    private static bool IsWidthHeightValid(object value)
+    {
+        double v = (double)value;
+        return double.IsNaN(v) || (v >= 0.0d && !double.IsPositiveInfinity(v));
+    }
+
+    internal static bool IsMinWidthHeightValid(object value)
+    {
+        double v = (double)value;
+        return !double.IsNaN(v) && v >= 0.0d && !double.IsPositiveInfinity(v);
+    }
+
+    internal static bool IsMaxWidthHeightValid(object value)
+    {
+        double v = (double)value;
+        return !double.IsNaN(v) && v >= 0.0;
+    }
+
+    private static readonly PropertyMetadata _actualWidthMetadata = new ReadOnlyPropertyMetadata(0d, GetActualWidth);
+
+    private static readonly DependencyPropertyKey ActualWidthPropertyKey =
+        DependencyProperty.RegisterReadOnly(
+            nameof(ActualWidth),
+            typeof(double),
+            typeof(FrameworkElement),
+            _actualWidthMetadata);
+
+    private static object GetActualWidth(DependencyObject d) => ((FrameworkElement)d).ActualWidth;
+
+    /// <summary>
+    /// Identifies the <see cref="ActualWidth"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty ActualWidthProperty = ActualWidthPropertyKey.DependencyProperty;
+
+    /// <summary>
+    /// Gets the rendered width of a <see cref="FrameworkElement"/>.
+    /// </summary>
+    /// <returns>
+    /// The width, in pixels, of the object. The default is 0. The default might be 
+    /// encountered if the object has not been loaded and undergone a layout pass.
+    /// </returns>
+    public double ActualWidth => ActualWidthInternal;
+
+    internal virtual double ActualWidthInternal => RenderSize.Width;
+
+    private static readonly PropertyMetadata _actualHeightMetadata = new ReadOnlyPropertyMetadata(0d, GetActualHeight);
+
+    private static readonly DependencyPropertyKey ActualHeightPropertyKey =
+        DependencyProperty.RegisterReadOnly(
+            nameof(ActualHeight),
+            typeof(double),
+            typeof(FrameworkElement),
+            _actualHeightMetadata);
+
+    private static object GetActualHeight(DependencyObject d) => ((FrameworkElement)d).ActualHeight;
+
+    /// <summary>
+    /// Identifies the <see cref="ActualHeight"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty ActualHeightProperty = ActualHeightPropertyKey.DependencyProperty;
+
+    /// <summary>
+    /// Gets the rendered height of a <see cref="FrameworkElement"/>.
+    /// </summary>
+    /// <returns>
+    /// The height, in pixels, of the object. The default is 0. The default might be
+    /// encountered if the object has not been loaded and undergone a layout pass.
+    /// </returns>
+    public double ActualHeight => ActualHeightInternal;
+
+    internal virtual double ActualHeightInternal => RenderSize.Height;
+
+    internal sealed override Size MeasureCore(Size availableSize)
+    {
+        //build the visual tree from styles first
+        if (!ApplyTemplate() && TemplateChild is not null)
         {
-            get => (bool)GetValue(CustomLayoutProperty);
-            set => SetValueInternal(CustomLayoutProperty, value);
+            INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(TemplateChild, this, 0);
         }
 
-        /// <summary>
-        /// Identifies the <see cref="IsAutoWidthOnCustomLayout"/> dependency property.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public static readonly DependencyProperty IsAutoWidthOnCustomLayoutProperty =
-            DependencyProperty.Register(
-                nameof(IsAutoWidthOnCustomLayout),
-                typeof(bool?),
-                typeof(FrameworkElement),
-                new PropertyMetadata((object)null));
-
-        /// <summary>
-        /// Gets or sets the Auto Width to the root of CustomLayout
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool? IsAutoWidthOnCustomLayout
+        if (BypassLayoutPolicies)
         {
-            get => (bool?)GetValue(IsAutoWidthOnCustomLayoutProperty);
-            set => SetValueInternal(IsAutoWidthOnCustomLayoutProperty, value);
+            return MeasureOverride(availableSize);
         }
-
-        /// <summary>
-        /// Identifies the <see cref="IsAutoHeightOnCustomLayout"/> dependency property.
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public static readonly DependencyProperty IsAutoHeightOnCustomLayoutProperty =
-            DependencyProperty.Register(
-                nameof(IsAutoHeightOnCustomLayout),
-                typeof(bool?),
-                typeof(FrameworkElement),
-                new PropertyMetadata((object)null));
-
-        /// <summary>
-        /// Gets or sets the Auto Height to the root of CustomLayout
-        /// </summary>
-        [Obsolete(Helper.ObsoleteMemberMessage)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool? IsAutoHeightOnCustomLayout
+        else
         {
-            get => (bool?)GetValue(IsAutoHeightOnCustomLayoutProperty);
-            set => SetValueInternal(IsAutoHeightOnCustomLayoutProperty, value);
-        }
-
-        internal sealed override Size MeasureCore(Size availableSize)
-        {
-            //build the visual tree from styles first
-            if (!ApplyTemplate() && TemplateChild is not null)
-            {
-                INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(TemplateChild, this, 0);
-            }
-
-            bool isLayoutRoot = BypassLayoutPolicies;
-
             Thickness margin = Margin;
-            double marginWidth = isLayoutRoot ? 0 : margin.Left + margin.Right;
-            double marginHeight = isLayoutRoot ? 0 : margin.Top + margin.Bottom;
+            double marginWidth = margin.Left + margin.Right;
+            double marginHeight = margin.Top + margin.Bottom;
 
             //  parent size is what parent want us to be
             Size frameworkAvailableSize = new Size(
@@ -187,24 +418,34 @@ namespace System.Windows
 
             return new Size(Math.Max(0, clippedDesiredWidth), Math.Max(0, clippedDesiredHeight));
         }
+    }
 
-        /// <summary>
-        /// Provides the behavior for the Measure pass of Silverlight layout. Classes can override 
-        /// this method to define their own Measure pass behavior.
-        /// </summary>
-        /// <param name="availableSize">
-        /// The available size that this object can give to child objects. Infinity (<see cref="double.PositiveInfinity"/>)
-        /// can be specified as a value to indicate that the object will size to whatever content is 
-        /// available.
-        /// </param>
-        /// <returns>
-        /// The size that this object determines it needs during layout, based on its calculations
-        /// of the allocated sizes for child objects; or based on other considerations, such as a 
-        /// fixed container size.
-        /// </returns>
-        protected virtual Size MeasureOverride(Size availableSize) => new Size(0, 0);
+    /// <summary>
+    /// Provides the behavior for the Measure pass of Silverlight layout. Classes can override 
+    /// this method to define their own Measure pass behavior.
+    /// </summary>
+    /// <param name="availableSize">
+    /// The available size that this object can give to child objects. Infinity (<see cref="double.PositiveInfinity"/>)
+    /// can be specified as a value to indicate that the object will size to whatever content is 
+    /// available.
+    /// </param>
+    /// <returns>
+    /// The size that this object determines it needs during layout, based on its calculations
+    /// of the allocated sizes for child objects; or based on other considerations, such as a 
+    /// fixed container size.
+    /// </returns>
+    protected virtual Size MeasureOverride(Size availableSize) => new Size(0, 0);
 
-        internal sealed override void ArrangeCore(Rect finalRect)
+    internal sealed override void ArrangeCore(Rect finalRect)
+    {
+        if (BypassLayoutPolicies)
+        {
+            Size oldRenderSize = RenderSize;
+            Size inkSize = ArrangeOverride(finalRect.Size);
+            RenderSize = inkSize;
+            SetLayoutOffset(new Vector(finalRect.X, finalRect.Y), oldRenderSize);
+        }
+        else
         {
             // If LayoutConstrained==true (parent wins in layout),
             // we might get finalRect.Size smaller then UnclippedDesiredSize.
@@ -228,11 +469,9 @@ namespace System.Windows
             // that child will get in its ArrangeOverride.
             Size arrangeSize = finalRect.Size;
 
-            bool isLayoutRoot = BypassLayoutPolicies;
-
             Thickness margin = Margin;
-            double marginWidth = isLayoutRoot ? 0 : margin.Left + margin.Right;
-            double marginHeight = isLayoutRoot ? 0 : margin.Top + margin.Bottom;
+            double marginWidth = margin.Left + margin.Right;
+            double marginHeight = margin.Top + margin.Bottom;
             arrangeSize.Width = Math.Max(0, arrangeSize.Width - marginWidth);
             arrangeSize.Height = Math.Max(0, arrangeSize.Height - marginHeight);
 
@@ -328,341 +567,346 @@ namespace System.Windows
                     DoubleUtil.LessThan(clientSize.Width, clippedInkSize.Width)
                 || DoubleUtil.LessThan(clientSize.Height, clippedInkSize.Height);
 
-            Point offset = isLayoutRoot ? new Point() : ComputeAlignmentOffset(clientSize, clippedInkSize);
+            Vector offset = ComputeAlignmentOffset(clientSize, clippedInkSize);
 
             offset.X += finalRect.X + margin.Left;
             offset.Y += finalRect.Y + margin.Top;
 
             SetLayoutOffset(offset, oldRenderSize);
         }
+    }
 
-        internal override Rect? GetLayoutClip(Size layoutSlotSize)
+    internal override Rect? GetLayoutClip(Size layoutSlotSize)
+    {
+        if (NeedsClipBounds || ClipToBounds)
         {
-            if (NeedsClipBounds || ClipToBounds)
+            // see if  MaxWidth/MaxHeight limit the element
+            var mm = new MinMax(this);
+
+            //this is in element's local rendering coord system
+            Size inkSize = RenderSize;
+
+            double maxWidthClip = double.IsPositiveInfinity(mm.maxWidth) ? inkSize.Width : mm.maxWidth;
+            double maxHeightClip = double.IsPositiveInfinity(mm.maxHeight) ? inkSize.Height : mm.maxHeight;
+
+            //need to clip because the computed sizes exceed MaxWidth/MaxHeight/Width/Height
+            bool needToClipLocally =
+                 ClipToBounds //need to clip at bounds even if inkSize is less then maxSize
+              || DoubleUtil.LessThan(maxWidthClip, inkSize.Width)
+              || DoubleUtil.LessThan(maxHeightClip, inkSize.Height);
+
+            //now lets say we already clipped by MaxWidth/MaxHeight, lets see if further clipping is needed
+            inkSize.Width = Math.Min(inkSize.Width, mm.maxWidth);
+            inkSize.Height = Math.Min(inkSize.Height, mm.maxHeight);
+
+            //now see if layout slot should clip the element
+            Thickness margin = Margin;
+            double marginWidth = margin.Left + margin.Right;
+            double marginHeight = margin.Top + margin.Bottom;
+
+            var clippingSize = new Size(Math.Max(0, layoutSlotSize.Width - marginWidth),
+                                        Math.Max(0, layoutSlotSize.Height - marginHeight));
+
+            bool needToClipSlot =
+                ClipToBounds //forces clip at layout slot bounds even if reported sizes are ok
+             || DoubleUtil.LessThan(clippingSize.Width, inkSize.Width)
+             || DoubleUtil.LessThan(clippingSize.Height, inkSize.Height);
+
+            if (needToClipSlot)
             {
-                // see if  MaxWidth/MaxHeight limit the element
-                MinMax mm = new MinMax(this);
+                Vector offset = ComputeAlignmentOffset(clippingSize, inkSize);
 
-                //this is in element's local rendering coord system
-                Size inkSize = RenderSize;
-
-                double maxWidthClip = double.IsPositiveInfinity(mm.maxWidth) ? inkSize.Width : mm.maxWidth;
-                double maxHeightClip = double.IsPositiveInfinity(mm.maxHeight) ? inkSize.Height : mm.maxHeight;
-
-                //need to clip because the computed sizes exceed MaxWidth/MaxHeight/Width/Height
-                bool needToClipLocally =
-                     ClipToBounds //need to clip at bounds even if inkSize is less then maxSize
-                  || DoubleUtil.LessThan(maxWidthClip, inkSize.Width)
-                  || DoubleUtil.LessThan(maxHeightClip, inkSize.Height);
-
-                //now lets say we already clipped by MaxWidth/MaxHeight, lets see if further clipping is needed
-                inkSize.Width = Math.Min(inkSize.Width, mm.maxWidth);
-                inkSize.Height = Math.Min(inkSize.Height, mm.maxHeight);
-
-                //now see if layout slot should clip the element
-                Thickness margin = Margin;
-                double marginWidth = margin.Left + margin.Right;
-                double marginHeight = margin.Top + margin.Bottom;
-
-                Size clippingSize = new Size(Math.Max(0, layoutSlotSize.Width - marginWidth),
-                                             Math.Max(0, layoutSlotSize.Height - marginHeight));
-
-                bool needToClipSlot =
-                    ClipToBounds //forces clip at layout slot bounds even if reported sizes are ok
-                 || DoubleUtil.LessThan(clippingSize.Width, inkSize.Width)
-                 || DoubleUtil.LessThan(clippingSize.Height, inkSize.Height);
-
-                if (needToClipSlot)
+                double left, top, width, height;
+                if (offset.X < 0)
                 {
-                    Point offset = ComputeAlignmentOffset(clippingSize, inkSize);
+                    left = -offset.X;
+                    width = clippingSize.Width - offset.X;
+                }
+                else
+                {
+                    left = 0;
+                    width = clippingSize.Width;
+                }
+                if (offset.Y < 0)
+                {
+                    top = -offset.Y;
+                    height = clippingSize.Height - offset.Y;
+                }
+                else
+                {
+                    top = 0;
+                    height = clippingSize.Height;
+                }
 
-                    double left, top, width, height;
-                    if (offset.X < 0)
+                var slotRect = new Rect(left, top, width, height);
+
+                if (needToClipLocally) //intersect 2 rects
+                {
+                    slotRect.Intersect(new Rect(0, 0, maxWidthClip, maxHeightClip));
+                }
+
+                if (GetFlowDirectionMatrix() is Matrix rtlMirror)
+                {
+                    slotRect.Transform(rtlMirror);
+                }
+
+                return slotRect;
+            }
+
+            if (needToClipLocally)
+            {
+                var clipRect = new Rect(0, 0, maxWidthClip, maxHeightClip);
+
+                if (GetFlowDirectionMatrix() is Matrix rtlMirror)
+                {
+                    clipRect.Transform(rtlMirror);
+                }
+
+                return clipRect;
+            }
+
+            return null;
+        }
+
+        return base.GetLayoutClip(layoutSlotSize);
+    }
+
+    /// <summary>
+    /// Provides the behavior for the Arrange pass of Silverlight layout. Classes can
+    /// override this method to define their own Arrange pass behavior.
+    /// </summary>
+    /// <param name="finalSize">
+    /// The final area within the parent that this object should use to arrange itself
+    /// and its children.
+    /// </param>
+    /// <returns>
+    /// The actual size that is used after the element is arranged in layout.
+    /// </returns>
+    protected virtual Size ArrangeOverride(Size finalSize) => finalSize;
+
+    /// <summary>
+    /// Occurs when the layout of the Silverlight visual tree changes.
+    /// </summary>
+    public new event EventHandler LayoutUpdated
+    {
+        add => base.LayoutUpdated += value;
+        remove => base.LayoutUpdated -= value;
+    }
+
+    /// <summary>
+    /// Occurs when either the <see cref="ActualHeight"/> or the <see cref="ActualWidth"/>
+    /// properties change value on a <see cref="FrameworkElement"/>.
+    /// </summary>
+    public event SizeChangedEventHandler SizeChanged;
+
+    /// <summary>
+    /// Raises the <see cref="SizeChanged"/> event, using the specified information as part of the eventual event data.
+    /// </summary>
+    /// <param name="info">
+    /// Details of the old and new size involved in the change.
+    /// </param>
+    protected internal override void OnRenderSizeChanged(SizeChangedInfo info)
+    {
+        //first, invalidate ActualWidth and/or ActualHeight
+        //Note: if any handler of invalidation will dirtyfy layout,
+        //subsequent handlers will run on effectively dirty layouts
+        //we only guarantee cleaning between elements, not between handlers here
+        if (info.WidthChanged)
+        {
+            NotifyPropertyChange(
+                new DependencyPropertyChangedEventArgs(
+                    info.PreviousSize.Width,
+                    info.NewSize.Width,
+                    ActualWidthProperty,
+                    _actualWidthMetadata));
+        }
+
+        if (info.HeightChanged)
+        {
+            NotifyPropertyChange(
+                new DependencyPropertyChangedEventArgs(
+                    info.PreviousSize.Height,
+                    info.NewSize.Height,
+                    ActualHeightProperty,
+                    _actualHeightMetadata));
+        }
+
+        SizeChanged?.Invoke(this, new SizeChangedEventArgs(info));
+    }
+
+    private Vector ComputeAlignmentOffset(Size clientSize, Size inkSize)
+    {
+        var offset = new Vector();
+
+        HorizontalAlignment ha = HorizontalAlignment;
+        VerticalAlignment va = VerticalAlignment;
+
+        //this is to degenerate Stretch to Top-Left in case when clipping is about to occur
+        //if we need it to be Center instead, simply remove these 2 ifs
+        if (ha == HorizontalAlignment.Stretch
+            && inkSize.Width > clientSize.Width)
+        {
+            ha = HorizontalAlignment.Left;
+        }
+
+        if (va == VerticalAlignment.Stretch
+            && inkSize.Height > clientSize.Height)
+        {
+            va = VerticalAlignment.Top;
+        }
+        //end of degeneration of Stretch to Top-Left
+
+        if (ha == HorizontalAlignment.Center
+            || ha == HorizontalAlignment.Stretch)
+        {
+            offset.X = (clientSize.Width - inkSize.Width) * 0.5;
+        }
+        else if (ha == HorizontalAlignment.Right)
+        {
+            offset.X = clientSize.Width - inkSize.Width;
+        }
+        else
+        {
+            offset.X = 0;
+        }
+
+        if (va == VerticalAlignment.Center
+            || va == VerticalAlignment.Stretch)
+        {
+            offset.Y = (clientSize.Height - inkSize.Height) * 0.5;
+        }
+        else if (va == VerticalAlignment.Bottom)
+        {
+            offset.Y = clientSize.Height - inkSize.Height;
+        }
+        else
+        {
+            offset.Y = 0;
+        }
+
+        return offset;
+    }
+
+    /// <summary>
+    /// This is the method layout parent uses to set a location of the child
+    /// relative to parent's visual as a result of layout. Typically, this is called
+    /// by the parent inside of its ArrangeOverride implementation after calling Arrange on a child.
+    /// </summary>
+    private void SetLayoutOffset(Vector offset, Size oldRenderSize)
+    {
+        if (!AreTransformsClean || !DoubleUtil.AreClose(RenderSize, oldRenderSize))
+        {
+            Transform additionalTransform = GetFlowDirectionTransform(); // rtl
+            Transform renderTransform = (Transform)GetValue(RenderTransformProperty);
+
+            TransformGroup t = null;
+
+            // arbitrary transform, create a collection
+            if (additionalTransform is not null || renderTransform is not null)
+            {
+                // Create a TransformGroup and make sure it does not participate
+                // in the InheritanceContext treeness because it is internal operation only.
+                t = new TransformGroup();
+                t.CanBeInheritanceContext = false;
+                t.Children.CanBeInheritanceContext = false;
+
+                if (additionalTransform is not null)
+                {
+                    t.Children.Add(additionalTransform);
+                }
+
+                if (renderTransform is not null)
+                {
+                    Point origin = GetRenderTransformOrigin();
+                    bool hasOrigin = origin.X != 0d || origin.Y != 0d;
+                    if (hasOrigin)
                     {
-                        left = -offset.X;
-                        width = clippingSize.Width - offset.X;
+                        var backOrigin = new TranslateTransform
+                        {
+                            X = -origin.X,
+                            Y = -origin.Y,
+                        };
+                        t.Children.Add(backOrigin);
                     }
-                    else
+
+                    //can not freeze render transform - it can be animated
+                    t.Children.Add(renderTransform);
+
+                    if (hasOrigin)
                     {
-                        left = 0;
-                        width = clippingSize.Width;
-                    }
-                    if (offset.Y < 0)
-                    {
-                        top = -offset.Y;
-                        height = clippingSize.Height - offset.Y;
-                    }
-                    else
-                    {
-                        top = 0;
-                        height = clippingSize.Height;
-                    }
-
-                    Rect slotRect = new Rect(left, top, width, height);
-
-                    if (needToClipLocally) //intersect 2 rects
-                    {
-                        slotRect.Intersect(new Rect(0, 0, maxWidthClip, maxHeightClip));
-                    }
-
-                    return slotRect;
-                }
-
-                if (needToClipLocally)
-                {
-                    return new Rect(0, 0, maxWidthClip, maxHeightClip);
-                }
-
-                return null;
-            }
-
-            return base.GetLayoutClip(layoutSlotSize);
-        }
-
-        /// <summary>
-        /// Provides the behavior for the Arrange pass of Silverlight layout. Classes can
-        /// override this method to define their own Arrange pass behavior.
-        /// </summary>
-        /// <param name="finalSize">
-        /// The final area within the parent that this object should use to arrange itself
-        /// and its children.
-        /// </param>
-        /// <returns>
-        /// The actual size that is used after the element is arranged in layout.
-        /// </returns>
-        protected virtual Size ArrangeOverride(Size finalSize) => finalSize;
-
-        /// <summary>
-        /// Occurs when the layout of the Silverlight visual tree changes.
-        /// </summary>
-        public event EventHandler LayoutUpdated
-        {
-            add
-            {
-                LayoutEventList.ListItem item = GetLayoutUpdatedHandler(value);
-
-                if (item == null)
-                {
-                    //set a weak ref in LM
-                    item = LayoutManager.Current.LayoutEvents.Add(value);
-                    AddLayoutUpdatedHandler(value, item);
-                }
-            }
-            remove
-            {
-                LayoutEventList.ListItem item = GetLayoutUpdatedHandler(value);
-
-                if (item != null)
-                {
-                    RemoveLayoutUpdatedHandler(value);
-                    //remove a weak ref from LM
-                    LayoutManager.Current.LayoutEvents.Remove(item);
-                }
-            }
-        }
-
-        private static readonly DependencyProperty LayoutUpdatedListItemsField =
-            DependencyProperty.Register(
-                "_LayoutUpdatedListItems",
-                typeof(object),
-                typeof(FrameworkElement),
-                null);
-
-        private static readonly DependencyProperty LayoutUpdatedHandlersField =
-            DependencyProperty.Register(
-                "_LayoutUpdatedHandlers",
-                typeof(EventHandler),
-                typeof(FrameworkElement),
-                null);
-
-        private void AddLayoutUpdatedHandler(EventHandler handler, LayoutEventList.ListItem item)
-        {
-            object cachedLayoutUpdatedItems = GetValue(LayoutUpdatedListItemsField);
-
-            if (cachedLayoutUpdatedItems == null)
-            {
-                SetValueInternal(LayoutUpdatedListItemsField, item);
-                SetValueInternal(LayoutUpdatedHandlersField, handler);
-            }
-            else
-            {
-                EventHandler cachedLayoutUpdatedHandler = (EventHandler)GetValue(LayoutUpdatedHandlersField);
-                if (cachedLayoutUpdatedHandler != null)
-                {
-                    //second unique handler is coming in.
-                    //allocate a datastructure
-                    var list = new Dictionary<EventHandler, object>(2)
-                    {
-                        //add previously cached handler
-                        { cachedLayoutUpdatedHandler, cachedLayoutUpdatedItems },
-
-                        //add new handler
-                        { handler, item }
-                    };
-
-                    ClearValue(LayoutUpdatedHandlersField);
-                    SetValueInternal(LayoutUpdatedListItemsField, list);
-                }
-                else //already have a list
-                {
-                    var list = (Dictionary<EventHandler, object>)cachedLayoutUpdatedItems;
-                    list.Add(handler, item);
-                }
-            }
-        }
-
-        private LayoutEventList.ListItem GetLayoutUpdatedHandler(EventHandler d)
-        {
-            object cachedLayoutUpdatedItems = GetValue(LayoutUpdatedListItemsField);
-
-            if (cachedLayoutUpdatedItems == null)
-            {
-                return null;
-            }
-            else
-            {
-                EventHandler cachedLayoutUpdatedHandler = (EventHandler)GetValue(LayoutUpdatedHandlersField);
-                if (cachedLayoutUpdatedHandler != null)
-                {
-                    if (cachedLayoutUpdatedHandler == d) return (LayoutEventList.ListItem)cachedLayoutUpdatedItems;
-                }
-                else //already have a list
-                {
-                    var list = (Dictionary<EventHandler, object>)cachedLayoutUpdatedItems;
-                    if (list.TryGetValue(d, out object item))
-                    {
-                        return (LayoutEventList.ListItem)item;
+                        var forwardOrigin = new TranslateTransform
+                        {
+                            X = origin.X,
+                            Y = origin.Y,
+                        };
+                        t.Children.Add(forwardOrigin);
                     }
                 }
-                return null;
             }
+
+            VisualTransform = t;
+            AreTransformsClean = true;
         }
 
-        private void RemoveLayoutUpdatedHandler(EventHandler d)
+        VisualOffset = offset;
+    }
+
+    private Point GetRenderTransformOrigin()
+    {
+        Point relativeOrigin = RenderTransformOrigin;
+        Size renderSize = RenderSize;
+        return new Point(renderSize.Width * relativeOrigin.X, renderSize.Height * relativeOrigin.Y);
+    }
+
+    private Matrix? GetFlowDirectionMatrix()
+    {
+        if (ShouldApplyMirrorTransform())
         {
-            object cachedLayoutUpdatedItems = GetValue(LayoutUpdatedListItemsField);
-            EventHandler cachedLayoutUpdatedHandler = (EventHandler)GetValue(LayoutUpdatedHandlersField);
-
-            if (cachedLayoutUpdatedHandler != null) //single handler
-            {
-                if (cachedLayoutUpdatedHandler == d)
-                {
-                    ClearValue(LayoutUpdatedListItemsField);
-                    ClearValue(LayoutUpdatedHandlersField);
-                }
-            }
-            else //there is an ArrayList allocated
-            {
-                var list = (Dictionary<EventHandler, object>)cachedLayoutUpdatedItems;
-                list.Remove(d);
-            }
+            return new Matrix(-1.0, 0.0, 0.0, 1.0, RenderSize.Width, 0.0);
         }
 
-        /// <summary>
-        /// Occurs when either the <see cref="ActualHeight"/> or the <see cref="ActualWidth"/>
-        /// properties change value on a <see cref="FrameworkElement"/>.
-        /// </summary>
-        public event SizeChangedEventHandler SizeChanged;
+        return null;
+    }
 
-        internal override void OnRenderSizeChanged(SizeChangedInfo info)
+    private Transform GetFlowDirectionTransform()
+    {
+        if (GetFlowDirectionMatrix() is Matrix matrix)
         {
-            //first, invalidate ActualWidth and/or ActualHeight
-            //Note: if any handler of invalidation will dirtyfy layout,
-            //subsequent handlers will run on effectively dirty layouts
-            //we only guarantee cleaning between elements, not between handlers here
-            if (info.WidthChanged)
-            {
-                NotifyPropertyChange(
-                    new DependencyPropertyChangedEventArgs(
-                        info.PreviousSize.Width,
-                        info.NewSize.Width,
-                        ActualWidthProperty,
-                        _actualWidthMetadata));
-            }
-
-            if (info.HeightChanged)
-            {
-                NotifyPropertyChange(
-                    new DependencyPropertyChangedEventArgs(
-                        info.PreviousSize.Height,
-                        info.NewSize.Height,
-                        ActualHeightProperty,
-                        _actualHeightMetadata));
-            }
-
-            SizeChanged?.Invoke(this, new SizeChangedEventArgs(info.PreviousSize, info.NewSize));
+            return new MatrixTransform(matrix);
         }
+        return null;
+    }
 
-        private Point ComputeAlignmentOffset(Size clientSize, Size inkSize)
-        {
-            Point offset = new Point();
+    internal virtual bool ShouldApplyMirrorTransform()
+    {
+        FlowDirection thisFlowDirection = FlowDirection;
 
-            HorizontalAlignment ha = HorizontalAlignment;
-            VerticalAlignment va = VerticalAlignment;
+        // If the element is connected to visual tree, get FlowDirection
+        // from its visual parent.
+        FlowDirection parentFlowDirection = GetFlowDirectionFromVisual(VisualTreeHelper.GetParent(this));
 
-            //this is to degenerate Stretch to Top-Left in case when clipping is about to occur
-            //if we need it to be Center instead, simply remove these 2 ifs
-            if (ha == HorizontalAlignment.Stretch
-                && inkSize.Width > clientSize.Width)
-            {
-                ha = HorizontalAlignment.Left;
-            }
+        //  if direction changes, instantiate a mirroring transform
+        return ApplyMirrorTransform(parentFlowDirection, thisFlowDirection);
+    }
 
-            if (va == VerticalAlignment.Stretch
-                && inkSize.Height > clientSize.Height)
-            {
-                va = VerticalAlignment.Top;
-            }
-            //end of degeneration of Stretch to Top-Left
+    internal static FlowDirection GetFlowDirectionFromVisual(DependencyObject visual)
+    {
+        return visual is FrameworkElement fe ? fe.FlowDirection : FlowDirection.LeftToRight;
+    }
 
-            if (ha == HorizontalAlignment.Center
-                || ha == HorizontalAlignment.Stretch)
-            {
-                offset.X = (clientSize.Width - inkSize.Width) * 0.5;
-            }
-            else if (ha == HorizontalAlignment.Right)
-            {
-                offset.X = clientSize.Width - inkSize.Width;
-            }
-            else
-            {
-                offset.X = 0;
-            }
+    private static bool ApplyMirrorTransform(FlowDirection parentFD, FlowDirection thisFD)
+    {
+        return (parentFD == FlowDirection.LeftToRight && thisFD == FlowDirection.RightToLeft) ||
+               (parentFD == FlowDirection.RightToLeft && thisFD == FlowDirection.LeftToRight);
+    }
 
-            if (va == VerticalAlignment.Center
-                || va == VerticalAlignment.Stretch)
-            {
-                offset.Y = (clientSize.Height - inkSize.Height) * 0.5;
-            }
-            else if (va == VerticalAlignment.Bottom)
-            {
-                offset.Y = clientSize.Height - inkSize.Height;
-            }
-            else
-            {
-                offset.Y = 0;
-            }
+    private bool NeedsClipBounds
+    {
+        get { return ReadInternalFlag(InternalFlags.NeedsClipBounds); }
+        set { WriteInternalFlag(InternalFlags.NeedsClipBounds, value); }
+    }
 
-            return offset;
-        }
-
-        /// <summary>
-        /// This is the method layout parent uses to set a location of the child
-        /// relative to parent's visual as a result of layout. Typically, this is called
-        /// by the parent inside of its ArrangeOverride implementation after calling Arrange on a child.
-        /// </summary>
-        private void SetLayoutOffset(Point offset, Size oldRenderSize)
-        {
-            VisualOffset = offset;
-        }
-
-        private bool NeedsClipBounds
-        {
-            get { return ReadInternalFlag(InternalFlags.NeedsClipBounds); }
-            set { WriteInternalFlag(InternalFlags.NeedsClipBounds, value); }
-        }
-
-        private Size _unclippedDesiredSize;
+    private Size _unclippedDesiredSize;
 
         private struct MinMax
         {
@@ -672,27 +916,103 @@ namespace System.Windows
                 minHeight = double.IsNaN(e.MinHeight) ? 0 : e.MinHeight;
                 double l = e.Height;
 
-                double height = (double.IsNaN(l) ? double.PositiveInfinity : l);
-                maxHeight = Math.Max(Math.Min(height, maxHeight), minHeight);
+            double height = (double.IsNaN(l) ? double.PositiveInfinity : l);
+            maxHeight = Math.Max(Math.Min(height, maxHeight), minHeight);
 
-                height = (double.IsNaN(l) ? 0 : l);
-                minHeight = Math.Max(Math.Min(maxHeight, height), minHeight);
+            height = (double.IsNaN(l) ? 0 : l);
+            minHeight = Math.Max(Math.Min(maxHeight, height), minHeight);
 
                 maxWidth = double.IsNaN(e.MaxWidth) ? double.PositiveInfinity : e.MaxWidth;
                 minWidth = double.IsNaN(e.MinWidth) ? 0 : e.MinWidth;
                 l = e.Width;
 
-                double width = (double.IsNaN(l) ? double.PositiveInfinity : l);
-                maxWidth = Math.Max(Math.Min(width, maxWidth), minWidth);
+            double width = (double.IsNaN(l) ? double.PositiveInfinity : l);
+            maxWidth = Math.Max(Math.Min(width, maxWidth), minWidth);
 
-                width = (double.IsNaN(l) ? 0 : l);
-                minWidth = Math.Max(Math.Min(maxWidth, width), minWidth);
-            }
-
-            internal double minWidth;
-            internal double maxWidth;
-            internal double minHeight;
-            internal double maxHeight;
+            width = (double.IsNaN(l) ? 0 : l);
+            minWidth = Math.Max(Math.Min(maxWidth, width), minWidth);
         }
+
+        internal double minWidth;
+        internal double maxWidth;
+        internal double minHeight;
+        internal double maxHeight;
     }
+
+    /// <summary>
+    /// Identifies the <see cref="CustomLayout"/> dependency property.
+    /// </summary>
+    [Obsolete(Helper.ObsoleteMemberMessage)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public static readonly DependencyProperty CustomLayoutProperty =
+        DependencyProperty.Register(
+            nameof(CustomLayout),
+            typeof(bool),
+            typeof(FrameworkElement),
+            new PropertyMetadata(true));
+
+    /// <summary>
+    /// Enable or disable measure/arrange layout system in a sub part
+    /// </summary>
+    [Obsolete(Helper.ObsoleteMemberMessage)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public bool CustomLayout
+    {
+        get => (bool)GetValue(CustomLayoutProperty);
+        set => SetValueInternal(CustomLayoutProperty, value);
+    }
+
+    /// <summary>
+    /// Identifies the <see cref="IsAutoWidthOnCustomLayout"/> dependency property.
+    /// </summary>
+    [Obsolete(Helper.ObsoleteMemberMessage)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public static readonly DependencyProperty IsAutoWidthOnCustomLayoutProperty =
+        DependencyProperty.Register(
+            nameof(IsAutoWidthOnCustomLayout),
+            typeof(bool?),
+            typeof(FrameworkElement),
+            new PropertyMetadata((object)null));
+
+    /// <summary>
+    /// Gets or sets the Auto Width to the root of CustomLayout
+    /// </summary>
+    [Obsolete(Helper.ObsoleteMemberMessage)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public bool? IsAutoWidthOnCustomLayout
+    {
+        get => (bool?)GetValue(IsAutoWidthOnCustomLayoutProperty);
+        set => SetValueInternal(IsAutoWidthOnCustomLayoutProperty, value);
+    }
+
+    /// <summary>
+    /// Identifies the <see cref="IsAutoHeightOnCustomLayout"/> dependency property.
+    /// </summary>
+    [Obsolete(Helper.ObsoleteMemberMessage)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public static readonly DependencyProperty IsAutoHeightOnCustomLayoutProperty =
+        DependencyProperty.Register(
+            nameof(IsAutoHeightOnCustomLayout),
+            typeof(bool?),
+            typeof(FrameworkElement),
+            new PropertyMetadata((object)null));
+
+    /// <summary>
+    /// Gets or sets the Auto Height to the root of CustomLayout
+    /// </summary>
+    [Obsolete(Helper.ObsoleteMemberMessage)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public bool? IsAutoHeightOnCustomLayout
+    {
+        get => (bool?)GetValue(IsAutoHeightOnCustomLayoutProperty);
+        set => SetValueInternal(IsAutoHeightOnCustomLayoutProperty, value);
+    }
+
+    [Obsolete(Helper.ObsoleteMemberMessage)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    protected virtual void OnAfterApplyHorizontalAlignmentAndWidth() { }
+
+    [Obsolete(Helper.ObsoleteMemberMessage)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    protected virtual void OnAfterApplyVerticalAlignmentAndWidth() { }
 }

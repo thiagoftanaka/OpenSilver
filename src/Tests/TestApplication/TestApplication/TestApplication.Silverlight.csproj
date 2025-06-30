@@ -251,6 +251,9 @@
       <DependentUpon>TextInputTest.xaml</DependentUpon>
     </Compile>
     <Compile Include="Tests\Events\XTextBox.cs" />
+    <Compile Include="Tests\FileDialogTest.xaml.cs">
+      <DependentUpon>FileDialogTest.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Tests\FileInfoTest.xaml.cs">
       <DependentUpon>FileInfoTest.xaml</DependentUpon>
     </Compile>
@@ -319,9 +322,6 @@
     </Compile>
     <Compile Include="Tests\NestedElementsTest.xaml.cs">
       <DependentUpon>NestedElementsTest.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Tests\OpenFileDialogTest.xaml.cs">
-      <DependentUpon>OpenFileDialogTest.xaml</DependentUpon>
     </Compile>
     <Compile Include="Tests\PopupZIndexTest.xaml.cs">
       <DependentUpon>PopupZIndexTest.xaml</DependentUpon>
@@ -610,6 +610,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Tests\FileDialogTest.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Tests\FileInfoTest.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -701,10 +705,6 @@
     <Page Include="Tests\NestedElementsTest.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Tests\OpenFileDialogTest.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
     </Page>
     <Page Include="Tests\PopupZIndexTest.xaml">
       <Generator>MSBuild:Compile</Generator>

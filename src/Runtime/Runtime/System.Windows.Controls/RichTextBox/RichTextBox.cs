@@ -43,7 +43,6 @@ namespace System.Windows.Controls
     {
         private const string ContentElementName = "ContentElement";
 
-        private BlockCollection _blocks;
         private bool _isFocused;
         private FrameworkElement _contentElement;
         private ScrollViewer _scrollViewer;
@@ -89,11 +88,9 @@ namespace System.Windows.Controls
         /// </summary>
         public event RoutedEventHandler SelectionChanged;
 
-        internal void UpdateSelection(int start, int length)
-        {
-            Selection.Update(start, length);
-            SelectionChanged?.Invoke(this, new RoutedEventArgs());
-        }
+        internal void RaiseSelectionChanged() => SelectionChanged?.Invoke(this, new RoutedEventArgs());
+
+        internal void UpdateSelection(int start, int length) => Selection.Update(start, start + length);
 
         /// <summary>
         /// Identifies the <see cref="VerticalScrollBarVisibility"/> dependency property.
@@ -114,7 +111,7 @@ namespace System.Windows.Controls
         public ScrollBarVisibility VerticalScrollBarVisibility
         {
             get => (ScrollBarVisibility)GetValue(VerticalScrollBarVisibilityProperty);
-            set => SetValue(VerticalScrollBarVisibilityProperty, value);
+            set => SetValueInternal(VerticalScrollBarVisibilityProperty, value);
         }
 
         private static void OnVerticalScrollBarVisibilityChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -145,7 +142,7 @@ namespace System.Windows.Controls
         public ScrollBarVisibility HorizontalScrollBarVisibility
         {
             get => (ScrollBarVisibility)GetValue(HorizontalScrollBarVisibilityProperty);
-            set => SetValue(HorizontalScrollBarVisibilityProperty, value);
+            set => SetValueInternal(HorizontalScrollBarVisibilityProperty, value);
         }
 
         private static void OnHorizontalScrollBarVisibilityChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -175,15 +172,23 @@ namespace System.Windows.Controls
         /// </returns>
         public string Xaml
         {
-            get => View?.GetXaml() ?? string.Empty;
+            get
+            {
+                if (View is RichTextBoxView view && INTERNAL_VisualTreeManager.IsElementInVisualTree(view))
+                {
+                    return view.GetXaml();
+                }
+
+                return RichTextXamlParser.ToXaml(Blocks);
+            }
             set
             {
                 using (DeferRefresh())
                 {
-                    _blocks.Clear();
+                    InternalBlocks.Clear();
                     foreach (Block block in RichTextXamlParser.Parse(value))
                     {
-                        _blocks.Add(block);
+                        InternalBlocks.Add(block);
                     }
                 }
             }
@@ -246,23 +251,18 @@ namespace System.Windows.Controls
         /// </returns>
         public BlockCollection Blocks => (BlockCollection)GetValue(BlocksPropertyKey.DependencyProperty);
 
-        internal BlockCollection GetBlocksCache() => _blocks;
+        internal BlockCollection InternalBlocks { get; private set; }
 
         private static object GetBlocks(DependencyObject d)
         {
             var richTextBox = (RichTextBox)d;
-            if (richTextBox._isModelInvalidated)
-            {
-                richTextBox.Resync();
-                richTextBox._isModelInvalidated = false;
-            }
-
-            return richTextBox._blocks;
+            richTextBox.Synchronize();
+            return richTextBox.InternalBlocks;
         }
 
         private static void OnBlocksChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            ((RichTextBox)d)._blocks = (BlockCollection)e.NewValue;
+            ((RichTextBox)d).InternalBlocks = (BlockCollection)e.NewValue;
 
             if (e.OldValue is BlockCollection oldBlocks)
             {
@@ -271,6 +271,26 @@ namespace System.Windows.Controls
             if (e.NewValue is BlockCollection newBlocks)
             {
                 newBlocks.IsModel = true;
+            }
+        }
+
+        internal void Synchronize()
+        {
+            if (_isModelInvalidated)
+            {
+                InternalBlocks.Clear();
+
+                if (View is RichTextBoxView view)
+                {
+                    var parser = new QuillContentParser(view.GetContents());
+
+                    while (parser.MoveToNextBlock())
+                    {
+                        InternalBlocks.Add(CreateParagraph(parser.BlockFormat, parser.Inlines));
+                    }
+                }
+
+                _isModelInvalidated = false;
             }
         }
 
@@ -369,11 +389,9 @@ namespace System.Windows.Controls
         /// Identifies the <see cref="AcceptsReturn"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty AcceptsReturnProperty =
-            DependencyProperty.Register(
-                nameof(AcceptsReturn),
-                typeof(bool),
+            KeyboardNavigation.AcceptsReturnProperty.AddOwner(
                 typeof(RichTextBox),
-                new PropertyMetadata(BooleanBoxes.TrueBox, OnAcceptsReturnChanged));
+                new FrameworkPropertyMetadata(BooleanBoxes.TrueBox, OnAcceptsReturnChanged));
 
         /// <summary>
         /// Gets or sets a value that determines whether the <see cref="RichTextBox"/>
@@ -703,14 +721,14 @@ namespace System.Windows.Controls
 
         internal void InvalidateUI()
         {
-            if (_isModelInvalidated)
-            {
-                return;
-            }
-
             if (_notificationsSuspended > 0)
             {
                 _changesCount++;
+                return;
+            }
+
+            if (_isModelInvalidated)
+            {
                 return;
             }
 
@@ -722,21 +740,6 @@ namespace System.Windows.Controls
             if (_notificationsSuspended == 0)
             {
                 _isModelInvalidated = true;
-            }
-        }
-
-        private void Resync()
-        {
-            _blocks.Clear();
-
-            if (View is RichTextBoxView view)
-            {
-                var parser = new QuillContentParser(view.GetContents());
-
-                while (parser.MoveToNextBlock())
-                {
-                    _blocks.Add(CreateParagraph(parser.BlockFormat, parser.Inlines));
-                }
             }
         }
 
@@ -776,6 +779,10 @@ namespace System.Windows.Controls
                 if (!string.IsNullOrEmpty(delta.Text))
                 {
                     paragraph.Inlines.Add(CreateRun(delta));
+                }
+                else if (delta.Image.HasValue)
+                {
+                    paragraph.Inlines.Add(CreateInlineImageContainer(delta));
                 }
             }
 
@@ -864,6 +871,30 @@ namespace System.Windows.Controls
             return run;
         }
 
+        private InlineImageContainer CreateInlineImageContainer(QuillDelta delta)
+        {
+            var image = new InlineImageContainer
+            {
+                Source = InlineImageContainer.ParseSource(delta.Image.Value.ImageData)
+            };
+
+            if (delta.Attributes.HasValue)
+            {
+                var attributes = delta.Attributes.Value;
+                if (!string.IsNullOrEmpty(attributes.Width))
+                {
+                    image.Width = double.Parse(attributes.Width, CultureInfo.InvariantCulture);
+                }
+                if (!string.IsNullOrEmpty(attributes.Height))
+                {
+                    image.Height = double.Parse(attributes.Height, CultureInfo.InvariantCulture);
+                }
+                image.Stretch = InlineImageContainer.ParseStretch(attributes.ObjectFit);
+            }
+
+            return image;
+        }
+
         internal override void UpdateVisualStates()
         {
             if (!IsEnabled)
@@ -928,6 +959,7 @@ namespace System.Windows.Controls
         private sealed class DeferHelper : IDisposable
         {
             private readonly RichTextBox _richTextBox;
+            private bool _disposed;
 
             public DeferHelper(RichTextBox richTextBox)
             {
@@ -937,13 +969,21 @@ namespace System.Windows.Controls
 
             ~DeferHelper() => Dispose(false);
 
-            public void Dispose()
-            {
-                GC.SuppressFinalize(this);
-                Dispose(true);
-            }
+            public void Dispose() => Dispose(true);
 
-            private void Dispose(bool isDisposing) => _richTextBox.EndRefresh();
+            private void Dispose(bool isDisposing)
+            {
+                if (_disposed) return;
+
+                _disposed = true;
+
+                if (isDisposing)
+                {
+                    GC.SuppressFinalize(this);
+                }
+
+                _richTextBox.EndRefresh();
+            }
         }
     }
 }

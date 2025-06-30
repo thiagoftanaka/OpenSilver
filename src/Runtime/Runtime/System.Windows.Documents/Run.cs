@@ -138,8 +138,13 @@ public sealed class Run : Inline
     /// <summary>
     /// Identifies the <see cref="FlowDirection"/> dependency property.
     /// </summary>
-    public static readonly DependencyProperty FlowDirectionProperty =
-        FrameworkElement.FlowDirectionProperty.AddOwner(typeof(TextElement));
+    public new static readonly DependencyProperty FlowDirectionProperty =
+        TextElement.FlowDirectionProperty.AddOwner(
+            typeof(Run),
+            new FrameworkPropertyMetadata(FlowDirection.LeftToRight, FrameworkPropertyMetadataOptions.Inherits)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((Run)d).SetDirection((FlowDirection)newValue),
+            });
 
     /// <summary>
     /// Gets or sets the direction that text and other user interface elements flow within
@@ -209,7 +214,7 @@ public sealed class Run : Inline
 
     internal override void AppendHtml(StringBuilder builder)
     {
-        builder.Append("<span class=\"opensilver-textelement\" style=\"font: ");
+        builder.Append("<span class=\"opensilver-inline\" style=\"font: ");
         FontProperties.AppendCssFontAsHtml(builder, FontStyle, FontWeight, FontSize, 0.0, FontFamily);
         builder.Append($"; letter-spacing: {FontProperties.ToCssLetterSpacing(CharacterSpacing)}\">")
                .Append(HttpUtility.HtmlEncode(Text))

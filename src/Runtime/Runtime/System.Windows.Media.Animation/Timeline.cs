@@ -107,13 +107,12 @@ public abstract partial class Timeline : DependencyObject
     /// <summary>
     /// Identifies the <see cref="FillBehavior"/> dependency property.
     /// </summary>
-    [OpenSilver.NotImplemented]
     public static readonly DependencyProperty FillBehaviorProperty =
         DependencyProperty.Register(
             nameof(FillBehavior),
             typeof(FillBehavior),
             typeof(Timeline),
-            null);
+            new PropertyMetadata(FillBehavior.HoldEnd));
 
     /// <summary>
     /// Gets or sets a value that specifies how the animation behaves after it reaches
@@ -124,7 +123,6 @@ public abstract partial class Timeline : DependencyObject
     /// active period but its parent is inside its active or fill period. The default
     /// value is <see cref="FillBehavior.HoldEnd"/>.
     /// </returns>
-    [OpenSilver.NotImplemented]
     public FillBehavior FillBehavior
     {
         get => (FillBehavior)GetValue(FillBehaviorProperty);
@@ -200,5 +198,5 @@ public abstract partial class Timeline : DependencyObject
 
     internal INameResolver NameResolver { get; set; }
 
-    internal virtual TimelineClock CreateClock(bool isRoot) => null;
+    internal virtual TimelineClock CreateClock() => null;
 }

@@ -26,51 +26,6 @@ internal sealed class TextBoxView : TextViewBase
 {
     static TextBoxView()
     {
-        TextElement.CharacterSpacingProperty.AddOwner(
-            typeof(TextBoxView),
-            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
-            {
-                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetCharacterSpacing((int)newValue),
-            });
-
-        TextElement.FontFamilyProperty.AddOwner(
-            typeof(TextBoxView),
-            new FrameworkPropertyMetadata(FontFamily.Default, FrameworkPropertyMetadataOptions.Inherits, OnFontFamilyChanged)
-            {
-                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetFontFamily((FontFamily)newValue),
-            });
-
-        TextElement.FontSizeProperty.AddOwner(
-            typeof(TextBoxView),
-            new FrameworkPropertyMetadata(11d, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
-            {
-                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetFontSize((double)newValue),
-            });
-
-        TextElement.FontStyleProperty.AddOwner(
-            typeof(TextBoxView),
-            new FrameworkPropertyMetadata(FontStyles.Normal, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
-            {
-                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetFontStyle((FontStyle)newValue),
-            });
-
-        TextElement.FontWeightProperty.AddOwner(
-           typeof(TextBoxView),
-           new FrameworkPropertyMetadata(FontWeights.Normal, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
-           {
-               MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetFontWeight((FontWeight)newValue),
-           });
-
-        TextElement.ForegroundProperty.AddOwner(
-            typeof(TextBoxView),
-            new FrameworkPropertyMetadata(
-                TextElement.ForegroundProperty.DefaultMetadata.DefaultValue,
-                FrameworkPropertyMetadataOptions.Inherits,
-                OnForegroundChanged)
-            {
-                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetForeground(oldValue as Brush, (Brush)newValue),
-            });
-
         Block.LineHeightProperty.AddOwner(
             typeof(TextBoxView),
             new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsMeasure)
@@ -84,11 +39,7 @@ internal sealed class TextBoxView : TextViewBase
             {
                 MethodToUpdateDom2 = static (d, oldValue, newValue) => ((TextBoxView)d).SetTextAlignment((TextAlignment)newValue),
             });
-
-        IsHitTestableProperty.OverrideMetadata(typeof(TextBoxView), new PropertyMetadata(BooleanBoxes.TrueBox));
     }
-
-    private WeakEventListener<TextBoxView, Brush, EventArgs> _foregroundChangedListener;
 
     internal TextBoxView(TextBox host)
         : base(host)
@@ -336,7 +287,7 @@ internal sealed class TextBoxView : TextViewBase
         {
             string sElement = Interop.GetVariableStringForJS(OuterDiv);
             Interop.ExecuteJavaScriptVoid(
-                $"{sElement}.setSelectionRange({start.ToInvariantString()}, {end.ToInvariantString()});");
+                $"{sElement}.setSelectionRange({start.ToInvariantString()}, {end.ToInvariantString()})");
         }
     }
 
@@ -345,7 +296,7 @@ internal sealed class TextBoxView : TextViewBase
         if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
         {
             string sElement = Interop.GetVariableStringForJS(OuterDiv);
-            return Interop.ExecuteJavaScriptString($"{sElement}.value;") ?? string.Empty;
+            return Interop.ExecuteJavaScriptString($"{sElement}.value") ?? string.Empty;
         }
 
         return string.Empty;
@@ -359,40 +310,5 @@ internal sealed class TextBoxView : TextViewBase
             Host.TextWrapping == TextWrapping.NoWrap ? string.Empty : "break-word",
             constraint.Width,
             "M");
-    }
-
-    private static void OnFontFamilyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        UIElementHelpers.InvalidateMeasureOnFontFamilyChanged((TextBoxView)d, (FontFamily)e.NewValue);
-    }
-
-    private static void OnForegroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        var view = (TextBoxView)d;
-
-        if (view._foregroundChangedListener != null)
-        {
-            view._foregroundChangedListener.Detach();
-            view._foregroundChangedListener = null;
-        }
-
-        if (e.NewValue is Brush newBrush)
-        {
-            view._foregroundChangedListener = new(view, newBrush)
-            {
-                OnEventAction = static (instance, sender, args) => instance.OnForegroundChanged(sender, args),
-                OnDetachAction = static (listener, source) => source.Changed -= listener.OnEvent,
-            };
-            newBrush.Changed += view._foregroundChangedListener.OnEvent;
-        }
-    }
-
-    private void OnForegroundChanged(object sender, EventArgs e)
-    {
-        if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
-        {
-            var foreground = (Brush)sender; 
-            this.SetForeground(foreground, foreground);
-        }
     }
 }

@@ -23,6 +23,7 @@ namespace System.Windows.Controls
     public sealed class ItemCollection : PresentationFrameworkCollection<object>, INotifyCollectionChanged
     {
         private readonly IInternalFrameworkElement _modelParent;
+        private readonly CollectionChangedHelper _collectionChanged;
 
         private IEnumerable _itemsSource; // base collection
         private WeakEventListener<ItemCollection, INotifyCollectionChanged, NotifyCollectionChangedEventArgs> _collectionChangedListener;
@@ -30,9 +31,10 @@ namespace System.Windows.Controls
         private bool _isUsingListWrapper;
         private ListWrapper _listWrapper;
 
-        internal ItemCollection(IInternalFrameworkElement parent) : base(true)
+        internal ItemCollection(IInternalFrameworkElement parent)
         {
             _modelParent = parent;
+            _collectionChanged = new(this);
         }
 
         internal override bool IsFixedSizeImpl => IsUsingItemsSource;
@@ -43,11 +45,15 @@ namespace System.Windows.Controls
         {
             if (IsUsingItemsSource)
             {
-                throw new InvalidOperationException("Operation is not valid while ItemsSource is in use. Access and modify elements with ItemsControl.ItemsSource instead.");
+                throw new InvalidOperationException(Strings.ItemsSourceInUse);
             }
+
+            _collectionChanged.CheckReentrancy();
 
             SetModelParent(value);
             AddInternal(value);
+
+            _collectionChanged.OnCollectionChanged(NotifyCollectionChangedAction.Add, value, InternalCount - 1);
         }
 
         internal override void CopyToImpl(object[] array, int index)
@@ -66,8 +72,10 @@ namespace System.Windows.Controls
         {
             if (IsUsingItemsSource)
             {
-                throw new InvalidOperationException("Operation is not valid while ItemsSource is in use. Access and modify elements with ItemsControl.ItemsSource instead.");
+                throw new InvalidOperationException(Strings.ItemsSourceInUse);
             }
+
+            _collectionChanged.CheckReentrancy();
 
             foreach (var item in InternalItems)
             {
@@ -75,29 +83,39 @@ namespace System.Windows.Controls
             }
 
             ClearInternal();
+
+            _collectionChanged.OnCollectionReset();
         }
 
         internal override void InsertOverride(int index, object value)
         {
             if (IsUsingItemsSource)
             {
-                throw new InvalidOperationException("Operation is not valid while ItemsSource is in use. Access and modify elements with ItemsControl.ItemsSource instead.");
+                throw new InvalidOperationException(Strings.ItemsSourceInUse);
             }
+
+            _collectionChanged.CheckReentrancy();
 
             SetModelParent(value);
             InsertInternal(index, value);
+
+            _collectionChanged.OnCollectionChanged(NotifyCollectionChangedAction.Add, value, index);
         }
 
         internal override void RemoveAtOverride(int index)
         {
             if (IsUsingItemsSource)
             {
-                throw new InvalidOperationException("Operation is not valid while ItemsSource is in use. Access and modify elements with ItemsControl.ItemsSource instead.");
+                throw new InvalidOperationException(Strings.ItemsSourceInUse);
             }
+
+            _collectionChanged.CheckReentrancy();
 
             object removedItem = GetItemInternal(index);
             ClearModelParent(removedItem);
             RemoveAtInternal(index);
+
+            _collectionChanged.OnCollectionChanged(NotifyCollectionChangedAction.Remove, removedItem, index);
         }
 
         internal override object GetItemOverride(int index) => IsUsingItemsSource ? SourceList[index] : GetItemInternal(index);
@@ -106,23 +124,27 @@ namespace System.Windows.Controls
         {
             if (IsUsingItemsSource)
             {
-                throw new InvalidOperationException("Operation is not valid while ItemsSource is in use. Access and modify elements with ItemsControl.ItemsSource instead.");
+                throw new InvalidOperationException(Strings.ItemsSourceInUse);
             }
+
+            _collectionChanged.CheckReentrancy();
 
             object originalItem = GetItemInternal(index);
             ClearModelParent(originalItem);
             SetModelParent(value);
             SetItemInternal(index, value);
+
+            _collectionChanged.OnCollectionChanged(NotifyCollectionChangedAction.Replace, originalItem, value, index);
         }
 
         internal override int IndexOfImpl(object value) => IsUsingItemsSource ? SourceList.IndexOf(value) : base.IndexOfImpl(value);
 
         internal override IEnumerator<object> GetEnumeratorImpl() => IsUsingItemsSource ? new Enumerator(this) : base.GetEnumeratorImpl();
 
-        public new event NotifyCollectionChangedEventHandler CollectionChanged
+        public event NotifyCollectionChangedEventHandler CollectionChanged
         {
-            add => base.CollectionChanged += value;
-            remove => base.CollectionChanged -= value;
+            add => _collectionChanged.CollectionChanged += value;
+            remove => _collectionChanged.CollectionChanged -= value;
         }
 
         internal IEnumerator LogicalChildren => IsUsingItemsSource ? EmptyEnumerator.Instance : GetEnumerator();
@@ -131,13 +153,13 @@ namespace System.Windows.Controls
 
         internal IList SourceList => _isUsingListWrapper ? _listWrapper : (IList)_itemsSource;
 
-        internal override int CountInternal => IsUsingItemsSource ? SourceList.Count : base.CountInternal;
+        internal override int CountImpl => IsUsingItemsSource ? SourceList.Count : base.CountImpl;
 
         internal void SetItemsSource(IEnumerable value)
         {
-            if (!IsUsingItemsSource && Count != 0)
+            if (!IsUsingItemsSource && InternalCount != 0)
             {
-                throw new InvalidOperationException("Items collection must be empty before using ItemsSource.");
+                throw new InvalidOperationException(Strings.CannotUseItemsSource);
             }
 
             int previousCount = Count;
@@ -151,9 +173,9 @@ namespace System.Windows.Controls
 
             InitializeSourceList(value);
 
-            UpdateCountProperty(previousCount, Count);
+            UpdateCountProperty(previousCount, SourceList.Count);
 
-            OnCollectionReset();
+            _collectionChanged.OnCollectionReset();
         }
 
         internal void ClearItemsSource()
@@ -170,9 +192,9 @@ namespace System.Windows.Controls
                 IsUsingItemsSource = false;
                 _isUsingListWrapper = false;
 
-                UpdateCountProperty(previousCount, Count);
+                UpdateCountProperty(previousCount, InternalCount);
 
-                OnCollectionReset();
+                _collectionChanged.OnCollectionReset();
             }
         }
 
@@ -197,14 +219,14 @@ namespace System.Windows.Controls
                 case NotifyCollectionChangedAction.Add:
                     if (e.NewItems.Count != 1)
                     {
-                        throw new NotSupportedException("Range actions are not supported.");
+                        throw new NotSupportedException(Strings.RangeActionsNotSupported);
                     }
                     break;
 
                 case NotifyCollectionChangedAction.Remove:
                     if (e.OldItems.Count != 1)
                     {
-                        throw new NotSupportedException("Range actions are not supported.");
+                        throw new NotSupportedException(Strings.RangeActionsNotSupported);
                     }
                     break;
 
@@ -212,7 +234,7 @@ namespace System.Windows.Controls
                 case NotifyCollectionChangedAction.Move:
                     if (e.NewItems.Count != 1 || e.OldItems.Count != 1)
                     {
-                        throw new NotSupportedException("Range actions are not supported.");
+                        throw new NotSupportedException(Strings.RangeActionsNotSupported);
                     }
                     break;
 
@@ -220,7 +242,7 @@ namespace System.Windows.Controls
                     break;
 
                 default:
-                    throw new NotSupportedException($"Unexpected collection change action '{e.Action}'.");
+                    throw new NotSupportedException(string.Format(Strings.UnexpectedCollectionChangeAction, e.Action));
             }
         }
 
@@ -256,7 +278,7 @@ namespace System.Windows.Controls
             UpdateCountProperty(previousCount, Count);
 
             // Raise collection changed
-            OnCollectionChanged(e);
+            _collectionChanged.OnCollectionChanged(e);
         }
 
         private void SetModelParent(object item) => _modelParent?.AddLogicalChild(item);

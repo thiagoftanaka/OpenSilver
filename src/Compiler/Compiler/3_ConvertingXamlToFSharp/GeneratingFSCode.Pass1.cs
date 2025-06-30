@@ -102,7 +102,6 @@ namespace OpenSilver.Compiler
                     // Create the "IntializeComponent()" method:
                     string initializeComponentMethod = CreateInitializeComponentMethod(
                         $"global.{_settings.Metadata.SystemWindowsNS}.Application",
-                        string.Empty,
                         _assemblyNameWithoutExtension,
                         _fileNameWithPathRelativeToProjectRoot,
                         new List<string>());
@@ -125,6 +124,7 @@ namespace OpenSilver.Compiler
 
                     string factoryClass = GenerateFactoryClass(
                         componentTypeFullName,
+                        baseType,
                         GeneratingCode.GetUniqueName(_reader.Document.Root),
                         "        raise (global.System.NotImplementedException())",
                         "        raise (global.System.NotImplementedException())",
@@ -156,6 +156,7 @@ namespace global
                 else
                 {
                     string finalCode = GenerateFactoryClass(
+                        baseType,
                         baseType,
                         GeneratingCode.GetUniqueName(_reader.Document.Root),
                         "        raise (global.System.NotImplementedException())",

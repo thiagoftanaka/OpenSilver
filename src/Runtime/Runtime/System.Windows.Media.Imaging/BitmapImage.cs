@@ -26,6 +26,10 @@ namespace System.Windows.Media.Imaging;
 /// </summary>
 public sealed class BitmapImage : BitmapSource
 {
+    private enum State { None, Opened, Failed }
+
+    private State _state;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="BitmapImage"/> class.
     /// </summary>
@@ -73,9 +77,21 @@ public sealed class BitmapImage : BitmapSource
 
     private static void OnUriSourceChanged(DependencyObject i, DependencyPropertyChangedEventArgs e)
     {
-        var bitmapImage = (BitmapImage)i;
-        bitmapImage.RaiseChanged();
-        bitmapImage.OnUriSourceChanged();
+        ((BitmapImage)i).OnUriSourceChanged((Uri)e.OldValue, (Uri)e.NewValue);
+    }
+
+    private void OnUriSourceChanged(Uri oldSource, Uri newSource)
+    {
+        if (oldSource == newSource) return;
+
+        if (_state != State.None)
+        {
+            _state = State.None;
+            SetNaturalSize(0, 0);
+        }
+
+        RaiseChanged();
+        OnUriSourceChanged();
     }
 
     /// <summary>
@@ -100,21 +116,39 @@ public sealed class BitmapImage : BitmapSource
     public BitmapCreateOptions CreateOptions
     {
         get => (BitmapCreateOptions)GetValue(CreateOptionsProperty);
-        set => SetValue(CreateOptionsProperty, value);
+        set => SetValueInternal(CreateOptionsProperty, value);
     }
 
     /// <summary>
     /// Occurs when there is an error associated with image retrieval or format.
     /// </summary>
-    [OpenSilver.NotImplemented]
     public event ExceptionRoutedEventHandler ImageFailed;
+
+    internal void OnImageFailed()
+    {
+        if (_state != State.Failed)
+        {
+            _state = State.Failed;
+            SetNaturalSize(0, 0);
+            ImageFailed?.Invoke(this, new ExceptionRoutedEventArgs());
+        }
+    }
 
     /// <summary>
     /// Occurs when the image source is downloaded and decoded with no failure. You can
     /// use this event to determine the size of an image before rendering it.
     /// </summary>
-    [OpenSilver.NotImplemented]
     public event RoutedEventHandler ImageOpened;
+
+    internal void OnImageOpened(int width, int height)
+    {
+        if (_state != State.Opened)
+        {
+            _state = State.Opened;
+            SetNaturalSize(width, height);
+            ImageOpened?.Invoke(this, new RoutedEventArgs());
+        }
+    }
 
     /// <summary>
     /// Occurs when the <see cref="UriSource"/> is changed.
@@ -123,9 +157,9 @@ public sealed class BitmapImage : BitmapSource
 
     internal override ValueTask<string> GetDataStringAsync(UIElement parent)
     {
-        if (UriSource != null)
+        if (UriSource is Uri uriSource)
         {
-            return new(INTERNAL_UriHelper.ConvertToHtml5Path(UriSource.OriginalString, parent));
+            return new(INTERNAL_UriHelper.ConvertToHtml5Path(uriSource.OriginalString, parent));
         }
 
         return base.GetDataStringAsync(parent);

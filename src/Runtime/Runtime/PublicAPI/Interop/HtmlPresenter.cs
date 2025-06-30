@@ -17,20 +17,29 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Markup;
+using System.Windows.Media;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
 
 namespace CSHTML5.Native.Html.Controls
 {
     [ContentProperty(nameof(Html))]
-    public class HtmlPresenter : FrameworkElement
+    public class HtmlPresenter : FrameworkElement, IResizeObserverListener
     {
         private INTERNAL_HtmlDomElementReference _jsDiv;
-        private ResizeObserverAdapter _resizeObserver;
+        private IDisposable _resizeObserver;
 
         static HtmlPresenter()
         {
             IsHitTestableProperty.OverrideMetadata(typeof(HtmlPresenter), new PropertyMetadata(BooleanBoxes.TrueBox));
+            FlowDirectionProperty.OverrideMetadata(
+                typeof(HtmlPresenter),
+                new FrameworkPropertyMetadata(
+                    FlowDirection.LeftToRight,
+                    FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsParentArrange)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((HtmlPresenter)d).SetDirection((FlowDirection)newValue),
+                });
         }
 
         /// <summary>
@@ -186,8 +195,7 @@ namespace CSHTML5.Native.Html.Controls
         {
             base.INTERNAL_OnAttachedToVisualTree();
 
-            _resizeObserver = new ResizeObserverAdapter();
-            _resizeObserver.Observe(_jsDiv, OnHtmlContentResized);
+            _resizeObserver = ResizeObserver.Observe(_jsDiv, this);
 
             SetScrollMode(this, ScrollMode);
         }
@@ -196,11 +204,8 @@ namespace CSHTML5.Native.Html.Controls
         {
             base.INTERNAL_OnDetachedFromVisualTree();
 
-            if (_resizeObserver is not null)
-            {
-                _resizeObserver.Unobserve(_jsDiv);
-                _resizeObserver = null;
-            }
+            _resizeObserver?.Dispose();
+            _resizeObserver = null;
 
             _jsDiv = null;
             IsUsingShadowDOM = false;
@@ -209,14 +214,25 @@ namespace CSHTML5.Native.Html.Controls
         /// <inheritdoc />
         protected override void OnMouseWheel(MouseWheelEventArgs e)
         {
-            base.OnMouseWheel(e);
-
-            string sElement = OpenSilver.Interop.GetVariableStringForJS(OuterDiv);
-            string sArgs = OpenSilver.Interop.GetVariableStringForJS(e.UIEventArg);
-            if (OpenSilver.Interop.ExecuteJavaScriptBoolean($"document.htmlPresenterHelpers.onWheelNative({sElement}, {sArgs})"))
+            if (e.Handled)
             {
-                e.Handled = true;
-                e.Cancellable = false;
+                return;
+            }
+
+            if (ScrollMode != ScrollMode.Disabled)
+            {
+                string sElement = OpenSilver.Interop.GetVariableStringForJS(OuterDiv);
+                string sArgs = OpenSilver.Interop.GetVariableStringForJS(e.UIEventArg);
+                if (OpenSilver.Interop.ExecuteJavaScriptBoolean($"document.htmlPresenterHelpers.onWheelNative({sElement}, {sArgs})"))
+                {
+                    e.Handled = true;
+                    e.Cancellable = false;
+                }
+            }
+
+            if (!e.Handled)
+            {
+                base.OnMouseWheel(e);
             }
         }
 
@@ -249,6 +265,9 @@ namespace CSHTML5.Native.Html.Controls
 
         internal sealed override bool EnablePointerEventsCore => true;
 
-        private void OnHtmlContentResized(Size size) => InvalidateMeasure();
+        internal sealed override bool ShouldApplyMirrorTransform() =>
+            GetFlowDirectionFromVisual(VisualTreeHelper.GetParent(this)) == FlowDirection.RightToLeft;
+
+        void IResizeObserverListener.OnSizeChanged(Size size) => InvalidateMeasure();
     }
 }

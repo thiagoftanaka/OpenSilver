@@ -14,6 +14,7 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Reflection;
 using System.Xaml;
 using System.Windows;
 using System.Windows.Data;
@@ -156,14 +157,36 @@ namespace OpenSilver.Internal.Xaml
         {
             try
             {
-                var methodInfo = firstArgument.GetType().GetMethod(handlerName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var methodInfo = firstArgument.GetType().GetMethod(handlerName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 var eventInfo = target.GetType().GetEvent(eventName);
                 Delegate handler = Delegate.CreateDelegate(eventInfo.EventHandlerType,
                                              firstArgument,
                                              methodInfo);
                 eventInfo.AddEventHandler(target, handler);
             }
-            catch(Exception ex)
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"{handlerName}: {ex.Message}");
+            }
+        }
+
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public static void RegisterAttachedEventHandler(string handlerName, Type ownerType, string eventName, object target, object firstArgument)
+        {
+            try
+            {
+                var methodInfo = firstArgument.GetType().GetMethod(handlerName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                var addHandlerMethod = ownerType.GetMethod($"Add{eventName}Handler", BindingFlags.Public | BindingFlags.Static);
+                var parameters = addHandlerMethod.GetParameters();
+                if (parameters.Length == 2)
+                {
+                    Delegate handler = Delegate.CreateDelegate(parameters[1].ParameterType,
+                        firstArgument,
+                        methodInfo);
+                    addHandlerMethod.Invoke(null, new object[2] { target, handler });
+                }
+            }
+            catch (Exception ex)
             {
                 throw new InvalidOperationException($"{handlerName}: {ex.Message}");
             }
@@ -181,15 +204,49 @@ namespace OpenSilver.Internal.Xaml
         }
 
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public static void SetTemplatedParent(FrameworkElement element, DependencyObject templatedParent)
+        public static void XamlContext_SetTemplatedParent(XamlContext context, FrameworkElement element)
         {
-            element.TemplatedParent = templatedParent;
+            Debug.Assert(context is not null);
+            Debug.Assert(element is not null);
+
+            element.SetTemplatedParent(context.TemplateOwnerReference);
         }
 
         [EditorBrowsable(EditorBrowsableState.Never)]
+        public static void XamlContext_SetTemplatedParent(XamlContext context, IFrameworkElement element)
+        {
+            Debug.Assert(context is not null);
+            Debug.Assert(element is not null);
+
+            // We do not want to share the weak reference here, because IFrameworkElements can be defined
+            // outside of OpenSilver, and we cannot ensure that it will not modify the target of the weak
+            // reference.
+            ((IInternalFrameworkElement)element).SetTemplatedParent(new(context.GetTemplateOwner()));
+        }
+
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public static void SetTemplatedParent(FrameworkElement element, DependencyObject templatedParent)
+        {
+            Debug.Assert(element is not null);
+
+            element.SetTemplatedParent(new(templatedParent));
+        }
+
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public static void SetTemplatedParent(IFrameworkElement element, DependencyObject templatedParent)
+        {
+            Debug.Assert(element is not null);
+
+            ((IInternalFrameworkElement)element).SetTemplatedParent(new(templatedParent));
+        }
+
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete(Helper.ObsoleteMemberMessage + " Use RuntimeHelpers.SetTemplatedParent(IFrameworkElement, DependencyObject) instead.", true)]
         public static void SetTemplatedParent(IFrameworkElement element, IFrameworkElement templatedParent)
         {
-            ((IInternalFrameworkElement)element).TemplatedParent = (DependencyObject)templatedParent;
+            Debug.Assert(element is not null);
+
+            ((IInternalFrameworkElement)element).SetTemplatedParent(new((DependencyObject)templatedParent));
         }
 
         [EditorBrowsable(EditorBrowsableState.Never)]
@@ -286,10 +343,10 @@ namespace OpenSilver.Internal.Xaml
         [EditorBrowsable(EditorBrowsableState.Never)]
         public static T CallProvideValue<T>(XamlContext context, IMarkupExtension<T> markupExtension) where T : class
         {
-            Debug.Assert(context != null);
-            Debug.Assert(markupExtension != null);
+            Debug.Assert(context is not null);
+            Debug.Assert(markupExtension is not null);
 
-            return markupExtension.ProvideValue(new ServiceProviderContext(context));
+            return markupExtension.ProvideValue(context.ServiceProvider);
         }
 
         [EditorBrowsable(EditorBrowsableState.Never)]
@@ -303,14 +360,14 @@ namespace OpenSilver.Internal.Xaml
 
             value = markupExtension.ProvideValue(serviceProvider);
 
-            if (value is Binding binding)
+            if (value is BindingBase binding)
             {
                 value = binding.ProvideValue(serviceProvider);
             }
 
-            if (value is BindingExpression bindingExpression && target is DependencyObject d)
+            if (value is Expression expression && target is DependencyObject d)
             {
-                d.SetValue(dp, bindingExpression);
+                d.SetValue(dp, expression);
                 return true;
             }
 

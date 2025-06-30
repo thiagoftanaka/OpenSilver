@@ -29,7 +29,6 @@ namespace OpenSilver.Simulator.XamlInspection
     public partial class XamlInspectionTreeView : UserControl
     {
         XamlPropertiesPane _xamlPropertiesPane;
-        bool _hasBeenFullyExpanded;
         TreeNode _selectedTreeNode;
         TreeNode _nodeBranchPreviouslyMarked;
         ContextMenu _ContextMenu;
@@ -74,7 +73,6 @@ namespace OpenSilver.Simulator.XamlInspection
         public bool TryRefresh(Assembly entryPointAssembly, XamlPropertiesPane xamlPropertiesPane)
         {
             _xamlPropertiesPane = xamlPropertiesPane;
-            _hasBeenFullyExpanded = false;
 
             var isSuccess = XamlInspectionHelper.TryInitializeTreeView(XamlTree);
 
@@ -119,7 +117,6 @@ namespace OpenSilver.Simulator.XamlInspection
                 if (treeViewItem != null)
                     treeViewItem.ExpandSubtree();
             }
-            _hasBeenFullyExpanded = true;
         }
 
         public void CollapseAllNodes()
@@ -136,7 +133,6 @@ namespace OpenSilver.Simulator.XamlInspection
             }
 
             XamlTree.SelectedItemChanged += TreeView_SelectedItemChanged;
-            _hasBeenFullyExpanded = false;
         }
 
         public void ExpandToNode(TreeNode fromNode, TreeNode toNode)
@@ -161,71 +157,6 @@ namespace OpenSilver.Simulator.XamlInspection
                     treeItem.IsExpanded = true;
             }
             treeItem.IsSelected = true;
-        }
-
-        public bool TrySelectTreeNode(object uiElement)
-        {
-            bool wasFullyExpanded = _hasBeenFullyExpanded;
-
-            // First, we need to expand all the nodes so that the "item generators" can be called (which creates the TreeViewItems") and so we can select the node:
-            ExpandAllNodes();
-
-            // Then, select the item:
-            foreach (Tuple<TreeNode, TreeViewItem> treeNodeAndTreeViewItem in TraverseTreeViewItems(XamlTree))
-            {
-                TreeNode treeNode = treeNodeAndTreeViewItem.Item1;
-                TreeViewItem treeViewItem = treeNodeAndTreeViewItem.Item2;
-                if (treeNodeAndTreeViewItem.Item1.Element == uiElement)
-                {
-                    if (treeViewItem != null)
-                    {
-                        Dispatcher.BeginInvoke((Action)(async () =>
-                        {
-                            treeViewItem.IsSelected = true;
-
-                            if (!wasFullyExpanded)
-                                await Task.Delay(3000); // We give the time to the TreeView to expand, in ordero to make it possible to bring the selected item into view.
-
-                            treeViewItem.BringIntoView();
-                        }));
-                    }
-                    else
-                        throw new Exception("Unable to get the TreeViewItem from the TreeNode. Please inform the authors at: support@cshtml5.com");
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public bool TrySelectTreeNodeX(object uiElement)
-        {
-            bool wasFullyExpanded = _hasBeenFullyExpanded;
-
-            // Then, select the item:
-            foreach (Tuple<TreeNode, TreeViewItem> treeNodeAndTreeViewItem in TraverseTreeViewItems(XamlTree))
-            {
-                TreeNode treeNode = treeNodeAndTreeViewItem.Item1;
-                TreeViewItem treeViewItem = treeNodeAndTreeViewItem.Item2;
-                if (treeNodeAndTreeViewItem.Item1.Element == uiElement)
-                {
-                    if (treeViewItem != null)
-                    {
-                        Dispatcher.BeginInvoke((Action)(async () =>
-                        {
-                            treeViewItem.IsSelected = true;
-
-                            if (!wasFullyExpanded)
-                                await Task.Delay(3000); // We give the time to the TreeView to expand, in ordero to make it possible to bring the selected item into view.
-
-                            treeViewItem.BringIntoView();
-                        }));
-                    }
-                    else
-                        throw new Exception("Unable to get the TreeViewItem from the TreeNode. Please inform the authors at: support@cshtml5.com");
-                    return true;
-                }
-            }
-            return false;
         }
 
         public TreeNode FindElementNode(opensilver::System.Windows.UIElement uiElement, TreeNode node)

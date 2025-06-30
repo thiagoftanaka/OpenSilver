@@ -12,7 +12,6 @@
 \*====================================================================================*/
 
 using System.Collections;
-using System.Diagnostics;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.ComponentModel;
@@ -32,7 +31,7 @@ namespace System.Windows
     /// object tree, and object lifetime feature areas.
     /// </summary>
     [RuntimeNameProperty(nameof(Name))]
-    public abstract partial class FrameworkElement : UIElement
+    public abstract partial class FrameworkElement : UIElement, IResourceDictionaryOwner
     {
         #region Inheritance Context
 
@@ -85,77 +84,83 @@ namespace System.Windows
         private void ConnectMentor(IInternalFrameworkElement mentor)
         {
             mentor.InheritedPropertyChanged += new InheritedPropertyChangedEventHandler(OnMentorInheritedPropertyChanged);
-            
-            InvalidateInheritedProperties(this, mentor.AsDependencyObject());
+            mentor.ResourcesChanged += new EventHandler(OnMentorResourcesChanged);
+
+            // invalidate the mentee's tree
+            TreeWalkHelper.InvalidateOnTreeChange(this, mentor.AsDependencyObject(), true);
         }
 
         private void DisconnectMentor(IInternalFrameworkElement mentor)
         {
             mentor.InheritedPropertyChanged -= new InheritedPropertyChangedEventHandler(OnMentorInheritedPropertyChanged);
+            mentor.ResourcesChanged -= new EventHandler(OnMentorResourcesChanged);
 
-            InvalidateInheritedProperties(this, mentor.AsDependencyObject());
+            // invalidate the mentee's tree
+            TreeWalkHelper.InvalidateOnTreeChange(this, mentor.AsDependencyObject(), false);
         }
 
         // handle the InheritedPropertyChanged event from the mentor
-        private void OnMentorInheritedPropertyChanged(object sender, InheritedPropertyChangedEventArgs e)
-        {
+        private void OnMentorInheritedPropertyChanged(object sender, InheritedPropertyChangedEventArgs e) =>
             TreeWalkHelper.InvalidateOnInheritablePropertyChange(this, e.Info, false);
-        }
+
+        // handle the ResourcesChanged event from the mentor
+        private void OnMentorResourcesChanged(object sender, EventArgs e) =>
+            TreeWalkHelper.InvalidateOnResourcesChange(this, ResourcesChangeInfo.CatastrophicDictionaryChangeInfo);
 
         internal event InheritedPropertyChangedEventHandler InheritedPropertyChanged;
 
-        internal static void OnInheritedPropertyChanged(FrameworkElement fe, InheritablePropertyChangeInfo info)
-        {
-            var handler = fe.InheritedPropertyChanged;
-            if (handler != null)
-            {
-                handler(fe, new InheritedPropertyChangedEventArgs(ref info));
-            }
-        }
+        private static void OnInheritedPropertyChanged(FrameworkElement fe, InheritablePropertyChangeInfo info) =>
+            fe.InheritedPropertyChanged?.Invoke(fe, new InheritedPropertyChangedEventArgs(ref info));
 
         #endregion Inheritance Context
 
         #region Visual Children
 
-        internal override void OnVisualParentChanged(DependencyObject oldParent)
+        /// <summary>
+        /// Invoked when the parent of this element in the visual tree is changed. Overrides
+        /// <see cref="UIElement.OnVisualParentChanged(DependencyObject)"/>.
+        /// </summary>
+        /// <param name="oldParent">
+        /// The old parent element. May be null to indicate that the element did not have
+        /// a visual parent previously.
+        /// </param>
+        protected internal override void OnVisualParentChanged(DependencyObject oldParent)
         {
             DependencyObject newParent = VisualTreeHelper.GetParent(this);
 
             // Do it only if you do not have a logical parent
-            if (this.Parent == null)
+            if (Parent is null)
             {
                 // Invalidate relevant properties for this subtree
-                this.OnParentChangedInternal(newParent ?? oldParent);
+                DependencyObject parent = newParent ?? oldParent;
+                TreeWalkHelper.InvalidateOnTreeChange(this, parent, newParent is not null);
             }
 
             base.OnVisualParentChanged(oldParent);
         }
 
         /// <summary>
-        /// Gets the number of Visual children of this FrameworkElement.
+        /// Gets the number of visual child elements within this element.
         /// </summary>
-        /// <remarks>
-        /// Derived classes override this property getter to provide the children count
-        /// of their custom children collection.
-        /// </remarks>
-        internal override int VisualChildrenCount
-        {
-            get
-            {
-                return (TemplateChild == null) ? 0 : 1;
-            }
-        }
+        /// <returns>
+        /// The number of visual child elements for this element.
+        /// </returns>
+        protected override int VisualChildrenCount => TemplateChild is null ? 0 : 1;
 
         /// <summary>
-        /// Gets the Visual child at the specified index.
+        /// Overrides <see cref="UIElement.GetVisualChild(int)"/>, and returns a child at 
+        /// the specified index from a collection of child elements.
         /// </summary>
-        /// <remarks>
-        /// Derived classes that provide a custom children collection must override this method
-        /// and return the child at the specified index.
-        /// </remarks>
-        internal override UIElement GetVisualChild(int index)
+        /// <param name="index">
+        /// The zero-based index of the requested child element in the collection.
+        /// </param>
+        /// <returns>
+        /// The requested child element. This should not return null; if the provided index
+        /// is out of range, an exception is thrown.
+        /// </returns>
+        protected override UIElement GetVisualChild(int index)
         {
-            if (TemplateChild == null || index != 0)
+            if (TemplateChild is null || index != 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(index));
             }
@@ -176,7 +181,13 @@ namespace System.Windows
             private set;
         }
 
-        internal void AddLogicalChild(object child)
+        /// <summary>
+        /// Adds the provided object to the logical tree of this element.
+        /// </summary>
+        /// <param name="child">
+        /// Child element to be added.
+        /// </param>
+        protected internal void AddLogicalChild(object child)
         {
             if (child != null)
             {
@@ -184,7 +195,7 @@ namespace System.Windows
                 // might be iterating during a property invalidation tree walk.
                 if (IsLogicalChildrenIterationInProgress)
                 {
-                    throw new InvalidOperationException("Cannot modify the logical children for this node at this time because a tree walk is in progress.");
+                    throw new InvalidOperationException(Strings.CannotModifyLogicalChildrenDuringTreeWalk);
                 }
 
                 HasLogicalChildren = true;
@@ -196,7 +207,14 @@ namespace System.Windows
             }
         }
 
-        internal void RemoveLogicalChild(object child)
+        /// <summary>
+        /// Removes the provided object from this element's logical tree. <see cref="FrameworkElement"/>
+        /// updates the affected logical tree parent pointers to keep in sync with this deletion.
+        /// </summary>
+        /// <param name="child">
+        /// The element to remove.
+        /// </param>
+        protected internal void RemoveLogicalChild(object child)
         {
             if (child != null)
             {
@@ -204,7 +222,7 @@ namespace System.Windows
                 // might be iterating during a property invalidation tree walk.
                 if (IsLogicalChildrenIterationInProgress)
                 {
-                    throw new InvalidOperationException("Cannot modify the logical children for this node at this time because a tree walk is in progress.");
+                    throw new InvalidOperationException(Strings.CannotModifyLogicalChildrenDuringTreeWalk);
                 }
 
                 if (child is IInternalFrameworkElement fe && fe.Parent == this)
@@ -233,34 +251,30 @@ namespace System.Windows
             // Logical Parent must first be dropped before you are attached to a newParent
             if (Parent != null && newParent != null && Parent != newParent)
             {
-                throw new InvalidOperationException("Specified element is already the logical child of another element. Disconnect it first.");
+                throw new InvalidOperationException(Strings.HasLogicalParent);
             }
 
             // Trivial check to avoid loops
             if (newParent == this)
             {
-                throw new InvalidOperationException("Element cannot be its own parent.");
+                throw new InvalidOperationException(Strings.CannotBeSelfParent);
             }
+
+            DependencyObject oldParent = Parent;
 
             Parent = newParent;
 
-            OnParentChangedInternal(newParent);
-        }
-
-        private void OnParentChangedInternal(DependencyObject parent)
-        {
-            // For now we only update the value of inherited properties
-
-            InvalidateInheritedProperties(this, parent);
+            DependencyObject parent = newParent ?? oldParent;
+            TreeWalkHelper.InvalidateOnTreeChange(this, parent, newParent is not null);
         }
 
         /// <summary>
-        /// Returns enumerator to logical children
+        /// Gets an enumerator for logical child elements of this element.
         /// </summary>
-        /*protected*/ internal virtual IEnumerator LogicalChildren
-        {
-            get { return null; }
-        }
+        /// <returns>
+        /// An enumerator for logical child elements of this element.
+        /// </returns>
+        protected internal virtual IEnumerator LogicalChildren => null;
 
         internal bool IsLogicalChildrenIterationInProgress
         {
@@ -274,27 +288,58 @@ namespace System.Windows
             set { WriteInternalFlag(InternalFlags.HasLogicalChildren, value); }
         }
 
+        private void OnAncestorChangedInternal(TreeChangeInfo parentTreeState)
+        {
+            // If this is a tree add operation update the ShouldLookupImplicitStyles
+            // flag with respect to your parent.
+            if (parentTreeState.IsAddOperation)
+            {
+                SetShouldLookupImplicitStyles();
+            }
+
+            ResourcesChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        // Set the ShouldLookupImplicitStyles flag on the current
+        // node if the parent has it set to true.
+        private void SetShouldLookupImplicitStyles()
+        {
+            if (!ShouldLookupImplicitStyles)
+            {
+                var parent = (Parent ?? InternalVisualParent) as FrameworkElement;
+                if (parent is not null && parent.ShouldLookupImplicitStyles)
+                {
+                    ShouldLookupImplicitStyles = true;
+                }
+            }
+        }
+
         #endregion Logical Parent
 
         private WeakReference<DependencyObject> _templatedParentRef;
 
-        internal DependencyObject TemplatedParent
+        /// <summary>
+        /// Gets a reference to the template parent of this element. This property is not
+        /// relevant if the element was not created through a template.
+        /// </summary>
+        /// <returns>
+        /// The element whose <see cref="FrameworkTemplate"/> caused this element to be created.
+        /// This value is frequently null.
+        /// </returns>
+        public DependencyObject TemplatedParent
         {
             get
             {
-                if (_templatedParentRef?.TryGetTarget(out DependencyObject templatedParent) ?? false)
+                if (_templatedParentRef is WeakReference<DependencyObject> wr)
                 {
+                    wr.TryGetTarget(out DependencyObject templatedParent);
                     return templatedParent;
                 }
-
                 return null;
             }
-            set
-            {
-                Debug.Assert(_templatedParentRef is null);
-                _templatedParentRef = new WeakReference<DependencyObject>(value);
-            }
         }
+
+        internal void SetTemplatedParent(WeakReference<DependencyObject> templatedParent) => _templatedParentRef = templatedParent;
 
         private FrameworkElement _templateChild; // Non-null if this FE has a child that was created as part of a template.
 
@@ -320,11 +365,23 @@ namespace System.Windows
         /// </summary>
         internal virtual FrameworkElement StateGroupsRoot => TemplateChild;
 
-        private ResourceDictionary _resources;
+        static FrameworkElement()
+        {
+            FlowDirectionProperty.OverrideMetadata(
+                typeof(FrameworkElement),
+                new FrameworkPropertyMetadata(
+                    FlowDirection.LeftToRight,
+                    FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsParentArrange,
+                    OnFlowDirectionChanged,
+                    CoerceFlowDirection));
+
+            EventManager.RegisterClassHandler<FrameworkElement>(
+                Validation.ErrorEvent,
+                new EventHandler<ValidationErrorEventArgs>(OnValidationError));
+        }
 
         /// <summary>
-        /// Provides base class initialization behavior for FrameworkElement-derived
-        /// classes.
+        /// Provides base class initialization behavior for FrameworkElement-derived classes.
         /// </summary>
         public FrameworkElement()
         {
@@ -342,90 +399,12 @@ namespace System.Windows
                 IsRightToLeft = true;
             }
 
-            Application app = Application.Current;
-            if (app != null && app.HasImplicitStylesInResources)
+            // Set the ShouldLookupImplicitStyles flag to true if App.Resources has implicit styles.
+            if (Application.Current is Application app && app.HasImplicitStylesInResources)
             {
                 ShouldLookupImplicitStyles = true;
             }
         }
-
-#region Resources
-
-        /// <summary>
-        ///     Check if resource is not empty.
-        ///     Call HasResources before accessing resources every time you need
-        ///     to query for a resource.
-        /// </summary>
-        internal bool HasResources
-        {
-            get
-            {
-                ResourceDictionary resources = _resources;
-                return (resources != null &&
-                        ((resources.Count > 0) || (resources.MergedDictionaries.Count > 0)));
-            }
-        }
-
-        /// <summary>
-        /// Gets the locally defined resource dictionary. In XAML, you can establish
-        /// resource items as child object elements of a frameworkElement.Resources property
-        /// element, through XAML implicit collection syntax.
-        /// </summary>
-        [Ambient]
-        public ResourceDictionary Resources
-        {
-            get
-            {
-                if (_resources == null)
-                {
-                    ResourceDictionary resource = new ResourceDictionary();
-                    resource.AddOwner(this);
-                    _resources = resource;
-                }
-                return _resources;
-            }
-            set
-            {
-                ResourceDictionary oldValue = _resources;
-                _resources = value;
-
-                if (oldValue != null)
-                {
-                    // This element is no longer an owner for the old RD
-                    oldValue.RemoveOwner(this);
-                }
-
-                if (value != null)
-                {
-                    if (!value.ContainsOwner(this))
-                    {
-                        // This element is an owner for the new RD
-                        value.AddOwner(this);
-                    }
-                }
-
-                // todo: implement this.
-                //// Invalidate ResourceReference properties for this subtree
-                //// 
-                //if (oldValue != value)
-                //{
-                //    TreeWalkHelper.InvalidateOnResourcesChange(this, null, new ResourcesChangeInfo(oldValue, value));
-                //}
-
-                // todo: remove the following block when 'InvalidateOnResourcesChange' is implemented
-                {
-                    HasStyleInvalidated = false;
-
-                    if (HasImplicitStyleFromResources == true &&
-                        (oldValue.Contains(GetType()) || Style == StyleProperty.GetDefaultValue(this)))
-                    {
-                        UpdateStyleProperty();
-                    }
-                }
-            }
-        }
-        
-#endregion
 
         /// <summary>
         /// Gets a value that indicates whether this element is in the Visual Tree, that is, if it has been loaded for presentation.
@@ -544,20 +523,54 @@ namespace System.Windows
         }
 
         /// <summary>
-        /// Attaches a binding to a FrameworkElement, using the provided binding object.
+        /// Attaches a binding to this element, based on the provided binding object.
         /// </summary>
-        /// <param name="dependencyProperty">The dependency property identifier of the property that is data bound.</param>
-        /// <param name="binding">The binding to use for the property.</param>
-        /// <returns>The BindingExpression created.</returns>
-        public BindingExpression SetBinding(DependencyProperty dependencyProperty, Binding binding)
-        {
-            return BindingOperations.SetBinding(this, dependencyProperty, binding);
-        }
+        /// <param name="dp">
+        /// Identifies the property where the binding should be established.
+        /// </param>
+        /// <param name="binding">
+        /// Represents the specifics of the data binding.
+        /// </param>
+        /// <returns>
+        /// Records the conditions of the binding. This return value can be useful for error checking.
+        /// </returns>
+        public BindingExpressionBase SetBinding(DependencyProperty dp, BindingBase binding)
+            => BindingOperations.SetBinding(this, dp, binding);
 
+        /// <summary>
+        /// Attaches a binding to a <see cref="FrameworkElement"/>, using the provided binding
+        /// object, and returns a <see cref="BindingExpression"/> for possible later use.
+        /// </summary>
+        /// <param name="dependencyProperty">
+        /// The dependency property identifier of the property that is data bound.
+        /// </param>
+        /// <param name="binding">
+        /// The binding to use for the property.
+        /// </param>
+        /// <returns>
+        /// A <see cref="BindingExpression"/> object.
+        /// </returns>
+        /// <exception cref="ArgumentException">
+        /// binding is specified as <see cref="BindingMode.TwoWay"/>, but has an empty
+        /// <see cref="Binding.Path"/>. or dp or binding parameters are null.
+        /// </exception>
+        public BindingExpression SetBinding(DependencyProperty dependencyProperty, Binding binding)
+            => BindingOperations.SetBinding(this, dependencyProperty, binding);
+
+        /// <summary>
+        /// Retrieves the <see cref="BindingExpression"/> for a dependency property where a 
+        /// binding is established.
+        /// </summary>
+        /// <param name="dp">
+        /// The dependency property identifier for the specific property on this <see cref="FrameworkElement"/>
+        /// where you want to obtain the <see cref="BindingExpression"/>.
+        /// </param>
+        /// <returns>
+        /// A <see cref="BindingExpression"/> for the binding, if the local value represented
+        /// a data-bound value. May return null if the property is not a data-bound value.
+        /// </returns>
         public BindingExpression GetBindingExpression(DependencyProperty dp)
-        {
-            return BindingOperations.GetBindingExpression(this, dp);
-        }
+            => BindingOperations.GetBindingExpression(this, dp);
 
         /// <summary>
         /// Return the text that represents this object, from the User's perspective.
@@ -626,18 +639,17 @@ namespace System.Windows
         /// </returns>
         public object FindName(string name)
         {
-            if (name == null)
+            if (name is null)
             {
                 throw new ArgumentNullException(nameof(name));
             }
 
-            if (TemplatedParent != null)
+            if (TemplatedParent is DependencyObject templatedParent)
             {
-                return (TemplatedParent as FrameworkElement)?.GetTemplateChild(name);
+                return (templatedParent as FrameworkElement)?.GetTemplateChild(name);
             }
 
-            INameScope nameScope = FindScope(this);
-            if (nameScope != null)
+            if (FindScope(this) is INameScope nameScope)
             {
                 return nameScope.FindName(name);
             }
@@ -647,10 +659,9 @@ namespace System.Windows
 
         internal static INameScope FindScope(FrameworkElement fe)
         {
-            while (fe != null)
+            while (fe is not null)
             {
-                INameScope nameScope = NameScope.GetNameScope(fe);
-                if (nameScope != null)
+                if (NameScope.GetNameScope(fe) is INameScope nameScope)
                 {
                     return nameScope;
                 }
@@ -669,8 +680,7 @@ namespace System.Windows
         /// <returns>The Named element.  Null if no element has this Name.</returns>
         internal DependencyObject GetTemplateChild(string childName)
         {
-            INameScope namescope = FrameworkTemplate.GetTemplateNameScope(this);
-            if (namescope != null)
+            if (FrameworkTemplate.GetTemplateNameScope(this) is INameScope namescope)
             {
                 return namescope.FindName(childName) as DependencyObject;
             }
@@ -688,7 +698,7 @@ namespace System.Windows
             }
             else
             {
-                throw new InvalidOperationException(string.Format("No NameScope found to {1} the Name '{0}'.", name, "register"));
+                throw new InvalidOperationException(string.Format(Strings.NameScopeNotFound, name, "register"));
             }
         }
 
@@ -702,7 +712,7 @@ namespace System.Windows
             }
             else
             {
-                throw new InvalidOperationException(string.Format("No NameScope found to {1} the Name '{0}'.", name, "unregister"));
+                throw new InvalidOperationException(string.Format(Strings.NameScopeNotFound, name, "unregister"));
             }
         }
 
@@ -732,7 +742,7 @@ namespace System.Windows
                         if (Features.DOM.AssignName && d is FrameworkElement fe)
                         {
                             INTERNAL_HtmlDomManager.SetDomElementAttribute(
-                                fe.OuterDiv, "dataId", (string)newValue ?? string.Empty);
+                                fe.OuterDiv, "dataId", (string)newValue ?? string.Empty, true);
                         }
                     },
                 });
@@ -768,12 +778,11 @@ namespace System.Windows
             ((FrameworkElement)d).RaiseDataContextChangedEvent(e);
         }
 
-        private void RaiseDataContextChangedEvent(DependencyPropertyChangedEventArgs e)
-        {
-            DataContextChanged?.Invoke(this, e);
-        }
+        private void RaiseDataContextChangedEvent(DependencyPropertyChangedEventArgs e) => DataContextChanged?.Invoke(this, e);
 
-        /// <summary>Occurs when the data context for this element changes. </summary>
+        /// <summary>
+        /// Occurs when the data context for this element changes.
+        /// </summary>
         public event DependencyPropertyChangedEventHandler DataContextChanged;
 
         #endregion
@@ -790,8 +799,7 @@ namespace System.Windows
         {
             get
             {
-                TriggerCollection triggers = (TriggerCollection)GetValue(TriggersProperty);
-                if (triggers == null)
+                if (GetValue(TriggersProperty) is not TriggerCollection triggers)
                 {
                     triggers = new TriggerCollection(this);
                     SetValueInternal(TriggersProperty, triggers);
@@ -823,34 +831,8 @@ namespace System.Windows
                 nameof(FlowDirection),
                 typeof(FlowDirection),
                 typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(
-                    FlowDirection.LeftToRight,
-                    FrameworkPropertyMetadataOptions.Inherits,
-                    OnFlowDirectionChanged,
-                    CoerceFlowDirection)
-                {
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
-                    {
-                        const string DIR = "dir";
-                        const string RTL = "rtl";
-                        const string LTR = "ltr";
-
-                        var uie = (UIElement)d;
-                        var direction = (FlowDirection)newValue;
-
-                        if (VisualTreeHelper.GetParent(uie) is UIElement parent
-                            && (FlowDirection)parent.GetValue(FlowDirectionProperty) == direction)
-                        {
-                            INTERNAL_HtmlDomManager.RemoveAttribute(uie.OuterDiv, DIR);
-                            return;
-                        }
-
-                        INTERNAL_HtmlDomManager.SetDomElementAttribute(
-                            uie.OuterDiv,
-                            DIR,
-                            direction == FlowDirection.LeftToRight ? LTR : RTL);
-                    },
-                });
+                new PropertyMetadata(FlowDirection.LeftToRight) { Inherits = true, },
+                IsValidFlowDirection);
 
         /// <summary>
         /// Gets or sets the direction that text and other user interface 
@@ -867,21 +849,26 @@ namespace System.Windows
             set => SetValueInternal(FlowDirectionProperty, value);
         }
 
+        private static bool IsValidFlowDirection(object o)
+        {
+            FlowDirection value = (FlowDirection)o;
+            return value == FlowDirection.LeftToRight || value == FlowDirection.RightToLeft;
+        }
+
         private static void OnFlowDirectionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            // Check that d is a FrameworkElement since the property inherits and this can be called
-            // on non-FEs.
-            if (d is FrameworkElement fe)
-            {
-                // Cache the new value as a bit to optimize accessing the FlowDirection property's CLR accessor
-                fe.IsRightToLeft = ((FlowDirection)e.NewValue) == FlowDirection.RightToLeft;
-            }
+            // Cache the new value as a bit to optimize accessing the FlowDirection property's CLR accessor
+            var fe = (FrameworkElement)d;
+            fe.IsRightToLeft = ((FlowDirection)e.NewValue) == FlowDirection.RightToLeft;
+            fe.AreTransformsClean = false;
         }
 
         private static object CoerceFlowDirection(DependencyObject d, object baseValue)
         {
-            FlowDirection direction = (FlowDirection)baseValue;
-            return (direction != FlowDirection.RightToLeft) ? FlowDirection.LeftToRight : FlowDirection.RightToLeft;
+            var fe = (FrameworkElement)d;
+            fe.InvalidateVisual();
+            fe.AreTransformsClean = false;
+            return baseValue;
         }
 
         internal bool IsRightToLeft
@@ -920,7 +907,8 @@ namespace System.Windows
             set { SetValueInternal(LanguageProperty, value); }
         }
 
-        internal override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+        /// <inheritdoc />
+        protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
         {
             base.OnPropertyChanged(e);
 
@@ -988,23 +976,30 @@ namespace System.Windows
                 typeof(FrameworkElement), 
                 new PropertyMetadata((object)null));
 
-#endregion
+        #endregion
 
         #region Loaded/Unloaded events
 
-        public static readonly RoutedEvent LoadedEvent = 
-            new RoutedEvent(
+        /// <summary>
+        /// Identifies the <see cref="Loaded"/> routed event.
+        /// </summary>
+        public static readonly RoutedEvent LoadedEvent =
+            EventManager.RegisterRoutedEvent(
                 nameof(Loaded),
                 RoutingStrategy.Direct,
-                typeof(RoutedEventHandler), 
+                typeof(RoutedEventHandler),
                 typeof(FrameworkElement));
 
         /// <summary>
-        /// Occurs when a FrameworkElement has been constructed and added to the object tree.
+        /// Occurs when a <see cref="FrameworkElement"/> has been constructed and added to the object tree.
         /// </summary>
-        public event RoutedEventHandler Loaded;
+        public event RoutedEventHandler Loaded
+        {
+            add => AddHandler(LoadedEvent, value, false);
+            remove => RemoveHandler(LoadedEvent, value);
+        }
 
-        internal void RaiseLoadedEvent() => Loaded?.Invoke(this, new RoutedEventArgs());
+        internal void RaiseLoadedEvent() => RaiseEvent(new RoutedEventArgs(LoadedEvent));
 
         internal void LoadResources()
         {
@@ -1015,11 +1010,25 @@ namespace System.Windows
         }
 
         /// <summary>
+        /// Identifies the <see cref="Unloaded"/> routed event.
+        /// </summary>
+        public static readonly RoutedEvent UnloadedEvent =
+            EventManager.RegisterRoutedEvent(
+                nameof(Unloaded),
+                RoutingStrategy.Direct,
+                typeof(RoutedEventHandler),
+                typeof(FrameworkElement));
+
+        /// <summary>
         /// Occurs when this object is no longer connected to the main object tree.
         /// </summary>
-        public event RoutedEventHandler Unloaded;
+        public event RoutedEventHandler Unloaded
+        {
+            add => AddHandler(UnloadedEvent, value, false);
+            remove => RemoveHandler(UnloadedEvent, value);
+        }
 
-        internal void RaiseUnloadedEvent() => Unloaded?.Invoke(this, new RoutedEventArgs());
+        internal void RaiseUnloadedEvent() => RaiseEvent(new RoutedEventArgs(UnloadedEvent));
 
         internal void UnloadResources()
         {
@@ -1038,44 +1047,79 @@ namespace System.Windows
         /// </summary>
         public event EventHandler<ValidationErrorEventArgs> BindingValidationError;
 
-        internal void OnBindingValidationError(ValidationErrorEventArgs e)
+        private static void OnValidationError(object sender, ValidationErrorEventArgs e)
         {
-            BindingValidationError?.Invoke(this, e);
+            var fe = (FrameworkElement)sender;
+            fe.BindingValidationError?.Invoke(fe, e);
         }
 
-#endregion
+        #endregion
+
+        #region ContextMenu
+
+        /// <summary>
+        /// Identifies the <see cref="ContextMenu"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty ContextMenuProperty =
+            ContextMenuService.ContextMenuProperty.AddOwner(typeof(FrameworkElement));
+
+        /// <summary>
+        /// Gets or sets the context menu element that should appear whenever the context menu is requested 
+        /// through user interface (UI) from within this element.
+        /// </summary>
+        /// <returns>
+        /// The context menu assigned to this element.
+        /// </returns>
+        public ContextMenu ContextMenu
+        {
+            get => (ContextMenu)GetValue(ContextMenuProperty);
+            set => SetValueInternal(ContextMenuProperty, value);
+        }
+
+        /// <summary>
+        /// Occurs when any context menu on the element is opened.
+        /// </summary>
+        public event ContextMenuEventHandler ContextMenuOpening;
+
+        internal void OnContextMenuOpening(double x, double y)
+            => ContextMenuOpening?.Invoke(this, new ContextMenuEventArgs(x, y));
+
+        /// <summary>
+        /// Identifies the <see cref="ToolTip"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty ToolTipProperty =
+            ToolTipService.ToolTipProperty.AddOwner(typeof(FrameworkElement));
+
+        /// <summary>
+        /// Gets or sets the tool-tip object that is displayed for this element in the user interface (UI).
+        /// </summary>
+        /// <returns>
+        /// The tooltip object.
+        /// </returns>
+        public object ToolTip
+        {
+            get => GetValue(ToolTipProperty);
+            set => SetValueInternal(ToolTipProperty, value);
+        }
+
+        #endregion
 
         protected internal override void INTERNAL_OnDetachedFromVisualTree()
         {
             base.INTERNAL_OnDetachedFromVisualTree();
-            if (HasImplicitStyleFromResources && 
-                (!HasResources || !Resources.Contains(GetType())))
-            {
-                HasStyleInvalidated = false;
-                UpdateStyleProperty();
-            }
+
+            // Fetch the implicit style
+            HasStyleInvalidated = false;
+            UpdateStyleProperty();
         }
 
         protected internal override void INTERNAL_OnAttachedToVisualTree()
         {
             base.INTERNAL_OnAttachedToVisualTree();
 
-            // We check if the parent has implicit styles in its ancestors and inherit it if it is the case
-            FrameworkElement parent = (Parent ?? VisualTreeHelper.GetParent(this)) as FrameworkElement;
-            if (parent != null && parent.ShouldLookupImplicitStyles)
-            {
-                ShouldLookupImplicitStyles = true;
-            }
-
             // Fetch the implicit style
-            // If this element's ResourceDictionary contains the
-            // implicit style, it has already been retrieved.
-            if (!HasImplicitStyleFromResources || 
-                (!HasResources || !Resources.Contains(GetType())))
-            {
-                HasStyleInvalidated = false;
-                UpdateStyleProperty();
-            }
+            HasStyleInvalidated = false;
+            UpdateStyleProperty();
 
             if (!HasThemeStyleEverBeenFetched)
             {

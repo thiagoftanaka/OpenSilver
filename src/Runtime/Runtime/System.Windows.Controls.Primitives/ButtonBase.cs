@@ -31,6 +31,11 @@ namespace System.Windows.Controls.Primitives
         private Point _mousePosition;
         private bool _suspendStateChanges;
 
+        static ButtonBase()
+        {
+            KeyboardNavigation.AcceptsReturnProperty.OverrideMetadata(typeof(ButtonBase), new FrameworkPropertyMetadata(BooleanBoxes.TrueBox));
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ButtonBase"/> class.
         /// </summary>
@@ -42,9 +47,23 @@ namespace System.Windows.Controls.Primitives
         }
 
         /// <summary>
+        /// Identifies the <see cref="Click"/> routed event.
+        /// </summary>
+        public static readonly RoutedEvent ClickEvent =
+            EventManager.RegisterRoutedEvent(
+                nameof(Click),
+                RoutingStrategy.Bubble,
+                typeof(RoutedEventHandler),
+                typeof(ButtonBase));
+
+        /// <summary>
         /// Occurs when a <see cref="Button"/> is clicked.
         /// </summary>
-        public event RoutedEventHandler Click;
+        public event RoutedEventHandler Click
+        {
+            add => AddHandler(ClickEvent, value);
+            remove => RemoveHandler(ClickEvent, value);
+        }
 
         /// <summary>
         /// Identifies the <see cref="ClickMode"/> dependency property.
@@ -218,10 +237,7 @@ namespace System.Windows.Controls.Primitives
         /// </summary>
         protected virtual void OnClick()
         {
-            Click?.Invoke(this, new RoutedEventArgs
-            {
-                OriginalSource = this
-            });
+            RaiseEvent(new RoutedEventArgs(ClickEvent, this));
 
             ExecuteCommand();
         }
@@ -333,7 +349,7 @@ namespace System.Windows.Controls.Primitives
                     }
                 }
                 // The ENTER key forces a click
-                else if (key == Key.Enter)
+                else if (key == Key.Enter && (bool)GetValue(KeyboardNavigation.AcceptsReturnProperty))
                 {
                     _isSpaceKeyDown = false;
                     IsPressed = false;
@@ -565,13 +581,12 @@ namespace System.Windows.Controls.Primitives
         }
 
         /// <summary>
-        /// Fetches the value of the IsEnabled property
+        /// Gets a value that becomes the return value of <see cref="UIElement.IsEnabled"/> in derived classes.
         /// </summary>
-        /// <remarks>
-        /// The reason this property is overridden is so that Button
-        /// can infuse the value for CanExecute into it.
-        /// </remarks>
-        internal override bool IsEnabledCore => base.IsEnabledCore && CanExecute;
+        /// <returns>
+        /// true if the element is enabled; otherwise, false.
+        /// </returns>
+        protected override bool IsEnabledCore => base.IsEnabledCore && CanExecute;
 
         private bool CanExecute
         {

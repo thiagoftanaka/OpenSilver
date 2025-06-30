@@ -25,6 +25,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Markup;
 using System.Xaml.Markup;
 
@@ -59,6 +60,8 @@ namespace System.Xaml
 		public EventHandler<XamlObjectEventArgs> AfterPropertiesHandler { get; set; }
 		public EventHandler<XamlObjectEventArgs> BeforePropertiesHandler { get; set; }
 		public EventHandler<XamlSetValueEventArgs> XamlSetValueHandler { get; set; }
+
+		public WeakReference<DependencyObject> TemplateOwnerReference { get; set; }
 
 		public INameScope ExternalNameScope { get; set; }
 
