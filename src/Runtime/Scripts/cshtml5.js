@@ -231,6 +231,7 @@ document.createShape = function (svgTagName, svgId, shapeId, defsId, parentId) {
         writable: false,
     });
     svg.appendChild(shape);
+    document.inputManager.addListeners(shape, false);
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     defs.setAttribute('id', defsId);
     svg.appendChild(defs);
