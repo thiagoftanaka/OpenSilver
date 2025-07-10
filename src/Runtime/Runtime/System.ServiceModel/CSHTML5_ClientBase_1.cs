@@ -249,7 +249,9 @@ namespace System.ServiceModel
             }
         }
 
-        public IList<MessageHeader> MessageHeaders => (Channel as ChannelBase<TChannel>)?.MessageHeaders;
+        private List<MessageHeader> _messageHeaders;
+        public IList<MessageHeader> MessageHeaders => (Channel as ChannelBase<TChannel>)?.MessageHeaders ??
+                                                      (_messageHeaders ??= new List<MessageHeader>());
 
         //#if !FOR_DESIGN_TIME && CORE
         //        [JSIgnore]
