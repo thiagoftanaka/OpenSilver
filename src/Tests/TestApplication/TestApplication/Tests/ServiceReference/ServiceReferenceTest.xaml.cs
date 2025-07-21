@@ -73,6 +73,22 @@ namespace TestApplication.Tests
 #endif
         }
 
+        private void LegacyBinaryEchoButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            LegacyBinaryServiceReference.BinaryServiceClient client = new LegacyBinaryServiceReference.BinaryServiceClient();
+            client.EchoCompleted +=
+                (_, ee) => LegacyBinaryEchoTextBlock.Text = ee.Error?.Message ?? ee.Result;
+            client.EchoAsync(LegacyBinaryEchoTextBox.Text);
+        }
+
+        private void LegacyBinaryBodyMemberButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            LegacyBinaryServiceReference.BinaryServiceClient client = new LegacyBinaryServiceReference.BinaryServiceClient();
+            client.BodyMemberCompleted +=
+                (_, ee) => LegacyBinaryBodyMemberTextBlock.Text = ee.Error?.Message ?? ee.Result;
+            client.BodyMemberAsync(LegacyBinaryBodyMemberTextBox.Text);
+        }
+
         #endregion
 
         #region Modern
@@ -130,6 +146,34 @@ namespace TestApplication.Tests
             string testString = "Ignore this case: not possible to add modern ServiceReference in Silverlight.";
 #endif
             BasicHttpBodyMemberTextBlock.Text = testString;
+        }
+
+#if OPENSILVER
+        private async void BinaryEchoButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            BinaryServiceReference.BinaryServiceClient client = new();
+            string testString = await client.EchoAsync(BinaryEchoTextBox.Text);
+#else
+        private void BinaryEchoButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            string testString = "Ignore this case: not possible to add modern ServiceReference in Silverlight.";
+#endif
+            BinaryEchoTextBlock.Text = testString;
+        }
+
+#if OPENSILVER
+        private async void BinaryBodyMemberButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            BinaryServiceReference.BinaryServiceClient client = new();
+            BinaryServiceReference.BodyMemberResponseMessage responseMessage =
+                await client.BodyMemberAsync(BinaryBodyMemberTextBox.Text);
+            string testString = responseMessage.BodyMemberResponse;
+#else
+        private void BinaryBodyMemberButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            string testString = "Ignore this case: not possible to add modern ServiceReference in Silverlight.";
+#endif
+            BinaryBodyMemberTextBlock.Text = testString;
         }
 
         #endregion
