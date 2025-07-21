@@ -19,11 +19,13 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="Connected Services\BasicHttpServiceReference\Reference.cs" />
+    <Compile Include="Connected Services\BinaryServiceReference\Reference.cs" />
     <Compile Include="Converters\BooleanVisibilityConverter.cs" />
     <Compile Include="HintBehavior.cs" />
     <Compile Include="LinqSamples.cs" />
     <Compile Include="NotifyPropertyChanged.cs" />
     <Compile Include="Service References\LegacyBasicHttpServiceReference\Reference.cs" />
+    <Compile Include="Service References\LegacyBinaryServiceReference\Reference.cs" />
     <Compile Include="Tests\AccordionTest.xaml.cs" />
     <Compile Include="Tests\DragDropTarget\ListBoxDragDropTargetTest.xaml.cs" />
     <Compile Include="Tests\DragDropTarget\PanelDragDropTargetTest.xaml.cs" />
@@ -710,6 +712,9 @@
     <UpToDateCheckInput Remove="Service References\BasicHttpServiceReference\**" />
   </ItemGroup>
   <ItemGroup>
+    <UpToDateCheckInput Remove="Service References\BinaryServiceReference\**" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService.disco" />
     <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService.wsdl" />
     <None Include="Service References\LegacyBasicHttpServiceReference\BasicHttpService.xsd" />
@@ -718,6 +723,16 @@
     <None Include="Service References\LegacyBasicHttpServiceReference\configuration.svcinfo" />
     <None Include="Service References\LegacyBasicHttpServiceReference\configuration91.svcinfo" />
     <None Include="Service References\LegacyBasicHttpServiceReference\Reference.svcmap">
+      <Generator>WCF Proxy Generator</Generator>
+    </None>
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService.disco" />
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService.wsdl" />
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService.xsd" />
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService1.wsdl" />
+    <None Include="Service References\LegacyBinaryServiceReference\BinaryService1.xsd" />
+    <None Include="Service References\LegacyBinaryServiceReference\configuration.svcinfo" />
+    <None Include="Service References\LegacyBinaryServiceReference\configuration91.svcinfo" />
+    <None Include="Service References\LegacyBinaryServiceReference\Reference.svcmap">
       <Generator>WCF Proxy Generator</Generator>
     </None>
   </ItemGroup>
