@@ -133,7 +133,7 @@ namespace TestApplication.Tests.ServiceReference
                 }
 
                 return INTERNAL_WebMethodsCaller.BeginCallWebMethod<IBasicHttpService>(
-                    _client.Endpoint.Address.ToString(),
+                    _client,
                     "BodyMember",
                     typeof(IAsyncResult),
                     null,
@@ -153,7 +153,7 @@ namespace TestApplication.Tests.ServiceReference
             {
 #if OPENSILVER
                 return (Message)INTERNAL_WebMethodsCaller.EndCallWebMethod<IBasicHttpService>(
-                    _client.Endpoint.Address.ToString(),
+                    _client,
                     "BodyMember",
                     typeof(Message),
                     new Dictionary<string, object>()

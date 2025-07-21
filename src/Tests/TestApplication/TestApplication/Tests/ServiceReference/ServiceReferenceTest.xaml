@@ -19,6 +19,18 @@
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="LegacyBasicHttpBodyMemberTextBlock" HorizontalAlignment="Center"/>
 
+        <TextBlock Text="Enter message:" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+        <TextBox Name="LegacyBinaryEchoTextBox" Width="300"/>
+        <Button Content="Legacy Binary Echo() - Event Based" Click="LegacyBinaryEchoButton_OnClick" Width="300"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="LegacyBinaryEchoTextBlock" HorizontalAlignment="Center"/>
+
+        <TextBlock Text="Enter message:" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+        <TextBox Name="LegacyBinaryBodyMemberTextBox" Width="300"/>
+        <Button Content="Legacy Binary BodyMember()" Click="LegacyBinaryBodyMemberButton_OnClick" Width="350"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="LegacyBinaryBodyMemberTextBlock" HorizontalAlignment="Center"/>
+
         <TextBlock Margin="0,30,0,0" Text="Modern Service References (Add Service Reference... in Visual Studio 2022+)"/>
 
         <TextBlock Text="Enter message:" HorizontalAlignment="Center" Margin="0,20,0,0"/>
@@ -38,6 +50,18 @@
         <Button Content="BasicHttp BodyMember()" Click="BasicHttpBodyMemberButton_OnClick" Width="350"/>
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="BasicHttpBodyMemberTextBlock" HorizontalAlignment="Center"/>
+
+        <TextBlock Text="Enter message:" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+        <TextBox Name="BinaryEchoTextBox" Width="300"/>
+        <Button Content="Binary Echo() - async await" Click="BinaryEchoButton_OnClick" Width="300"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="BinaryEchoTextBlock" HorizontalAlignment="Center"/>
+
+        <TextBlock Text="Enter message:" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+        <TextBox Name="BinaryBodyMemberTextBox" Width="300"/>
+        <Button Content="Binary BodyMember()" Click="BinaryBodyMemberButton_OnClick" Width="350"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="BinaryBodyMemberTextBlock" HorizontalAlignment="Center"/>
 
         <TextBlock Margin="0,30,0,0" Text="Custom clients:"/>
 

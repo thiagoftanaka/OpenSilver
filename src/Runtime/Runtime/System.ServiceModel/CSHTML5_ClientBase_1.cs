@@ -12,25 +12,25 @@
 *  
 \*====================================================================================*/
 
-using System.Linq;
-using System.Collections.Generic;
-using System.Net;
-using System.Diagnostics;
-using System.Reflection;
-using System.ComponentModel;
-using System.Threading;
-using System.ServiceModel.Channels;
-using System.IO;
-using System.Threading.Tasks;
-using System.Runtime.Serialization;
-using System.Xml.Linq;
-using System.Xml;
-using System.Windows;
 using CSHTML5.Internal;
-using DataContractSerializerCustom = System.Runtime.Serialization.DataContractSerializer_CSHTML5Ver;
-using System.ServiceModel.Description;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Reflection;
+using System.Runtime.Serialization;
+using System.ServiceModel.Channels;
+using System.ServiceModel.Description;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Xml;
+using System.Xml.Linq;
+using DataContractSerializerCustom = System.Runtime.Serialization.DataContractSerializer_CSHTML5Ver;
 
 namespace System.ServiceModel
 {
@@ -320,17 +320,13 @@ namespace System.ServiceModel
         /// </summary>
         public partial class WebMethodsCaller
         {
-            string _addressOfService;
+            private readonly CSHTML5_ClientBase<TChannel> _client;
 
             INTERNAL_WebRequestHelper_JSOnly _webRequestHelper_JSVersion = new INTERNAL_WebRequestHelper_JSOnly();
 
-            /// <summary>
-            /// Constructor for the WebMethodsCaller's class
-            /// </summary>
-            /// <param name="addressOfService">The address of the WebService</param>
-            public WebMethodsCaller(string addressOfService)
+            public WebMethodsCaller(CSHTML5_ClientBase<TChannel> client)
             {
-                _addressOfService = addressOfService;
+                _client = client;
             }
 
             public void BeginCallWebMethod(
@@ -392,9 +388,9 @@ namespace System.ServiceModel
                     originalRequestObject,
                     soapVersion,
                     out Dictionary<string, string> headers,
-                    out string request);
+                    out object request);
 
-                Uri address = INTERNAL_UriHelper.EnsureAbsoluteUri(_addressOfService);
+                Uri address = INTERNAL_UriHelper.EnsureAbsoluteUri(_client.Endpoint.Address.Uri.ToString());
 
                 // Make the actual web service call
                 _webRequestHelper_JSVersion.MakeRequest(
@@ -616,12 +612,12 @@ namespace System.ServiceModel
                     originalRequestObject,
                     soapVersion,
                     out Dictionary<string, string> headers,
-                    out string request);
+                    out object request);
 
                 var tcs = new TaskCompletionSource<(T, MessageHeaders)>(); //todo: here we need to change object to the return type
 
                 string response = _webRequestHelper_JSVersion.MakeRequest(
-                    new Uri(_addressOfService),
+                    _client.Endpoint.Address.Uri,
                     "POST",
                     this,
                     headers,
@@ -669,12 +665,12 @@ namespace System.ServiceModel
                     originalRequestObject,
                     soapVersion,
                     out Dictionary<string, string> headers,
-                    out string request);
+                    out object request);
 
                 var tcs = new TaskCompletionSource<T>(); //todo: here we need to change object to the return type
 
                 string response = _webRequestHelper_JSVersion.MakeRequest(
-                    new Uri(_addressOfService),
+                    _client.Endpoint.Address.Uri,
                     "POST",
                     this,
                     headers,
@@ -756,10 +752,10 @@ namespace System.ServiceModel
                     originalRequestObject,
                     soapVersion,
                     out Dictionary<string, string> headers,
-                    out string request);
+                    out object request);
 
                 string response = _webRequestHelper_JSVersion.MakeRequest(
-                        new Uri(_addressOfService),
+                        _client.Endpoint.Address.Uri,
                         "POST",
                         this,
                         headers,
@@ -849,10 +845,10 @@ namespace System.ServiceModel
                     originalRequestObject,
                     soapVersion,
                     out Dictionary<string, string> headers,
-                    out string request);
+                    out object request);
 
                 string response = _webRequestHelper_JSVersion.MakeRequest(
-                        new Uri(_addressOfService),
+                        _client.Endpoint.Address.Uri,
                         "POST",
                         this,
                         headers,
@@ -926,7 +922,7 @@ namespace System.ServiceModel
                 IDictionary<string, object> requestParameters,
                 string soapVersion,
                 out Dictionary<string, string> headers,
-                out string request)
+                out object request)
             {
                 headers = [];
 
@@ -990,6 +986,10 @@ namespace System.ServiceModel
 
                 string elementAsString = bodyBuilder.ToString();
 
+                BinaryMessageEncodingBindingElement binaryBindingElement = _client.Endpoint.Binding.CreateBindingElements()
+                    .Find<BinaryMessageEncodingBindingElement>();
+                bool isBinaryBinding = binaryBindingElement != null;
+
                 switch (soapVersion)
                 {
                     case "1.1":
@@ -1005,13 +1005,38 @@ namespace System.ServiceModel
                         break;
 
                     case "1.2":
-                        headers.Add("Content-Type", "application/soap+xml; charset=utf-8");
+                        headers.Add("Content-Type", isBinaryBinding ? "application/soap+msbin1" : "application/soap+xml; charset=utf-8");
 
-                        request = $"<s:Envelope xmlns:a=\"{MessageStrings.NamespaceAddressing10}\" xmlns:s=\"{MessageStrings.SOAP12.Namespace}\"><s:Header><a:Action>{soapAction}</a:Action>{envelopeHeaders ?? string.Empty}<a:To>{_addressOfService}</a:To></s:Header><s:Body>{elementAsString}</s:Body></s:Envelope>";
+                        request = $"<s:Envelope xmlns:a=\"{MessageStrings.NamespaceAddressing10}\" xmlns:s=\"{MessageStrings.SOAP12.Namespace}\"><s:Header><a:Action>{soapAction}</a:Action>{envelopeHeaders ?? string.Empty}<a:To>{_client.Endpoint.Address.Uri}</a:To></s:Header><s:Body>{elementAsString}</s:Body></s:Envelope>";
                         break;
 
                     default:
                         throw new InvalidOperationException($"SOAP version not supported: {soapVersion}");
+                }
+
+                if (isBinaryBinding)
+                {
+                    MessageHeaders messageHeaders = GetEnvelopeHeaders(request.ToString(), soapVersion);
+                    request = CreateBinaryRequest(elementAsString, messageHeaders, soapAction, binaryBindingElement);
+                }
+            }
+
+            private static byte[] CreateBinaryRequest(string bodyContent,
+                MessageHeaders messageHeaders,
+                string soapAction,
+                BinaryMessageEncodingBindingElement binaryBindingElement)
+            {
+                using (var reader = XmlDictionaryReader.CreateTextReader(Encoding.UTF8.GetBytes(bodyContent), XmlDictionaryReaderQuotas.Max))
+                {
+                    var temporaryMessage = Message.CreateMessage(binaryBindingElement.MessageVersion, soapAction, reader);
+                    temporaryMessage.Headers.Clear();
+                    temporaryMessage.Headers.CopyHeadersFrom(messageHeaders);
+
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        binaryBindingElement.CreateMessageEncoderFactory().Encoder.WriteMessage(temporaryMessage, memoryStream);
+                        return memoryStream.ToArray();
+                    }
                 }
             }
 
@@ -1079,7 +1104,7 @@ namespace System.ServiceModel
                 }
             }
 
-            private static (object Result, Exception Error) ReadAndPrepareResponse(
+            private (object Result, Exception Error) ReadAndPrepareResponse(
                 OperationDescription operation,
                 object[] args,
                 string responseAsString,
@@ -1128,6 +1153,14 @@ namespace System.ServiceModel
                 if (string.IsNullOrEmpty(responseAsString))
                 {
                     throw new CommunicationException("The remote server returned an error. To debug, look at the browser Console output, or use a tool such as Fiddler.");
+                }
+
+                BinaryMessageEncodingBindingElement binaryBindingElement = _client.Endpoint.Binding.CreateBindingElements()
+                    .Find<BinaryMessageEncodingBindingElement>();
+                bool isBinaryBinding = binaryBindingElement != null;
+                if (isBinaryBinding)
+                {
+                    responseAsString = DecodeBinaryResponse(responseAsString, binaryBindingElement);
                 }
 
                 string ns;
@@ -1469,6 +1502,23 @@ namespace System.ServiceModel
                 }
 
                 return (localName, ns.NamespaceName);
+            }
+
+            private static string DecodeBinaryResponse(string responseAsString, BinaryMessageEncodingBindingElement binaryBindingElement)
+            {
+                byte[] response = Convert.FromBase64String(responseAsString);
+                MessageEncoder messageEncoder = binaryBindingElement.CreateMessageEncoderFactory().Encoder;
+
+                var bodyBuilder = new StringBuilder();
+                using (MemoryStream readingMemoryStream = new MemoryStream(response))
+                using (var xmlDictionaryWriter = XmlDictionaryWriter.CreateDictionaryWriter(
+                    XmlWriter.Create(bodyBuilder, new XmlWriterSettings { OmitXmlDeclaration = true })))
+                {
+                    Message temporaryMessage = messageEncoder.ReadMessage(readingMemoryStream, int.MaxValue);
+                    temporaryMessage.WriteMessage(xmlDictionaryWriter);
+                    xmlDictionaryWriter.Flush();
+                    return bodyBuilder.ToString();
+                }
             }
         }
 

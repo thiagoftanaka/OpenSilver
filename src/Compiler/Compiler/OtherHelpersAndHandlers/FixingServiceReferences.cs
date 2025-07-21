@@ -590,8 +590,8 @@ namespace OpenSilver.Compiler
 @"
 {0}
             {1}System.ServiceModel.INTERNAL_WebMethodsCaller.{2}CallWebMethod{3}
-                <{4}{5}>({6}, ""{7}"", {11}, {8}, ""{9}"");
-{10}
+                <{4}{5}>(this, ""{6}"", {10}, {7}, ""{8}"");
+{9}
 ",
                         argsBuilder.ToString(),  // {0} - out param init
                         returnResult ? $"var {resultName} = " : string.Empty,  // {1} - return value variable declaration
@@ -599,12 +599,11 @@ namespace OpenSilver.Compiler
                         returnResult ? string.Empty : "_WithoutReturnValue",  // {3} - Async suffix
                         returnResult ? returnType + ", " : string.Empty,  // {4} - return type
                         interfaceType,  // {5} - interface type
-                        endpointCode,  // {6} - endpoint
-                        GetMethodName(methodName, methodType),  // {7} - method name
-                        parametersDictionaryDefinitionBuilder.ToString(),  // {8} - parameters
-                        soapVersion,  // {9} - soap version
-                        returnBuilder.ToString(), // {10} - out param retrieval code and return statement
-                        argsName // {11} - name of arguments array
+                        GetMethodName(methodName, methodType),  // {6} - method name
+                        parametersDictionaryDefinitionBuilder.ToString(),  // {7} - parameters
+                        soapVersion,  // {8} - soap version
+                        returnBuilder.ToString(), // {9} - out param retrieval code and return statement
+                        argsName // {10} - name of arguments array
                         );
                     }
                     else
@@ -613,9 +612,9 @@ namespace OpenSilver.Compiler
                         newBody = string.Format(
 
     @"
-            {11}
+            {10}
             {6}System.ServiceModel.INTERNAL_WebMethodsCaller.{8}CallWebMethod{0}{7}
-                <{1}{2}>({9}, ""{3}"", {4}, ""{10}"");
+                <{1}{2}>(this, ""{3}"", {4}, ""{9}"");
 ",
                         ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
                         ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
@@ -626,7 +625,6 @@ namespace OpenSilver.Compiler
                         ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
                         ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.NotAsyncWithoutReturnType || methodType == MethodType.AsyncEndWithoutReturnType) ? "_WithoutReturnValue" : ""),
                         ((methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")),
-                        endpointCode,
                         soapVersion,
                         string.Join(" ", outParamDefinitions.Where(def => def.Kind == ParameterKind.Out).Select(def => $"{def.Name} = default({def.Type});"))
                         );
@@ -639,7 +637,7 @@ namespace OpenSilver.Compiler
                     newBody = string.Format(
     @"
             {6}System.ServiceModel.INTERNAL_WebMethodsCaller.{8}CallWebMethod{0}{7}
-                <{1}{2}>({9}, ""{3}"", {4}, ""{10}"");
+                <{1}{2}>(this, ""{3}"", {4}, ""{9}"");
 ",
      ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType) ? "Async" : string.Empty),
      ((methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? returnType + ", " : ""),
@@ -650,7 +648,6 @@ namespace OpenSilver.Compiler
      ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.AsyncWithReturnType || methodType == MethodType.NotAsyncWithReturnType || methodType == MethodType.AsyncBegin || methodType == MethodType.AsyncEndWithReturnType) ? "return " : ""),
      ((methodType == MethodType.AsyncWithoutReturnType || methodType == MethodType.NotAsyncWithoutReturnType || methodType == MethodType.AsyncEndWithoutReturnType) ? "_WithoutReturnValue" : ""),
      ((methodType == MethodType.AsyncBegin ? "Begin" : "") + (methodType == MethodType.AsyncEndWithoutReturnType || methodType == MethodType.AsyncEndWithReturnType ? "End" : "")),
-     endpointCode,
      soapVersion
      );
                 }

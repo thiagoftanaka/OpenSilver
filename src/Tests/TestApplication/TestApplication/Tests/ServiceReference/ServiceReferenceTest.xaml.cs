@@ -22,7 +22,8 @@ namespace TestApplication.Tests
 {
     public partial class ServiceReferenceTest : Page
     {
-        private const string Address = "http://localhost:50506/BasicHttpService.svc";
+        private const string BasicHttpAddress = "http://localhost:50506/BasicHttpService.svc";
+        private const string BinaryAddress = "http://localhost:50506/BinaryService.svc";
 
         public ServiceReferenceTest()
         {
@@ -35,7 +36,7 @@ namespace TestApplication.Tests
         {
 #if OPENSILVER
             LegacyBasicHttpServiceReference.BasicHttpServiceClient client = new LegacyBasicHttpServiceReference.BasicHttpServiceClient(
-                new CustomBinding(), new EndpointAddress(Address));
+                new CustomBinding(), new EndpointAddress(BasicHttpAddress));
 #else
             LegacyBasicHttpServiceReference.BasicHttpServiceClient client = new LegacyBasicHttpServiceReference.BasicHttpServiceClient();
 #endif
@@ -48,7 +49,7 @@ namespace TestApplication.Tests
         {
 #if OPENSILVER
             LegacyBasicHttpServiceReference.BasicHttpServiceClient client = new LegacyBasicHttpServiceReference.BasicHttpServiceClient(
-                new CustomBinding(), new EndpointAddress(Address));
+                new CustomBinding(), new EndpointAddress(BasicHttpAddress));
 #else
             LegacyBasicHttpServiceReference.BasicHttpServiceClient client = new LegacyBasicHttpServiceReference.BasicHttpServiceClient();
 #endif
@@ -56,6 +57,36 @@ namespace TestApplication.Tests
                 (_, ee) => LegacyBasicHttpBodyMemberTextBlock.Text = ee.Error?.Message ?? ee.Result;
 
             client.BodyMemberAsync(LegacyBasicHttpBodyMemberTextBox.Text);
+        }
+
+        private void LegacyBinaryEchoButton_OnClick(object sender, RoutedEventArgs e)
+        {
+#if OPENSILVER
+            LegacyBinaryServiceReference.BinaryServiceClient client = new LegacyBinaryServiceReference.BinaryServiceClient(
+                new CustomBinding([new BinaryMessageEncodingBindingElement(),
+                    new HttpTransportBindingElement { MaxBufferSize = 2147483647, MaxReceivedMessageSize = 2147483647 }]),
+                new EndpointAddress(BinaryAddress));
+#else
+            LegacyBinaryServiceReference.BinaryServiceClient client = new LegacyBinaryServiceReference.BinaryServiceClient();
+#endif
+            client.EchoCompleted +=
+                (_, ee) => LegacyBinaryEchoTextBlock.Text = ee.Error?.Message ?? ee.Result;
+            client.EchoAsync(LegacyBinaryEchoTextBox.Text);
+        }
+
+        private void LegacyBinaryBodyMemberButton_OnClick(object sender, RoutedEventArgs e)
+        {
+#if OPENSILVER
+            LegacyBinaryServiceReference.BinaryServiceClient client = new LegacyBinaryServiceReference.BinaryServiceClient(
+                new CustomBinding([new BinaryMessageEncodingBindingElement(),
+                    new HttpTransportBindingElement { MaxBufferSize = 2147483647, MaxReceivedMessageSize = 2147483647 }]),
+                new EndpointAddress(BinaryAddress));
+#else
+            LegacyBinaryServiceReference.BinaryServiceClient client = new LegacyBinaryServiceReference.BinaryServiceClient();
+#endif
+            client.BodyMemberCompleted +=
+                (_, ee) => LegacyBinaryBodyMemberTextBlock.Text = ee.Error?.Message ?? ee.Result;
+            client.BodyMemberAsync(LegacyBinaryBodyMemberTextBox.Text);
         }
 
         #endregion
@@ -104,6 +135,40 @@ namespace TestApplication.Tests
             BasicHttpBodyMemberTextBlock.Text = testString;
         }
 
+#if OPENSILVER
+        private async void BinaryEchoButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            BinaryServiceReference.BinaryServiceClient client = new(
+                new CustomBinding([new BinaryMessageEncodingBindingElement(),
+                    new HttpTransportBindingElement { MaxBufferSize = 2147483647, MaxReceivedMessageSize = 2147483647 }]),
+                new EndpointAddress(BinaryAddress));
+            string testString = await client.EchoAsync(BinaryEchoTextBox.Text);
+#else
+        private void BinaryEchoButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            string testString = "Ignore this case: not possible to add modern ServiceReference in Silverlight.";
+#endif
+            BinaryEchoTextBlock.Text = testString;
+        }
+
+#if OPENSILVER
+        private async void BinaryBodyMemberButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            BinaryServiceReference.BinaryServiceClient client = new(
+                new CustomBinding([new BinaryMessageEncodingBindingElement(),
+                    new HttpTransportBindingElement { MaxBufferSize = 2147483647, MaxReceivedMessageSize = 2147483647 }]),
+                new EndpointAddress(BinaryAddress));
+            BinaryServiceReference.BodyMemberResponseMessage responseMessage =
+                await client.BodyMemberAsync(BinaryBodyMemberTextBox.Text);
+            string testString = responseMessage.BodyMemberResponse;
+#else
+        private void BinaryBodyMemberButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            string testString = "Ignore this case: not possible to add modern ServiceReference in Silverlight.";
+#endif
+            BinaryBodyMemberTextBlock.Text = testString;
+        }
+
         #endregion
 
         #region Custom Client
@@ -112,7 +177,7 @@ namespace TestApplication.Tests
         {
 #if OPENSILVER
             CustomLegacyBasicHttpClient client = new CustomLegacyBasicHttpClient(
-                new CustomBinding(), new EndpointAddress(Address));
+                new CustomBinding(), new EndpointAddress(BasicHttpAddress));
 #else
             CustomLegacyBasicHttpClient client = new CustomLegacyBasicHttpClient();
 #endif
