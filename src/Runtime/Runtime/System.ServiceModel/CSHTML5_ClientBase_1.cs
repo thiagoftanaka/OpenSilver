@@ -219,6 +219,21 @@ namespace System.ServiceModel
 
         public string INTERNAL_RemoteAddressAsString { get; }
 
+        // Headers can be injected to mimic the behavior of OperationContext.Current.OutgoingMessageHeaders.
+        // This is exposed from Client because Channel is protected.
+        private ICollection<MessageHeader> _outgoingMessageHeaders;
+        public ICollection<MessageHeader> OutgoingMessageHeaders
+        {
+            get
+            {
+                if (Channel is ChannelBase<TChannel> channelBase)
+                {
+                    return channelBase.OutgoingMessageHeaders;
+                }
+                return _outgoingMessageHeaders ??= new List<MessageHeader>();
+            }
+        }
+
         /// <summary>
         /// Initializes a new instance of the System.ServiceModel.ClientBase`1
         /// class using the default target endpoint from the application configuration
@@ -492,8 +507,8 @@ namespace System.ServiceModel
                 Action<string> callback,
                 string soapVersion)
             {
-                BeginCallWebMethod(webMethodName, interfaceType, methodReturnType, null, "", originalRequestObject,
-                    callback, soapVersion);
+                BeginCallWebMethod(webMethodName, interfaceType, methodReturnType, null, _client.OutgoingMessageHeaders,
+                    originalRequestObject, callback, soapVersion);
             }
 
             public void BeginCallWebMethod(
@@ -506,7 +521,7 @@ namespace System.ServiceModel
                 string soapVersion)
             {
                 BeginCallWebMethod(webMethodName, interfaceType, methodReturnType, null,
-                    GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), soapVersion), originalRequestObject,
+                    outgoingMessageHeaders, originalRequestObject,
                     callback, soapVersion);
             }
 
@@ -514,21 +529,8 @@ namespace System.ServiceModel
                 string webMethodName,
                 Type interfaceType,
                 Type methodReturnType,
-                string messageHeaders,
-                IDictionary<string, object> originalRequestObject,
-                Action<string> callback,
-                string soapVersion)
-            {
-                BeginCallWebMethod(webMethodName, interfaceType, methodReturnType, null,
-                    messageHeaders, originalRequestObject, callback, soapVersion);
-            }
-
-            public void BeginCallWebMethod(
-                string webMethodName,
-                Type interfaceType,
-                Type methodReturnType,
                 IReadOnlyList<Type> knownTypes,
-                string messageHeaders,
+                IEnumerable<MessageHeader> messageHeaders,
                 IDictionary<string, object> originalRequestObject,
                 Action<string> callback,
                 string soapVersion)
@@ -758,12 +760,10 @@ namespace System.ServiceModel
                 ContractDescription contract = ContractDescriptionProvider.GetContract(interfaceType);
                 OperationDescription operation = contract.Operations.Find(webMethodName);
 
-                string outgoingMessageHeadersString = GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), soapVersion);
-
                 PrepareRequest(
                     operation,
                     null,
-                    outgoingMessageHeadersString,
+                    outgoingMessageHeaders,
                     originalRequestObject,
                     soapVersion,
                     out Dictionary<string, string> headers,
@@ -816,7 +816,7 @@ namespace System.ServiceModel
                 PrepareRequest(
                     operation,
                     null,
-                    "",
+                    _client.OutgoingMessageHeaders,
                     originalRequestObject,
                     soapVersion,
                     out Dictionary<string, string> headers,
@@ -903,7 +903,7 @@ namespace System.ServiceModel
                 PrepareRequest(
                     operation,
                     null,
-                    "",
+                    _client.OutgoingMessageHeaders,
                     originalRequestObject,
                     soapVersion,
                     out Dictionary<string, string> headers,
@@ -991,12 +991,10 @@ namespace System.ServiceModel
                 ContractDescription contract = ContractDescriptionProvider.GetContract(interfaceType);
                 OperationDescription operation = contract.Operations.Find(webMethodName);
 
-                var outgoingMessageHeadersString = GetEnvelopeHeaders(outgoingMessageHeaders?.ToList(), soapVersion);
-
                 PrepareRequest(
                     operation,
                     null,
-                    outgoingMessageHeadersString,
+                    outgoingMessageHeaders,
                     originalRequestObject,
                     soapVersion,
                     out Dictionary<string, string> headers,
@@ -1030,9 +1028,9 @@ namespace System.ServiceModel
                 return (result, incomingMessageHeaders);
             }
 
-            private static string GetEnvelopeHeaders(ICollection<MessageHeader> messageHeaders, string soapVersion)
+            private static string GetEnvelopeHeaders(IEnumerable<MessageHeader> messageHeaders, string soapVersion)
             {
-                if (messageHeaders == null || !messageHeaders.Any())
+                if (messageHeaders == null)
                 {
                     return "";
                 }
@@ -1073,7 +1071,7 @@ namespace System.ServiceModel
             private void PrepareRequest(
                 OperationDescription operation,
                 IReadOnlyList<Type> knownTypes,
-                string envelopeHeaders,
+                IEnumerable<MessageHeader> envelopeHeaders,
                 IDictionary<string, object> requestParameters,
                 string soapVersion,
                 out Dictionary<string, string> headers,
@@ -1090,7 +1088,9 @@ namespace System.ServiceModel
                 {
                     elementAsString = GetBodyContents(message);
 
-                    envelopHeadersString = SerializeMessageHeaders(message.Headers);
+                    MessageHeaders mergedHeaders = MergeHeaders(envelopeHeaders, message);
+
+                    envelopHeadersString = SerializeMessageHeaders(mergedHeaders);
                     soapAction = message.Headers.Action;
                 }
                 else
@@ -1143,7 +1143,7 @@ namespace System.ServiceModel
                     }
 
                     elementAsString = bodyBuilder.ToString();
-                    envelopHeadersString = envelopeHeaders;
+                    envelopHeadersString = GetEnvelopeHeaders(envelopeHeaders, soapVersion);
                     soapAction = operation.Messages[0].Action;
                 }
 
@@ -1183,6 +1183,22 @@ namespace System.ServiceModel
                     }
                 }
                 return envelopHeadersStringBuilder.ToString();
+            }
+
+            private static MessageHeaders MergeHeaders(IEnumerable<MessageHeader> envelopeHeaders, Message message)
+            {
+                MessageHeaders mergedHeaders = new MessageHeaders(message.Headers);
+                foreach (MessageHeader envelopeHeader in envelopeHeaders)
+                {
+                    if (message.Headers.FindHeader(envelopeHeader.Name, envelopeHeader.Namespace) == -1)
+                    {
+                        mergedHeaders.Add(envelopeHeader);
+                    }
+                }
+                // These will be added manually on request string
+                mergedHeaders.RemoveAll(MessageStrings.Action, MessageStrings.NamespaceAddressing10);
+                mergedHeaders.RemoveAll(MessageStrings.To, MessageStrings.NamespaceAddressing10);
+                return mergedHeaders;
             }
 
             private static string GetBodyContents(Message message)
@@ -1706,6 +1722,9 @@ namespace System.ServiceModel
         {
             private CSHTML5_ClientBase<T> _client;
 
+            // Alternative to OperationContext.Current.OutgoingMessageHeaders in Silverlight to add Headers to a Channel in runtime.
+            internal ICollection<MessageHeader> OutgoingMessageHeaders { get; } = new List<MessageHeader>();
+
             /// <summary>
             /// Initializes a new instance of the <see cref="System.ServiceModel.ClientBase{TChannel}.ChannelBase{T}"/>
             /// class from an existing instance of the class.
@@ -1752,7 +1771,7 @@ namespace System.ServiceModel
                     methodName,
                     typeof(IAsyncResult),
                     null,
-                    "",
+                    OutgoingMessageHeaders,
                     parameters,
                     soapVersion,
                     _client);
