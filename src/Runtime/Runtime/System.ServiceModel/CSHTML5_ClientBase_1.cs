@@ -218,6 +218,16 @@ namespace System.ServiceModel
 
         public string INTERNAL_RemoteAddressAsString { get; }
 
+        // Headers can be injected to mimic the behavior of OperationContext.Current.OutgoingMessageHeaders.
+        private ICollection<MessageHeader> _outgoingMessageHeaders;
+        public ICollection<MessageHeader> OutgoingMessageHeaders
+        {
+            get
+            {
+                return _outgoingMessageHeaders ??= new List<MessageHeader>();
+            }
+        }
+
         /// <summary>
         /// Initializes a new instance of the System.ServiceModel.ClientBase`1
         /// class using the default target endpoint from the application configuration
@@ -990,24 +1000,27 @@ namespace System.ServiceModel
                     .Find<BinaryMessageEncodingBindingElement>();
                 bool isBinaryBinding = binaryBindingElement != null;
 
+                string outgoingMessageHeaders = GetEnvelopeHeaders(_client.OutgoingMessageHeaders, soapVersion);
+
                 switch (soapVersion)
                 {
                     case "1.1":
                         headers.Add("Content-Type", "text/xml; charset=utf-8");
                         headers.Add("SOAPAction", soapAction);
 
-                        if (!string.IsNullOrEmpty(envelopeHeaders))
+                        string xmlHeaders = string.Empty;
+                        if (!string.IsNullOrEmpty(envelopeHeaders) || !string.IsNullOrEmpty(outgoingMessageHeaders))
                         {
-                            envelopeHeaders = "<s:Header>" + envelopeHeaders + "</s:Header>";
+                            xmlHeaders = $"<s:Header>{envelopeHeaders}{outgoingMessageHeaders}</s:Header>";
                         }
 
-                        request = $"<s:Envelope xmlns:s=\"{MessageStrings.SOAP11.Namespace}\">{(envelopeHeaders ?? string.Empty)}<s:Body>{elementAsString}</s:Body></s:Envelope>";
+                        request = $"<s:Envelope xmlns:s=\"{MessageStrings.SOAP11.Namespace}\">{xmlHeaders}<s:Body>{elementAsString}</s:Body></s:Envelope>";
                         break;
 
                     case "1.2":
                         headers.Add("Content-Type", isBinaryBinding ? "application/soap+msbin1" : "application/soap+xml; charset=utf-8");
 
-                        request = $"<s:Envelope xmlns:a=\"{MessageStrings.NamespaceAddressing10}\" xmlns:s=\"{MessageStrings.SOAP12.Namespace}\"><s:Header><a:Action>{soapAction}</a:Action>{envelopeHeaders ?? string.Empty}<a:To>{_client.Endpoint.Address.Uri}</a:To></s:Header><s:Body>{elementAsString}</s:Body></s:Envelope>";
+                        request = $"<s:Envelope xmlns:a=\"{MessageStrings.NamespaceAddressing10}\" xmlns:s=\"{MessageStrings.SOAP12.Namespace}\"><s:Header><a:Action>{soapAction}</a:Action>{envelopeHeaders ?? string.Empty}{outgoingMessageHeaders}<a:To>{_client.Endpoint.Address.Uri}</a:To></s:Header><s:Body>{elementAsString}</s:Body></s:Envelope>";
                         break;
 
                     default:

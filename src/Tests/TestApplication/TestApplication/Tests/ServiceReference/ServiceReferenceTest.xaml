@@ -15,6 +15,8 @@
 
         <TextBlock Text="Enter message:" HorizontalAlignment="Center" Margin="0,20,0,0"/>
         <TextBox Name="LegacyBasicHttpBodyMemberTextBox" Width="300"/>
+        <TextBlock Text="Enter custom header:" HorizontalAlignment="Center"/>
+        <TextBox Name="LegacyBasicHttpHeaderTextBox" Width="300"/>
         <Button Content="Legacy BasicHttp BodyMember()" Click="LegacyBasicHttpBodyMemberButton_OnClick" Width="350"/>
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="LegacyBasicHttpBodyMemberTextBlock" HorizontalAlignment="Center"/>
@@ -47,6 +49,8 @@
 
         <TextBlock Text="Enter message:" HorizontalAlignment="Center" Margin="0,20,0,0"/>
         <TextBox Name="BasicHttpBodyMemberTextBox" Width="300"/>
+        <TextBlock Text="Enter custom header:" HorizontalAlignment="Center"/>
+        <TextBox Name="BasicHttpHeaderTextBox" Width="300"/>
         <Button Content="BasicHttp BodyMember()" Click="BasicHttpBodyMemberButton_OnClick" Width="350"/>
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="BasicHttpBodyMemberTextBlock" HorizontalAlignment="Center"/>
@@ -67,6 +71,8 @@
 
         <TextBlock Text="Enter message:" HorizontalAlignment="Center" Margin="0,20,0,0"/>
         <TextBox Name="CustomLegacyBasicHttpBodyMemberTextBox" Width="300"/>
+        <TextBlock Text="Enter custom Message header:" HorizontalAlignment="Center"/>
+        <TextBox Name="CustomLegacyBasicHttpHeaderTextBox" Width="300"/>
         <Button Content="Custom Client Legacy BasicHttp BodyMember()" Click="CustomLegacyBasicHttpBodyMemberButton_OnClick" Width="350"/>
         <TextBlock Text="Result:" HorizontalAlignment="Center"/>
         <TextBlock Name="CustomBasicHttpBodyMemberTextBlock" HorizontalAlignment="Center"/>

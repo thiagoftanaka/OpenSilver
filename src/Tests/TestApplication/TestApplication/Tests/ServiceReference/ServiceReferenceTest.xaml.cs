@@ -12,6 +12,8 @@
 \*====================================================================================*/
 
 
+using System.Collections.Generic;
+using System.Reflection;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
 using System.Windows;
@@ -52,11 +54,35 @@ namespace TestApplication.Tests
                 new CustomBinding(), new EndpointAddress(BasicHttpAddress));
 #else
             LegacyBasicHttpServiceReference.BasicHttpServiceClient client = new LegacyBasicHttpServiceReference.BasicHttpServiceClient();
+
+            using (new System.ServiceModel.OperationContextScope(client.InnerChannel))
+            {
 #endif
+            if (!string.IsNullOrEmpty(LegacyBasicHttpHeaderTextBox.Text))
+            {
+                MessageHeader customHeader =
+                    MessageHeader.CreateHeader("CustomHeader", "", LegacyBasicHttpHeaderTextBox.Text);
+
+#if OPENSILVER
+                // The client only inherits from CSHTML5_ClientBase after compilation, 
+                // so reflection is used here to access its members.
+                PropertyInfo outgoingMessageHeadersProperty = client.GetType().GetProperty("OutgoingMessageHeaders");
+                ICollection<MessageHeader> outgoingMessageHeaders =
+                    (ICollection<MessageHeader>)outgoingMessageHeadersProperty.GetValue(client);
+                outgoingMessageHeaders.Add(customHeader);
+#else
+                    System.ServiceModel.OperationContext.Current.OutgoingMessageHeaders.Add(customHeader);
+#endif
+            }
+
             client.BodyMemberCompleted +=
                 (_, ee) => LegacyBasicHttpBodyMemberTextBlock.Text = ee.Error?.Message ?? ee.Result;
 
             client.BodyMemberAsync(LegacyBasicHttpBodyMemberTextBox.Text);
+
+#if !OPENSILVER
+            }
+#endif
         }
 
         private void LegacyBinaryEchoButton_OnClick(object sender, RoutedEventArgs e)
@@ -110,7 +136,7 @@ namespace TestApplication.Tests
         private async void BasicHttpEndpointConfigEchoButton_OnClick(object sender, RoutedEventArgs e)
         {
             BasicHttpServiceReference.BasicHttpServiceClient client = new(
-                    BasicHttpServiceReference.BasicHttpServiceClient.EndpointConfiguration.BasicHttpBinding_BasicHttpService);
+                BasicHttpServiceReference.BasicHttpServiceClient.EndpointConfiguration.BasicHttpBinding_BasicHttpService);
             string testString = await client.EchoAsync(BasicHttpEndpointConfigEchoTextBox.Text);
 #else
         private void BasicHttpEndpointConfigEchoButton_OnClick(object sender, RoutedEventArgs e)
@@ -124,6 +150,19 @@ namespace TestApplication.Tests
         private async void BasicHttpBodyMemberButton_OnClick(object sender, RoutedEventArgs e)
         {
             BasicHttpServiceReference.BasicHttpServiceClient client = new();
+
+            if (!string.IsNullOrEmpty(BasicHttpHeaderTextBox.Text))
+            {
+                MessageHeader customHeader = MessageHeader.CreateHeader("CustomHeader", "", BasicHttpHeaderTextBox.Text);
+
+                // The client only inherits from CSHTML5_ClientBase after compilation, 
+                // so reflection is used here to access its members.
+                PropertyInfo outgoingMessageHeadersProperty = client.GetType().GetProperty("OutgoingMessageHeaders");
+                ICollection<MessageHeader> outgoingMessageHeaders =
+                    (ICollection<MessageHeader>)outgoingMessageHeadersProperty.GetValue(client);
+                outgoingMessageHeaders.Add(customHeader);
+            }
+
             BasicHttpServiceReference.BodyMemberResponseMessage responseMessage =
                 await client.BodyMemberAsync(BasicHttpBodyMemberTextBox.Text);
             string testString = responseMessage.BodyMemberResponse;
@@ -180,11 +219,30 @@ namespace TestApplication.Tests
                 new CustomBinding(), new EndpointAddress(BasicHttpAddress));
 #else
             CustomLegacyBasicHttpClient client = new CustomLegacyBasicHttpClient();
+
+            using (new System.ServiceModel.OperationContextScope(client.InnerChannel))
+            {
 #endif
+            if (!string.IsNullOrEmpty(CustomLegacyBasicHttpHeaderTextBox.Text))
+            {
+                MessageHeader customHeader =
+                    MessageHeader.CreateHeader("CustomHeader", "", CustomLegacyBasicHttpHeaderTextBox.Text);
+
+#if OPENSILVER
+                client.OutgoingMessageHeaders.Add(customHeader);
+#else
+                System.ServiceModel.OperationContext.Current.OutgoingMessageHeaders.Add(customHeader);
+#endif
+            }
+
             client.BodyMemberCompleted +=
                 (_, ee) => CustomBasicHttpBodyMemberTextBlock.Text = ee.Error?.Message ?? ee.Result;
             // Tests if headers from the Message instance are sent
             client.BodyMemberAsync(CustomLegacyBasicHttpBodyMemberTextBox.Text);
+#if !OPENSILVER
+            }
+#endif
+
         }
 
         #endregion
