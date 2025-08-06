@@ -14,6 +14,7 @@
 
 using System.ServiceModel;
 using System.ServiceModel.Activation;
+using System.Xml;
 
 namespace TestApplication.Silverlight.Web
 {
@@ -30,9 +31,20 @@ namespace TestApplication.Silverlight.Web
         [OperationContract]
         public BodyMemberResponseMessage BodyMember(BodyMemberRequestMessage message)
         {
+            int headerIndex = OperationContext.Current.IncomingMessageHeaders.FindHeader("CustomHeader", "");
+            string headerContent = null;
+            if (headerIndex != -1)
+            {
+                using (XmlDictionaryReader xmlDictionaryReader = OperationContext.Current.IncomingMessageHeaders
+                           .GetReaderAtHeader(headerIndex))
+                {
+                    headerContent = xmlDictionaryReader.ReadString();
+                }
+            }
+
             return new BodyMemberResponseMessage
             {
-                Response = $"BodyMember response to '{message.Request}'."
+                Response = $"BodyMember response to '{message.Request}'. Custom header: {(headerIndex != -1 ? headerContent : "no custom header")}"
             };
         }
     }

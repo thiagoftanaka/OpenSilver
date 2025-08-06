@@ -13,6 +13,7 @@
 \*====================================================================================*/
 
 using System.Collections.Generic;
+using System.ServiceModel.Channels;
 using System.Threading.Tasks;
 
 namespace System.ServiceModel
@@ -156,7 +157,7 @@ namespace System.ServiceModel
             string webMethodName,
             Type methodReturnType,
             IReadOnlyList<Type> knownTypes,
-            string messageHeaders,
+            IEnumerable<MessageHeader> messageHeaders,
             IDictionary<string, object> requestParameters,
             string soapVersion,
             CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
@@ -207,39 +208,19 @@ namespace System.ServiceModel
         }
 
         public static IAsyncResult BeginCallWebMethod<INTERFACE_TYPE>(
-            string endpointAddress,
-            string webMethodName,
-            Type methodReturnType,
-            string messageHeaders,
-            IDictionary<string, object> requestParameters,
-            string soapVersion,
-            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
+           string endpointAddress,
+           string webMethodName,
+           Type methodReturnType,
+           IDictionary<string, object> requestParameters,
+           string soapVersion,
+           CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
         {
             return BeginCallWebMethod<INTERFACE_TYPE>(
                 endpointAddress,
                 webMethodName,
                 methodReturnType,
                 null,
-                messageHeaders,
-                requestParameters,
-                soapVersion,
-                client);
-        }
-
-        public static IAsyncResult BeginCallWebMethod<INTERFACE_TYPE>(
-            string endpointAddress,
-            string webMethodName,
-            Type methodReturnType,
-            IDictionary<string, object> requestParameters,
-            string soapVersion,
-            CSHTML5_ClientBase<INTERFACE_TYPE> client) where INTERFACE_TYPE : class
-        {
-            return BeginCallWebMethod<INTERFACE_TYPE>(
-                endpointAddress,
-                webMethodName,
-                methodReturnType,
-                null,
-                "",
+                client.OutgoingMessageHeaders,
                 requestParameters,
                 soapVersion,
                 client);
@@ -257,7 +238,7 @@ namespace System.ServiceModel
                 webMethodName,
                 typeof(RETURN_TYPE),
                 null,
-                "",
+                client.OutgoingMessageHeaders,
                 requestParameters,
                 soapVersion,
                 client);
