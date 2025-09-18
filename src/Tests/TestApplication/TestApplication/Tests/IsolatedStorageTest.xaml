@@ -10,46 +10,89 @@
             <StackPanel Orientation="Vertical">
                 <Border BorderBrush="White" BorderThickness="1">
                     <StackPanel Orientation="Vertical">
-                        <TextBlock Text="Testing IsolatedStorageFile:" Margin="0,0,0,10"/>
-                        <TextBlock Text="Path to the file in the IsolatedStorage:"/>
+                        <TextBlock Text="Testing IsolatedStorageFile (ApplicationSettings):" Margin="0,0,0,10"/>
+                        <TextBlock Text="Path to the file in the Application IsolatedStorage:"/>
                         <TextBox Text="MyFilePath" x:Name="TextBoxWithIsolatedStorageFilePath"/>
-                        <TextBlock Text="TextBox containing the text of the file to add to the IsolatedStorage:"/>
+                        <TextBlock Text="TextBox containing the text of the file to add to the Application IsolatedStorage:"/>
                         <TextBox Text="Hello World!" x:Name="TextBoxWithNewTextForIsolatedStorage" Canvas.Left="20" Canvas.Top="30"/>
-                        <Button Content="Save to isolatedStorage" Click="ButtonSaveToIsolatedStorage_Click"/>
-                        <Button Content="Load from isolated storage" Click="ButtonLoadFromIsolatedStorage_Click"/>
-                        <Button Content="Delete from isolated storage" Click="ButtonDeleteFromIsolatedStorage_Click"/>
-                        <TextBlock Name="TextBlockWithLoadedText" Text="This TextBlock will contain the Text loaded from the IsolatedStorage"/>
+                        <Button Content="Save to Application isolatedStorage" Click="ButtonSaveToIsolatedStorage_Click"/>
+                        <Button Content="Load from Application isolated storage" Click="ButtonLoadFromIsolatedStorage_Click"/>
+                        <Button Content="Delete from Application isolated storage" Click="ButtonDeleteFromIsolatedStorage_Click"/>
+                        <TextBlock Name="TextBlockWithApplicationLoadedText" Text="This TextBlock will contain the Text loaded from the Application IsolatedStorage"/>
                     </StackPanel>
                 </Border>
                 <Border BorderBrush="White" BorderThickness="1" Margin="0,10,0,0">
                     <StackPanel Orientation="Vertical">
-                        <TextBlock Text="Testing IsolatedStorageSettings:" Margin="0,0,0,10"/>
+                        <TextBlock Text="Testing IsolatedStorageSettings (ApplicationSettings):" Margin="0,0,0,10"/>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Key:"/>
-                            <TextBox Text="My Key" x:Name="TextBoxWithIsolatedStorageSettingsKey"/>
+                            <TextBox Text="My Application Key" x:Name="TextBoxWithIsolatedStorageSettingsKey"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Value associated to the key:"/>
-                            <TextBox Text="My Value" x:Name="TextBoxWithIsolatedStorageSettingsValue" Canvas.Left="20" Canvas.Top="30"/>
+                            <TextBox Text="My Application Value" x:Name="TextBoxWithIsolatedStorageSettingsValue" Canvas.Left="20" Canvas.Top="30"/>
                         </StackPanel>
-                        <Button Content="Save to isolatedStorage" Click="ButtonSaveToIsolatedStorageSettings_Click"/>
-                        <Button Content="Save to isolatedStorage using 'Add'" Click="ButtonSaveToIsolatedStorageSettingsWithAdd_Click"/>
-                        <Button Content="Remove from isolated storage" Click="ButtonRemoveFromIsolatedStorageSettings_Click"/>
-                        <Button Content="Load from isolated storage" Click="ButtonLoadFromIsolatedStorageSettings_Click"/>
-                        <Button Content="Load from isolated storage (using TryGetValue)" Click="ButtonLoadFromIsolatedStorageUsingTryGetValue_Click"/>
+                        <Button Content="Clear isolatedStorage (ApplicationSettings)" Click="ButtonClearIsolatedStorageSettings_Click"/>
+                        <Button Content="Save to Application isolatedStorage" Click="ButtonSaveToIsolatedStorageSettings_Click"/>
+                        <Button Content="Save to Application isolatedStorage using 'Add'" Click="ButtonSaveToIsolatedStorageSettingsWithAdd_Click"/>
+                        <Button Content="Remove from Application isolated storage" Click="ButtonRemoveFromIsolatedStorageSettings_Click"/>
+                        <Button Content="Load from Application isolated storage" Click="ButtonLoadFromIsolatedStorageSettings_Click"/>
+                        <Button Content="Load from Application isolated storage (using TryGetValue)" Click="ButtonLoadFromIsolatedStorageUsingTryGetValue_Click"/>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Amount of elements in local storage settings:"/>
-                            <TextBlock Name="TextBlockWithIsolatedStorageSettingsElementsCount" Text="Click 'Load from isolated storage'" Margin="5,0,0,0"/>
+                            <TextBlock Text="Amount of elements in Application local storage settings:"/>
+                            <TextBlock Name="TextBlockWithIsolatedStorageSettingsElementsCount" Text="Click 'Load from Application isolated storage'" Margin="5,0,0,0"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Elements in LocalStorageSettings at last Load:"/>
-                            <TextBlock Name="TextBlockWithIsolatedStorageSettingsElements" Text="Click 'Load from isolated storage'" Margin="5,0,0,0"/>
+                            <TextBlock Text="Elements in Application LocalStorageSettings at last Load:"/>
+                            <TextBlock Name="TextBlockWithIsolatedStorageSettingsElements" Text="Click 'Load from Application isolated storage'" Margin="5,0,0,0"/>
                         </StackPanel>
-                        <TextBlock Name="TextBlockWithIsolatedStorageSettingsLoadedText" Text="This TextBlock will contain the Text loaded from the IsolatedStorageSettings"/>
+                        <TextBlock Name="TextBlockWithIsolatedStorageSettingsLoadedText" Text="This TextBlock will contain the Text loaded from the Application IsolatedStorageSettings"/>
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="White" BorderThickness="1" Margin="0,10,0,0">
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="Testing IsolatedStorageFile (SiteSettings):" Margin="0,0,0,10"/>
+                        <TextBlock Text="Path to the file in the Site IsolatedStorage:"/>
+                        <TextBox Text="MyFilePath" x:Name="TextBoxWithSiteIsolatedStorageFilePath"/>
+                        <TextBlock Text="TextBox containing the text of the file to add to the SiteIsolatedStorage:"/>
+                        <TextBox Text="Hello World!" x:Name="TextBoxWithNewTextForSiteIsolatedStorage" Canvas.Left="20" Canvas.Top="30"/>
+                        <Button Content="Save to Site isolatedStorage" Click="ButtonSaveToSiteIsolatedStorage_Click"/>
+                        <Button Content="Load from Site isolated storage" Click="ButtonLoadFromSiteIsolatedStorage_Click"/>
+                        <Button Content="Delete from Site isolated storage" Click="ButtonDeleteFromSiteIsolatedStorage_Click"/>
+                        <TextBlock Name="TextBlockWithSiteLoadedText" Text="This TextBlock will contain the Text loaded from the Site IsolatedStorage"/>
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="White" BorderThickness="1" Margin="0,10,0,0">
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="Testing IsolatedStorageSettings (SiteSettings):" Margin="0,0,0,10"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Key:"/>
+                            <TextBox Text="My Site Key" x:Name="TextBoxWithSiteIsolatedStorageSettingsKey"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Value associated to the key:"/>
+                            <TextBox Text="My Site Value" x:Name="TextBoxWithSiteIsolatedStorageSettingsValue" Canvas.Left="20" Canvas.Top="30"/>
+                        </StackPanel>
+                        <Button Content="Clear isolatedStorage (SiteSettings)" Click="ButtonClearSiteIsolatedStorageSettings_Click"/>
+                        <Button Content="Save to Site isolatedStorage (SiteSettings)" Click="ButtonSaveToSiteIsolatedStorageSettings_Click"/>
+                        <Button Content="Save to Site isolatedStorage (SiteSettings) using 'Add'" Click="ButtonSaveToSiteIsolatedStorageSettingsWithAdd_Click"/>
+                        <Button Content="Remove from Site isolated storage" Click="ButtonRemoveFromSiteIsolatedStorageSettings_Click"/>
+                        <Button Content="Load from Site isolated storage" Click="ButtonLoadFromSiteIsolatedStorageSettings_Click"/>
+                        <Button Content="Load from Site isolated storage (using TryGetValue)" Click="ButtonLoadFromSiteIsolatedStorageUsingTryGetValue_Click"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Amount of elements in Site local storage settings:"/>
+                            <TextBlock Name="TextBlockWithSiteIsolatedStorageSettingsElementsCount" Text="Click 'Load from Site isolated storage'" Margin="5,0,0,0"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Elements in Site LocalStorageSettings at last Load:"/>
+                            <TextBlock Name="TextBlockWithSiteIsolatedStorageSettingsElements" Text="Click 'Load from Site isolated storage'" Margin="5,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock Name="TextBlockWithSiteIsolatedStorageSettingsLoadedText" Text="This TextBlock will contain the Text loaded from the Site IsolatedStorageSettings"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
         </Border>
-        <TextBlock Foreground="Red">The test doesn't work. IsolatedStorage cannot be verified at the moment.</TextBlock>
     </StackPanel>
 </sdk:Page>

@@ -184,9 +184,12 @@ internal static class UIElementHelpers
 
     internal static void SetInnerText(this UIElement uie, string text)
     {
+        string textWithoutInvisibleCharacters = INTERNAL_HtmlDomManager.ReplaceInvisibleCharacters(text);
+        string escapedText = INTERNAL_HtmlDomManager.EscapeStringForUseInJavaScript(textWithoutInvisibleCharacters);
+
         INTERNAL_HtmlDomManager.SetDomElementProperty(uie.OuterDiv,
             "innerText",
-            INTERNAL_HtmlDomManager.EscapeStringForUseInJavaScript(text));
+            escapedText);
     }
 
     internal static void SetDirection(this UIElement uie, FlowDirection flowDirection)

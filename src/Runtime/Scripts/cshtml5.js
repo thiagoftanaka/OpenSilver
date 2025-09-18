@@ -271,6 +271,7 @@ document.createShape = function (svgTagName, svgId, shapeId, defsId, parentId) {
         writable: false,
     });
     svg.appendChild(shape);
+    document.inputManager.addListeners(shape, false);
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     defs.setAttribute('id', defsId);
     svg.appendChild(defs);
@@ -1166,6 +1167,16 @@ document.createTextviewManager = function (inputCallback, scrollCallback, select
                 inputCallback(id);
             });
 
+            view.addEventListener('copy', function (e) {
+                let selection = document.getSelection().toString();
+
+                if (selection !== undefined && selection.includes('\u2010')) {
+                    e.preventDefault();
+                    selection = selection.replace(/\u2010/g, '\u00AD');
+                    (e.originalEvent || e).clipboardData.setData('text/plain', selection);
+                }
+            });
+
             view.addEventListener('scroll', function (e) {
                 scrollCallback(id);
             });
@@ -1655,6 +1666,16 @@ document.createRichTextViewManager = function (selectionChangedCallback, content
                 }, 0, this);
             });
 
+            view.addEventListener('copy', function (e) {
+                let selection = document.getSelection().toString();
+
+                if (selection !== undefined && selection.includes('\u2010')) {
+                    e.preventDefault();
+                    selection = selection.replace(/\u2010/g, '\u00AD');
+                    (e.originalEvent || e).clipboardData.setData('text/plain', selection);
+                }
+            });
+
             const ql = new Quill(view, Options);
 
             // we can't use the 'selection-change' event because it does not fire when the user types in the editor
@@ -1667,6 +1688,26 @@ document.createRichTextViewManager = function (selectionChangedCallback, content
                 }
             });
             ql.on('text-change', function (delta, oldDelta, source) {
+                if (source === 'silent') return;
+
+                const newContents = ql.getContents()
+                    .map((op) => {
+                        if (typeof op.insert === 'string') {
+                            // Replacing soft hyphens with placeholders (hyphen)
+                            op.insert = op.insert.replaceAll('\u00AD', '\u2010');
+                        }
+                        return op;
+                    });
+
+                // Wrap update in queue to avoid jitteriness
+                queueMicrotask(() => {
+                    const selection = ql.getSelection();
+                    ql.setContents(newContents, 'silent');
+                    if (selection) {
+                        ql.setSelection(selection.index, 0, 'silent');
+                    }
+                });
+
                 if (source === Quill.sources.USER) {
                     contentChangedCallback(id);
                 }

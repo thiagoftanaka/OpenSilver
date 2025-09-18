@@ -17,6 +17,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Input;
+using CSHTML5;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
 using OpenSilver.Internal.Controls;

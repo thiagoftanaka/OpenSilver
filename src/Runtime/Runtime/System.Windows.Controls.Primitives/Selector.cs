@@ -1146,7 +1146,10 @@ namespace System.Windows.Controls.Primitives
         {
             if (ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated)
             {
-                AdjustNewContainers();
+                Application.Current.RootVisual.Dispatcher.BeginInvoke(() =>
+                {
+                    AdjustNewContainers();
+                });
             }
         }
 

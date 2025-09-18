@@ -167,7 +167,8 @@ internal sealed class RichTextBoxView : TextViewBase
             return string.Empty;
         }
 
-        return Interop.ExecuteJavaScriptString($"document.richTextViewManager.getSelectedText('{OuterDiv.UniqueIdentifier}')");
+        string nativeSelectedText = Interop.ExecuteJavaScriptString($"document.richTextViewManager.getSelectedText('{OuterDiv.UniqueIdentifier}')");
+        return INTERNAL_HtmlDomManager.RestoreInvisibleCharacters(nativeSelectedText);
     }
 
     internal int GetContentLength()
@@ -606,7 +607,9 @@ internal sealed class RichTextBoxView : TextViewBase
         return Interop.ExecuteJavaScriptString($"document.richTextViewManager.getContents('{OuterDiv.UniqueIdentifier}')") switch
         {
             "" or null => Array.Empty<QuillDelta>(),
-            string contents => JsonSerializer.Deserialize<QuillDelta[]>(contents, SerializerOptions),
+            string contents => JsonSerializer.Deserialize<QuillDelta[]>(
+                INTERNAL_HtmlDomManager.RestoreInvisibleCharacters(contents),
+                SerializerOptions),
         };
     }
 
@@ -620,7 +623,9 @@ internal sealed class RichTextBoxView : TextViewBase
         return Interop.ExecuteJavaScriptString($"document.richTextViewManager.getContents('{OuterDiv.UniqueIdentifier}', {start.ToInvariantString()}, {length.ToInvariantString()})") switch
         {
             "" or null => Array.Empty<QuillDelta>(),
-            string contents => JsonSerializer.Deserialize<QuillDelta[]>(contents, SerializerOptions),
+            string contents => JsonSerializer.Deserialize<QuillDelta[]>(
+                INTERNAL_HtmlDomManager.RestoreInvisibleCharacters(contents),
+                SerializerOptions)
         };
     }
 

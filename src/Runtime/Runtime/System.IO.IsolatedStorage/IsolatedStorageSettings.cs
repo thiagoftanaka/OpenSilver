@@ -36,6 +36,9 @@ namespace System.IO.IsolatedStorage
     public sealed partial class IsolatedStorageSettings : IEnumerable, IEnumerable<KeyValuePair<string, object>>
     {
         private static IsolatedStorageSettings _applicationSettings;
+        private static IsolatedStorageSettings _domainSettings;
+
+        private AppDomain _appDomain;
 
         private readonly string _fullApplicationName;
         private readonly string _keyPrefix;
@@ -50,6 +53,13 @@ namespace System.IO.IsolatedStorage
         {
             _fullApplicationName = Application.Current.ToString();
             _keyPrefix = $"storage_{_fullApplicationName}_settings_";
+        }
+
+        private IsolatedStorageSettings(AppDomain appDomain)
+        {
+            _fullApplicationName = Application.Current.ToString();
+            _keyPrefix = $"storage_{_fullApplicationName}_settings_";
+            _appDomain = appDomain;
         }
 
         /// <summary>
@@ -116,7 +126,8 @@ namespace System.IO.IsolatedStorage
         ////     the contents of the application's System.IO.IsolatedStorage.IsolatedStorageFile,
         ////     scoped at the domain level. If an instance does not already exist, a new
         ////     instance is created.
-        //public static IsolatedStorageSettings SiteSettings { get; }
+        public static IsolatedStorageSettings SiteSettings =>
+            _domainSettings ??= new IsolatedStorageSettings(AppDomain.CurrentDomain);
 
         /// <summary>
         /// Gets a collection that contains the values in the dictionary.

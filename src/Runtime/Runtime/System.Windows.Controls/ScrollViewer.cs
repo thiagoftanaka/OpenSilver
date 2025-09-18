@@ -12,6 +12,7 @@
 \*====================================================================================*/
 
 using System.Diagnostics;
+using System.Linq;
 using System.Windows.Input;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls.Primitives;
@@ -66,6 +67,8 @@ namespace System.Windows.Controls
             EventManager.RegisterClassHandler<ScrollViewer>(PreviewMouseLeftButtonUpEvent, new MouseButtonEventHandler(OnTouchEndThunk), true);
             EventManager.RegisterClassHandler<ScrollViewer>(Mouse.MouseMoveEvent, new MouseEventHandler(OnTouchMoveThunk), true);
         }
+
+        private bool _hasHandlesScrollingDescendant = false;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ScrollViewer"/> class.
@@ -871,7 +874,11 @@ namespace System.Windows.Controls
         {
             base.OnKeyDown(e);
 
-            if (ScrollInfo is not null && !e.Handled && !TemplatedParentHandlesScrolling)
+            if (ScrollInfo is not null && !e.Handled && !TemplatedParentHandlesScrolling &&
+                // This marks KeyDown and Handled and thus can preventDefault() keyboard events in richtextbox in JS.
+                // TemplatedParentHandlesScrolling does not work on all scenarios where there are several layers of ContentTemplates.
+                // This solution traverses down to see if any Control already HandlesScrolling.
+                !_hasHandlesScrollingDescendant)
             {
                 // Parent is not going to handle scrolling; do so here 
                 bool control = ModifierKeys.Control == (Keyboard.Modifiers & ModifierKeys.Control);
@@ -1077,6 +1084,8 @@ namespace System.Windows.Controls
             {
                 _invalidatedMeasureFromArrange = MeasureDirty;
             }
+
+            _hasHandlesScrollingDescendant = this.GetLogicalDescendents().OfType<Control>().Any(c => c.HandlesScrolling);
 
             return size;
         }

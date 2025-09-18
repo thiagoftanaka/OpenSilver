@@ -29,6 +29,9 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
 {
     public static class INTERNAL_HtmlDomManager // Note: this class is "internal" but still visible to the Simulator because of the "InternalsVisibleTo" flag in "Assembly.cs".
     {
+        internal const char SoftHyphen = (char)173;
+        internal const char SoftHyphenPlaceholder = (char)8208;
+
         //------
         // All JavaScript functions (called through dynamic objects) for manipulating the DOM should go here.
         //------
@@ -520,6 +523,7 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
             for (i = 0; i < len; i += 1)
             {
                 char c = s[i];
+
                 switch (c)
                 {
                     case '\\':
@@ -682,6 +686,18 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
             }
 
             return new Size();
+        }
+
+        internal static string ReplaceInvisibleCharacters(string text)
+        {
+            // Soft hyphen (dec 173 in Unicode) does not display a visible symbol on modern browsers, but
+            // shows a regular hyphen in Silverlight. A placeholder of a hyphen symbol is used to approximate Silverlight.
+            return text.Replace(SoftHyphen, SoftHyphenPlaceholder);
+        }
+
+        internal static string RestoreInvisibleCharacters(string text)
+        {
+            return text.Replace(SoftHyphenPlaceholder, SoftHyphen);
         }
     }
 }

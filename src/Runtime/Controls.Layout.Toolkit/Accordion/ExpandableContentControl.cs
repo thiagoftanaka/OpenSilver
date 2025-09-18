@@ -322,11 +322,10 @@ namespace System.Windows.Controls.Primitives
         /// <param name="arrangeSize">Size of the visible part of the control.</param>
         private void UpdateClip(Size arrangeSize)
         {
-            if (Clip != _clippingRectangle)
+            Clip = new RectangleGeometry
             {
-                Clip = _clippingRectangle;
-            }
-            _clippingRectangle.Rect = new Rect(0.0, 0.0, arrangeSize.Width, arrangeSize.Height);
+                Rect = new Rect(0.0, 0.0, arrangeSize.Width, arrangeSize.Height)
+            };
         }
 
         /// <summary>
@@ -365,7 +364,7 @@ namespace System.Windows.Controls.Primitives
             if (IsHorizontalRevealMode)
             {
                 double targetWidth = TargetSize.Width;
-                if (Double.IsNaN(targetWidth))
+                if (Double.IsNaN(targetWidth) && ContentSite.ActualWidth != 0)
                 {
                     // NaN has the same meaning as autosize, which in this context means the desired size
                     targetWidth = ContentSite.DesiredSize.Width;
@@ -377,7 +376,7 @@ namespace System.Windows.Controls.Primitives
             if (IsVerticalRevealMode)
             {
                 double targetHeight = TargetSize.Height;
-                if (Double.IsNaN(targetHeight))
+                if (Double.IsNaN(targetHeight) && ContentSite.ActualHeight != 0)
                 {
                     // NaN has the same meaning as autosize, which in this context means the desired size
                     targetHeight = ContentSite.DesiredSize.Height;
@@ -429,7 +428,6 @@ namespace System.Windows.Controls.Primitives
         public ExpandableContentControl()
         {
             _clippingRectangle = new RectangleGeometry();
-            Clip = _clippingRectangle;
         }
 
         /// <summary>

@@ -273,8 +273,6 @@ namespace System.Windows.Controls
             PopupChild.MinHeight = 0;
             PopupChild.MaxHeight = Math.Max(0, popupMaxHeight);
 
-            PopupChild.Width = popupContentWidth;
-            // PopupChild.Height = popupContentHeight;
             PopupChild.HorizontalAlignment = HorizontalAlignment.Left;
             PopupChild.VerticalAlignment = VerticalAlignment.Top;
 

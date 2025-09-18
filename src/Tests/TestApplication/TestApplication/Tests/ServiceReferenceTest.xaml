@@ -1,0 +1,17 @@
+﻿<sdk:Page
+    x:Class="TestApplication.Tests.ServiceReferenceTest"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:TestApplication.OpenSilver.Tests"
+    xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
+
+    <StackPanel Orientation="Vertical">
+        <Button Name="BasicHttpGetTestStringButton" Content="BasicHttp GetTestString()" Click="BasicHttpGetTestStringButton_OnClick" Width="200"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="BasicHttpGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
+
+        <Button Name="BinaryGetTestStringButton" Content="Binary GetTestString()" Click="BinaryGetTestStringButton_OnClick" Width="200" Margin="0,20,0,0"/>
+        <TextBlock Text="Result:" HorizontalAlignment="Center"/>
+        <TextBlock Name="BinaryGetTestStringResultTextBlock" HorizontalAlignment="Center"/>
+    </StackPanel>
+</sdk:Page>

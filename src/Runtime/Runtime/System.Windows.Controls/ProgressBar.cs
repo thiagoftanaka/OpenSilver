@@ -14,6 +14,7 @@
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Automation.Peers;
+using CSHTML5.Internal;
 
 namespace System.Windows.Controls
 {
@@ -28,6 +29,7 @@ namespace System.Windows.Controls
     {
         private const string ProgressBarIndicatorName = "ProgressBarIndicator";
         private const string ProgressBarTrackName = "ProgressBarTrack";
+        private const string IndeterminateRootName = "IndeterminateRoot";
         private const string StateIndeterminate = "Indeterminate";
         private const string StateDeterminate = "Determinate";
 
@@ -72,7 +74,9 @@ namespace System.Windows.Controls
 
         private static void IsIndeterminatePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            ((ProgressBar)d).UpdateVisualStates();
+            var progressBar = (ProgressBar)d;
+            progressBar.SetProgressBarIndicatorLength();
+            progressBar.UpdateVisualStates();
         }
 
         /// <summary>
@@ -90,6 +94,13 @@ namespace System.Windows.Controls
 
             _indicator = GetTemplateChild(ProgressBarIndicatorName) as FrameworkElement;
             _track = GetTemplateChild(ProgressBarTrackName) as FrameworkElement;
+            var indeterminateRoot = GetTemplateChild(IndeterminateRootName) as FrameworkElement;
+            if (indeterminateRoot != null)
+            {
+                var indeterminateRootStyle = INTERNAL_HtmlDomManager
+                    .GetDomElementStyleForModification(indeterminateRoot.OuterDiv);
+                indeterminateRootStyle.overflow = "hidden";
+            }
 
             if (_indicator != null && _track != null)
             {

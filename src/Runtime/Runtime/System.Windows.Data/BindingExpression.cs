@@ -1049,7 +1049,7 @@ namespace System.Windows.Data
 
                 _mentor = mentor;
 
-                if (source == null && mentor == null)
+                if (source == null && mentor == null && Target != null)
                 {
                     Target.InheritedContextChanged += new EventHandler(OnTargetInheritedContextChanged);
                 }

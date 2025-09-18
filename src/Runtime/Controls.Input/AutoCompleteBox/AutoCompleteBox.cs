@@ -289,7 +289,8 @@ namespace System.Windows.Controls
             if (newValue > 0 && source._delayTimer == null)
             {
                 source._delayTimer = new DispatcherTimer();
-                source._delayTimer.Tick += source.PopulateDropDown;
+                source._delayTimer.Tick += (sender, args) =>
+                    Application.Current.RootVisual.Dispatcher.BeginInvoke(() => source.PopulateDropDown(sender, args));
             }
 
             // Set the new tick interval
@@ -556,8 +557,6 @@ namespace System.Windows.Controls
             {
                 source.ClosingDropDown(oldValue);
             }
-
-            source.UpdateVisualState(true);
         }
 #endregion public bool IsDropDownOpen
 
@@ -2364,6 +2363,11 @@ namespace System.Windows.Controls
             }
             _popupHasOpened = true;
             OnDropDownOpened(new RoutedPropertyChangedEventArgs<bool>(oldValue, newValue));
+
+            // UpdateVisualState was originally called at the end of OnIsDropDownOpenPropertyChanged,
+            // but states defined by users might interact with the dropdown Popup/children, so it
+            // needs to be already open before applying the state.
+            UpdateVisualState(true);
         }
 
         /// <summary>

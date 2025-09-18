@@ -343,6 +343,7 @@ namespace Microsoft.Expression.Interactivity.Core
             // so that they can account for the fact that these elements have unusual layout positions right now.
             //
 
+            skipped = false;
             Storyboard layoutStoryboard;
 
             // On WPF 4 there's an open bug (882549) where platform controls reassert all states every measure, and at designtime this is a problem because the CommonStates
@@ -364,6 +365,7 @@ namespace Microsoft.Expression.Interactivity.Core
 
             if (previousState == state)
             {
+                skipped = true;
                 return true;
             }
 
@@ -379,7 +381,7 @@ namespace Microsoft.Expression.Interactivity.Core
             //
             if (!GetUseFluidLayout(group))
             {
-                return this.TransitionEffectAwareGoToStateCore(control, stateGroupsRoot, stateName, group, state, useTransitions, transition, animateWithTransitionEffect, previousState);
+                return this.TransitionEffectAwareGoToStateCore(control, stateGroupsRoot, stateName, group, state, useTransitions, transition, animateWithTransitionEffect, previousState, out skipped);
             }
 
             //
@@ -406,7 +408,7 @@ namespace Microsoft.Expression.Interactivity.Core
                 {
                     StopAnimations();
                 }
-                bool returnValue = this.TransitionEffectAwareGoToStateCore(control, stateGroupsRoot, stateName, group, state, useTransitions, transition, animateWithTransitionEffect, previousState);
+                bool returnValue = this.TransitionEffectAwareGoToStateCore(control, stateGroupsRoot, stateName, group, state, useTransitions, transition, animateWithTransitionEffect, previousState, out skipped);
 
                 SetLayoutStoryboardProperties(control, stateGroupsRoot, layoutStoryboard, originalValueRecords);
                 return returnValue;
@@ -414,7 +416,7 @@ namespace Microsoft.Expression.Interactivity.Core
 
             if (layoutStoryboard.Children.Count == 0 && originalValueRecords.Count == 0)
             {
-                return this.TransitionEffectAwareGoToStateCore(control, stateGroupsRoot, stateName, group, state, useTransitions, transition, animateWithTransitionEffect, previousState);
+                return this.TransitionEffectAwareGoToStateCore(control, stateGroupsRoot, stateName, group, state, useTransitions, transition, animateWithTransitionEffect, previousState, out skipped);
             }
 
             try
@@ -456,7 +458,7 @@ namespace Microsoft.Expression.Interactivity.Core
                 //
                 // Go to the new state; jump immediately to the layout changes
                 //
-                this.TransitionEffectAwareGoToStateCore(control, stateGroupsRoot, stateName, group, state, useTransitions, transition, animateWithTransitionEffect, previousState);
+                this.TransitionEffectAwareGoToStateCore(control, stateGroupsRoot, stateName, group, state, useTransitions, transition, animateWithTransitionEffect, previousState, out skipped);
                 SetLayoutStoryboardProperties(control, stateGroupsRoot, layoutStoryboard, originalValueRecords);
 
                 //
@@ -669,7 +671,7 @@ namespace Microsoft.Expression.Interactivity.Core
                 transition.GeneratedEasingFunction = new DummyEasingFunction() { DummyValue = (FinishesWithZeroOpacity(control, stateGroupsRoot, state, previousState) ? 0.01 : 0) };
             }
 
-            bool returnValue = base.GoToStateCore(control, stateGroupsRoot, stateName, group, state, useTransitions);
+            bool returnValue = base.GoToStateCore(control, stateGroupsRoot, stateName, group, state, useTransitions, out skipped);
 
             if (animateWithTransitionEffect)
             {
@@ -717,8 +719,8 @@ namespace Microsoft.Expression.Interactivity.Core
                     }
                 }
 
-                double baseOpacity = (double)stateGroupsRoot.GetAnimationBaseValue(UIElement.OpacityProperty);
-                return (baseOpacity == 0);
+                //double baseOpacity = (double)stateGroupsRoot.GetAnimationBaseValue(UIElement.OpacityProperty);
+                return false;// (baseOpacity == 0);
             }
 
             // if it's not mentioned in either state, then let's just check the current opacity

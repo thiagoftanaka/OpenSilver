@@ -438,6 +438,7 @@ namespace System.Windows.Tests
         {
             protected override bool GoToStateCore(FrameworkElement control, FrameworkElement templateRoot, string stateName, VisualStateGroup group, VisualState state, bool useTransitions)
             {
+                skipped = false;
                 var innerControl = (control as MyControl2).InnerControl;
                 if (innerControl == null)
                     return false;

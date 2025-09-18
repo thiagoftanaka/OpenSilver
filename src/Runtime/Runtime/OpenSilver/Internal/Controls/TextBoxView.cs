@@ -11,6 +11,8 @@
 *  
 \*====================================================================================*/
 
+using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -66,7 +68,20 @@ internal sealed class TextBoxView : TextViewBase
 
     internal protected sealed override void OnInput()
     {
-        Host.UpdateTextProperty(GetText());
+        string nativeText = GetText();
+
+        // The Text Property must not be impacted by soft hyphen placeholders
+        string textWithoutPlaceholders = INTERNAL_HtmlDomManager.RestoreInvisibleCharacters(nativeText);
+        Host.UpdateTextProperty(textWithoutPlaceholders);
+
+        if (nativeText.Contains(INTERNAL_HtmlDomManager.SoftHyphen))
+        {
+            // SetTextNative is called to replace soft hyphens with placeholders
+            int selectionStart = SelectionStart;
+            SetTextNative(nativeText);
+            SelectionStart = selectionStart;
+        }
+
         InvalidateMeasure();
     }
 
@@ -77,8 +92,10 @@ internal sealed class TextBoxView : TextViewBase
         if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this) && OuterDiv is not null)
         {
             string sElement = Interop.GetVariableStringForJS(OuterDiv);
-            Interop.ExecuteJavaScriptVoid(
-                $"{sElement}.value = \"{INTERNAL_HtmlDomManager.EscapeStringForUseInJavaScript(text)}\"");
+            string textWithoutInvisibleCharacters = INTERNAL_HtmlDomManager.ReplaceInvisibleCharacters(text);
+            string escapedText = INTERNAL_HtmlDomManager.EscapeStringForUseInJavaScript(textWithoutInvisibleCharacters);
+
+            Interop.ExecuteJavaScriptVoid($"{sElement}.value = \"{escapedText}\";");
 
             InvalidateMeasure();
         }
