@@ -24,19 +24,16 @@ namespace OpenSilver.Compiler
             string fileNameWithPathRelativeToProjectRoot,
             string assemblyNameWithoutExtension,
             AssembliesInspector reflectionOnSeparateAppDomain,
-            bool isFirstPass,
-            string outputRootPath,
-            string outputAppFilesPath,
-            string outputLibrariesPath,
-            string outputResourcesPath)
+            XamlPreprocessorOptions options,
+            bool isFirstPass)
         {
-            ConversionSettings settings = ConversionSettings.CreateCSharpSettings(assemblyNameWithoutExtension);
+            ConversionSettings settings = ConversionSettings.CreateCSharpSettings(assemblyNameWithoutExtension, options);
 
             // Process the "HtmlPresenter" nodes in order to "escape" its content, because the content is HTML and it
             // could be badly formatted and not be parsable using XDocument.Parse.
             xaml = ProcessingHtmlPresenterNodes.Process(xaml);
 
-            XDocument doc = XDocument.Parse(xaml, LoadOptions.SetLineInfo);
+            XDocument doc = XDocumentHelper.Parse(xaml, LoadOptions.SetLineInfo);
 
             if (!isFirstPass)
             {
@@ -47,8 +44,6 @@ namespace OpenSilver.Compiler
                 ProcessingTextBlockNodes.Process(doc, reflectionOnSeparateAppDomain, settings);
 
                 InsertingImplicitNodes.InsertImplicitNodes(doc, reflectionOnSeparateAppDomain, settings, "global::");
-
-                FixingPropertiesOrder.FixPropertiesOrder(doc, reflectionOnSeparateAppDomain, settings);
 
                 // Process the "ContentPresenter" nodes in order to transform "<ContentPresenter />" into
                 // "<ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" />"
@@ -61,15 +56,6 @@ namespace OpenSilver.Compiler
             // Generate unique names for XAML elements:
             GeneratingUniqueNames.ProcessDocument(doc);
 
-            // Prepare the code that will be put in the "InitializeComponent" of the Application class,
-            // which means that it will be executed when the application is launched:
-            string codeToPutInTheInitializeComponentOfTheApplicationClass = $@"
-global::CSHTML5.Internal.StartupAssemblyInfo.OutputRootPath = @""{outputRootPath}"";
-global::CSHTML5.Internal.StartupAssemblyInfo.OutputAppFilesPath = @""{outputAppFilesPath}"";
-global::CSHTML5.Internal.StartupAssemblyInfo.OutputLibrariesPath = @""{outputLibrariesPath}"";
-global::CSHTML5.Internal.StartupAssemblyInfo.OutputResourcesPath = @""{outputResourcesPath}"";
-";
-
             // Generate C# code from the tree:
             return GeneratingCSCode.GenerateCode(
                 doc,
@@ -78,8 +64,7 @@ global::CSHTML5.Internal.StartupAssemblyInfo.OutputResourcesPath = @""{outputRes
                 assemblyNameWithoutExtension,
                 reflectionOnSeparateAppDomain,
                 isFirstPass,
-                settings,
-                codeToPutInTheInitializeComponentOfTheApplicationClass);
+                settings);
         }
     }
 }

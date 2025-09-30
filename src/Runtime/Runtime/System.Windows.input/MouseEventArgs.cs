@@ -11,173 +11,146 @@
 *  
 \*====================================================================================*/
 
-using System.Globalization;
+using System.ComponentModel;
 using System.Windows.Controls.Primitives;
-using CSHTML5;
+using System.Windows.Media;
 using CSHTML5.Internal;
+using OpenSilver.Internal;
 
-namespace System.Windows.Input
+namespace System.Windows.Input;
+
+/// <summary>
+/// Provides event data for pointer message events related to specific user interface
+/// elements, such as PointerPressed.
+/// </summary>
+public class MouseEventArgs : RoutedEventArgs
 {
     /// <summary>
-    /// Provides event data for pointer message events related to specific user interface
-    /// elements, such as PointerPressed.
+    /// Initializes a new instance of the <see cref="MouseEventArgs"/> class.
     /// </summary>
-    public class MouseEventArgs : RoutedEventArgs
+    public MouseEventArgs() { }
+
+    internal MouseEventArgs(bool isTouchDevice, ModifierKeys keyModifiers, double x, double y)
     {
-        internal override void InvokeHandler(Delegate handler, object target)
+        IsTouchEvent = isTouchDevice;
+        KeyModifiers = keyModifiers;
+        _pointerAbsoluteX = x;
+        _pointerAbsoluteY = y;
+    }
+
+    /// <inheritdoc />
+    protected override void InvokeEventHandler(Delegate genericHandler, object genericTarget) =>
+        ((MouseEventHandler)genericHandler)(genericTarget, this);
+
+    internal double _pointerAbsoluteX;
+    internal double _pointerAbsoluteY;
+
+    internal bool IsTouchEvent { get; private set; }
+
+    /// <summary>
+    /// Gets or sets a value that marks the routed event as handled, and prevents
+    /// most handlers along the event route from handling the same event again.
+    /// </summary>
+    public new bool Handled
+    {
+        get => base.Handled;
+        set => base.Handled = value;
+    }
+
+    /// <summary>
+    /// Gets a value that indicates which key modifiers were active at the time that
+    /// the pointer event was initiated.
+    /// </summary>
+    public ModifierKeys KeyModifiers { get; }
+
+    /// <summary>
+    /// Gets an object that reports stylus device information, such as the collection
+    /// of stylus points associated with the input.
+    /// </summary>
+    /// <returns>
+    /// The stylus device information object.
+    /// </returns>
+    public StylusDevice StylusDevice => new StylusDevice(this);
+
+    /// <summary>
+    /// Gets a reference to a pointer token.
+    /// </summary>
+    public Pointer Pointer { get; internal set; }
+
+    /// <summary>
+    /// Gets the number of times the button was clicked.
+    /// </summary>
+    public int ClickCount { get; internal set; }
+
+    /// <summary>
+    /// Returns the pointer position for this event occurrence, optionally evaluated
+    /// against a coordinate origin of a supplied UIElement.
+    /// </summary>
+    /// <param name="relativeTo">
+    /// Any UIElement-derived object that is connected to the same object tree. To
+    /// specify the object relative to the overall coordinate system, use a relativeTo value
+    /// of null.
+    /// </param>
+    /// <returns>
+    /// A PointerPoint value that represents the pointer point associated with this
+    /// event. If null was passed as relativeTo, the coordinates are in the frame
+    /// of reference of the overall window. If a non-null relativeTo was passed,
+    /// the coordinates are relative to the object referenced by relativeTo.
+    /// </returns>
+    public Point GetPosition(UIElement relativeTo)
+        => GetPosition(new Point(_pointerAbsoluteX, _pointerAbsoluteY), relativeTo);
+
+    internal static Point GetPosition(Point origin, UIElement relativeTo)
+    {
+        if (relativeTo is Popup popup)
         {
-            ((MouseEventHandler)handler)(target, this);
+            relativeTo = popup.IsOpen ? popup.Child : null;
         }
 
-        internal double _pointerAbsoluteX = 0d; // Note: they are actually "relative" to the XAML Window root.
-        internal double _pointerAbsoluteY = 0d; // Note: they are actually "relative" to the XAML Window root.
-
-        internal bool IsTouchEvent { get; private set; }
-
-        /// <summary>
-        /// Gets or sets a value that marks the routed event as handled, and prevents
-        /// most handlers along the event route from handling the same event again.
-        /// </summary>
-        public bool Handled
+        if (relativeTo is null)
         {
-            get => HandledImpl;
-            set => HandledImpl = value;
+            //-----------------------------------
+            // Return the absolute pointer coordinates:
+            //-----------------------------------
+            return origin;
         }
-
-        /// <summary>
-        /// Gets a value that indicates which key modifiers were active at the time that
-        /// the pointer event was initiated.
-        /// </summary>
-        public ModifierKeys KeyModifiers
+        else if (INTERNAL_VisualTreeManager.IsElementInVisualTree(relativeTo))
         {
-            get;
-            internal set;
-        }
+            //-----------------------------------
+            // Returns the pointer coordinates relative to the "relativeTo" element:
+            //-----------------------------------
 
-        /// <summary>
-        /// Gets an object that reports stylus device information, such as the collection
-        /// of stylus points associated with the input.
-        /// </summary>
-        /// <returns>
-        /// The stylus device information object.
-        /// </returns>
-        public StylusDevice StylusDevice => new StylusDevice(this);
-
-        internal void FillEventArgs(UIElement element, object jsEventArg)
-        {
-            KeyModifiers = Keyboard.Modifiers;
-            SetPointerAbsolutePosition(jsEventArg, element.ParentWindow);
-        }
-
-        protected internal void SetPointerAbsolutePosition(object jsEventArg, Window window)
-        {
+            Matrix m = relativeTo.InternalTransformToAncestor(null);
+            if (m.HasInverse)
             {
-                // Hack to improve the Simulator performance by making only one interop call rather than two:
-                string sEvent = OpenSilver.Interop.GetVariableStringForJS(jsEventArg);
-                string type = OpenSilver.Interop.ExecuteJavaScriptString($"{sEvent}.type");
-                IsTouchEvent = type.StartsWith("touch");
-                string concatenated = IsTouchEvent ? OpenSilver.Interop.ExecuteJavaScriptString($"{sEvent}.changedTouches[0].pageX + '|' + {sEvent}.changedTouches[0].pageY")
-                                                   : OpenSilver.Interop.ExecuteJavaScriptString($"{sEvent}.pageX + '|' + {sEvent}.pageY");
-                int sepIndex = concatenated.IndexOf('|');
-                string pointerAbsoluteXAsString = concatenated.Substring(0, sepIndex);
-                string pointerAbsoluteYAsString = concatenated.Substring(sepIndex + 1);
-                _pointerAbsoluteX = double.Parse(pointerAbsoluteXAsString, CultureInfo.InvariantCulture); //todo: verify that the locale is OK. I think that JS by default always produces numbers in invariant culture (with "." separator).
-                _pointerAbsoluteY = double.Parse(pointerAbsoluteYAsString, CultureInfo.InvariantCulture); //todo: read note above
+                m.Invert();
             }
-
-            //---------------------------------------
-            // Adjust the absolute coordinates to take into account the fact that the XAML Window is not necessary un the top-left corner of the HTML page:
-            //---------------------------------------
-            if (window != null)
-            {
-                // Get the XAML Window root position relative to the page:
-                string sElement = OpenSilver.Interop.GetVariableStringForJS(window.OuterDiv);
-
-                double windowRootLeft;
-                double windowRootTop;
-
-                // Hack to improve the Simulator performance by making only one interop call rather than two:
-                string concatenated = OpenSilver.Interop.ExecuteJavaScriptString(
-                    $"({sElement}.getBoundingClientRect().left - document.body.getBoundingClientRect().left) + '|' + ({sElement}.getBoundingClientRect().top - document.body.getBoundingClientRect().top)");
-                int sepIndex = concatenated.IndexOf('|');
-                if (sepIndex > -1)
-                {
-                    string windowRootLeftAsString = concatenated.Substring(0, sepIndex);
-                    string windowRootTopAsString = concatenated.Substring(sepIndex + 1);
-                    windowRootLeft = double.Parse(windowRootLeftAsString, CultureInfo.InvariantCulture);
-                    windowRootTop = double.Parse(windowRootTopAsString, CultureInfo.InvariantCulture);
-                }
-                else
-                {
-                    windowRootLeft = Double.NaN;
-                    windowRootTop = Double.NaN;
-                }
-
-                // Substract the XAML Window position, to get the pointer position relative to the XAML Window root:
-                _pointerAbsoluteX -= windowRootLeft;
-                _pointerAbsoluteY -= windowRootTop;
-            }
+            return m.Transform(origin);
         }
 
-        /// <summary>
-        /// Gets a reference to a pointer token.
-        /// </summary>
-        public Pointer Pointer { get; internal set; }
+        return new Point(0.0, 0.0);
+    }
 
-        /// <summary>
-        /// Gets the number of times the button was clicked.
-        /// </summary>
-        public int ClickCount { get; internal set; }
+    [Obsolete(Helper.ObsoleteMemberMessage)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    protected internal void SetPointerAbsolutePosition(object jsEventArg, Window window)
+    {
+        string sEvent = OpenSilver.Interop.GetVariableStringForJS(jsEventArg);
+        IsTouchEvent = OpenSilver.Interop.ExecuteJavaScriptBoolean($"{sEvent}.pointerType === 'touch'", false);
+        _pointerAbsoluteX = OpenSilver.Interop.ExecuteJavaScriptDouble($"{sEvent}.pageX", false);
+        _pointerAbsoluteY = OpenSilver.Interop.ExecuteJavaScriptDouble($"{sEvent}.pageY", false);
 
-        /// <summary>
-        /// Returns the pointer position for this event occurrence, optionally evaluated
-        /// against a coordinate origin of a supplied UIElement.
-        /// </summary>
-        /// <param name="relativeTo">
-        /// Any UIElement-derived object that is connected to the same object tree. To
-        /// specify the object relative to the overall coordinate system, use a relativeTo value
-        /// of null.
-        /// </param>
-        /// <returns>
-        /// A PointerPoint value that represents the pointer point associated with this
-        /// event. If null was passed as relativeTo, the coordinates are in the frame
-        /// of reference of the overall window. If a non-null relativeTo was passed,
-        /// the coordinates are relative to the object referenced by relativeTo.
-        /// </returns>
-        public Point GetPosition(UIElement relativeTo)
-            => GetPosition(new Point(_pointerAbsoluteX, _pointerAbsoluteY), relativeTo);
-
-        internal static Point GetPosition(Point origin, UIElement relativeTo)
+        //---------------------------------------
+        // Adjust the absolute coordinates to take into account the fact that the XAML Window is not necessary un the top-left corner of the HTML page:
+        //---------------------------------------
+        if (window != null)
         {
-            if (relativeTo is Popup popup)
-            {
-                relativeTo = popup.IsOpen ? popup.Child : null;
-            }
-
-            if (relativeTo == null)
-            {
-                //-----------------------------------
-                // Return the absolute pointer coordinates:
-                //-----------------------------------
-                return origin;
-            }
-            else if (INTERNAL_VisualTreeManager.IsElementInVisualTree(relativeTo))
-            {
-                //-----------------------------------
-                // Returns the pointer coordinates relative to the "relativeTo" element:
-                //-----------------------------------
-
-                UIElement rootVisual = Window.GetWindow(relativeTo)?.Content;
-                if (rootVisual != null)
-                {
-                    return rootVisual.TransformToVisual(relativeTo).Transform(origin);
-                }
-            }
-
-            return new Point(0.0, 0.0);
+            // Get the XAML Window root position relative to the page and substracts it
+            string sElement = OpenSilver.Interop.GetVariableStringForJS(window.OuterDiv);
+            _pointerAbsoluteX -= OpenSilver.Interop.ExecuteJavaScriptDouble(
+                $"{sElement}.getBoundingClientRect().left - document.body.getBoundingClientRect().left", false);
+            _pointerAbsoluteY -= OpenSilver.Interop.ExecuteJavaScriptDouble(
+                $"{sElement}.getBoundingClientRect().top - document.body.getBoundingClientRect().top", false);
         }
-
-        [OpenSilver.NotImplemented]
-        public int Delta { get; private set; }
     }
 }

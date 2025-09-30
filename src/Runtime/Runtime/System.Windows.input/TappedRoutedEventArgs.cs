@@ -11,16 +11,24 @@
 *  
 \*====================================================================================*/
 
-namespace System.Windows.Input
+namespace System.Windows.Input;
+
+/// <summary>
+/// Provides event data for the Tapped event.
+/// </summary>
+public sealed class TappedRoutedEventArgs : MouseEventArgs
 {
     /// <summary>
-    /// Provides event data for the Tapped event.
+    /// Initializes a new instance of the <see cref="TappedRoutedEventArgs"/> class.
     /// </summary>
-    public sealed class TappedRoutedEventArgs : MouseEventArgs
+    public TappedRoutedEventArgs() { }
+
+    internal TappedRoutedEventArgs(bool isTouchDevice, ModifierKeys keyModifiers, double x, double y)
+        : base(isTouchDevice, keyModifiers, x, y)
     {
-        internal override void InvokeHandler(Delegate handler, object target)
-        {
-            ((TappedEventHandler)handler)(target, this);
-        }
     }
+
+    /// <inheritdoc />
+    protected override void InvokeEventHandler(Delegate genericHandler, object genericTarget) =>
+        ((TappedEventHandler)genericHandler)(genericTarget, this);
 }

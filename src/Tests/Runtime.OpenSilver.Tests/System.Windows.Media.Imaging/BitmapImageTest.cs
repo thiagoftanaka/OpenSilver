@@ -1,5 +1,4 @@
-﻿using FluentAssertions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
 using System.Windows.Controls;
 
@@ -24,9 +23,7 @@ namespace System.Windows.Media.Imaging.Tests
             // has been disposed of
             image.Source = bitmapImage;
 
-            (image.Source as BitmapImage).INTERNAL_StreamAsBase64String
-                .Should()
-                .Be(Base64ImageExample);
+            Assert.IsTrue(bitmapImage.GetDataStringAsync(image).Result.EndsWith(Base64ImageExample));
         }
     }
 }

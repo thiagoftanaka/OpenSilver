@@ -26,6 +26,7 @@ internal static class TextContainersHelper
             Run run => new TextContainerRun(run),
             Span span => new TextContainerSpan(span),
             LineBreak => TextContainerLineBreak.Instance,
+            InlineImageContainer image => new TextContainerInlineImageContainer(image),
             RichTextBlock richTextBlock => new TextContainerRichTextBlock(richTextBlock),
             Paragraph paragraph => new TextContainerParagraph(paragraph),
             Section section => new TextContainerSection(section),
@@ -39,7 +40,7 @@ internal static class TextContainersHelper
             TextElement textElement => textElement.TextContainer,
             TextBlock textBlock => textBlock.Inlines.TextContainer,
             RichTextBlock richTextBlock => richTextBlock.Blocks.TextContainer,
-            RichTextBox richTextBox => richTextBox.Blocks.TextContainer,
+            RichTextBox richTextBox => richTextBox.InternalBlocks.TextContainer,
             _ => null,
         };
 }

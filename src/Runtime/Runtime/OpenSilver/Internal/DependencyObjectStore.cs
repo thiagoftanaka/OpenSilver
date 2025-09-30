@@ -38,49 +38,39 @@ internal static class DependencyObjectStore
         EffectiveValueEntry oldEntry = storage.Entry;
         EffectiveValueEntry newEntry = null;
 
-        var newExpr = newValue as Expression;
-
         if (oldEntry.IsExpression)
         {
             var currentExpr = (Expression)oldEntry.ModifiedValue.BaseValue;
+            var newExpr = newValue as Expression;
 
-            if (oldEntry.BaseValueSourceInternal == BaseValueSourceInternal.Local)
+            if (currentExpr == newExpr)
             {
-                if (currentExpr == newExpr)
-                {
-                    Debug.Assert(newExpr.IsAttached);
-                    RefreshExpressionCommon(storage, d, dp, metadata, newExpr);
-                    return;
-                }
+                Debug.Assert(newExpr.IsAttached);
+                RefreshExpressionCommon(storage, d, dp, metadata, newExpr);
+                return;
+            }
 
-                // if the current BindingExpression is a TwoWay binding, we don't want to remove the binding 
-                // unless we are overriding it with a new Expression.
-                if (newExpr == null && currentExpr.CanSetValue(d, dp))
-                {
-                    newEntry = new EffectiveValueEntry(BaseValueSourceInternal.Local);
-                    newEntry.Value = currentExpr;
-                    newEntry.SetExpressionValue(newValue);
-                }
-                else
-                {
-                    currentExpr.OnDetach(d, dp);
-                }
+            // if the current BindingExpression is a TwoWay binding, we don't want to remove the binding 
+            // unless we are overriding it with a new Expression.
+            if (newExpr is null && currentExpr.CanSetValue(d, dp))
+            {
+                newEntry = new EffectiveValueEntry(oldEntry.BaseValueSourceInternal);
+                newEntry.Value = currentExpr;
+                newEntry.SetExpressionValue(newValue);
             }
             else
             {
-                Debug.Assert(oldEntry.BaseValueSourceInternal == BaseValueSourceInternal.LocalStyle ||
-                             oldEntry.BaseValueSourceInternal == BaseValueSourceInternal.ThemeStyle);
-
+                currentExpr.MarkDetached();
                 currentExpr.OnDetach(d, dp);
             }
         }
 
-        if (newEntry == null)
+        if (newEntry is null)
         {
             // Set the new local value
             storage.LocalValue = newValue;
 
-            newEntry = EvaluateEffectiveValue(d, dp, newValue, BaseValueSourceInternal.Local);
+            newEntry = EvaluateEffectiveValue(d, dp, metadata, newValue, BaseValueSourceInternal.Local);
         }
 
         if (oldEntry.IsAnimated)
@@ -104,22 +94,36 @@ internal static class DependencyObjectStore
         DependencyProperty dp,
         PropertyMetadata metadata)
     {
+        EffectiveValueEntry oldEntry = storage.Entry;
+
+        object current = storage.LocalValue;
+
         // Reset local value
         storage.LocalValue = DependencyProperty.UnsetValue;
 
-        EffectiveValueEntry oldEntry = storage.Entry;
-
-        // Check for expression
         if (oldEntry.IsExpression)
         {
-            var currentExpr = (Expression)oldEntry.ModifiedValue.BaseValue;
-            currentExpr.OnDetach(d, dp);
+            // Inform value expression of detachment, if applicable
+            if (current is Expression currentExpr)
+            {
+                currentExpr.MarkDetached();
+                currentExpr.OnDetach(d, dp);
+            }
+            else
+            {
+                Debug.Assert(
+                    oldEntry.BaseValueSourceInternal == BaseValueSourceInternal.LocalStyle ||
+                    oldEntry.BaseValueSourceInternal == BaseValueSourceInternal.ThemeStyle);
+
+                RefreshExpressionCommon(storage, d, dp, metadata, (Expression)oldEntry.ModifiedValue.BaseValue);
+                return;
+            }
         }
 
         (object effectiveValue, BaseValueSourceInternal effectiveValueKind) =
             ComputeEffectiveBaseValue(storage, d, dp, metadata);
 
-        EffectiveValueEntry newEntry = EvaluateEffectiveValue(d, dp, effectiveValue, effectiveValueKind);
+        EffectiveValueEntry newEntry = EvaluateEffectiveValue(d, dp, metadata, effectiveValue, effectiveValueKind);
 
         if (oldEntry.IsAnimated)
         {
@@ -169,13 +173,18 @@ internal static class DependencyObjectStore
         PropertyMetadata metadata)
     {
         var oldEntry = storage.Entry;
+        if (!oldEntry.IsAnimated)
+        {
+            return;
+        }
+
         var newEntry = new EffectiveValueEntry(oldEntry.BaseValueSourceInternal);
 
         if (oldEntry.IsExpression)
         {
             var expression = (Expression)oldEntry.ModifiedValue.BaseValue;
             newEntry.Value = expression;
-            EvaluateExpression(newEntry, d, dp, expression);
+            EvaluateExpression(newEntry, d, dp, metadata, expression);
         }
         else
         {
@@ -199,11 +208,7 @@ internal static class DependencyObjectStore
         PropertyMetadata metadata,
         object newValue)
     {
-        if (newValue == DependencyProperty.UnsetValue)
-        {
-            ClearLocalStyleValue(storage, d, dp, metadata);
-            return;
-        }
+        Debug.Assert(newValue != DependencyProperty.UnsetValue);
 
         storage.LocalStyleValue = newValue;
 
@@ -220,10 +225,11 @@ internal static class DependencyObjectStore
         if (oldEntry.IsExpression)
         {
             var currentExpr = (Expression)oldEntry.ModifiedValue.BaseValue;
+            currentExpr.MarkDetached();
             currentExpr.OnDetach(d, dp);
         }
 
-        EffectiveValueEntry newEntry = EvaluateEffectiveValue(d, dp, newValue, BaseValueSourceInternal.LocalStyle);
+        EffectiveValueEntry newEntry = EvaluateEffectiveValue(d, dp, metadata, newValue, BaseValueSourceInternal.LocalStyle);
 
         if (oldEntry.IsAnimated)
         {
@@ -241,7 +247,7 @@ internal static class DependencyObjectStore
             OperationType.Unknown);
     }
 
-    private static void ClearLocalStyleValue(
+    internal static void ClearLocalStyleValue(
         Storage storage,
         DependencyObject d,
         DependencyProperty dp,
@@ -259,13 +265,14 @@ internal static class DependencyObjectStore
         if (oldEntry.IsExpression)
         {
             var currentExpr = (Expression)oldEntry.ModifiedValue.BaseValue;
+            currentExpr.MarkDetached();
             currentExpr.OnDetach(d, dp);
         }
 
         (object effectiveValue, BaseValueSourceInternal effectiveValueKind) = ComputeEffectiveBaseValue(
             storage, d, dp, metadata);
 
-        EffectiveValueEntry newEntry = EvaluateEffectiveValue(d, dp, effectiveValue, effectiveValueKind);
+        EffectiveValueEntry newEntry = EvaluateEffectiveValue(d, dp, metadata, effectiveValue, effectiveValueKind);
 
         if (oldEntry.IsAnimated)
         {
@@ -290,11 +297,7 @@ internal static class DependencyObjectStore
         PropertyMetadata metadata,
         object newValue)
     {
-        if (newValue == DependencyProperty.UnsetValue)
-        {
-            ClearThemeStyleValue(storage, d, dp, metadata);
-            return;
-        }
+        Debug.Assert(newValue != DependencyProperty.UnsetValue);
 
         EffectiveValueEntry oldEntry = storage.Entry;
 
@@ -311,13 +314,14 @@ internal static class DependencyObjectStore
         if (oldEntry.IsExpression)
         {
             var oldExpr = (Expression)oldEntry.ModifiedValue.BaseValue;
+            oldExpr.MarkDetached();
             oldExpr.OnDetach(d, dp);
         }
 
         (object effectiveValue, BaseValueSourceInternal effectiveValueKind) = ComputeEffectiveBaseValue(
             storage, d, dp, metadata);
 
-        EffectiveValueEntry newEntry = EvaluateEffectiveValue(d, dp, effectiveValue, effectiveValueKind);
+        EffectiveValueEntry newEntry = EvaluateEffectiveValue(d, dp, metadata, effectiveValue, effectiveValueKind);
 
         if (oldEntry.IsAnimated)
         {
@@ -335,7 +339,7 @@ internal static class DependencyObjectStore
             OperationType.Unknown);
     }
 
-    private static void ClearThemeStyleValue(
+    internal static void ClearThemeStyleValue(
         Storage storage,
         DependencyObject d,
         DependencyProperty dp,
@@ -353,13 +357,14 @@ internal static class DependencyObjectStore
         if (oldEntry.IsExpression)
         {
             var oldExpr = (Expression)oldEntry.ModifiedValue.BaseValue;
+            oldExpr.MarkDetached();
             oldExpr.OnDetach(d, dp);
         }
 
         (object effectiveValue, BaseValueSourceInternal effectiveValueKind) = ComputeEffectiveBaseValue(
             storage, d, dp, metadata);
 
-        EffectiveValueEntry newEntry = EvaluateEffectiveValue(d, dp, effectiveValue, effectiveValueKind);
+        EffectiveValueEntry newEntry = EvaluateEffectiveValue(d, dp, metadata, effectiveValue, effectiveValueKind);
 
         if (oldEntry.IsAnimated)
         {
@@ -385,10 +390,7 @@ internal static class DependencyObjectStore
         object newValue,
         bool propagateChanges)
     {
-        if (newValue == DependencyProperty.UnsetValue)
-        {
-            return ClearInheritedValue(storage, d, dp, metadata, propagateChanges);
-        }
+        Debug.Assert(newValue != DependencyProperty.UnsetValue);
 
         storage.InheritedValue = newValue;
 
@@ -402,7 +404,7 @@ internal static class DependencyObjectStore
             return false;
         }
 
-        EffectiveValueEntry newEntry = EvaluateEffectiveValue(d, dp, newValue, BaseValueSourceInternal.Inherited);
+        EffectiveValueEntry newEntry = EvaluateEffectiveValue(d, dp, metadata, newValue, BaseValueSourceInternal.Inherited);
 
         return UpdateEffectiveValue(storage,
             d,
@@ -414,7 +416,7 @@ internal static class DependencyObjectStore
             propagateChanges ? OperationType.Unknown : OperationType.Inherit);
     }
 
-    private static bool ClearInheritedValue(
+    internal static bool ClearInheritedValue(
         Storage storage,
         DependencyObject d,
         DependencyProperty dp,
@@ -532,7 +534,7 @@ internal static class DependencyObjectStore
         var oldEntry = storage.Entry;
         var newEntry = new EffectiveValueEntry(oldEntry);
 
-        EvaluateExpression(newEntry, d, dp, expression);
+        EvaluateExpression(newEntry, d, dp, metadata, expression);
 
         UpdateEffectiveValue(storage,
             d,
@@ -580,6 +582,7 @@ internal static class DependencyObjectStore
     private static EffectiveValueEntry EvaluateEffectiveValue(
         DependencyObject d,
         DependencyProperty dp,
+        PropertyMetadata metadata,
         object value,
         BaseValueSourceInternal valueSource)
     {
@@ -591,17 +594,18 @@ internal static class DependencyObjectStore
 
             if (expression.IsAttached)
             {
-                throw new InvalidOperationException($"Cannot attach an instance of '{expression}' multiple times");
+                throw new InvalidOperationException(Strings.SharingNonSharableExpression);
             }
 
+            expression.MarkAttached();
             expression.OnAttach(d, dp);
 
             entry.Value = expression;
-            EvaluateExpression(entry, d, dp, expression);
+            EvaluateExpression(entry, d, dp, metadata, expression);
         }
         else
         {
-            entry.Value = dp.IsStringType ? value?.ToString() : value;
+            entry.Value = value;
         }
 
         return entry;
@@ -611,15 +615,18 @@ internal static class DependencyObjectStore
         EffectiveValueEntry entry,
         DependencyObject d,
         DependencyProperty dp,
+        PropertyMetadata metadata,
         Expression expression)
     {
         Debug.Assert(expression != null);
         Debug.Assert(entry.Value == expression || entry.ModifiedValue.BaseValue == expression);
 
         object exprValue = expression.GetValue(d, dp);
-        if (dp.IsStringType)
+
+        // if there is still no value, use the default
+        if (exprValue == DependencyProperty.UnsetValue)
         {
-            exprValue = exprValue?.ToString();
+            exprValue = metadata.GetDefaultValue(d, dp);
         }
 
         ValidateValue(dp, exprValue, false, false);
@@ -655,7 +662,7 @@ internal static class DependencyObjectStore
         }
     }
 
-    private static bool UpdateEffectiveValue(
+    internal static bool UpdateEffectiveValue(
         Storage storage,
         DependencyObject d,
         DependencyProperty dp,
@@ -771,8 +778,7 @@ internal static class DependencyObjectStore
 
         if (!isValidValue)
         {
-            throw new ArgumentException(
-                $"'{value}' is not a valid value for property '{dp.Name}'.");
+            throw new ArgumentException(string.Format(Strings.InvalidPropertyValue, value, dp.Name));
         }
     }
 }

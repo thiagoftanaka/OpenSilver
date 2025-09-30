@@ -11,11 +11,11 @@
 *  
 \*====================================================================================*/
 
-using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows.Controls.Primitives;
-using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
 
@@ -88,9 +88,9 @@ namespace System.Windows
         }
 
         /// <summary>
-        /// Invalidates the rendering of the element.
+        /// Invalidates the rendering of the element, and forces a complete new layout pass.
         /// </summary>
-        internal void InvalidateVisual()
+        public void InvalidateVisual()
         {
             InvalidateArrange();
             RenderingInvalidated = true;
@@ -135,8 +135,9 @@ namespace System.Windows
             {
                 //enforce that Measure can not receive NaN size .
                 if (double.IsNaN(availableSize.Width) || double.IsNaN(availableSize.Height))
-                    throw new InvalidOperationException(
-                        "UIElement.Measure(availableSize) cannot be called with NaN size.");
+                {
+                    throw new InvalidOperationException(Strings.UIElement_Layout_NaNMeasure);
+                }
 
                 bool neverMeasured = NeverMeasured;
                 
@@ -217,15 +218,15 @@ namespace System.Windows
                 //enforce that MeasureCore can not return PositiveInfinity size even if given Infinte availabel size.
                 //Note: NegativeInfinity can not be returned by definition of Size structure.
                 if (double.IsPositiveInfinity(desiredSize.Width) || double.IsPositiveInfinity(desiredSize.Height))
-                    throw new InvalidOperationException(string.Format(
-                        "Layout measurement override of element '{0}' should not return PositiveInfinity as its DesiredSize, even if Infinity is passed in as available size.",
-                        GetType().FullName));
+                {
+                    throw new InvalidOperationException(string.Format(Strings.UIElement_Layout_PositiveInfinityReturned, GetType().FullName));
+                }
 
                 //enforce that MeasureCore can not return NaN size .
                 if (double.IsNaN(desiredSize.Width) || double.IsNaN(desiredSize.Height))
-                    throw new InvalidOperationException(string.Format(
-                        "Layout measurement override of element '{0}' should not return NaN values as its DesiredSize.",
-                        GetType().FullName));
+                {
+                    throw new InvalidOperationException(string.Format(Strings.UIElement_Layout_NaNReturned, GetType().FullName));
+                }
 
                 //reset measure dirtiness
                 
@@ -302,10 +303,11 @@ namespace System.Windows
                     || double.IsNaN(finalRect.Height))
                 {
                     DependencyObject parent = GetLayoutParent(this);
-                    throw new InvalidOperationException(string.Format(
-                        "Cannot call Arrange on a UIElement with infinite size or NaN. Parent of type '{0}' invokes the UIElement. Arrange called on element of type '{1}'.",
-                        parent == null ? string.Empty : parent.GetType().FullName,
-                        GetType().FullName));
+                    throw new InvalidOperationException(
+                        string.Format(
+                            Strings.UIElement_Layout_InfinityArrange,
+                            parent == null ? string.Empty : parent.GetType().FullName,
+                            GetType().FullName));
                 }
 
                 if (!IsVisible || ReadVisualFlag(VisualFlags.IsLayoutSuspended))
@@ -368,7 +370,7 @@ namespace System.Windows
                     LayoutManager layoutManager = LayoutManager.Current;
 
                     Size oldSize = RenderSize;
-                    Point oldOffset = VisualOffset;
+                    Vector oldOffset = VisualOffset;
                     Rect? oldLayoutClip = LayoutClip;
                     bool sizeChanged = false;
                     bool gotException = true;
@@ -434,14 +436,141 @@ namespace System.Windows
         }
 
         /// <summary>
-        /// This is invoked after layout update before rendering if the element's RenderSize
-        /// has changed as a result of layout update.
+        /// Occurs when the layout of the various visual elements associated with the current <see cref="Dispatcher"/> changes.
+        /// </summary>
+        public event EventHandler LayoutUpdated
+        {
+            add
+            {
+                LayoutEventList.ListItem item = GetLayoutUpdatedHandler(value);
+
+                if (item == null)
+                {
+                    //set a weak ref in LM
+                    item = LayoutManager.Current.LayoutEvents.Add(value);
+                    AddLayoutUpdatedHandler(value, item);
+                }
+            }
+            remove
+            {
+                LayoutEventList.ListItem item = GetLayoutUpdatedHandler(value);
+
+                if (item != null)
+                {
+                    RemoveLayoutUpdatedHandler(value);
+                    //remove a weak ref from LM
+                    LayoutManager.Current.LayoutEvents.Remove(item);
+                }
+            }
+        }
+
+        private static readonly DependencyProperty LayoutUpdatedListItemsField =
+            DependencyProperty.Register(
+                "_LayoutUpdatedListItems",
+                typeof(object),
+                typeof(FrameworkElement),
+                null);
+
+        private static readonly DependencyProperty LayoutUpdatedHandlersField =
+            DependencyProperty.Register(
+                "_LayoutUpdatedHandlers",
+                typeof(EventHandler),
+                typeof(FrameworkElement),
+                null);
+
+        private void AddLayoutUpdatedHandler(EventHandler handler, LayoutEventList.ListItem item)
+        {
+            object cachedLayoutUpdatedItems = GetValue(LayoutUpdatedListItemsField);
+
+            if (cachedLayoutUpdatedItems == null)
+            {
+                SetValueInternal(LayoutUpdatedListItemsField, item);
+                SetValueInternal(LayoutUpdatedHandlersField, handler);
+            }
+            else
+            {
+                EventHandler cachedLayoutUpdatedHandler = (EventHandler)GetValue(LayoutUpdatedHandlersField);
+                if (cachedLayoutUpdatedHandler != null)
+                {
+                    //second unique handler is coming in.
+                    //allocate a datastructure
+                    var list = new Dictionary<EventHandler, object>(2)
+                    {
+                        //add previously cached handler
+                        { cachedLayoutUpdatedHandler, cachedLayoutUpdatedItems },
+
+                        //add new handler
+                        { handler, item }
+                    };
+
+                    ClearValue(LayoutUpdatedHandlersField);
+                    SetValueInternal(LayoutUpdatedListItemsField, list);
+                }
+                else //already have a list
+                {
+                    var list = (Dictionary<EventHandler, object>)cachedLayoutUpdatedItems;
+                    list.Add(handler, item);
+                }
+            }
+        }
+
+        private LayoutEventList.ListItem GetLayoutUpdatedHandler(EventHandler d)
+        {
+            object cachedLayoutUpdatedItems = GetValue(LayoutUpdatedListItemsField);
+
+            if (cachedLayoutUpdatedItems == null)
+            {
+                return null;
+            }
+            else
+            {
+                EventHandler cachedLayoutUpdatedHandler = (EventHandler)GetValue(LayoutUpdatedHandlersField);
+                if (cachedLayoutUpdatedHandler != null)
+                {
+                    if (cachedLayoutUpdatedHandler == d) return (LayoutEventList.ListItem)cachedLayoutUpdatedItems;
+                }
+                else //already have a list
+                {
+                    var list = (Dictionary<EventHandler, object>)cachedLayoutUpdatedItems;
+                    if (list.TryGetValue(d, out object item))
+                    {
+                        return (LayoutEventList.ListItem)item;
+                    }
+                }
+                return null;
+            }
+        }
+
+        private void RemoveLayoutUpdatedHandler(EventHandler d)
+        {
+            object cachedLayoutUpdatedItems = GetValue(LayoutUpdatedListItemsField);
+            EventHandler cachedLayoutUpdatedHandler = (EventHandler)GetValue(LayoutUpdatedHandlersField);
+
+            if (cachedLayoutUpdatedHandler != null) //single handler
+            {
+                if (cachedLayoutUpdatedHandler == d)
+                {
+                    ClearValue(LayoutUpdatedListItemsField);
+                    ClearValue(LayoutUpdatedHandlersField);
+                }
+            }
+            else //there is an ArrayList allocated
+            {
+                var list = (Dictionary<EventHandler, object>)cachedLayoutUpdatedItems;
+                list.Remove(d);
+            }
+        }
+
+        /// <summary>
+        /// When overridden in a derived class, participates in rendering operations that are directed by the 
+        /// layout system. This method is invoked after layout update, and before rendering, if the element's 
+        /// <see cref="RenderSize"/> has changed as a result of layout update.
         /// </summary>
         /// <param name="info">
-        /// Packaged parameters (<seealso cref="SizeChangedInfo"/>, includes old and new sizes 
-        /// and which dimension actually changes.
+        /// The packaged parameters (<see cref="SizeChangedInfo"/>), which includes old and new sizes, and which 
+        /// dimension actually changes.
         /// </param>
-        internal virtual void OnRenderSizeChanged(SizeChangedInfo info) { }
+        protected internal virtual void OnRenderSizeChanged(SizeChangedInfo info) { }
 
         private bool MarkForSizeChangedIfNeeded(Size oldSize, Size newSize)
         {
@@ -487,9 +616,8 @@ namespace System.Windows
         internal static UIElement GetLayoutParent(UIElement element)
             => VisualTreeHelper.GetParent(element) switch
             {
-                PopupRoot => null,
                 UIElement uie => uie,
-                null when element is FrameworkElement fe && fe.Parent is Popup popup => popup.PopupRoot?.Content,
+                null when element is FrameworkElement fe && fe.Parent is Popup popup => popup.PopupRoot?.HiddenVisualParent,
                 _ => null,
             };
 
@@ -508,7 +636,7 @@ namespace System.Windows
             e.NeverArranged = true;
             e.PreviousArrangeRect = new Rect();
             e.PreviousAvailableSize = new Size();
-            e.VisualOffset = new Point();
+            e.VisualOffset = new Vector();
             e.LayoutClip = null;
             e._desiredSize = new Size();
             e.RenderSize = new Size();
@@ -535,8 +663,7 @@ namespace System.Windows
 
             for (int i = 0; i < count; i++)
             {
-                UIElement cv = v.GetVisualChild(i);
-                if (cv != null)
+                if (v.GetVisualChild(i) is UIElement cv)
                 {
                     PropagateSuspendLayout(cv);
                 }
@@ -587,15 +714,14 @@ namespace System.Windows
 
             for (int i = 0; i < count; i++)
             {
-                UIElement cv = v.GetVisualChild(i);
-                if (cv != null)
+                if (v.GetVisualChild(i) is UIElement cv)
                 {
                     PropagateResumeLayout(v, cv);
                 }
             }
         }
 
-        internal Point VisualOffset { get; set; }
+        internal Vector VisualOffset { get; set; }
 
         internal Rect? LayoutClip { get; private set; }
 
@@ -664,6 +790,12 @@ namespace System.Windows
         {
             get { return ReadFlag(CoreFlags.MeasureDuringArrange); }
             set { WriteFlag(CoreFlags.MeasureDuringArrange, value); }
+        }
+
+        internal bool AreTransformsClean
+        {
+            get { return ReadFlag(CoreFlags.AreTransformsClean); }
+            set { WriteFlag(CoreFlags.AreTransformsClean, value); }
         }
 
         internal bool BypassLayoutPolicies

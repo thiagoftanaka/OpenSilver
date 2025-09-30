@@ -11,12 +11,16 @@
 *  
 \*====================================================================================*/
 
+using System.ComponentModel;
+using OpenSilver.Internal;
+
 namespace System.Windows.Input
 {
     /// <summary>
     /// Represents the image used for the mouse pointer.
     /// </summary>
-    public sealed partial class Cursor : IDisposable
+    [TypeConverter(typeof(CursorConverter))]
+    public sealed class Cursor : IDisposable
     {
         private static string[] HtmlCursors { get; }
 
@@ -67,7 +71,7 @@ namespace System.Windows.Input
             }
             else
             {
-                throw new ArgumentException(string.Format("'{0}' cursor type is not valid.", cursorType));
+                throw new ArgumentException(string.Format(Strings.InvalidCursorType, cursorType));
             }
         }
 

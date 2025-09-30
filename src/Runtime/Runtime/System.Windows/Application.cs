@@ -26,13 +26,14 @@ using System.ApplicationModel.Activation;
 using System.Windows.Input;
 using System.Windows.Threading;
 using CSHTML5.Internal;
+using OpenSilver.Theming;
 
 namespace System.Windows
 {
     /// <summary>
     /// Encapsulates the app and its available services.
     /// </summary>
-    public partial class Application
+    public partial class Application : IResourceDictionaryOwner
     {
         private static readonly Dictionary<string, string> _resourcesCache = new(StringComparer.OrdinalIgnoreCase);
 
@@ -43,9 +44,7 @@ namespace System.Windows
         private ResourceDictionary _resources;
         private Dictionary<object, object> _implicitResourcesCache;
         private Host _host;
-
-        // Says if App.Resources has any implicit styles
-        internal bool HasImplicitStylesInResources { get; set; }
+        private Theme _theme;
 
         /// <summary>
         /// Gets the Application object for the current application.
@@ -79,7 +78,7 @@ namespace System.Windows
             AppDomain.CurrentDomain.UnhandledException +=
                 (s, e) => OnUnhandledException(e.ExceptionObject as Exception, false);
 
-            new DOMEventManager(GetWindow, "unload", ProcessOnExit).AttachToDomEvents();
+            DOMEvents.Window.AddEventListener("beforeunload", OnExitNative);
 
             // In case of a redirection from Microsoft AAD, when running in the Simulator, we re-instantiate the application. We need to reload the JavaScript files because they are no longer in the HTML DOM due to the AAD redirection:
             OpenSilver.Interop.ResetLoadedFilesDictionaries();
@@ -88,9 +87,9 @@ namespace System.Windows
             ClientSideResourceRegister.Startup();
 
             // Keep a reference to the startup assembly:
-            StartupAssemblyInfo.StartupAssembly = this.GetType().Assembly;
+            StartupAssemblyInfo.StartupAssembly = GetType().Assembly;
 
-            Window.Current = _mainWindow = new Window(true);
+            Window.Current = _mainWindow = new Window();
             _mainWindow.AttachToDomElement(_rootDiv);
 
             // We call the "Startup" event and the "OnLaunched" method using the Dispatcher, because usually the user registers the "Startup" event in the constructor of the "App.cs" class, which is derived from "Application.cs", and therefore when we arrive here the event is not yet registered. Executing the code in the Dispatcher ensures that the constructor of the "App.cs" class has finished before running the code.
@@ -98,15 +97,41 @@ namespace System.Windows
             {
                 StartAppServices();
 
-                // Raise the "Startup" event:
-                if (this.Startup != null)
-                    Startup(this, new StartupEventArgs());
+                OnStartup(new StartupEventArgs());
 
-                // Call the "OnLaunched" method:
-                this.OnLaunched(new LaunchActivatedEventArgs());
+                OnLaunched(new LaunchActivatedEventArgs());
             });
-
         }
+
+        /// <summary>
+        /// Gets or sets the <see cref="OpenSilver.Theming.Theme"/> used across this <see cref="Application"/>.
+        /// </summary>
+        public Theme Theme
+        {
+            get { return _theme; }
+            set
+            {
+                if (_theme == value) return;
+
+                _theme?.RemoveOwner(this);
+
+                if (value is not null)
+                {
+                    value.Seal();
+                    value.AddOwner(this);
+                }
+
+                _theme = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets a collection of the <see cref="Window"/> instances that have been created.
+        /// </summary>
+        /// <returns>
+        /// A collection of the windows used by the application.
+        /// </returns>
+        public WindowCollection Windows { get; } = new();
 
         public IList ApplicationLifetimeObjects => _lifetimeObjects ??= new ApplicationLifetimeObjectsCollection();
 
@@ -145,7 +170,7 @@ namespace System.Windows
             {
                 string sElement = OpenSilver.Interop.GetVariableStringForJS(_rootDiv);
                 paramsArray = JsonSerializer.Deserialize<HTMLParam[]>(
-                    OpenSilver.Interop.ExecuteJavaScriptString($"document.getAppParams({sElement});"));
+                    OpenSilver.Interop.ExecuteJavaScriptString($"document.getAppParams({sElement})"));
             }
             catch
             {
@@ -172,7 +197,7 @@ namespace System.Windows
         {
             get
             {
-                if (_resources == null)
+                if (_resources is null)
                 {
                     _resources = new ResourceDictionary();
                     _resources.AddOwner(this);
@@ -181,14 +206,13 @@ namespace System.Windows
             }
             set
             {
+                if (_resources == value) return;
+
                 ResourceDictionary oldValue = _resources;
                 _resources = value;
 
-                if (oldValue != null)
-                {
-                    // This app is no longer an owner for the old ResourceDictionary
-                    oldValue.RemoveOwner(this);
-                }
+                // This app is no longer an owner for the old ResourceDictionary
+                oldValue?.RemoveOwner(this);
 
                 if (value != null)
                 {
@@ -199,29 +223,57 @@ namespace System.Windows
                     }
                 }
 
-                if (oldValue != value)
-                {
-                    InvalidateStyleCache(new ResourcesChangeInfo(oldValue, value));
-
-                    //// this notify all window in the app that Application resources changed
-                    // InvalidateResourceReferences(new ResourcesChangeInfo(oldValue, value));
-                }
+                // this notify all window in the app that Application resources changed
+                InvalidateResources(new ResourcesChangeInfo(oldValue, value));
             }
         }
 
-        internal bool HasResources
+        internal bool HasResources => _resources is not null && !_resources.IsEmpty;
+
+        // Says if App.Resources has any implicit styles
+        internal bool HasImplicitStylesInResources { get; set; }
+
+        void IResourceDictionaryOwner.SetResources(ResourceDictionary resourceDictionary)
         {
-            get
+            // Propagate the HasImplicitStyles flag to the new owner
+            if (resourceDictionary.HasImplicitStyles)
             {
-                ResourceDictionary resources = _resources;
-                return (resources != null &&
-                        ((resources.Count > 0) || (resources.MergedDictionaries.Count > 0)));
+                HasImplicitStylesInResources = true;
             }
         }
 
-        internal object FindImplicitResourceInternal(object resourceKey)
+        void IResourceDictionaryOwner.OnResourcesChange(ResourcesChangeInfo info, bool shouldInvalidate, bool hasImplicitStyles)
         {
-            if (_implicitResourcesCache?.TryGetValue(resourceKey, out object resource) ?? false)
+            // Set the HasImplicitStyles flag on the owner
+            if (hasImplicitStyles)
+            {
+                HasImplicitStylesInResources = true;
+            }
+
+            if (shouldInvalidate)
+            {
+                InvalidateResources(info);
+            }
+        }
+
+        internal object FindResourceInternal(object resourceKey)
+        {
+            if (_resources is not null && _resources.TryGetResource(resourceKey, out object value))
+            {
+                return value;
+            }
+
+            if (_theme is Theme theme && theme.TryGetResource(resourceKey, out value))
+            {
+                return value;
+            }
+
+            return null;
+        }
+
+        internal object FindImplicitResource(object resourceKey)
+        {
+            if (_implicitResourcesCache is not null && _implicitResourcesCache.TryGetValue(resourceKey, out object resource))
             {
                 return resource;
             }
@@ -229,7 +281,13 @@ namespace System.Windows
             return null;
         }
 
-        internal void InvalidateStyleCache(ResourcesChangeInfo info)
+        private void InvalidateResources(ResourcesChangeInfo info)
+        {
+            InvalidateImplicitResourcesCache(info);
+            InvalidateResourceReferences(info);
+        }
+
+        private void InvalidateImplicitResourcesCache(ResourcesChangeInfo info)
         {
             if (info.Key is not null)
             {
@@ -251,12 +309,20 @@ namespace System.Windows
                 }
             }
             else if (info.IsCatastrophicDictionaryChange ||
-                (info.NewDictionary != null && (info.NewDictionary.HasImplicitStyles || info.NewDictionary.HasImplicitDataTemplates)) ||
-                (info.OldDictionary != null && (info.OldDictionary.HasImplicitStyles || info.OldDictionary.HasImplicitDataTemplates)))
+                (info.NewDictionary != null && ResourceDictionary.Helpers.HasImplicitResources(info.NewDictionary)) ||
+                (info.OldDictionary != null && ResourceDictionary.Helpers.HasImplicitResources(info.OldDictionary)))
             {
-                _implicitResourcesCache = HasResources && (Resources.HasImplicitStyles || Resources.HasImplicitDataTemplates) ?
+                _implicitResourcesCache = HasResources && ResourceDictionary.Helpers.HasImplicitResources(Resources) ?
                     ResourceDictionary.Helpers.BuildImplicitResourcesCache(Resources) :
                     null;
+            }
+        }
+
+        internal void InvalidateResourceReferences(ResourcesChangeInfo info)
+        {
+            foreach (Window window in Windows)
+            {
+                TreeWalkHelper.InvalidateOnResourcesChange(window, info);
             }
         }
 
@@ -276,6 +342,19 @@ namespace System.Windows
         public event StartupEventHandler Startup;
 
         /// <summary>
+        /// Raises the <see cref="Startup"/> event.
+        /// </summary>
+        /// <param name="e">
+        /// A <see cref="StartupEventArgs"/> that contains the event data.
+        /// </param>
+        /// <remarks>
+        /// <see cref="OnStartup"/> raises the <see cref="Startup"/> event.
+        /// A type that derives from <see cref="Application"/> may override <see cref="OnStartup"/>. The overridden method 
+        /// must call <see cref="OnStartup"/> in the base class if the <see cref="Startup"/> event needs to be raised.
+        /// </remarks>
+        protected virtual void OnStartup(StartupEventArgs e) => Startup?.Invoke(this, e);
+
+        /// <summary>
         /// Gets or sets the main application UI. This is an alias for the 
         /// <see cref="Window.Content"/> of this application's <see cref="MainWindow"/>.
         /// </summary>
@@ -284,9 +363,6 @@ namespace System.Windows
             get => _mainWindow.Content;
             set => _mainWindow.Content = value as FrameworkElement;
         }
-
-        //returns the html window element
-        internal object GetWindow() => INTERNAL_HtmlDomManager.GetHtmlWindow();
 
         internal INTERNAL_HtmlDomElementReference GetRootDiv() => _rootDiv;
 
@@ -383,17 +459,14 @@ namespace System.Windows
         /// </returns>
         public object TryFindResource(object resourceKey)
         {
-            if (resourceKey is Type typeKey)
+            if (resourceKey is Type typeKey && XamlResources.FindStyleResourceInGenericXaml(typeKey) is object resource)
             {
-                if (XamlResources.FindStyleResourceInGenericXaml(typeKey) is object resource1)
-                {
-                    return resource1;
-                }
+                return resource;
             }
 
-            if (HasResources && Resources.TryGetResource(resourceKey, out object resource2))
+            if (HasResources && Resources.TryGetResource(resourceKey, out resource))
             {
-                return resource2;
+                return resource;
             }
 
             return XamlResources.FindBuiltInResource(resourceKey);
@@ -425,10 +498,9 @@ namespace System.Windows
             string resourceUri = resourceLocator.ToString();
             if (AppResourcesManager.IsComponentUri(resourceUri))
             {
-                IXamlComponentLoader factory = GetXamlComponentLoader(resourceUri);
-                if (factory != null)
+                if (GetXamlComponentLoader(resourceUri) is IXamlComponentLoader loader)
                 {
-                    factory.LoadComponent(component);
+                    loader.LoadComponent(component);
                 }
             }
         }
@@ -519,25 +591,44 @@ namespace System.Windows
         #region Exit event
 
         /// <summary>
-        /// Occurs just before an application shuts down and cannot be canceled.
+        /// Occurs just before an application shuts down.
         /// </summary>
-        public event EventHandler Exit;
+        public event ExitEventHandler Exit;
 
         /// <summary>
-        /// Raises the Exit event
+        /// Raises the <see cref="Exit"/> event.
         /// </summary>
-        void ProcessOnExit(object jsEventArg)
-        {
-            OnExit(EventArgs.Empty);
-        }
+        /// <param name="e">
+        /// An <see cref="ExitEventArgs"/> that contains the event data.
+        /// </param>
+        protected virtual void OnExit(ExitEventArgs e) => Exit?.Invoke(this, e);
 
-        /// <summary>
-        /// Raises the Exit event
-        /// </summary>
-        /// <param name="eventArgs">The arguments for the event.</param>
-        protected virtual void OnExit(EventArgs eventArgs)
+        private void OnExitNative(object jsEventArg)
         {
-            Exit?.Invoke(this, eventArgs);
+            var e = new ExitEventArgs(0);
+
+            try
+            {
+                OnExit(e);
+
+                foreach (Window window in Windows)
+                {
+                    if (window.InvokeOnClosing(true))
+                    {
+                        e.Handled = true;
+                    }
+                }
+            }
+            finally
+            {
+                Environment.ExitCode = e.ExitCode;
+
+                if (e.Handled)
+                {
+                    OpenSilver.Interop.ExecuteJavaScriptVoid(
+                        $"{OpenSilver.Interop.GetVariableStringForJS(jsEventArg)}.preventDefault()");
+                }
+            }
         }
 
         #endregion
@@ -552,6 +643,8 @@ namespace System.Windows
         /// to ensure correction functioning of the application.
         /// </summary>
         /// <param name="entryPoint"></param>
+        [Obsolete(Helper.ObsoleteMemberMessage)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static void RunApplication(Action entryPoint) => entryPoint();
     }
 }

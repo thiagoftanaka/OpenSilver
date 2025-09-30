@@ -28,6 +28,7 @@ namespace OpenSilver.Internal.Xaml.Context
         {
             _stack = new XamlContextStack();
             SavedDepth = 0;
+            ServiceProvider = new ServiceProviderContext(this);
         }
 
         internal XamlContext(XamlContext ctx)
@@ -39,6 +40,7 @@ namespace OpenSilver.Internal.Xaml.Context
 
             _stack = ctx._stack.DeepCopy();
             SavedDepth = _stack.Depth;
+            ServiceProvider = new ServiceProviderContext(this);
         }
 
         internal void PushScope() => _stack.PushScope();
@@ -92,7 +94,21 @@ namespace OpenSilver.Internal.Xaml.Context
             }
         }
 
+        internal ServiceProviderContext ServiceProvider { get; }
+
         internal INameScope ExternalNameScope { get; set; }
+
+        internal WeakReference<DependencyObject> TemplateOwnerReference { get; set; }
+
+        internal DependencyObject GetTemplateOwner()
+        {
+            if (TemplateOwnerReference is WeakReference<DependencyObject> wr)
+            {
+                wr.TryGetTarget(out DependencyObject owner);
+                return owner;
+            }
+            return null;
+        }
 
         /// <summary>
         /// Total depth of the stack SavedDepth+LiveDepth
@@ -118,35 +134,66 @@ namespace OpenSilver.Internal.Xaml.Context
 
         internal IEnumerable<object> ServiceProvider_GetAllAmbientValues()
         {
-            var retList = new List<object>();
-
             XamlObjectFrame frame = _stack.CurrentFrame;
             while (frame.Depth >= 1)
             {
                 object inst = frame.Instance;
-                if (inst is IInternalFrameworkElement fe)
+                switch (inst)
                 {
-                    if (fe.HasResources)
-                    {
-                        retList.Add(fe.Resources);
-                    }
-                }
-                else if (inst is ResourceDictionary)
-                {
-                    retList.Add(inst);
-                }
-                else if (inst is Application app)
-                {
-                    if (app.HasResources)
-                    {
-                        retList.Add(app.Resources);
-                    }
+                    case FrameworkElement fe:
+                        {
+                            if (fe.HasResources)
+                            {
+                                yield return fe.Resources;
+                            }
+                            for (Style style = fe.Style; style is not null; style = style.BasedOn)
+                            {
+                                if (style.HasResources)
+                                {
+                                    yield return style.Resources;
+                                }
+                            }
+                            if (fe.TemplateInternal is FrameworkTemplate template && template.HasResources)
+                            {
+                                yield return template.Resources;
+                            }
+                        }
+                        break;
+                    case ResourceDictionary:
+                        yield return inst;
+                        break;
+                    case Style style:
+                        do
+                        {
+                            if (style.HasResources)
+                            {
+                                yield return style.Resources;
+                            }
+                            style = style.BasedOn;
+                        } while (style is not null);
+                        break;
+                    case FrameworkTemplate template:
+                        if (template.HasResources)
+                        {
+                            yield return template.Resources;
+                        }
+                        break;
+                    case Application app:
+                        if (app.HasResources)
+                        {
+                            yield return app.Resources;
+                        }
+                        break;
+                    case IInternalFrameworkElement ife:
+                        if (ife.HasResources)
+                        {
+                            yield return ife.Resources;
+                        }
+                        break;
                 }
 
                 frame = frame.Previous;
             }
-
-            return retList;
         }
     }
 }

@@ -37,13 +37,67 @@ public sealed class PointAnimationUsingKeyFrames : AnimationTimeline, IKeyFrameA
     /// The collection of <see cref="PointKeyFrame"/> objects that define
     /// the animation. The default is an empty collection.
     /// </returns>
-    public PointKeyFrameCollection KeyFrames => _frames ??= new PointKeyFrameCollection(this);
+    public PointKeyFrameCollection KeyFrames
+    {
+        get
+        {
+            if (_frames is null)
+            {
+                SetKeyFrames(new());
+            }
+            return _frames;
+        }
+        set { SetKeyFrames(value); }
+    }
 
     IKeyFrameCollection<Point> IKeyFrameAnimation<Point>.KeyFrames => _frames;
+
+    /// <inheritdoc />
+    public sealed override Type TargetPropertyType => typeof(Point);
 
     protected sealed override Duration GetNaturalDurationCore() =>
         KeyFrameAnimationHelpers.GetLargestTimeSpanKeyTime(this);
 
-    internal override TimelineClock CreateClock(bool isRoot) =>
-        new AnimationClock<Point>(this, isRoot, new KeyFramesAnimator<Point>(this));
+    internal override TimelineClock CreateClock() =>
+        new AnimationClock<Point>(this, new KeyFramesAnimator<Point>(this));
+
+    private void SetKeyFrames(PointKeyFrameCollection keyFrames)
+    {
+        if (_frames is not null)
+        {
+            RemoveSelfAsInheritanceContext(_frames, null);
+        }
+
+        _frames = keyFrames;
+
+        if (_frames is not null)
+        {
+            ProvideSelfAsInheritanceContext(_frames, null);
+        }
+    }
+}
+
+/// <summary>
+/// Represents a collection of <see cref="PointKeyFrame"/> objects that can be individually accessed by index.
+/// </summary>
+public sealed class PointKeyFrameCollection : PresentationFrameworkCollection<PointKeyFrame>, IKeyFrameCollection<Point>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PointKeyFrameCollection"/> class.
+    /// </summary>
+    public PointKeyFrameCollection() { }
+
+    internal override void AddOverride(PointKeyFrame value) => AddDependencyObjectInternal(value);
+
+    internal override void ClearOverride() => ClearDependencyObjectInternal();
+
+    internal override PointKeyFrame GetItemOverride(int index) => GetItemInternal(index);
+
+    internal override void InsertOverride(int index, PointKeyFrame value) => InsertDependencyObjectInternal(index, value);
+
+    internal override void RemoveAtOverride(int index) => RemoveAtDependencyObjectInternal(index);
+
+    internal override void SetItemOverride(int index, PointKeyFrame value) => SetItemDependencyObjectInternal(index, value);
+
+    IKeyFrame<Point> IKeyFrameCollection<Point>.this[int index] => GetItemInternal(index);
 }

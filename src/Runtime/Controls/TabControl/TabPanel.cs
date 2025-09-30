@@ -5,7 +5,6 @@
 
 using System.Collections;
 using System.Windows.Media;
-using OpenSilver.Internal.Controls;
 
 namespace System.Windows.Controls.Primitives
 {
@@ -658,20 +657,29 @@ namespace System.Windows.Controls.Primitives
         /// </summary>
         internal double RowHeight { get; set; }
 
+        /// <inheritdoc />
         protected sealed override UIElementCollection CreateUIElementCollection(FrameworkElement logicalParent)
         {
             return base.CreateUIElementCollection(null);
         }
 
-        internal override IEnumerator LogicalChildren
+        // Note: Since children are displayed in a grid in our implementation,
+        // this panel's children are not logical children. There are the logical
+        // children of the grid they are displayed in.
+        /// <inheritdoc />
+        protected sealed override IEnumerator LogicalChildren => EmptyEnumerator.Instance;
+
+        private sealed class EmptyEnumerator : IEnumerator
         {
-            get
-            {
-                // Note: Since children are displayed in a grid in our implementation,
-                // this panel's children are not logical children. There are the logical
-                // children of the grid they are displayed in.
-                return EmptyEnumerator.Instance;
-            }
+            private EmptyEnumerator() { }
+
+            public static EmptyEnumerator Instance { get; } = new EmptyEnumerator();
+
+            public object Current => throw new InvalidOperationException();
+
+            public bool MoveNext() => false;
+
+            public void Reset() { }
         }
     }
 }

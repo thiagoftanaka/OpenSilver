@@ -37,6 +37,12 @@ internal interface IInternalFrameworkElement : IFrameworkElement, IInternalUIEle
 {
     event InheritedPropertyChangedEventHandler InheritedPropertyChanged;
 
+    event EventHandler ResourcesChanged;
+
+    void OnResourcesChanged(ResourcesChangeInfo info);
+
+    void OnAncestorChangedInternal(TreeChangeInfo info);
+
     bool HasLogicalChildren { get; set; }
 
     bool IsLogicalChildrenIterationInProgress { get; set; }
@@ -47,9 +53,9 @@ internal interface IInternalFrameworkElement : IFrameworkElement, IInternalUIEle
 
     IEnumerator LogicalChildren { get; }
 
-    RoutedEvent LoadedEvent { get; }
+    DependencyObject TemplatedParent { get; }
 
-    DependencyObject TemplatedParent { get; set; }
+    void SetTemplatedParent(WeakReference<DependencyObject> templatedParent);
 
     IFrameworkElement TemplateChild { get; set; }
 

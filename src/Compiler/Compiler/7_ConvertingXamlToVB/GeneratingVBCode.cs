@@ -37,7 +37,21 @@ namespace OpenSilver.Compiler
                 {
                     componentType = componentType,
                     eventName = eventName,
-                    handlerName = handlerName
+                    handlerName = handlerName,
+                });
+
+                return componentId;
+            }
+
+            public int Connect(string componentType, string ownerType, string eventName, string handlerName)
+            {
+                int componentId = _entries.Count;
+                _entries.Add(new ComponentConnectorEntry
+                {
+                    componentType = componentType,
+                    ownerType = ownerType,
+                    eventName = eventName,
+                    handlerName = handlerName,
                 });
 
                 return componentId;
@@ -59,7 +73,14 @@ namespace OpenSilver.Compiler
                     {
                         ComponentConnectorEntry eventEntry = _entries[componentId];
                         builder.Append(' ', 4 * 4).AppendLine($"Case {componentId}");
-                        builder.Append(' ', 4 * 5).AppendLine($"AddHandler CType({targetParam}, {eventEntry.componentType}).{eventEntry.eventName}, AddressOf Me.{eventEntry.handlerName}");
+                        if (string.IsNullOrEmpty(eventEntry.ownerType))
+                        {
+                            builder.Append(' ', 4 * 5).AppendLine($"AddHandler CType({targetParam}, {eventEntry.componentType}).{eventEntry.eventName}, AddressOf Me.{eventEntry.handlerName}");
+                        }
+                        else
+                        {
+                            builder.Append(' ', 4 * 5).AppendLine($"{eventEntry.ownerType}.Add{eventEntry.eventName}Handler(CType({targetParam}, {eventEntry.componentType}), AddressOf Me.{eventEntry.handlerName})");
+                        }
                         builder.Append(' ', 4 * 5).AppendLine("Return");
                     }
 
@@ -74,6 +95,7 @@ namespace OpenSilver.Compiler
             private struct ComponentConnectorEntry
             {
                 public string componentType;
+                public string ownerType;
                 public string eventName;
                 public string handlerName;
             }
@@ -86,8 +108,7 @@ namespace OpenSilver.Compiler
             string rootNamespace,
             AssembliesInspector reflectionOnSeparateAppDomain,
             bool isFirstPass,
-            ConversionSettings settings,
-            string codeToPutInTheInitializeComponentOfTheApplicationClass)
+            ConversionSettings settings)
         {
             ICodeGenerator generator;
             if (isFirstPass)
@@ -107,8 +128,7 @@ namespace OpenSilver.Compiler
                     assemblyNameWithoutExtension,
                     rootNamespace,
                     reflectionOnSeparateAppDomain,
-                    settings,
-                    codeToPutInTheInitializeComponentOfTheApplicationClass);
+                    settings);
             }
 
             return generator.Generate();
@@ -116,7 +136,6 @@ namespace OpenSilver.Compiler
 
         private static string CreateInitializeComponentMethod(
             string applicationTypeFullName,
-            string additionalCodeForApplication,
             string assemblyNameWithoutExtension,
             string fileNameWithPathRelativeToProjectRoot,
             List<string> findNameCalls)
@@ -139,7 +158,6 @@ namespace OpenSilver.Compiler
             End If
             _contentLoaded = True
 
-            {additionalCodeForApplication}
             {loadComponentCall}
             {string.Join(Environment.NewLine + "            ", findNameCalls)}
         End Sub
@@ -273,6 +291,7 @@ End Namespace
 
         private static string GenerateFactoryClass(
             string componentTypeFullName,
+            string baseTypeFullName,
             string componentParamName,
             string loadComponentImpl,
             string createComponentImpl,
@@ -299,31 +318,44 @@ End Namespace
 '------------------------------------------------------------------------------
 
 Namespace Global
+    ''' <summary>
+    ''' {factoryName}
+    ''' </summary>
     <Global.System.Diagnostics.DebuggerNonUserCodeAttribute()>
     <Global.System.ComponentModel.EditorBrowsable(Global.System.ComponentModel.EditorBrowsableState.Never)>
     Public NotInheritable Class {factoryName}
-        Implements {IXamlComponentFactoryClass}(Of {componentTypeFullName}), {IXamlComponentLoaderClass}(Of {componentTypeFullName})
+#Disable Warning BC40008
+        Implements {IXamlComponentFactoryClass}(Of {componentTypeFullName}), {IXamlComponentLoaderClass}(Of {baseTypeFullName})
+#Enable Warning BC40008
+        ''' <summary>
+        ''' Instantiate
+        ''' </summary>
+        <Global.System.ComponentModel.EditorBrowsable(Global.System.ComponentModel.EditorBrowsableState.Never)>
         Public Shared Function Instantiate() As Object
             Return CreateComponentImpl()
         End Function
     
+#Disable Warning BC40008
         Private Function IXamlComponentFactory_CreateComponent() As {componentTypeFullName} Implements {IXamlComponentFactoryClass}(Of {componentTypeFullName}).CreateComponent
+#Enable Warning BC40008
             Return CreateComponentImpl()
         End Function
     
+#Disable Warning BC40008
         Private Function IXamlComponentFactory_CreateComponent1() As Object Implements {IXamlComponentFactoryClass}.CreateComponent
+#Enable Warning BC40008
             Return CreateComponentImpl()
         End Function
     
-        Private Sub IXamlComponentLoader_LoadComponent(component As {componentTypeFullName}) Implements {IXamlComponentLoaderClass}(Of {componentTypeFullName}).LoadComponent
+        Private Sub IXamlComponentLoader_LoadComponent(component As {baseTypeFullName}) Implements {IXamlComponentLoaderClass}(Of {baseTypeFullName}).LoadComponent
             LoadComponentImpl(component)
         End Sub
     
         Private Sub IXamlComponentLoader_LoadComponent1(component As Object) Implements {IXamlComponentLoaderClass}.LoadComponent
-            LoadComponentImpl(CType(component, {componentTypeFullName}))
+            LoadComponentImpl(CType(component, {baseTypeFullName}))
         End Sub
     
-        Private Shared Sub LoadComponentImpl(ByVal {componentParamName} As {componentTypeFullName})
+        Private Shared Sub LoadComponentImpl(ByVal {componentParamName} As {baseTypeFullName})
             If TypeOf CObj({componentParamName}) Is {uiElementFullyQualifiedTypeName} Then
                 CType(CObj({componentParamName}), {uiElementFullyQualifiedTypeName}).XamlSourcePath = ""{assemblyName}\{fileNameWithPathRelativeToProjectRoot}""
             End If

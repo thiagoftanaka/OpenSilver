@@ -11,7 +11,10 @@
 *  
 \*====================================================================================*/
 
+using System.ComponentModel;
+using System.Globalization;
 using System.Windows.Shapes;
+using OpenSilver.Internal;
 
 namespace System.Windows.Media
 {
@@ -20,9 +23,21 @@ namespace System.Windows.Media
     /// objects can be used for clipping regions and as geometry definitions for rendering
     /// two-dimensional graphic data as a <see cref="Path"/>.
     /// </summary>
+    [TypeConverter(typeof(GeometryConverter))]
     public abstract class Geometry : DependencyObject
     {
         internal Geometry() { }
+
+        /// <summary>
+        /// Creates a new <see cref="Geometry"/> instance from the specified string using the current culture.
+        /// </summary>
+        /// <param name="source">
+        /// A string that describes the geometry to be created.
+        /// </param>
+        /// <returns>
+        /// A new <see cref="Geometry"/> instance created from the specified string.
+        /// </returns>
+        public static Geometry Parse(string source) => Parsers.ParseGeometry(source, CultureInfo.InvariantCulture);
 
         /// <summary>
         /// Gets an empty geometry object.
@@ -85,7 +100,7 @@ namespace System.Windows.Media
             geometry.RaisePathChanged();
         }
 
-        internal void RaisePathChanged() => Invalidated?.Invoke(this, new GeometryInvalidatedEventsArgs(true, false));
+        internal void RaisePathChanged() => Invalidated?.Invoke(this, GeometryInvalidatedEventsArgs.AffectsMeasureArgs);
 
         internal static void OnFillRuleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -93,7 +108,7 @@ namespace System.Windows.Media
             geometry.RaiseFillRuleChanged();
         }
 
-        private void RaiseFillRuleChanged() => Invalidated?.Invoke(this, new GeometryInvalidatedEventsArgs(false, true));
+        private void RaiseFillRuleChanged() => Invalidated?.Invoke(this, GeometryInvalidatedEventsArgs.AffectsFillRuleArgs);
 
         internal abstract string ToPathData(IFormatProvider formatProvider);
 
@@ -107,6 +122,10 @@ namespace System.Windows.Media
             AffectsMeasure = affectsMeasure;
             AffectsFillRule = affectsFillRule;
         }
+
+        public static GeometryInvalidatedEventsArgs AffectsMeasureArgs { get; } = new(true, false);
+
+        public static GeometryInvalidatedEventsArgs AffectsFillRuleArgs { get; } = new(false, true);
 
         public bool AffectsMeasure { get; }
 

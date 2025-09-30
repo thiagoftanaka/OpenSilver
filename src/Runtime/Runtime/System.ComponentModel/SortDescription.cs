@@ -12,7 +12,7 @@
 *  
 \*====================================================================================*/
 
-using System.Globalization;
+using OpenSilver.Internal;
 
 namespace System.ComponentModel
 {
@@ -38,7 +38,7 @@ namespace System.ComponentModel
         public SortDescription(string propertyName, ListSortDirection direction)
         {
             if (direction != ListSortDirection.Ascending && direction != ListSortDirection.Descending)
-                throw new InvalidEnumArgumentException("direction", (int)direction, typeof(ListSortDirection));
+                throw new InvalidEnumArgumentException(nameof(direction), (int)direction, typeof(ListSortDirection));
 
             _propertyName = propertyName;
             _direction = direction;
@@ -65,7 +65,7 @@ namespace System.ComponentModel
             set
             {
                 if (_sealed)
-                    throw new InvalidOperationException(string.Format("Cannot modify a '{0}' after it is sealed.", "SortDescription"));
+                    throw new InvalidOperationException(string.Format(Strings.CannotChangeAfterSealed, nameof(SortDescription)));
 
                 _propertyName = value;
             }
@@ -80,10 +80,10 @@ namespace System.ComponentModel
             set
             {
                 if (_sealed)
-                    throw new InvalidOperationException(string.Format("Cannot modify a '{0}' after it is sealed.", "SortDescription"));
+                    throw new InvalidOperationException(string.Format(Strings.CannotChangeAfterSealed, nameof(SortDescription)));
 
                 if (value < ListSortDirection.Ascending || value > ListSortDirection.Descending)
-                    throw new InvalidEnumArgumentException("value", (int)value, typeof(ListSortDirection));
+                    throw new InvalidEnumArgumentException(nameof(value), (int)value, typeof(ListSortDirection));
 
                 _direction = value;
             }

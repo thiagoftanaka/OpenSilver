@@ -12,7 +12,6 @@
 \*====================================================================================*/
 
 using System.Collections.Generic;
-using System.Globalization;
 using System.Windows.Media.Effects;
 using System.Diagnostics;
 using System.ComponentModel;
@@ -31,70 +30,171 @@ namespace System.Windows
     {
         static UIElement()
         {
-            MouseMoveEvent = new RoutedEvent(nameof(MouseMove), RoutingStrategy.Bubble, typeof(MouseEventHandler), typeof(UIElement));
-            MouseLeftButtonDownEvent = new RoutedEvent(nameof(MouseLeftButtonDown), RoutingStrategy.Bubble, typeof(MouseButtonEventHandler), typeof(UIElement));
-            MouseRightButtonDownEvent = new RoutedEvent(nameof(MouseRightButtonDown), RoutingStrategy.Bubble, typeof(MouseButtonEventHandler), typeof(UIElement));
-            MouseWheelEvent = new RoutedEvent(nameof(MouseWheel), RoutingStrategy.Bubble, typeof(MouseWheelEventHandler), typeof(UIElement));
-            MouseLeftButtonUpEvent = new RoutedEvent(nameof(MouseLeftButtonUp), RoutingStrategy.Bubble, typeof(MouseButtonEventHandler), typeof(UIElement));
-            MouseEnterEvent = new RoutedEvent(nameof(MouseEnter), RoutingStrategy.Direct, typeof(MouseEventHandler), typeof(UIElement));
-            MouseLeaveEvent = new RoutedEvent(nameof(MouseLeave), RoutingStrategy.Direct, typeof(MouseEventHandler), typeof(UIElement));
-            TextInputEvent = new RoutedEvent(nameof(TextInput), RoutingStrategy.Bubble, typeof(TextCompositionEventHandler), typeof(UIElement));
-            TextInputStartEvent = new RoutedEvent(nameof(TextInputStart), RoutingStrategy.Bubble, typeof(TextCompositionEventHandler), typeof(UIElement));
-            TextInputUpdateEvent = new RoutedEvent(nameof(TextInputUpdate), RoutingStrategy.Bubble, typeof(TextCompositionEventHandler), typeof(UIElement));
-            TappedEvent = new RoutedEvent(nameof(Tapped), RoutingStrategy.Bubble, typeof(TappedEventHandler), typeof(UIElement));
-            MouseRightButtonUpEvent = new RoutedEvent(nameof(MouseRightButtonUp), RoutingStrategy.Bubble, typeof(MouseButtonEventHandler), typeof(UIElement));
-            KeyDownEvent = new RoutedEvent(nameof(KeyDown), RoutingStrategy.Bubble, typeof(KeyEventHandler), typeof(UIElement));
-            KeyUpEvent = new RoutedEvent(nameof(KeyUp), RoutingStrategy.Bubble, typeof(KeyEventHandler), typeof(UIElement));
-            GotFocusEvent = new RoutedEvent(nameof(GotFocus), RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(UIElement));
-            LostFocusEvent = new RoutedEvent(nameof(LostFocus), RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(UIElement));
-            LostMouseCaptureEvent = new RoutedEvent(nameof(LostMouseCapture), RoutingStrategy.Bubble, typeof(MouseEventHandler), typeof(UIElement));
-
-            RegisterEvents(typeof(UIElement));
+            RegisterEvents();
         }
 
         internal bool IsConnectedToLiveTree { get; set; }
 
         internal bool IsUnloading { get; set; }
 
-#region Visual Parent
+        #region Visual Children
 
         /// <summary>
-        /// Returns the parent of this UIElement.
+        /// Gets the visual tree parent of the visual object.
         /// </summary>
-        internal DependencyObject VisualParent { get; private set; }
-
-#endregion Visual Parent
-
-#region Visual Children
+        /// <returns>
+        /// The <see cref="UIElement"/> parent.
+        /// </returns>
+        protected DependencyObject VisualParent => InternalVisualParent;
 
         /// <summary>
-        /// Derived class must implement to support UIElement children. The method must return
-        /// the child at the specified index. Index must be between 0 and GetVisualChildrenCount-1.
-        ///
-        /// By default a UIElement does not have any children.
-        ///
-        /// Remark:
-        ///       Need to lock down Visual tree during the callbacks.
-        ///       During this virtual call it is not valid to modify the Visual tree.
+        /// Identical to <see cref="VisualParent"/>.
         /// </summary>
-        internal virtual UIElement GetVisualChild(int index)
+        internal DependencyObject InternalVisualParent { get; private set; }
+
+        /// <summary>
+        /// Returns a child at the specified index from a collection of child elements.
+        /// </summary>
+        /// <param name="index">
+        /// The zero-based index of the requested child element in the collection.
+        /// </param>
+        /// <returns>
+        /// The requested child element. This should not return null; if the provided index 
+        /// is out of range, an exception is thrown.
+        /// </returns>
+        protected virtual UIElement GetVisualChild(int index) => throw new ArgumentOutOfRangeException(nameof(index));
+
+        /// <summary>
+        /// Returns the child at index "index".
+        /// </summary>
+        internal UIElement InternalGetVisualChild(int index) => GetVisualChild(index);
+
+        /// <summary>
+        /// Gets the number of child elements for the <see cref="UIElement"/>.
+        /// </summary>
+        /// <returns>
+        /// The number of child elements.
+        /// </returns>
+        protected virtual int VisualChildrenCount => 0;
+
+        /// <summary>
+        /// Returns the number of children.
+        /// </summary>
+        internal int InternalVisualChildrenCount => VisualChildrenCount;
+
+        /// <summary>
+        /// Defines the parent-child relationship between two visuals.
+        /// </summary>
+        /// <param name="child">
+        /// The child visual object to add to parent visual.
+        /// </param>
+        protected void AddVisualChild(UIElement child)
         {
-            throw new ArgumentOutOfRangeException(nameof(index));
+            if (child is null)
+            {
+                return;
+            }
+
+            if (child.InternalVisualParent is not null)
+            {
+                throw new ArgumentException(Strings.UIElement_HasParent);
+            }
+
+            HasVisualChildren = true;
+
+            // Set the parent pointer.
+
+            child.InternalVisualParent = this;
+
+            //
+            // Resume layout.
+            //
+            PropagateResumeLayout(this, child);
+
+            // Fire notifications
+            OnVisualChildrenChanged(child, null);
+            child.OnVisualParentChanged(null);
         }
 
         /// <summary>
-        /// Derived classes override this property to enable the UIElement code to enumerate
-        /// the UIElement children. Derived classes need to return the number of children
-        /// from this method.
-        ///
-        /// By default a UIElement does not have any children.
-        ///
-        /// Remark: During this virtual method the Visual tree must not be modified.
+        /// Helper method to provide access to <see cref="AddVisualChild(UIElement)"/> for visual 
+        /// collections such as UIElementCollection or TextElementCollection.
         /// </summary>
-        internal virtual int VisualChildrenCount
+        internal void InternalAddVisualChild(UIElement child) => AddVisualChild(child);
+
+        /// <summary>
+        /// Removes the parent-child relationship between two visuals.
+        /// </summary>
+        /// <param name="child">
+        /// The child visual object to remove from the parent visual.
+        /// </param>
+        protected void RemoveVisualChild(UIElement child)
         {
-            get { return 0; }
+            if (child is null || child.InternalVisualParent is null)
+            {
+                return;
+            }
+
+            if (child.InternalVisualParent != this)
+            {
+                throw new ArgumentException(Strings.UIElement_NotChild);
+            }
+
+            if (VisualChildrenCount == 0)
+            {
+                HasVisualChildren = false;
+            }
+
+            // Set the parent pointer to null.
+
+            child.InternalVisualParent = null;
+
+            PropagateSuspendLayout(child);
+
+            child.OnVisualParentChanged(this);
+            OnVisualChildrenChanged(null, child);
         }
+
+        /// <summary>
+        /// Helper method to provide access to <see cref="RemoveVisualChild(UIElement)"/> for visual 
+        /// collections such as UIElementCollection or TextElementCollection.
+        /// </summary>
+        internal void InternalRemoveVisualChild(UIElement child) => RemoveVisualChild(child);
+
+        /// <summary>
+        /// Called when the parent of the visual object is changed.
+        /// </summary>
+        /// <param name="oldParent">
+        /// A value of type <see cref="DependencyObject"/> that represents the previous
+        /// parent of the <see cref="UIElement"/> object. If the <see cref="UIElement"/>
+        /// object did not have a previous parent, the value of the parameter is null.
+        /// </param>
+        protected internal virtual void OnVisualParentChanged(DependencyObject oldParent)
+        {
+            // Synchronize ForceInherit properties
+            if (InternalVisualParent is not null)
+            {
+                SynchronizeForceInheritProperties(this, InternalVisualParent);
+            }
+            else
+            {
+                if (oldParent is not null)
+                {
+                    SynchronizeForceInheritProperties(this, oldParent);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Called when the visual element collection of the visual object is modified.
+        /// </summary>
+        /// <param name="visualAdded">
+        /// The <see cref="UIElement"/> that was added to the collection.
+        /// </param>
+        /// <param name="visualRemoved">
+        /// The <see cref="UIElement"/> that was removed from the collection.
+        /// </param>
+        protected internal virtual void OnVisualChildrenChanged(DependencyObject visualAdded, DependencyObject visualRemoved) { }
 
         /// <Summary>
         /// Flag to check if this visual has any children
@@ -120,39 +220,6 @@ namespace System.Windows
         /// child appeard in the children collection. The UIElement layer will then call the GetVisualChild
         /// method to find out where the child was added.
         /// </summary>
-        internal void AddVisualChild(UIElement child)
-        {
-            if (child == null)
-            {
-                return;
-            }
-
-            if (child.VisualParent != null)
-            {
-                throw new ArgumentException("Must disconnect specified child from current parent UIElement before attaching to new parent UIElement.");
-            }
-
-            HasVisualChildren = true;
-
-            // Set the parent pointer.
-
-            child.VisualParent = this;
-
-            //
-            // Resume layout.
-            //
-            PropagateResumeLayout(this, child);
-
-            child.OnVisualParentChanged(null);
-        }
-
-        /// <summary>
-        /// AttachChild
-        ///
-        /// Derived classes must call this method to notify the UIElement layer that a new
-        /// child appeard in the children collection. The UIElement layer will then call the GetVisualChild
-        /// method to find out where the child was added.
-        /// </summary>
         internal void AddVisualChild(IInternalUIElement child)
         {
             if (child == null)
@@ -162,7 +229,7 @@ namespace System.Windows
 
             if (child.VisualParent != null)
             {
-                throw new ArgumentException("Must disconnect specified child from current parent UIElement before attaching to new parent UIElement.");
+                throw new ArgumentException(Strings.UIElement_HasParent);
             }
 
             HasVisualChildren = true;
@@ -172,39 +239,6 @@ namespace System.Windows
             child.VisualParent = this;
 
             child.OnVisualParentChanged(null);
-        }
-        
-        /// <summary>
-        /// DisconnectChild
-        ///
-        /// Derived classes must call this method to notify the UIElement layer that a
-        /// child was removed from the children collection. The UIElement layer will then call
-        /// GetChildren to find out which child has been removed.
-        /// </summary>
-        internal void RemoveVisualChild(UIElement child)
-        {
-            if (child == null || child.VisualParent == null)
-            {
-                return;
-            }
-
-            if (child.VisualParent != this)
-            {
-                throw new ArgumentException("Specified UIElement is not a child of this UIElement.");
-            }
-
-            if (VisualChildrenCount == 0)
-            {
-                HasVisualChildren = false;
-            }
-
-            // Set the parent pointer to null.
-
-            child.VisualParent = null;
-
-            PropagateSuspendLayout(child);
-
-            child.OnVisualParentChanged(this);
         }
 
         /// <summary>
@@ -223,7 +257,7 @@ namespace System.Windows
 
             if (child.VisualParent != this)
             {
-                throw new ArgumentException("Specified UIElement is not a child of this UIElement.");
+                throw new ArgumentException(Strings.UIElement_NotChild);
             }
 
             if (VisualChildrenCount == 0)
@@ -236,26 +270,6 @@ namespace System.Windows
             child.VisualParent = null;
 
             child.OnVisualParentChanged(this);
-        }
-
-        /// <summary>
-        /// OnVisualParentChanged is called when the parent of the UIElement is changed.
-        /// </summary>
-        /// <param name="oldParent">Old parent or null if the UIElement did not have a parent before.</param>
-        internal virtual void OnVisualParentChanged(DependencyObject oldParent)
-        {
-            // Synchronize ForceInherit properties
-            if (VisualParent != null)
-            {
-                SynchronizeForceInheritProperties(this, VisualParent);
-            }
-            else
-            {
-                if (oldParent != null)
-                {
-                    SynchronizeForceInheritProperties(this, oldParent);
-                }
-            }
         }
 
 #endregion Visual Children
@@ -281,7 +295,8 @@ namespace System.Windows
             WriteVisualFlag(VisualFlags.IsUIElement, true);
         }
 
-        internal override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+        /// <inheritdoc />
+        protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
         {
             if (e.Metadata is PropertyMetadata metadata && _isLoaded)
             {
@@ -292,7 +307,53 @@ namespace System.Windows
             base.OnPropertyChanged(e);
         }
 
-#region ClipToBounds
+        /// <summary>
+        /// Attempts to set focus to this element.
+        /// </summary>
+        /// <returns>
+        /// true if keyboard focus and logical focus were set to this element; false if only logical focus was set to this element, 
+        /// or if the call to this method did not force the focus to change.
+        /// </returns>
+        public bool Focus() =>
+            KeyboardNavigation.Current.Focus(this) is UIElement uie &&
+            InputManager.Current.SetFocus(uie);
+
+        /// <summary>
+        /// Occurs when the value of the <see cref="Focusable"/> property changes.
+        /// </summary>
+        public event DependencyPropertyChangedEventHandler FocusableChanged;
+
+        /// <summary>
+        /// Identifies the <see cref="Focusable"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty FocusableProperty =
+            DependencyProperty.Register(
+                nameof(Focusable),
+                typeof(bool),
+                typeof(UIElement),
+                new PropertyMetadata(BooleanBoxes.FalseBox, OnFocusableChanged));
+
+        /// <summary>
+        /// Gets or sets a value that indicates whether the element can receive focus. This is a dependency property.
+        /// </summary>
+        /// <returns>
+        /// true if the element is focusable; otherwise false. The default is false.
+        /// </returns>
+        public bool Focusable
+        {
+            get => (bool)GetValue(FocusableProperty);
+            set => SetValueInternal(FocusableProperty, value);
+        }
+
+        private static void OnFocusableChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var uie = (UIElement)d;
+
+            // Raise the public changed event.
+            uie.FocusableChanged?.Invoke(uie, e);
+        }
+
+        #region ClipToBounds
 
         /// <summary>
         /// Gets or sets a value indicating whether to clip the content of this element
@@ -400,15 +461,12 @@ namespace System.Windows
         #region IsEnabled
 
         /// <summary>
-        /// Fetches the value that IsEnabled should be coerced to.
+        /// Gets a value that becomes the return value of <see cref="IsEnabled"/> in derived classes.
         /// </summary>
-        /// <remarks>
-        /// This method is virtual is so that controls derived from UIElement
-        /// can combine additional requirements into the coersion logic.
-        /// It is important for anyone overriding this property to also
-        /// call CoerceValue when any of their dependencies change.
-        /// </remarks>
-        internal virtual bool IsEnabledCore => true;
+        /// <returns>
+        /// true if the element is enabled; otherwise, false.
+        /// </returns>
+        protected virtual bool IsEnabledCore => true;
 
         /// <summary>
         /// Identifies the <see cref="IsEnabled"/> dependency property.
@@ -438,6 +496,8 @@ namespace System.Windows
         private static void OnIsEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             var uie = (UIElement)d;
+
+            // Raise the public changed event.
             uie.IsEnabledChanged?.Invoke(uie, e);
             uie.InvalidateForceInheritPropertyOnChildren(e.Property);
 
@@ -570,15 +630,7 @@ namespace System.Windows
                 nameof(RenderTransform),
                 typeof(Transform),
                 typeof(UIElement),
-                new PropertyMetadata(null, OnRenderTransformChanged)
-                {
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
-                    {
-                        var uie = (UIElement)d;
-                        uie.SetTransform((Transform)newValue);
-                        uie.SetTransformOrigin(uie.RenderTransformOrigin);
-                    }
-                });
+                new PropertyMetadata(null, OnRenderTransformChanged));
 
         /// <summary>
         /// Gets or sets transform information that affects the rendering position of a <see cref="UIElement"/>.
@@ -592,37 +644,6 @@ namespace System.Windows
             set => SetValueInternal(RenderTransformProperty, value);
         }
 
-        private static void OnRenderTransformChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            UIElement uie = (UIElement)d;
-
-            if (uie._renderTransformChangedListener != null)
-            {
-                uie._renderTransformChangedListener.Detach();
-                uie._renderTransformChangedListener = null;
-            }
-
-            if (e.NewValue is Transform newTransform)
-            {
-                uie._renderTransformChangedListener = new(uie, newTransform)
-                {
-                    OnEventAction = static (instance, sender, args) => instance.OnRenderTransformChanged(sender, args),
-                    OnDetachAction = static (listener, source) => source.Changed -= listener.OnEvent,
-                };
-                newTransform.Changed += uie._renderTransformChangedListener.OnEvent;
-            }
-        }
-
-        private void OnRenderTransformChanged(object sender, EventArgs e)
-        {
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
-            {
-                this.SetTransform((Transform)sender);
-            }
-        }
-
-        private WeakEventListener<UIElement, Transform, EventArgs> _renderTransformChangedListener;
-
         /// <summary>
         /// Identifies the <see cref="RenderTransformOrigin"/> dependency property.
         /// </summary>
@@ -631,10 +652,7 @@ namespace System.Windows
                 nameof(RenderTransformOrigin),
                 typeof(Point),
                 typeof(UIElement),
-                new PropertyMetadata(new Point(0, 0))
-                {
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((UIElement)d).SetTransformOrigin((Point)newValue),
-                });
+                new PropertyMetadata(new Point(0, 0), OnRenderTransformChanged));
 
         /// <summary>
         /// Gets or sets the origin point of any possible render transform declared by
@@ -649,9 +667,68 @@ namespace System.Windows
             set => SetValueInternal(RenderTransformOriginProperty, value);
         }
 
-#endregion
+        private static void OnRenderTransformChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            UIElement uie = (UIElement)d;
 
-#region UseLayoutRounding
+            //if never measured, then nothing to do, it should be measured at some point
+            if (!uie.NeverMeasured && !uie.NeverArranged)
+            {
+                uie.InvalidateArrange();
+                uie.AreTransformsClean = false;
+            }
+        }
+
+        private static readonly DependencyProperty VisualTransformProperty =
+            DependencyProperty.Register(
+                nameof(VisualTransform),
+                typeof(Transform),
+                typeof(UIElement),
+                new PropertyMetadata(null, OnVisualTransformChanged)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((UIElement)d).SetTransform((Transform)newValue),
+                });
+
+        internal Transform VisualTransform
+        {
+            get => (Transform)GetValue(VisualTransformProperty);
+            set => SetValue(VisualTransformProperty, value);
+        }
+
+        private static void OnVisualTransformChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var uie = (UIElement)d;
+
+            if (uie._visualTransformChangedListener != null)
+            {
+                uie._visualTransformChangedListener.Detach();
+                uie._visualTransformChangedListener = null;
+            }
+
+            if (e.NewValue is Transform newTransform)
+            {
+                uie._visualTransformChangedListener = new(uie, newTransform)
+                {
+                    OnEventAction = static (instance, sender, args) => instance.OnVisualTransformChanged(sender, args),
+                    OnDetachAction = static (listener, source) => source.Changed -= listener.OnEvent,
+                };
+                newTransform.Changed += uie._visualTransformChangedListener.OnEvent;
+            }
+        }
+
+        private void OnVisualTransformChanged(object sender, EventArgs e)
+        {
+            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
+            {
+                this.SetTransform((Transform)sender);
+            }
+        }
+
+        private WeakEventListener<UIElement, Transform, EventArgs> _visualTransformChangedListener;
+
+        #endregion
+
+        #region UseLayoutRounding
 
         /// <summary>
         /// Gets or sets a value that determines whether rendering for the object and
@@ -797,20 +874,33 @@ namespace System.Windows
 
         #region IsVisible
 
-        /// <summary>
-        /// A property indicating if this element is visible or not.
-        /// </summary>
-        public bool IsVisible => ReadFlag(CoreFlags.IsVisibleCache);
+        // The IsVisible property is a read-only reflection of the Visibility
+        // property.
+        private static readonly PropertyMetadata _isVisibleMetadata =
+            new ReadOnlyPropertyMetadata(BooleanBoxes.FalseBox, GetIsVisible, OnIsVisibleChanged, CoerceIsVisible);
+
+        private static readonly DependencyPropertyKey IsVisiblePropertyKey =
+            DependencyProperty.RegisterReadOnly(
+                nameof(IsVisible),
+                typeof(bool),
+                typeof(UIElement),
+                _isVisibleMetadata);
 
         /// <summary>
         /// Identifies the <see cref="IsVisible"/> dependency property.
         /// </summary>
-        private static readonly DependencyProperty IsVisibleProperty =
-            DependencyProperty.Register(
-                nameof(IsVisible),
-                typeof(bool),
-                typeof(UIElement),
-                new PropertyMetadata(false, OnIsVisibleChanged, CoerceIsVisible));
+        public static readonly DependencyProperty IsVisibleProperty = IsVisiblePropertyKey.DependencyProperty;
+
+        /// <summary>
+        /// Gets a value indicating whether this element is visible in the user interface (UI).
+        /// This is a dependency property.
+        /// </summary>
+        /// <returns>
+        /// true if the element is visible; otherwise, false.
+        /// </returns>
+        public bool IsVisible => ReadFlag(CoreFlags.IsVisibleCache);
+
+        private static object GetIsVisible(DependencyObject d) => BooleanBoxes.Box(((UIElement)d).IsVisible);
 
         private static void OnIsVisibleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -833,7 +923,8 @@ namespace System.Windows
             // Invalidate the children so that they will inherit the new value.
             uie.InvalidateForceInheritPropertyOnChildren(e.Property);
 
-            uie.IsVisibleChanged?.Invoke(d, e);
+            // Raise the public changed event.
+            uie.IsVisibleChanged?.Invoke(uie, e);
         }
 
         private static object CoerceIsVisible(DependencyObject d, object baseValue)
@@ -1149,75 +1240,6 @@ namespace System.Windows
 
 #endregion
 
-        /// <summary>
-        /// Returns a transform object that can be used to transform coordinates from
-        /// the UIElement to the specified object.
-        /// </summary>
-        /// <param name="visual">
-        /// The object to compare to the current object for purposes of obtaining the
-        /// transform.
-        /// </param>
-        /// <returns>
-        /// The transform information as an object. Call methods on this object to get
-        /// a practical transform.
-        /// </returns>
-        public GeneralTransform TransformToVisual(UIElement visual)
-        {
-            if (!INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
-            {
-                throw new ArgumentException();
-            }
-            // If no "visual" was specified, we use the Window root instead.
-            // Note: This is useful for example when calculating the position of popups, which
-            // are defined in absolute coordinates, at the same level as the Window root.
-            INTERNAL_HtmlDomElementReference outerDivOfReferenceVisual;
-            if (visual != null)
-            {
-                if (!INTERNAL_VisualTreeManager.IsElementInVisualTree(visual))
-                {
-                    throw new ArgumentException(nameof(visual));
-                }
-
-                outerDivOfReferenceVisual = visual.OuterDiv;
-            }
-            else
-            {
-                UIElement rootVisual = Window.GetWindow(this)?.Content ?? throw new InvalidOperationException();
-
-                outerDivOfReferenceVisual = rootVisual.OuterDiv;
-            }
-
-            // Hack to improve the Simulator performance by making only one interop call rather than two:
-            string sOuterDivOfControl = OpenSilver.Interop.GetVariableStringForJS(OuterDiv);
-            string sOuterDivOfReferenceVisual = OpenSilver.Interop.GetVariableStringForJS(outerDivOfReferenceVisual);
-            string concatenated = OpenSilver.Interop.ExecuteJavaScriptString(
-                $"({sOuterDivOfControl}.getBoundingClientRect().left - {sOuterDivOfReferenceVisual}.getBoundingClientRect().left) + '|' + ({sOuterDivOfControl}.getBoundingClientRect().top - {sOuterDivOfReferenceVisual}.getBoundingClientRect().top)");
-            int sepIndex = concatenated.IndexOf('|');
-            string offsetLeftAsString = concatenated.Substring(0, sepIndex);
-            string offsetTopAsString = concatenated.Substring(sepIndex + 1);
-            double offsetLeft = Convert.ToDouble(offsetLeftAsString, CultureInfo.InvariantCulture);
-            double offsetTop = Convert.ToDouble(offsetTopAsString, CultureInfo.InvariantCulture);
-
-            return new MatrixTransform(new Matrix(1, 0, 0, 1, offsetLeft, offsetTop));
-        }
-
-        /// <summary>
-        /// Use this method for better performance in the Simulator compared to 
-        /// requesting the ActualWidth and ActualHeight separately.
-        /// </summary>
-        /// <returns>
-        /// The actual size of the element.
-        /// </returns>
-        internal Size GetBoundingClientSize()
-        {
-            if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
-            {
-                return INTERNAL_HtmlDomManager.GetBoundingClientSize(OuterDiv);
-            }
-
-            return new Size();
-        }
-
         internal bool IsDescendantOf(DependencyObject ancestor)
         {
             if (ancestor is null)
@@ -1227,7 +1249,7 @@ namespace System.Windows
 
             if (ancestor is not UIElement)
             {
-                throw new ArgumentException("ancestor must be a UIElement.");
+                throw new ArgumentException(string.Format(Strings.UIElement_NotAnUIElement, nameof(ancestor)));
             }
 
             // Walk up the parent chain of the descendant until we run out
@@ -1264,11 +1286,10 @@ namespace System.Windows
 
         internal void InvalidateForceInheritPropertyOnChildren(DependencyProperty property)
         {
-            int cChildren = this.VisualChildrenCount;
+            int cChildren = VisualChildrenCount;
             for (int i = 0; i < cChildren; i++)
             {
-                UIElement child = this.GetVisualChild(i);
-                if (child != null)
+                if (GetVisualChild(i) is UIElement child)
                 {
                     child.CoerceValue(property);
                 }
@@ -1349,7 +1370,7 @@ namespace System.Windows
         HasAutomationPeer = 0x00100000,
         RenderingInvalidated = 0x00200000,
         IsVisibleCache = 0x00400000,
-        //AreTransformsClean = 0x00800000,
+        AreTransformsClean = 0x00800000,
         BypassLayoutPolicies = 0x01000000, //IsOpacitySuppressed = 0x01000000,
         //ExistsEventHandlersStore = 0x02000000,
         //TouchesOverCache = 0x04000000,
@@ -1401,8 +1422,8 @@ namespace System.Windows
         //// 
         //Are3DContentBoundsValid = 0x00000020,
 
-        //// FindCommonAncestor is used to find the common ancestor of a Visual.
-        //FindCommonAncestor = 0x00000040,
+        // FindCommonAncestor is used to find the common ancestor of a Visual.
+        FindCommonAncestor = 0x00000040,
 
         //// IsLayoutIslandRoot indicates that this Visual is a root of Element Layout Island.
         //IsLayoutIslandRoot = 0x00000080,

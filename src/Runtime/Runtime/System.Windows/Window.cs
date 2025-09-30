@@ -13,11 +13,11 @@
 
 using System.Diagnostics;
 using System.ComponentModel;
-using System.Globalization;
 using System.Windows.Markup;
 using System.Windows.Input;
 using CSHTML5.Internal;
 using OpenSilver.Internal;
+using OpenSilver.Internal.Controls.Primitives;
 
 namespace System.Windows
 {
@@ -25,46 +25,39 @@ namespace System.Windows
     /// Represents an application window.
     /// </summary>
     [ContentProperty(nameof(Content))]
-    public class Window : FrameworkElement
+    public class Window : FrameworkElement, IResizeObserverListener
     {
+        static Window()
+        {
+            KeyboardNavigation.TabNavigationProperty.OverrideMetadata(typeof(Window), new FrameworkPropertyMetadata(KeyboardNavigationMode.Cycle));
+        }
+
+        private IDisposable _resizeObserver;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Window"/> class.
         /// </summary>
-        public Window() : this(false) { }
-
-        internal Window(bool hookUpEvents)
+        public Window()
         {
             BypassLayoutPolicies = true;
 
-            if (hookUpEvents)
+            if (Application.Current is Application app)
             {
-                new DOMEventManager(
-                    Application.Current.GetWindow, 
-                    "beforeunload", 
-                    ProcessOnClosing)
-                .AttachToDomEvents();
-
-                new DOMEventManager(
-                    () => INTERNAL_HtmlDomManager.GetHtmlWindow(), 
-                    "resize", 
-                    ProcessOnWindowSizeChanged)
-                .AttachToDomEvents();
+                app.Windows.Add(this);
             }
+
+            PopupService.TrackMousePosition(this);
 
             GotFocus += new RoutedEventHandler(OnGotFocus);
         }
 
+        ~Window() => _resizeObserver?.Dispose();
+
         internal TextMeasurementService TextMeasurementService { get; private set; }
 
-        internal override int VisualChildrenCount
-        {
-            get
-            {
-                return Content == null ? 0 : 1;
-            }
-        }
+        protected override int VisualChildrenCount => Content is null ? 0 : 1;
 
-        internal override UIElement GetVisualChild(int index)
+        protected override UIElement GetVisualChild(int index)
         {
             UIElement content = Content;
             if (content == null || index != 0)
@@ -115,6 +108,8 @@ namespace System.Windows
                 throw new InvalidOperationException("The method 'Window.AttachToDomElement' can be called only once.");
             }
 
+            ParentWindow = this;
+
             //Note: The "rootDomElement" will contain one DIV for the root of the window visual tree, and other DIVs to host the popups.
             RootDomElement = rootDomElement ?? throw new ArgumentNullException(nameof(rootDomElement));
 
@@ -123,13 +118,10 @@ namespace System.Windows
             RootDomElement.Style.overflow = "clip";
 
             // Create the DIV that will correspond to the root of the window visual tree:
-            OuterDiv = INTERNAL_HtmlDomManager.AppendDomElement("div", RootDomElement, this);
+            OuterDiv = INTERNAL_HtmlDomManager.CreateWindowDomElementAndAppendIt(this);
 
-            OuterDiv.Style.width = "100%";
-            OuterDiv.Style.height = "100%";
-            OuterDiv.Style.overflowX = "hidden";
-            OuterDiv.Style.overflowY = "hidden";
-            
+            _resizeObserver = ResizeObserver.Observe(RootDomElement, this);
+
             InputManager.Current.RegisterRoot(RootDomElement);
 
             // Set the window as "loaded":
@@ -148,14 +140,6 @@ namespace System.Windows
 
             // Raise the "Loaded" event:
             RaiseLoadedEvent();
-            
-            SizeChanged += WindowSizeChangedEventHandler;
-        }
-
-        private void WindowSizeChangedEventHandler(object sender, WindowSizeChangedEventArgs e)
-        {
-            InvalidateMeasure();
-            InvalidateArrange();
         }
 
         private void OnGotFocus(object sender, RoutedEventArgs e) => Current = this;
@@ -167,29 +151,10 @@ namespace System.Windows
         /// </summary>
         public new event WindowSizeChangedEventHandler SizeChanged;
 
-        void ProcessOnWindowSizeChanged(object jsEventArg)
+        private void OnWindowSizeChanged(Size size)
         {
-            double width;
-            double height;
-            string sElement = OpenSilver.Interop.GetVariableStringForJS(this.OuterDiv);
-            // Hack to improve the Simulator performance by making only one interop call rather than two:
-            string concatenated = OpenSilver.Interop.ExecuteJavaScriptString($"{sElement}.offsetWidth + '|' + {sElement}.offsetHeight");
-            int sepIndex = concatenated.IndexOf('|');
-            string widthAsString = concatenated.Substring(0, sepIndex);
-            string heightAsString = concatenated.Substring(sepIndex + 1);
-            width = double.Parse(widthAsString, CultureInfo.InvariantCulture); //todo: verify that the locale is OK. I think that JS by default always produces numbers in invariant culture (with "." separator).
-            height = double.Parse(heightAsString, CultureInfo.InvariantCulture); //todo: read note above
-
-            var eventArgs = new WindowSizeChangedEventArgs()
-            {
-                Size = new Size(width, height)
-            };
-            OnWindowSizeChanged(eventArgs);
-        }
-
-        void OnWindowSizeChanged(WindowSizeChangedEventArgs eventArgs)
-        {
-            SizeChanged?.Invoke(this, eventArgs);
+            InvalidateMeasure();
+            SizeChanged?.Invoke(this, new WindowSizeChangedEventArgs(size));
         }
 
         /// <summary>
@@ -201,7 +166,7 @@ namespace System.Windows
             {
                 if (OuterDiv is not null)
                 {
-                    string sDiv = OpenSilver.Interop.GetVariableStringForJS(OuterDiv);
+                    string sDiv = OpenSilver.Interop.GetVariableStringForJS(RootDomElement);
                     double width = OpenSilver.Interop.ExecuteJavaScriptDouble($"{sDiv}.offsetWidth");
                     double height = OpenSilver.Interop.ExecuteJavaScriptDouble($"{sDiv}.offsetHeight");
                     return new Rect(0, 0, width, height);
@@ -217,13 +182,6 @@ namespace System.Windows
         {
             if (_isLoaded)
             {
-                // Due to the fact that the children fill their "ParentWindow"
-                // property by copying the value of the "ParentWindow" property
-                // of their parent, we need to temporarily set it to be equal
-                // to "this" before calling "base.OnContentChanged", so that it
-                // then gets passed to the children recursively:
-                this.ParentWindow = this;
-
                 // Attach the child UI element:
                 UIElement newChild = newContent as UIElement;
                 UIElement oldChild = oldContent as UIElement;
@@ -232,9 +190,6 @@ namespace System.Windows
                 RemoveVisualChild(oldChild);
                 AddVisualChild(newChild);
                 INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(newChild, this);
-
-                // We can now revert the "ParentWindow" to null (cf. comment above):
-                this.ParentWindow = null;
             }
         }
 
@@ -284,7 +239,7 @@ namespace System.Windows
 
         public override object CreateDomElement(object parentRef, out object domElementWhereToPlaceChildren)
         {
-            throw new InvalidOperationException("\"CreateDomElement\" should not be called for the Window object.");
+            throw new InvalidOperationException("'CreateDomElement' should not be called for the Window object.");
         }
 
         #region Closing event
@@ -297,18 +252,18 @@ namespace System.Windows
         /// <summary>
         /// Raises the Closing event
         /// </summary>
-        void ProcessOnClosing(object jsEventArg)
-        {
-            OnClosing(new ClosingEventArgs(true));
-        }
+        /// <param name="e">The arguments for the event.</param>
+        protected void OnClosing(ClosingEventArgs e) => Closing?.Invoke(this, e);
 
-        /// <summary>
-        /// Raises the Closing event
-        /// </summary>
-        /// <param name="eventArgs">The arguments for the event.</param>
-        protected void OnClosing(ClosingEventArgs eventArgs)
+        internal bool InvokeOnClosing(bool cancellable)
         {
-            Closing?.Invoke(this, eventArgs);
+            if (Closing is not null)
+            {
+                var e = new ClosingEventArgs(cancellable);
+                OnClosing(e);
+                return e.IsCancelable && e.Cancel;
+            }
+            return false;
         }
 
         #endregion
@@ -337,7 +292,7 @@ namespace System.Windows
         {
             if (dependencyObject is not UIElement uie)
             {
-                throw new InvalidOperationException("Reference is not a valid visual DependencyObject.");
+                throw new InvalidOperationException(string.Format(Strings.UIElement_NotAnUIElement, nameof(dependencyObject)));
             }
 
             return GetWindow(uie);
@@ -382,10 +337,10 @@ namespace System.Windows
         protected override Size MeasureOverride(Size availableSize)
         {
             availableSize = Bounds.Size;
-            if (Content is not null)
+            if (Content is FrameworkElement content)
             {
-                Content.Measure(availableSize);
-                return Content.DesiredSize;
+                content.Measure(availableSize);
+                return content.DesiredSize;
             }
             return availableSize;
         }
@@ -393,11 +348,10 @@ namespace System.Windows
         protected override Size ArrangeOverride(Size finalSize)
         {
             finalSize = Bounds.Size;
-            if (Content is not null)
-            {
-                Content.Arrange(new Rect(new Point(), finalSize));
-            }
+            Content?.Arrange(new Rect(new Point(), finalSize));
             return finalSize;
         }
+
+        void IResizeObserverListener.OnSizeChanged(Size size) => OnWindowSizeChanged(size);
     }
 }

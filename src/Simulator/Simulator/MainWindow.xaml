@@ -4,10 +4,9 @@
         xmlns:mahapps="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
         xmlns:xamlinspection="clr-namespace:OpenSilver.Simulator.XamlInspection"
         xmlns:console="clr-namespace:DotNetForHtml5.EmulatorWithoutJavascript.Console"
-        SizeToContent="WidthAndHeight"
-        ResizeMode="CanResizeWithGrip"
         WindowStartupLocation="Manual"
         ShowIconOnTitleBar="True"
+        Icon="/OpenSilver.Simulator;component/OpenSilverIcon.png"
         GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
         Left="100" Top="5"
         KeyUp="MetroWindow_KeyUp">

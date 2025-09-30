@@ -1,11 +1,10 @@
 ﻿<Project>
 
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
-  
+
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <EnableDefaultItems>false</EnableDefaultItems>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AssemblyName>OpenSilver.Controls.Data.Input</AssemblyName>
     <RootNamespace>System.Windows.Controls</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -23,7 +22,6 @@
   <ItemGroup>
     <Compile Include="Automation\DescriptionViewerAutomationPeer.cs" />
     <Compile Include="Automation\ValidationSummaryAutomationPeer.cs" />
-    <Compile Include="Common\Extensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources.Designer.cs">
       <DesignTime>True</DesignTime>

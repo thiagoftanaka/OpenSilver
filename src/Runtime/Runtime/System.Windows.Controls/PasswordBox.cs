@@ -12,10 +12,10 @@
 \*====================================================================================*/
 
 using System.Windows.Automation.Peers;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using CSHTML5.Internal;
-using OpenSilver.Internal;
 using OpenSilver.Internal.Controls;
 
 namespace System.Windows.Controls
@@ -133,6 +133,70 @@ namespace System.Windows.Controls
         }
 
         /// <summary>
+        /// Identifies the <see cref="SelectionBackground"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty SelectionBackgroundProperty =
+            TextBox.SelectionBackgroundProperty.AddOwner(
+                typeof(PasswordBox),
+                new PropertyMetadata((object)null)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
+                    {
+                        ((PasswordBox)d).OuterDiv.Style.setProperty(
+                            "--selection-bg-color",
+                            newValue switch
+                            {
+                                SolidColorBrush scb => scb.ToHtmlString(),
+                                _ => string.Empty,
+                            });
+                    },
+                });
+
+        /// <summary>
+        /// Gets or sets the brush used to render the background for the selected text.
+        /// </summary>
+        /// <returns>
+        /// The brush that fills the background of the selected text.
+        /// </returns>
+        public Brush SelectionBackground
+        {
+            get => (Brush)GetValue(SelectionBackgroundProperty);
+            set => SetValueInternal(SelectionBackgroundProperty, value);
+        }
+
+        /// <summary>
+        /// Identifies the <see cref="SelectionForeground"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty SelectionForegroundProperty =
+            TextBox.SelectionForegroundProperty.AddOwner(
+                typeof(PasswordBox),
+                new PropertyMetadata((object)null)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
+                    {
+                        ((PasswordBox)d).OuterDiv.Style.setProperty(
+                            "--selection-color",
+                            newValue switch
+                            {
+                                SolidColorBrush scb => scb.ToHtmlString(),
+                                _ => string.Empty,
+                            });
+                    },
+                });
+
+        /// <summary>
+        /// Gets or sets the brush used for the selected text in the <see cref="PasswordBox"/>.
+        /// </summary>
+        /// <returns>
+        /// The brush used for the selected text in the <see cref="PasswordBox"/>.
+        /// </returns>
+        public Brush SelectionForeground
+        {
+            get => (Brush)GetValue(SelectionForegroundProperty);
+            set => SetValueInternal(SelectionForegroundProperty, value);
+        }
+
+        /// <summary>
         /// Gets or sets the password currently held by the <see cref="PasswordBox"/>.
         /// </summary>
         /// <returns>
@@ -164,7 +228,12 @@ namespace System.Windows.Controls
                 nameof(Password),
                 typeof(string),
                 typeof(PasswordBox),
-                new PropertyMetadata(string.Empty, OnPasswordChanged, CoercePassword));
+                new FrameworkPropertyMetadata(
+                    string.Empty,
+                    FrameworkPropertyMetadataOptions.None,
+                    OnPasswordChanged,
+                    CoercePassword,
+                    UpdateSourceTrigger.LostFocus));
 
         private static void OnPasswordChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -179,7 +248,7 @@ namespace System.Windows.Controls
                 pwb._textViewHost?.View.SetPasswordNative((string)e.NewValue);
             }
 
-            pwb.OnPasswordChanged(new RoutedEventArgs { OriginalSource = pwb });
+            pwb.OnPasswordChanged(new RoutedEventArgs { Source = pwb });
         }
 
         private static object CoercePassword(DependencyObject d, object baseValue) => baseValue ?? string.Empty;
@@ -339,49 +408,5 @@ namespace System.Windows.Controls
                 VisualStateManager.GoToState(this, VisualStates.StateUnfocused, false);
             }
         }
-
-        #region Not supported yet
-
-        [OpenSilver.NotImplemented]
-        public static readonly DependencyProperty SelectionBackgroundProperty =
-            DependencyProperty.Register(
-                nameof(SelectionBackground),
-                typeof(Brush),
-                typeof(PasswordBox),
-                null);
-
-        /// <summary>
-        /// Gets or sets the brush used to render the background for the selected text.
-        /// </summary>
-        [OpenSilver.NotImplemented]
-        public Brush SelectionBackground
-        {
-            get => (Brush)GetValue(SelectionBackgroundProperty);
-            set => SetValueInternal(SelectionBackgroundProperty, value);
-        }
-
-        /// <summary>
-        /// Identifies the <see cref="PasswordBox.SelectionForeground"/> dependency
-        /// property.
-        /// </summary>
-        [OpenSilver.NotImplemented]
-        public static readonly DependencyProperty SelectionForegroundProperty =
-            DependencyProperty.Register(
-                nameof(SelectionForeground),
-                typeof(Brush),
-                typeof(PasswordBox),
-                new PropertyMetadata((object)null));
-
-        /// <summary>
-        /// Gets or sets the brush used for the selected text in the <see cref="PasswordBox"/>.
-        /// </summary>
-        [OpenSilver.NotImplemented]
-        public Brush SelectionForeground
-        {
-            get => (Brush)GetValue(SelectionForegroundProperty);
-            set => SetValueInternal(SelectionForegroundProperty, value);
-        }
-
-        #endregion
     }
 }

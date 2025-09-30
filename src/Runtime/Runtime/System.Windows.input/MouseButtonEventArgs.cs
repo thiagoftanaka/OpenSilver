@@ -11,17 +11,25 @@
 *  
 \*====================================================================================*/
 
-namespace System.Windows.Input
+namespace System.Windows.Input;
+
+/// <summary>
+/// Provides event data for mouse button input events, for example <see cref="UIElement.MouseLeftButtonDown"/>
+/// and <see cref="UIElement.MouseRightButtonUp"/>.
+/// </summary>
+public class MouseButtonEventArgs : MouseEventArgs
 {
     /// <summary>
-    /// Provides event data for mouse button input events, for example <see cref="UIElement.MouseLeftButtonDown"/>
-    /// and <see cref="UIElement.MouseRightButtonUp"/>.
+    /// Initializes a new instance of the <see cref="MouseButtonEventArgs"/> class.
     /// </summary>
-    public class MouseButtonEventArgs : MouseEventArgs
+    public MouseButtonEventArgs() { }
+
+    internal MouseButtonEventArgs(bool isTouchDevice, ModifierKeys keyModifiers, double x, double y)
+        : base(isTouchDevice, keyModifiers, x, y)
     {
-        internal override void InvokeHandler(Delegate handler, object target)
-        {
-            ((MouseButtonEventHandler)handler)(target, this);
-        }
     }
+
+    /// <inheritdoc />
+    protected override void InvokeEventHandler(Delegate genericHandler, object genericTarget) =>
+        ((MouseButtonEventHandler)genericHandler)(genericTarget, this);
 }

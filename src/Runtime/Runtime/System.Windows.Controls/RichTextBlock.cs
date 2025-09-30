@@ -30,6 +30,15 @@ namespace System.Windows.Controls
         static RichTextBlock()
         {
             IsHitTestableProperty.OverrideMetadata(typeof(RichTextBlock), new PropertyMetadata(BooleanBoxes.TrueBox));
+            DefaultStyleKeyProperty.OverrideMetadata(typeof(RichTextBlock), new PropertyMetadata(typeof(RichTextBlock)));
+            FlowDirectionProperty.OverrideMetadata(
+                typeof(RichTextBlock),
+                new FrameworkPropertyMetadata(
+                    FlowDirection.LeftToRight,
+                    FrameworkPropertyMetadataOptions.Inherits | FrameworkPropertyMetadataOptions.AffectsParentArrange)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((RichTextBlock)d).SetDirection((FlowDirection)newValue),
+                });
         }
 
         private BlockCollection _blocks;
@@ -260,7 +269,7 @@ namespace System.Windows.Controls
                 nameof(IsTextSelectionEnabled),
                 typeof(bool),
                 typeof(RichTextBlock),
-                new PropertyMetadata(true)
+                new PropertyMetadata(BooleanBoxes.TrueBox)
                 {
                     MethodToUpdateDom2 = static (d, oldValue, newValue) => ((RichTextBlock)d).SetTextSelection((bool)newValue),
                 });
@@ -384,7 +393,7 @@ namespace System.Windows.Controls
         {
             get
             {
-                if (Blocks.Count > 0 && Application.Current is Application app)
+                if (Blocks.InternalCount > 0 && Application.Current is Application app)
                 {
                     return app.MainWindow.TextMeasurementService.MeasureBaseline(GetFonts(this));
                 }
@@ -403,10 +412,10 @@ namespace System.Windows.Controls
 
                     static IEnumerable<FontProperties> GetFontsRecursive(Block block, UIElement current)
                     {
-                        int count = current.VisualChildrenCount;
+                        int count = current.InternalVisualChildrenCount;
                         for (int i = 0; i < count; i++)
                         {
-                            switch (current.GetVisualChild(i))
+                            switch (current.InternalGetVisualChild(i))
                             {
                                 case Run run:
                                     if (!string.IsNullOrEmpty(run.Text))
@@ -451,6 +460,9 @@ namespace System.Windows.Controls
         protected internal override void INTERNAL_OnAttachedToVisualTree()
         {
             base.INTERNAL_OnAttachedToVisualTree();
+
+            this.SetTextSelection(IsTextSelectionEnabled);
+
             foreach (var block in Blocks.InternalItems)
             {
                 INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(block, this);
@@ -476,9 +488,9 @@ namespace System.Windows.Controls
 
         protected override Size ArrangeOverride(Size finalSize) => finalSize;
 
-        internal sealed override int VisualChildrenCount => Blocks.Count;
+        protected sealed override int VisualChildrenCount => Blocks.InternalCount;
 
-        internal sealed override UIElement GetVisualChild(int index)
+        protected sealed override UIElement GetVisualChild(int index)
         {
             if (index < 0 || index >= VisualChildrenCount)
             {
@@ -487,5 +499,8 @@ namespace System.Windows.Controls
 
             return Blocks.InternalItems[index];
         }
+
+        internal sealed override bool ShouldApplyMirrorTransform() =>
+            GetFlowDirectionFromVisual(VisualTreeHelper.GetParent(this)) == FlowDirection.RightToLeft;
     }
 }

@@ -36,6 +36,7 @@ using System.Xaml.Markup;
 using System.Xaml.Schema;
 using System.Xml;
 using System.Xml.Serialization;
+using OpenSilver.Internal.Xaml;
 
 // To use this under .NET, compile sources as:
 //
@@ -303,7 +304,7 @@ namespace System.Xaml
     }
 
     // specific implementation
-    class XamlObjectWriterInternal : XamlWriterInternalBase, IXamlObjectWriterFactory
+    class XamlObjectWriterInternal : XamlWriterInternalBase, IXamlObjectWriterFactory, ITemplateOwnerProvider
     {
         const string Xmlns2000Namespace = "http://www.w3.org/2000/xmlns/";
 
@@ -938,6 +939,16 @@ namespace System.Xaml
         public XamlObjectWriter GetXamlObjectWriter(XamlObjectWriterSettings settings)
         {
             return new XamlObjectWriter(sctx, settings);
+        }
+
+        DependencyObject ITemplateOwnerProvider.GetTemplateOwner()
+        {
+            if (source.Settings.TemplateOwnerReference is WeakReference<DependencyObject> wr)
+            {
+                wr.TryGetTarget(out DependencyObject owner);
+                return owner;
+            }
+            return null;
         }
     }
 }

@@ -42,7 +42,7 @@ namespace OpenSilver.Compiler
         //
         private static Dictionary<string, Func<string, string>> GetSupportedCoreTypes()
         {
-            return new Dictionary<string, Func<string, string>>(28)
+            return new Dictionary<string, Func<string, string>>(29)
             {
                 ["system.windows.input.cursor"] = (s => CoreTypesHelper.ConvertToCursor(s, "global::System.Windows.Input.Cursor", "global::System.Windows.Input.Cursors")),
                 ["system.windows.media.animation.keytime"] = (s => CoreTypesHelper.ConvertToKeyTime(s, "global::System.Windows.Media.Animation.KeyTime")),
@@ -73,6 +73,7 @@ namespace OpenSilver.Compiler
                 ["system.windows.fontstyle"] = (s => CoreTypesHelper.ConvertToFontStyle(s, "global::System.Windows.FontStyle", "global::System.Windows.FontStyles")),
                 ["system.windows.textdecorationcollection"] = (s => CoreTypesHelper.ConvertToTextDecorationCollection(s, "global::System.Windows.TextDecorationCollection", "global::System.Windows.TextDecorations")),
                 ["system.windows.media.imagesource"] = (s => CoreTypesHelper.ConvertToImageSource(s, "global::System.Windows.Media.ImageSource", "global::System.Windows.Media.Imaging.BitmapImage")),
+                ["system.windows.vector"] = (s => CoreTypesHelper.ConvertToVector(s, "global::System.Windows.Vector")),
             };
         }
     }
@@ -118,25 +119,27 @@ namespace OpenSilver.Compiler
             }
         }
 
+        private static readonly char[] _repeatBehaviorConverterIterationCharacter = ['x', 'X'];
+
         internal static string ConvertToRepeatBehavior(string source, string destinationType)
         {
-            const char _iterationCharacter = 'x';
+            string stringValue = source.Trim();
 
-            string stringValue = source.Trim().ToLowerInvariant();
-
-            if (stringValue == "forever")
+            if (string.Equals(stringValue, "Forever", StringComparison.OrdinalIgnoreCase))
             {
-                return string.Format($"{destinationType}.Forever");
+                return $"{destinationType}.Forever";
             }
             else if (stringValue.Length > 0 &&
-                     stringValue[stringValue.Length - 1] == _iterationCharacter)
+                     char.ToLowerInvariant(stringValue[stringValue.Length - 1]) == _repeatBehaviorConverterIterationCharacter[0])
             {
-                string stringDoubleValue = stringValue.TrimEnd(_iterationCharacter);
+                string stringDoubleValue = stringValue.TrimEnd(_repeatBehaviorConverterIterationCharacter);
 
-                return $"new {destinationType}({stringDoubleValue.TrimEnd()})";
+                return $"new {destinationType}({SystemTypesHelper.CSharp.ConvertFromInvariantString(stringDoubleValue, "system.double")})";
             }
 
-            return SystemTypesHelper.CSharp.ConvertFromInvariantString(stringValue, "system.timespan");
+            string timeSpanValue = SystemTypesHelper.CSharp.ConvertFromInvariantString(stringValue, "system.timespan");
+
+            return $"new {destinationType}({timeSpanValue})";
         }
 
         internal static string ConvertToKeySpline(string source, string destinationType, string pointTypeName)
@@ -684,6 +687,18 @@ namespace OpenSilver.Compiler
             }
 
             return $"new {bitmapImageTypeFullName}(new global::System.Uri({Escape(source)}, {uriKind}))";
+        }
+
+        internal static string ConvertToVector(string source, string destinationType)
+        {
+            string[] split = source.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (split.Length == 2)
+            {
+                return $"new {destinationType}({split[0]}, {split[1]})";
+            }
+
+            throw GetConvertException(source, destinationType);
         }
 
         private static Exception GetConvertException(string value, string destinationTypeFullName)

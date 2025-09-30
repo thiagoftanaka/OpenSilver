@@ -12,18 +12,24 @@
 \*====================================================================================*/
 
 using System.Collections.Specialized;
-using System.Linq;
+using System.ComponentModel;
+using CSHTML5.Internal;
+using OpenSilver.Internal;
 
 namespace System.Windows.Controls
 {
-    /// <exclude/>
+    /// <summary>
+    /// Represents an ordered collection of <see cref="UIElement"/> objects.
+    /// </summary>
     public class UIElementCollection : PresentationFrameworkCollection<UIElement>
     {
-        internal UIElementCollection(UIElement visualParent, FrameworkElement logicalParent) : base(true)
+        private CollectionChangedHelper _collectionChanged;
+
+        internal UIElementCollection(UIElement visualParent, FrameworkElement logicalParent)
         {
             if (visualParent == null)
             {
-                throw new ArgumentNullException($"'{nameof(visualParent)}' must be provided when instantiating '{GetType()}'");
+                throw new ArgumentNullException(string.Format(Strings.Panel_NoNullVisualParent, nameof(visualParent), GetType()));
             }
 
             VisualParent = visualParent;
@@ -36,22 +42,31 @@ namespace System.Windows.Controls
 
         internal sealed override void AddOverride(UIElement value)
         {
+            _collectionChanged?.CheckReentrancy();
+
             SetLogicalParent(value);
             SetVisualParent(value);
+            INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(value, VisualParent);
+
             AddInternal(value);
 
             VisualParent.InvalidateMeasure();
+
+            _collectionChanged?.OnCollectionChanged(NotifyCollectionChangedAction.Add, value, InternalCount - 1);
         }
 
         internal sealed override void ClearOverride()
         {
-            int count = Count;
+            _collectionChanged?.CheckReentrancy();
+
+            int count = InternalCount;
             if (count > 0)
             {
                 UIElement[] uies = InternalItems.ToArray();
 
                 for (int i = 0; i < count; ++i)
                 {
+                    INTERNAL_VisualTreeManager.DetachVisualChildIfNotNull(uies[i], VisualParent);
                     ClearVisualParent(uies[i]);
                     ClearLogicalParent(uies[i]);
                 }
@@ -60,34 +75,51 @@ namespace System.Windows.Controls
 
                 VisualParent.InvalidateMeasure();
             }
+
+            _collectionChanged?.OnCollectionReset();
         }
 
         internal sealed override UIElement GetItemOverride(int index) => GetItemInternal(index);
 
         internal sealed override void InsertOverride(int index, UIElement value)
         {
+            _collectionChanged?.CheckReentrancy();
+
             SetLogicalParent(value);
             SetVisualParent(value);
+            INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(value, VisualParent);
+
             InsertInternal(index, value);
 
             VisualParent.InvalidateMeasure();
+
+            _collectionChanged?.OnCollectionChanged(NotifyCollectionChangedAction.Add, value, index);
         }
 
         internal sealed override void RemoveAtOverride(int index)
         {
+            _collectionChanged?.CheckReentrancy();
+
             UIElement oldChild = GetItemInternal(index);
+
+            INTERNAL_VisualTreeManager.DetachVisualChildIfNotNull(oldChild, VisualParent);
             ClearVisualParent(oldChild);
             ClearLogicalParent(oldChild);
             RemoveAtInternal(index);
             
             VisualParent.InvalidateMeasure();
+
+            _collectionChanged?.OnCollectionChanged(NotifyCollectionChangedAction.Remove, oldChild, index);
         }
 
         internal sealed override void SetItemOverride(int index, UIElement value)
         {
+            _collectionChanged?.CheckReentrancy();
+
             UIElement oldChild = GetItemInternal(index);
             if (oldChild != value)
             {
+                INTERNAL_VisualTreeManager.DetachVisualChildIfNotNull(oldChild, VisualParent);
                 ClearVisualParent(oldChild);
                 ClearLogicalParent(oldChild);
 
@@ -95,23 +127,37 @@ namespace System.Windows.Controls
 
                 SetLogicalParent(value);
                 SetVisualParent(value);
+                INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(value, VisualParent);
 
                 VisualParent.InvalidateMeasure();
             }
+
+            _collectionChanged?.OnCollectionChanged(NotifyCollectionChangedAction.Replace, oldChild, value, index);
         }
 
-        public new event NotifyCollectionChangedEventHandler CollectionChanged
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public event NotifyCollectionChangedEventHandler CollectionChanged
         {
-            add => base.CollectionChanged += value;
-            remove => base.CollectionChanged -= value;
+            add
+            {
+                _collectionChanged ??= new(this);
+                _collectionChanged.CollectionChanged += value;
+            }
+            remove
+            {
+                if (_collectionChanged is CollectionChangedHelper collectionChanged)
+                {
+                    collectionChanged.CollectionChanged -= value;
+                }
+            }
         }
 
         private void SetLogicalParent(UIElement child) => LogicalParent?.AddLogicalChild(child);
 
         private void ClearLogicalParent(UIElement child) => LogicalParent?.RemoveLogicalChild(child);
 
-        private void SetVisualParent(UIElement child) => VisualParent.AddVisualChild(child);
+        private void SetVisualParent(UIElement child) => VisualParent.InternalAddVisualChild(child);
 
-        private void ClearVisualParent(UIElement child) => VisualParent.RemoveVisualChild(child);
+        private void ClearVisualParent(UIElement child) => VisualParent.InternalRemoveVisualChild(child);
     }
 }

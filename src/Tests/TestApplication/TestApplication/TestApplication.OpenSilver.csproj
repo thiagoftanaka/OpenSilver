@@ -7,11 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="OpenSilver" Version="3.0.0" />
-    <PackageReference Include="System.ServiceModel.Duplex" Version="4.4.*" />
-    <PackageReference Include="System.ServiceModel.Http" Version="8.1.2" />
-    <PackageReference Include="System.ServiceModel.NetTcp" Version="4.4.*" />
-    <PackageReference Include="System.ServiceModel.Security" Version="4.4.*" />
+    <PackageReference Include="OpenSilver" Version="3.1.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,7 +33,7 @@
     <Compile Include="Tests\Events\KeyDownTest.xaml.cs" />
     <Compile Include="Tests\Events\XTextBox.cs" />
     <Compile Include="Tests\InkPresenterTest.xaml.cs" />
-    <Compile Include="Tests\OpenFileDialogTest.xaml.cs" />
+    <Compile Include="Tests\FileDialogTest.xaml.cs" />
     <Compile Include="Tests\PopupWindowTest.xaml.cs" />
     <Compile Include="Tests\PrintDocumentTest.xaml.cs" />
     <Compile Include="Registry\ITreeItem.cs" />
@@ -663,7 +659,7 @@
     <Page Include="Tests\InkPresenterTest.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Tests\OpenFileDialogTest.xaml">
+    <Page Include="Tests\FileDialogTest.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Tests\PopupWindowTest.xaml">

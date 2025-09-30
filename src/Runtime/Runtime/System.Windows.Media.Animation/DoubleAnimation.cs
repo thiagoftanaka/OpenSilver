@@ -15,7 +15,6 @@ using OpenSilver.Internal.Media.Animation;
 
 namespace System.Windows.Media.Animation;
 
-
 /// <summary>
 /// Animates the value of a System.Double property between two target values using
 /// linear interpolation over a specified <see cref="Timeline.Duration"/>.
@@ -118,11 +117,11 @@ public class DoubleAnimation : AnimationTimeline, IFromByToAnimation<double>
         set => SetValueInternal(ToProperty, value);
     }
 
-    internal sealed override TimelineClock CreateClock(bool isRoot) =>
-        new AnimationClock<double>(
-            this,
-            isRoot,
-            new FromToByAnimator<double>(this));
+    /// <inheritdoc />
+    public sealed override Type TargetPropertyType => typeof(double);
+
+    internal sealed override TimelineClock CreateClock() =>
+        new AnimationClock<double>(this, new FromToByAnimator<double>(this));
 
     double IFromByToAnimation<double>.InterpolateValue(double from, double to, double progress) =>
         AnimatedTypeHelpers.InterpolateDouble(from, to, progress);

@@ -48,24 +48,25 @@ internal sealed class XamlTemplateContent : ITemplateContent
         }
     }
 
-    IFrameworkElement ITemplateContent.LoadContent(IFrameworkElement owner)
+    IFrameworkElement ITemplateContent.LoadContent<T>(T owner)
     {
         XamlObjectWriterSettings settings = CreateObjectWriterSettings(_objectWriterParentSettings);
         settings.ExternalNameScope = new NameScope();
         settings.RegisterNamesOnExternalNamescope = true;
+        settings.TemplateOwnerReference = new(owner);
 
         settings.BeforePropertiesHandler =
             delegate (object sender, XamlObjectEventArgs args)
             {
                 if (args.Instance is FrameworkElement fe)
                 {
-                    fe.TemplatedParent = (DependencyObject)owner;
+                    fe.SetTemplatedParent(settings.TemplateOwnerReference);
                 }
             };
 
         if (LoadXaml(settings) is IFrameworkElement rootElement)
         {
-            if (owner == null)
+            if (owner is null)
             {
                 if (NameScope.GetNameScope(rootElement) == null)
                 {

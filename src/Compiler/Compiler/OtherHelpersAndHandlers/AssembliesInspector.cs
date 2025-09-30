@@ -14,6 +14,7 @@
 using System;
 using System.Reflection;
 using System.Xml.Linq;
+using Mono.Cecil;
 using OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspector;
 
 namespace OpenSilver.Compiler
@@ -58,9 +59,6 @@ namespace OpenSilver.Compiler
         public bool IsTypeAssignableFrom(string nameSpaceOfTypeToAssignFrom, string nameOfTypeToAssignFrom, string assemblyNameOfTypeToAssignFrom, string nameSpaceOfTypeToAssignTo, string nameOfTypeToAssignTo, string assemblyNameOfTypeToAssignTo, bool isAttached = false)
             => _monoCecilVersion.IsTypeAssignableFrom(nameSpaceOfTypeToAssignFrom, nameOfTypeToAssignFrom, assemblyNameOfTypeToAssignFrom, nameSpaceOfTypeToAssignTo, nameOfTypeToAssignTo, assemblyNameOfTypeToAssignTo, isAttached);
 
-        public string GetKeyNameOfProperty(string elementNameSpace, string elementLocalName, string assemblyNameIfAny, string propertyName)
-            => _monoCecilVersion.GetKeyNameOfProperty(elementNameSpace, elementLocalName, assemblyNameIfAny, propertyName);
-
         public bool DoesTypeContainNameMemberOfTypeString(string namespaceName, string localTypeName, string assemblyNameIfAny = null)
             => _monoCecilVersion.DoesTypeContainNameMemberOfTypeString(namespaceName, localTypeName, assemblyNameIfAny);
 
@@ -76,6 +74,9 @@ namespace OpenSilver.Compiler
 
         public MemberTypes GetMemberType(string memberName, string namespaceName, string localTypeName, string assemblyNameIfAny = null)
             => _monoCecilVersion.GetMemberType(memberName, namespaceName, localTypeName, assemblyNameIfAny);
+
+        public (MemberTypes Type, MethodDefinition Method, TypeReference DeclaringType) GetAttachedMemberType(string memberName, string ownerTypeNamespace, string ownerTypeName, string ownerTypeAssemblyName)
+            => _monoCecilVersion.GetAttachedMemberType(memberName, ownerTypeNamespace, ownerTypeName, ownerTypeAssemblyName);
 
         public bool IsTypeAnEnum(string namespaceName, string localTypeName, string assemblyNameIfAny = null)
             => _monoCecilVersion.IsTypeAnEnum(namespaceName, localTypeName, assemblyNameIfAny);
@@ -109,5 +110,17 @@ namespace OpenSilver.Compiler
 
         public string GetField(string fieldName, string namespaceName, string typeName, string assemblyName)
             => _monoCecilVersion.GetField(fieldName, namespaceName, typeName, assemblyName);
+
+        public TypeDefinition GetTypeDefinition(string namespaceName, string typeName, string assemblyName)
+            => _monoCecilVersion.FindType(namespaceName, typeName, assemblyName);
+
+        public string GetEnumValue(TypeDefinition enumType, string name, bool ignoreCase, bool allowIntegerValue)
+            => _monoCecilVersion.GetEnumValue(enumType, name, ignoreCase, allowIntegerValue);
+
+        public FieldDefinition GetField(TypeDefinition type, string name, bool staticOnly, bool publicOnly)
+            => MonoCecilAssembliesInspectorImpl.FindFieldDeep(type, name, out _, false, staticOnly, publicOnly);
+
+        public PropertyDefinition GetProperty(TypeDefinition type, string name, bool staticOnly, bool publicOnly)
+            => MonoCecilAssembliesInspectorImpl.FindPropertyGetterDeep(type, name, out _, staticOnly, publicOnly);
     }
 }
