@@ -79,6 +79,12 @@ namespace System.Windows
                     }
                 }
 
+                if (dp == null)
+                {
+                    // Trying on the TemplateOwner type, in case it was registered there
+                    dp = DependencyProperty.FromName(DependencyPropertyName ?? Path, source.GetType());
+                }
+
                 if (dp is not null)
                 {
                     return new TemplateBindingExpression(source, dp);
@@ -98,9 +104,9 @@ namespace System.Windows
                     Type type = DependencyPropertyOwnerType ?? source.GetType();
                     DependencyProperty dp = DependencyProperty.FromName(propertyName, type);
 
-                    if (dp == null && DependencyPropertyOwnerType != null)
+                    if (dp == null)
                     {
-                        // Trying on TargetObject type in case it was registered there
+                        // Trying on the TargetObject type, in case it was registered there
                         dp = DependencyProperty.FromName(propertyName, source.GetType());
                     }
 
