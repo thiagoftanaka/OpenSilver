@@ -125,6 +125,12 @@ public class TemplateBindingExtension : MarkupExtension
                 }
             }
 
+            if (dp == null)
+            {
+                // Trying on the TemplateOwner type, in case it was registered there
+                dp = DependencyProperty.FromName(DependencyPropertyName ?? Path, source.GetType());
+            }
+
             if (dp is not null)
             {
                 return new TemplateBindingExpression(source, dp);
@@ -140,14 +146,20 @@ public class TemplateBindingExtension : MarkupExtension
         {
             if (provideValueTarget.TargetObject is IInternalControl source)
             {
+                string propertyName = DependencyPropertyName ?? Path;
                 if (_property is not DependencyProperty dp)
                 {
-                    string propertyName = DependencyPropertyName ?? Path;
                     Type type = DependencyPropertyOwnerType ?? source.GetType();
                     dp = DependencyProperty.FromName(propertyName, type);
                 }
 
-                if (dp is not null)
+                if (dp == null)
+                {
+                    // Trying on the TargetObject type, in case it was registered there
+                    dp = DependencyProperty.FromName(propertyName, source.GetType());
+                }
+
+                if (dp != null)
                 {
                     return new TemplateBindingExpression(source, dp);
                 }
