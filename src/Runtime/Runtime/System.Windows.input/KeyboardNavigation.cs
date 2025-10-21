@@ -601,8 +601,7 @@ public sealed class KeyboardNavigation
 
         DependencyObject result = null;
 
-        if (e == container || !IsGroup(e))
-            result = GetFirstChild(e);
+        result = GetFirstChild(e);
 
         if (result != null || e == container)
             return result;
@@ -639,12 +638,7 @@ public sealed class KeyboardNavigation
         DependencyObject result = GetPreviousSibling(e);
 
         if (result != null)
-        {
-            if (IsGroup(result))
-                return result;
-            else
-                return GetLastInTree(result);
-        }
+            return GetLastInTree(result);
         else
             return GetParent(e);
     }
@@ -657,7 +651,7 @@ public sealed class KeyboardNavigation
         {
             result = container;
             container = GetLastChild(container);
-        } while (container != null && !IsGroup(container));
+        } while (container != null);
 
         if (container != null)
             return container;
@@ -693,9 +687,6 @@ public sealed class KeyboardNavigation
 
         while (e != null)
         {
-            if (IsGroup(e))
-                return e;
-
             result = e;
             e = GetParent(e);
         }
@@ -716,19 +707,9 @@ public sealed class KeyboardNavigation
         return false;
     }
 
-    private bool IsGroup(DependencyObject e)
-    {
-        return true;
-    }
-
     private KeyboardNavigationMode GetKeyNavigationMode(DependencyObject e)
     {
         return (KeyboardNavigationMode)e.GetValue(TabNavigationProperty);
-    }
-
-    private bool IsTabStopOrGroup(DependencyObject e)
-    {
-        return IsTabStop(e) || IsGroup(e);
     }
 
     private static int GetTabIndexHelper(DependencyObject d)
@@ -745,7 +726,7 @@ public sealed class KeyboardNavigation
         DependencyObject currElement = container;
         while ((currElement = GetNextInTree(currElement, container)) != null)
         {
-            if (IsTabStopOrGroup(currElement))
+            if (IsTabStop(currElement))
             {
                 int currPriority = GetTabIndexHelper(currElement);
 
@@ -766,7 +747,7 @@ public sealed class KeyboardNavigation
         DependencyObject currElement = e;
         while ((currElement = GetNextInTree(currElement, container)) != null)
         {
-            if (IsTabStopOrGroup(currElement) && GetTabIndexHelper(currElement) == elementTabPriority)
+            if (IsTabStop(currElement) && GetTabIndexHelper(currElement) == elementTabPriority)
             {
                 return currElement;
             }
@@ -789,7 +770,7 @@ public sealed class KeyboardNavigation
         DependencyObject currElement = container;
         while ((currElement = GetNextInTree(currElement, container)) != null)
         {
-            if (IsTabStopOrGroup(currElement))
+            if (IsTabStop(currElement))
             {
                 int currPriority = GetTabIndexHelper(currElement);
                 if (currPriority > elementTabPriority)
@@ -884,7 +865,7 @@ public sealed class KeyboardNavigation
         // Search down inside the container
         while ((nextTabElement = GetNextTabInGroup(nextTabElement, container, currentTabbingType)) != null)
         {
-            Debug.Assert(IsTabStopOrGroup(nextTabElement), "nextTabElement should be IsTabStop or group");
+            Debug.Assert(IsTabStop(nextTabElement), "nextTabElement should be IsTabStop");
 
             // Avoid the endless loop here for Cycle groups
             if (loopStartElement == nextTabElement)
@@ -916,7 +897,7 @@ public sealed class KeyboardNavigation
         DependencyObject currElement = GetLastInTree(container);
         while (currElement != null && currElement != container)
         {
-            if (IsTabStopOrGroup(currElement))
+            if (IsTabStop(currElement))
             {
                 int currPriority = GetTabIndexHelper(currElement);
 
@@ -938,7 +919,7 @@ public sealed class KeyboardNavigation
         DependencyObject currElement = GetPreviousInTree(e, container);
         while (currElement != null)
         {
-            if (IsTabStopOrGroup(currElement) && GetTabIndexHelper(currElement) == elementTabPriority && currElement != container)
+            if (IsTabStop(currElement) && GetTabIndexHelper(currElement) == elementTabPriority && currElement != container)
             {
                 return currElement;
             }
@@ -959,7 +940,7 @@ public sealed class KeyboardNavigation
         DependencyObject currElement = GetLastInTree(container);
         while (currElement != null)
         {
-            if (IsTabStopOrGroup(currElement) && currElement != container)
+            if (IsTabStop(currElement) && currElement != container)
             {
                 int currPriority = GetTabIndexHelper(currElement);
                 if (currPriority < elementTabPriority)
@@ -1072,9 +1053,8 @@ public sealed class KeyboardNavigation
             if (nextTabElement == container && tabbingType == KeyboardNavigationMode.Local)
                 break;
 
-            // At this point nextTabElement is TabStop or TabGroup
             // In case it is a TabStop only return the element
-            if (IsTabStop(nextTabElement) && !IsGroup(nextTabElement))
+            if (IsTabStop(nextTabElement))
                 return nextTabElement;
 
             // Avoid the endless loop here
