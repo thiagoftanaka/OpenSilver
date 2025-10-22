@@ -12,7 +12,6 @@
 \*====================================================================================*/
 
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Windows.Markup;
 using OpenSilver.Internal;
 
@@ -44,7 +43,7 @@ namespace System.Windows.Media
                         {
                             PolyBezierSegment segment = (PolyBezierSegment)d;
                             var points = new PointCollection();
-                            points.CollectionChanged += new NotifyCollectionChangedEventHandler(segment.OnPointsCollectionChanged);
+                            points.Changed += new EventHandler(segment.OnPointsCollectionChanged);
                             return points;
                         }),
                     OnPointsChanged,
@@ -68,11 +67,11 @@ namespace System.Windows.Media
             PolyBezierSegment segment = (PolyBezierSegment)d;
             if (e.OldValue is PointCollection oldPoints)
             {
-                oldPoints.CollectionChanged -= new NotifyCollectionChangedEventHandler(segment.OnPointsCollectionChanged);
+                oldPoints.Changed -= new EventHandler(segment.OnPointsCollectionChanged);
             }
             if (e.NewValue is PointCollection newPoints)
             {
-                newPoints.CollectionChanged += new NotifyCollectionChangedEventHandler(segment.OnPointsCollectionChanged);
+                newPoints.Changed += new EventHandler(segment.OnPointsCollectionChanged);
             }
 
             PropertyChanged(d, e);
@@ -83,21 +82,21 @@ namespace System.Windows.Media
             return baseValue ?? new PointCollection();
         }
 
-        private void OnPointsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) => InvalidateParentGeometry();
+        private void OnPointsCollectionChanged(object sender, EventArgs e) => InvalidateParentGeometry();
 
         internal override IEnumerable<string> ToDataStream(IFormatProvider formatProvider)
         {
             // https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/d#cubic_b%C3%A9zier_curve
             var points = Points;
 
-            if (points.Count % 3 != 0)
+            if (points.InternalCount % 3 != 0)
             {
                 throw new InvalidOperationException("PolyBezierSegment points must use triplet points.");
             }
 
             yield return $"C";
 
-            for (var i = 0; i < points.Count; i++)
+            for (var i = 0; i < points.InternalCount; i++)
             {
                 yield return points[i].X.ToString(formatProvider);
                 yield return points[i].Y.ToString(formatProvider);

@@ -12,7 +12,6 @@
 \*====================================================================================*/
 
 using System;
-using System.Windows.Browser;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
@@ -27,12 +26,16 @@ namespace CSHTML5.Internal
         {
             get
             {
-                // Note: this is populated at the startup of the application
-                // (cf. "codeToPutInTheInitializeComponentOfTheApplicationClass" in the "Compiler" project)
-                string path = StartupAssemblyInfo.OutputResourcesPath.Replace('\\', '/');
-                if (!path.EndsWith("/") && path != string.Empty)
+                string path = StartupAssemblyInfo.OutputResourcesPath;
+                if (string.IsNullOrEmpty(path))
                 {
-                    path += '/';
+                    return string.Empty;
+                }
+
+                path = path.Replace('\\', '/');
+                if (!path.EndsWith("/"))
+                {
+                    path += "/";
                 }
 
                 return path;
@@ -237,7 +240,7 @@ namespace CSHTML5.Internal
             }
             else if (uriString.StartsWith("/"))
             {
-                string originalString = HtmlPage.Document.DocumentUri.OriginalString;
+                string originalString = GetDocumentURI();
                 int firstIndexOfSlashAfterNameOfDomain = -1;
                 string httpPrefix = string.Empty;
                 string nameOfDomain = originalString;
@@ -261,7 +264,7 @@ namespace CSHTML5.Internal
             }
             else
             {
-                string originalString = HtmlPage.Document.DocumentUri.OriginalString;
+                string originalString = GetDocumentURI();
                 int lastIndexOfSlash = originalString.LastIndexOf('/');
                 if (lastIndexOfSlash > -1)
                 {
@@ -280,6 +283,8 @@ namespace CSHTML5.Internal
                 }
             }
         }
+
+        private static string GetDocumentURI() => OpenSilver.Interop.ExecuteJavaScriptString("window.location.href");
 
         [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]

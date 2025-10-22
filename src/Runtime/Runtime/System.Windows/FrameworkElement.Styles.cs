@@ -11,10 +11,9 @@
 *  
 \*====================================================================================*/
 
-using System;
 using System.ComponentModel;
 using System.Windows.Controls;
-using System.Windows.Media;
+using OpenSilver.Internal;
 
 namespace System.Windows
 {
@@ -93,8 +92,7 @@ namespace System.Windows
         }
 
         /// <summary>
-        /// Identifies the <see cref="DefaultStyleKey"/> dependency
-        /// property.
+        /// Identifies the <see cref="DefaultStyleKey"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty DefaultStyleKeyProperty =
             DependencyProperty.Register(
@@ -106,10 +104,35 @@ namespace System.Windows
         /// <summary>
         /// Gets or sets the key that references the default style for the control.
         /// </summary>
-        protected object DefaultStyleKey
+        protected internal object DefaultStyleKey
         {
-            get { return GetValue(DefaultStyleKeyProperty); }
-            set { SetValueInternal(DefaultStyleKeyProperty, value); }
+            get => GetValue(DefaultStyleKeyProperty);
+            set => SetValueInternal(DefaultStyleKeyProperty, value);
+        }
+
+        /// <summary>
+        /// Identifies the <see cref="OverridesDefaultStyle"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty OverridesDefaultStyleProperty =
+            DependencyProperty.Register(
+                nameof(OverridesDefaultStyle),
+                typeof(bool),
+                typeof(FrameworkElement),
+                new PropertyMetadata(BooleanBoxes.FalseBox, OnThemeStyleKeyChanged));
+
+        /// <summary>
+        /// Gets or sets a value that indicates whether this element incorporates style properties from theme styles.
+        /// </summary>
+        /// <returns>
+        /// true if this element does not use theme style properties; all style-originating properties come from local 
+        /// application styles, and theme style properties do not apply. false if application styles apply first, and 
+        /// then theme styles apply for properties that were not specifically set in application styles. The default is 
+        /// false.
+        /// </returns>
+        public bool OverridesDefaultStyle
+        {
+            get => (bool)GetValue(OverridesDefaultStyleProperty);
+            set => SetValueInternal(OverridesDefaultStyleProperty, value);
         }
 
         private static void OnThemeStyleKeyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -124,36 +147,32 @@ namespace System.Windows
         /// </summary>
         private void UpdateThemeStyleProperty()
         {
-            if (IsThemeStyleUpdateInProgress == false)
+            if (IsThemeStyleUpdateInProgress)
             {
-                IsThemeStyleUpdateInProgress = true;
-                try
-                {
-                    StyleHelper.GetThemeStyle(this);
-                }
-                finally
-                {
-                    IsThemeStyleUpdateInProgress = false;
-                }
+                throw new InvalidOperationException(string.Format(Strings.CyclicThemeStyleReferenceDetected, this));
             }
-            else
-            {
-                throw new InvalidOperationException(string.Format("Cyclic reference found while evaluating the ThemeStyle property on element '{0}'.", this));
-            }
-        }
 
-        // Invoked when the ThemeStyle property is changed
-        internal static void OnThemeStyleChanged(DependencyObject d, Style oldStyle, Style newStyle)
-        {
-            FrameworkElement fe = (FrameworkElement)d;
-            StyleHelper.UpdateThemeStyleCache(fe, oldStyle, newStyle, ref fe._themeStyleCache);
+            IsThemeStyleUpdateInProgress = true;
+            try
+            {
+                Style oldStyle = ThemeStyle;
+                Style newStyle = StyleHelper.GetThemeStyle(this);
+                if (oldStyle != newStyle)
+                {
+                    StyleHelper.UpdateThemeStyleCache(this, oldStyle, newStyle, ref _themeStyleCache);
+                }
+            }
+            finally
+            {
+                IsThemeStyleUpdateInProgress = false;
+            }
         }
 
         private void UpdateStyleProperty()
         {
             if (!HasStyleInvalidated)
             {
-                if (IsStyleUpdateInProgress == false)
+                if (!IsStyleUpdateInProgress)
                 {
                     IsStyleUpdateInProgress = true;
                     try
@@ -168,7 +187,7 @@ namespace System.Windows
                 }
                 else
                 {
-                    throw new InvalidOperationException(string.Format("Cyclic reference found while evaluating the Style property on element '{0}'.", this));
+                    throw new InvalidOperationException(string.Format(Strings.CyclicStyleReferenceDetected, this));
                 }
             }
         }
@@ -176,11 +195,11 @@ namespace System.Windows
         private void InvalidateStyleProperty()
         {
             // Try to find an implicit style
-            Style implicitStyle = FindImplicitStyleResource(this, GetType()) as Style;
+            Style implicitStyle = FindImplicitStyleResource(this, DependencyObjectType.SystemType) as Style;
             Style oldStyle = ImplicitStyle;
 
             // Set the flag associated with the StyleProperty
-            HasImplicitStyleFromResources = implicitStyle != null;
+            HasImplicitStyleFromResources = implicitStyle is not null;
 
             if (oldStyle != implicitStyle)
             {
@@ -200,50 +219,11 @@ namespace System.Windows
                     boundaryElement = fe.TemplatedParent;
                 }
 
-                object implicitStyle;
-                // First, try to find an implicit style in parents' resources.
-                FrameworkElement f = fe;
-                InheritanceBehavior inheritanceBehavior = InheritanceBehavior.Default;
-                while (f != null)
+                object implicitStyle = FindResourceInternal(fe, StyleProperty, resourceKey, boundaryElement, true);
+                if (implicitStyle != DependencyProperty.UnsetValue)
                 {
-                    inheritanceBehavior = f.ResourceLookupMode;
-                    if (inheritanceBehavior != InheritanceBehavior.Default)
-                    {
-                        break;
-                    }
-
-                    if (f.HasResources && f.Resources.HasImplicitStyles)
-                    {
-                        implicitStyle = f.Resources[resourceKey];
-                        if (implicitStyle != null)
-                        {
-                            return implicitStyle;
-                        }
-                    }
-
-                    f = (f.Parent ?? VisualTreeHelper.GetParent(f)) as FrameworkElement;
-                    if (boundaryElement != null && f == boundaryElement)
-                    {
-                        return null;
-                    }
+                    return implicitStyle;
                 }
-
-                if ((inheritanceBehavior == InheritanceBehavior.Default ||
-                     inheritanceBehavior == InheritanceBehavior.SkipToAppNow)
-                    && boundaryElement == null)
-                {
-                    // Then we try to find the resource in the App's Resources
-                    // if we can't find it in the parents.
-                    Application app = Application.Current;
-                    if (app != null)
-                    {
-                        implicitStyle = app.FindImplicitResourceInternal(resourceKey);
-                        if (implicitStyle != null)
-                        {
-                            return implicitStyle;
-                        }
-                    }
-                }                
             }
 
             return null;
@@ -278,7 +258,7 @@ namespace System.Windows
         internal bool ShouldLookupImplicitStyles
         {
             get { return ReadInternalFlag(InternalFlags.ShouldLookupImplicitStyles); }
-            set { WriteInternalFlag(InternalFlags.ShouldLookupImplicitStyles, value); }
+            private set { WriteInternalFlag(InternalFlags.ShouldLookupImplicitStyles, value); }
         }
 
         // Indicates if this instance has a style set by a generator

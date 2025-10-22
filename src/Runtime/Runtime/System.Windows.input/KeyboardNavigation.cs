@@ -12,22 +12,229 @@
 \*====================================================================================*/
 
 using System.Diagnostics;
-using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Documents;
 using System.Windows.Media;
 using CSHTML5.Internal;
+using OpenSilver.Internal;
 
 namespace System.Windows.Input;
 
-///<summary>
-/// KeyboardNavigation class provide methods for logical (Tab) navigation between focusable controls
-///</summary>
-internal sealed class KeyboardNavigation
+/// <summary>
+/// Provides logical and directional navigation between focusable objects.
+/// </summary>
+public sealed class KeyboardNavigation
 {
+    /// <summary>
+    /// Identifies the KeyboardNavigation.TabIndex attached property.
+    /// </summary>
+    public static readonly DependencyProperty TabIndexProperty =
+        DependencyProperty.RegisterAttached(
+            "TabIndex",
+            typeof(int),
+            typeof(KeyboardNavigation),
+            new FrameworkPropertyMetadata(int.MaxValue));
+
+    /// <summary>
+    /// Gets the value of the KeyboardNavigation.TabIndex attached property for the specified element.
+    /// </summary>
+    /// <param name="element">
+    /// The element from which to read the attached property.
+    /// </param>
+    /// <returns>
+    /// The value of the KeyboardNavigation.TabIndex property.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    public static int GetTabIndex(DependencyObject element)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+        return (int)element.GetValue(TabIndexProperty);
+    }
+
+    /// <summary>
+    /// Set the value of the KeyboardNavigation.TabIndex attached property for the specified element.
+    /// </summary>
+    /// <param name="element">
+    /// The element on which to set the attached property to.
+    /// </param>
+    /// <param name="index">
+    /// The property value to set.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    public static void SetTabIndex(DependencyObject element, int index)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+        element.SetValueInternal(TabIndexProperty, index);
+    }
+
+    /// <summary>
+    /// Identifies the KeyboardNavigation.IsTabStop attached property.
+    /// </summary>
+    public static readonly DependencyProperty IsTabStopProperty =
+        DependencyProperty.RegisterAttached(
+            "IsTabStop",
+            typeof(bool),
+            typeof(KeyboardNavigation),
+            new FrameworkPropertyMetadata(BooleanBoxes.TrueBox));
+
+    /// <summary>
+    /// Gets the value of the KeyboardNavigation.IsTabStop attached property for the specified element.
+    /// </summary>
+    /// <param name="element">
+    /// The element from which to read the attached property.
+    /// </param>
+    /// <returns>
+    /// The value of the KeyboardNavigation.IsTabStop property.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    public static bool GetIsTabStop(DependencyObject element)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+        return (bool)element.GetValue(IsTabStopProperty);
+    }
+
+    /// <summary>
+    /// Sets the value of the KeyboardNavigation.IsTabStop attached property for the specified element.
+    /// </summary>
+    /// <param name="element">
+    /// The element to which to write the attached property.
+    /// </param>
+    /// <param name="isTabStop">
+    /// The property value to set.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    public static void SetIsTabStop(DependencyObject element, bool isTabStop)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+        element.SetValueInternal(IsTabStopProperty, isTabStop);
+    }
+
+    /// <summary>
+    /// Identifies the KeyboardNavigation.TabNavigation attached property.
+    /// </summary>
+    public static readonly DependencyProperty TabNavigationProperty =
+        DependencyProperty.RegisterAttached(
+            "TabNavigation",
+            typeof(KeyboardNavigationMode),
+            typeof(KeyboardNavigation),
+            new FrameworkPropertyMetadata(KeyboardNavigationMode.Local));
+
+    /// <summary>
+    /// Gets the value of the KeyboardNavigation.TabNavigation attached property for the specified element.
+    /// </summary>
+    /// <param name="element">
+    /// Element from which to get the attached property.
+    /// </param>
+    /// <returns>
+    /// The value of the KeyboardNavigation.TabNavigation property.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    public static KeyboardNavigationMode GetTabNavigation(DependencyObject element)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+        return (KeyboardNavigationMode)element.GetValue(TabNavigationProperty);
+    }
+
+    /// <summary>
+    /// Sets the value of the KeyboardNavigation.TabNavigation attached property for the specified element.
+    /// </summary>
+    /// <param name="element">
+    /// Element on which to set the attached property.
+    /// </param>
+    /// <param name="mode">
+    /// Property value to set.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    public static void SetTabNavigation(DependencyObject element, KeyboardNavigationMode mode)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+        element.SetValueInternal(TabNavigationProperty, mode);
+    }
+
+    /// <summary>
+    /// Identifies the KeyboardNavigation.AcceptsReturn attached property.
+    /// </summary>
+    public static readonly DependencyProperty AcceptsReturnProperty =
+        DependencyProperty.RegisterAttached(
+            "AcceptsReturn",
+            typeof(bool),
+            typeof(KeyboardNavigation),
+            new FrameworkPropertyMetadata(BooleanBoxes.FalseBox));
+
+    /// <summary>
+    /// Gets the value of the KeyboardNavigation.AcceptsReturn attached property for the specified element.
+    /// </summary>
+    /// <param name="element">
+    /// The element from which to read the attached property.
+    /// </param>
+    /// <returns>
+    /// The value of the KeyboardNavigation.AcceptsReturn property.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    public static bool GetAcceptsReturn(DependencyObject element)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+        return (bool)element.GetValue(AcceptsReturnProperty);
+    }
+
+    /// <summary>
+    /// Sets the value of the KeyboardNavigation.AcceptsReturn attached property for the specified element.
+    /// </summary>
+    /// <param name="element">
+    /// The element to write the attached property to.
+    /// </param>
+    /// <param name="enabled">
+    /// The property value to set.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    public static void SetAcceptsReturn(DependencyObject element, bool enabled)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+        element.SetValueInternal(AcceptsReturnProperty, enabled);
+    }
+
     private KeyboardNavigation() { }
 
-    public static KeyboardNavigation Current { get; } = new KeyboardNavigation();
+    internal static KeyboardNavigation Current { get; } = new KeyboardNavigation();
 
     internal void ProcessInput(KeyEventArgs keyEventArgs)
     {
@@ -50,16 +257,15 @@ internal sealed class KeyboardNavigation
     private static readonly DependencyProperty TabOnceActiveElementProperty =
         DependencyProperty.RegisterAttached(
             "TabOnceActiveElement",
-            typeof(WeakReference),
+            typeof(WeakReference<DependencyObject>),
             typeof(KeyboardNavigation),
             null);
 
     internal static DependencyObject GetTabOnceActiveElement(DependencyObject d)
     {
-        WeakReference weakRef = (WeakReference)d.GetValue(TabOnceActiveElementProperty);
-        if (weakRef != null && weakRef.IsAlive)
+        var weakRef = (WeakReference<DependencyObject>)d.GetValue(TabOnceActiveElementProperty);
+        if (weakRef != null && weakRef.TryGetTarget(out DependencyObject activeElement))
         {
-            DependencyObject activeElement = weakRef.Target as DependencyObject;
             // Verify if the element is still in the same visual tree
             if (GetVisualRoot(activeElement) == GetVisualRoot(d))
                 return activeElement;
@@ -71,7 +277,7 @@ internal sealed class KeyboardNavigation
 
     internal static void SetTabOnceActiveElement(DependencyObject d, DependencyObject value)
     {
-        d.SetValueInternal(TabOnceActiveElementProperty, new WeakReference(value));
+        d.SetValueInternal(TabOnceActiveElementProperty, new WeakReference<DependencyObject>(value));
     }
 
     private DependencyObject GetActiveElement(DependencyObject d)
@@ -166,7 +372,7 @@ internal sealed class KeyboardNavigation
             return false;
         }
 
-        return nextTab is Control iie && iie.Focus();
+        return nextTab is UIElement iie && iie.Focus();
     }
 
     internal bool Navigate(DependencyObject sourceElement, Key key, ModifierKeys modifiers, bool fromProcessInput = false)
@@ -499,30 +705,25 @@ internal sealed class KeyboardNavigation
 
     internal bool IsTabStop(DependencyObject e)
     {
-        return e is Control control && IsTabStop(control);
-    }
-
-    internal bool IsTabStop(Control control)
-    {
-        return control.IsTabStop
-            && control.IsEnabled
-            && control.IsVisible
-            && INTERNAL_VisualTreeManager.IsElementInVisualTree(control);
+        if (e is FrameworkElement fe)
+        {
+            return fe.Focusable
+                && (bool)fe.GetValue(IsTabStopProperty)
+                && fe.IsEnabled
+                && fe.IsVisible
+                && INTERNAL_VisualTreeManager.IsElementInVisualTree(fe);
+        }
+        return false;
     }
 
     private bool IsGroup(DependencyObject e)
     {
-        return e is Control && e is not TextBlock && e is not TextElement;
+        return true;
     }
 
     private KeyboardNavigationMode GetKeyNavigationMode(DependencyObject e)
     {
-        return e switch
-        {
-            Control => (KeyboardNavigationMode)e.GetValue(Control.TabNavigationProperty),
-            PopupRoot or Window => KeyboardNavigationMode.Cycle,
-            _ => KeyboardNavigationMode.Local,
-        };
+        return (KeyboardNavigationMode)e.GetValue(TabNavigationProperty);
     }
 
     private bool IsTabStopOrGroup(DependencyObject e)
@@ -532,7 +733,7 @@ internal sealed class KeyboardNavigation
 
     private static int GetTabIndexHelper(DependencyObject d)
     {
-        return (int)d.GetValue(Control.TabIndexProperty);
+        return (int)d.GetValue(TabIndexProperty);
     }
 
     // Find the element with highest priority (lowest index) inside the group

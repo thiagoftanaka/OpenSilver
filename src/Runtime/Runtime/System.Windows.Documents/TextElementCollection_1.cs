@@ -31,7 +31,6 @@ public abstract class TextElementCollection<T> : PresentationFrameworkCollection
     private bool _isModel;
 
     internal TextElementCollection(UIElement owner)
-        : base(false)
     {
         Debug.Assert(owner is not null);
         _owner = owner;
@@ -61,12 +60,12 @@ public abstract class TextElementCollection<T> : PresentationFrameworkCollection
         AddDependencyObjectInternal(value);
         SetVisualParent(value);
         value.IsModel = IsModel;
-        OnAdd(value, Count);
+        OnAdd(value, InternalCount);
     }
 
     internal sealed override void ClearOverride()
     {
-        if (Count > 0)
+        if (InternalCount > 0)
         {
             T[] oldItems = InternalItems.ToArray();
             ClearDependencyObjectInternal();
@@ -155,7 +154,7 @@ public abstract class TextElementCollection<T> : PresentationFrameworkCollection
         }
     }
 
-    private void SetVisualParent(T item) => _owner.AddVisualChild(item);
+    private void SetVisualParent(T item) => _owner.InternalAddVisualChild(item);
 
-    private void ClearVisualParent(T item) => _owner.RemoveVisualChild(item);
+    private void ClearVisualParent(T item) => _owner.InternalRemoveVisualChild(item);
 }

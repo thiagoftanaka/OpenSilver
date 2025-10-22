@@ -11,6 +11,10 @@
 *  
 \*====================================================================================*/
 
+using System.Windows.Media;
+using CSHTML5.Internal;
+using OpenSilver.Internal;
+
 namespace System.Windows.Documents;
 
 /// <summary>
@@ -48,6 +52,53 @@ public abstract class Block : TextElement
         set => SetValueInternal(LineHeightProperty, value);
     }
 
+    /// <summary>
+    /// Returns the value of the <see cref="LineHeight"/> attached property for a specified dependency object.
+    /// </summary>
+    /// <param name="element">
+    /// The dependency object from which to retrieve the value of the <see cref="LineHeight"/> property.
+    /// </param>
+    /// <returns>
+    /// The current value of the <see cref="LineHeight"/> attached property on the specified dependency object.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    public static double GetLineHeight(DependencyObject element)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+
+        return (double)element.GetValue(LineHeightProperty);
+    }
+
+    /// <summary>
+    /// Sets the value of the <see cref="LineHeight"/> attached property for a specified dependency object.
+    /// </summary>
+    /// <param name="element">
+    /// The dependency object on which to set the value of the <see cref="LineHeight"/> property.
+    /// </param>
+    /// <param name="value">
+    /// The new value to set the property to.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// value is negative.
+    /// </exception>
+    public static void SetLineHeight(DependencyObject element, double value)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+
+        element.SetValueInternal(LineHeightProperty, value);
+    }
+
     private static bool IsValidLineHeight(object o)
     {
         double d = (double)o;
@@ -76,6 +127,50 @@ public abstract class Block : TextElement
     }
 
     /// <summary>
+    /// Returns the value of the <see cref="LineStackingStrategy"/> attached property for a specified dependency object.
+    /// </summary>
+    /// <param name="element">
+    /// The dependency object from which to retrieve the value of the <see cref="LineStackingStrategy"/> attached property.
+    /// </param>
+    /// <returns>
+    /// The current value of the <see cref="LineStackingStrategy"/> attached property on the specified dependency object.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    public static LineStackingStrategy GetLineStackingStrategy(DependencyObject element)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+
+        return (LineStackingStrategy)element.GetValue(LineStackingStrategyProperty);
+    }
+
+    /// <summary>
+    /// Sets the value of the <see cref="LineStackingStrategy"/> attached property on a specified dependency object.
+    /// </summary>
+    /// <param name="element">
+    /// The dependency object on which to set the value of the <see cref="LineStackingStrategy"/> property.
+    /// </param>
+    /// <param name="value">
+    /// The new value to set the property to.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    public static void SetLineStackingStrategy(DependencyObject element, LineStackingStrategy value)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+
+        element.SetValueInternal(LineStackingStrategyProperty, value);
+    }
+
+    /// <summary>
     /// Identifies the <see cref="TextAlignment" /> dependency property.
     /// </summary>
     public static readonly DependencyProperty TextAlignmentProperty =
@@ -93,5 +188,197 @@ public abstract class Block : TextElement
     {
         get => (TextAlignment)GetValue(TextAlignmentProperty);
         set => SetValueInternal(TextAlignmentProperty, value);
+    }
+
+    /// <summary>
+    /// Returns the value of the <see cref="TextAlignment"/> attached property for a specified dependency object.
+    /// </summary>
+    /// <param name="element">
+    /// The dependency object from which to retrieve the value of the <see cref="TextAlignment"/> property.
+    /// </param>
+    /// <returns>
+    /// The current value of the <see cref="TextAlignment"/> attached property on the specified dependency object.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    public static TextAlignment GetTextAlignment(DependencyObject element)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+
+        return (TextAlignment)element.GetValue(TextAlignmentProperty);
+    }
+
+    /// <summary>
+    /// Sets the value of the <see cref="TextAlignment"/> attached property for a specified dependency object.
+    /// </summary>
+    /// <param name="element">
+    /// The dependency object on which to set the value of the <see cref="TextAlignment"/> property.
+    /// </param>
+    /// <param name="value">
+    /// The new value to set the property to.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// element is null.
+    /// </exception>
+    public static void SetTextAlignment(DependencyObject element, TextAlignment value)
+    {
+        if (element is null)
+        {
+            throw new ArgumentNullException(nameof(element));
+        }
+
+        element.SetValueInternal(TextAlignmentProperty, value);
+    }
+
+    /// <summary>
+    /// Identifies the <see cref="Margin"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty MarginProperty =
+        DependencyProperty.Register(
+            nameof(Margin),
+            typeof(Thickness),
+            typeof(Block),
+            new FrameworkPropertyMetadata(new Thickness(), FrameworkPropertyMetadataOptions.AffectsMeasure)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((Block)d).SetMargin((Thickness)newValue)
+            },
+            IsValidMargin);
+
+    /// <summary>
+    /// Gets or sets the margin thickness for the element.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="Thickness"/> structure that specifies the amount of margin to apply, in device independent 
+    /// pixels. The default is a uniform thickness of zero (0.0).
+    /// </returns>
+    public Thickness Margin
+    {
+        get => (Thickness)GetValue(MarginProperty);
+        set => SetValueInternal(MarginProperty, value);
+    }
+
+    private static bool IsValidMargin(object o) => IsValidThickness((Thickness)o, true);
+
+    /// <summary>
+    /// Identifies the <see cref="Padding"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty PaddingProperty =
+        DependencyProperty.Register(
+            nameof(Padding),
+            typeof(Thickness),
+            typeof(Block),
+            new FrameworkPropertyMetadata(new Thickness(), FrameworkPropertyMetadataOptions.AffectsMeasure)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((Block)d).SetPadding((Thickness)newValue),
+            },
+            IsValidPadding);
+
+    /// <summary>
+    /// Gets or sets the padding thickness for the element.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="Thickness"/> structure that specifies the amount of padding to apply, in device independent
+    /// pixels. The default is a uniform thickness of zero (0.0).
+    /// </returns>
+    public Thickness Padding
+    {
+        get => (Thickness)GetValue(PaddingProperty);
+        set => SetValueInternal(PaddingProperty, value);
+    }
+
+    private static bool IsValidPadding(object o) => IsValidThickness((Thickness)o, true);
+
+    /// <summary>
+    /// Identifies the <see cref="BorderThickness"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty BorderThicknessProperty =
+        DependencyProperty.Register(
+            nameof(BorderThickness),
+            typeof(Thickness),
+            typeof(Block),
+            new FrameworkPropertyMetadata(new Thickness(), FrameworkPropertyMetadataOptions.AffectsMeasure)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((Block)d).SetBorderWidth((Thickness)newValue),
+            },
+            IsValidBorderThickness);
+
+    /// <summary>
+    /// Gets or sets the border thickness for the element.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="Thickness"/> structure specifying the amount of border to apply, in device independent
+    /// pixels. The default is a uniform thickness of zero (0.0).
+    /// </returns>
+    public Thickness BorderThickness
+    {
+        get => (Thickness)GetValue(BorderThicknessProperty);
+        set => SetValueInternal(BorderThicknessProperty, value);
+    }
+
+    private static bool IsValidBorderThickness(object o) => IsValidThickness((Thickness) o, false);
+
+    /// <summary>
+    /// Identifies the <see cref="BorderBrush"/> dependency property.
+    /// </summary>
+    public static readonly DependencyProperty BorderBrushProperty =
+        DependencyProperty.Register(
+            nameof(BorderBrush),
+            typeof(Brush),
+            typeof(Block),
+            new FrameworkPropertyMetadata((object)null)
+            {
+                MethodToUpdateDom2 = static (d, oldValue, newValue) => ((Block)d).SetBorderColor(oldValue as Brush, (Brush)newValue),
+            });
+
+    /// <summary>
+    /// Gets or sets a <see cref="Brush"/> to use when painting the element's border.
+    /// </summary>
+    /// <returns>
+    /// The brush used to apply to the element's border. The default is null.
+    /// </returns>
+    public Brush BorderBrush
+    {
+        get => (Brush)GetValue(BorderBrushProperty);
+        set => SetValueInternal(BorderBrushProperty, value);
+    }
+
+    private static bool IsValidThickness(Thickness t, bool allowNaN)
+    {
+        const double maxThickness = 1000000;
+
+        if (!allowNaN)
+        {
+            if (double.IsNaN(t.Left) || double.IsNaN(t.Right) || double.IsNaN(t.Top) || double.IsNaN(t.Bottom))
+            {
+                return false;
+            }
+        }
+        if (!double.IsNaN(t.Left) && (t.Left < 0 || t.Left > maxThickness))
+        {
+            return false;
+        }
+        if (!double.IsNaN(t.Right) && (t.Right < 0 || t.Right > maxThickness))
+        {
+            return false;
+        }
+        if (!double.IsNaN(t.Top) && (t.Top < 0 || t.Top > maxThickness))
+        {
+            return false;
+        }
+        if (!double.IsNaN(t.Bottom) && (t.Bottom < 0 || t.Bottom > maxThickness))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    public override object CreateDomElement(object parentRef, out object domElementWhereToPlaceChildren)
+    {
+        domElementWhereToPlaceChildren = null;
+        return INTERNAL_HtmlDomManager.CreateBlockDomElementAndAppendIt(parentRef, this);
     }
 }

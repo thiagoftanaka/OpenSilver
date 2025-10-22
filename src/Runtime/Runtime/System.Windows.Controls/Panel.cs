@@ -15,7 +15,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Markup;
 using System.Windows.Controls.Primitives;
@@ -38,15 +37,17 @@ namespace System.Windows.Controls
         private WeakEventListener<Panel, Brush, EventArgs> _backgroundChangedListener;
         private bool _refreshBackgroundOnSizeChange;
 
-        /// <summary> 
-        /// Returns enumerator to logical children.
+        /// <summary>
+        /// Gets an enumerator that can iterate the logical child elements of this <see cref="Panel"/> element.
         /// </summary>
-        /*protected*/
-        internal override IEnumerator LogicalChildren
+        /// <returns>
+        /// An <see cref="IEnumerator"/>. This property has no default value.
+        /// </returns>
+        protected internal override IEnumerator LogicalChildren
         {
             get
             {
-                if (this._uiElementCollection == null || this._uiElementCollection.Count == 0 || this.IsItemsHost)
+                if (_uiElementCollection is null || _uiElementCollection.InternalCount == 0 || IsItemsHost)
                 {
                     // empty panel or a panel being used as the items
                     // host has *no* logical children; give empty enumerator
@@ -54,89 +55,94 @@ namespace System.Windows.Controls
                 }
 
                 // otherwise, its logical children is its visual children
-                return this.Children.GetEnumerator();
+                return Children.GetEnumerator();
             }
         }
 
         /// <summary>
-        /// Gets the Visual children count.
+        /// Gets the number of child <see cref="UIElement"/> objects in this instance
+        /// of <see cref="Panel"/>.
         /// </summary>
-        internal override int VisualChildrenCount
+        /// <returns>
+        /// The number of child <see cref="UIElement"/> objects.
+        /// </returns>
+        protected override int VisualChildrenCount
         {
             get
             {
-                if (_uiElementCollection == null)
+                if (_uiElementCollection is null)
                 {
                     return 0;
                 }
                 else
                 {
-                    return _uiElementCollection.Count;
+                    return _uiElementCollection.InternalCount;
                 }
             }
         }
 
         /// <summary>
-        /// Gets the Visual child at the specified index.
+        /// Gets a <see cref="UIElement"/> child of this <see cref="Panel"/> at the specified index position.
         /// </summary>
-        internal override UIElement GetVisualChild(int index)
+        /// <param name="index">
+        /// The index position of the <see cref="UIElement"/> child.
+        /// </param>
+        /// <returns>
+        /// A <see cref="UIElement"/> child of the parent <see cref="Panel"/> element.
+        /// </returns>
+        protected override UIElement GetVisualChild(int index)
         {
-            if (_uiElementCollection == null)
+            if (_uiElementCollection is null)
             {
                 throw new ArgumentOutOfRangeException(nameof(index));
             }
 
-            return _uiElementCollection[index];
+            return _uiElementCollection.InternalItems[index];
         }
 
         /// <summary>
-        /// Orientation of the panel if its layout is in one dimension.
-        /// Otherwise HasLogicalOrientation is false and LogicalOrientation should be ignored
+        /// The <see cref="Orientation"/> of the panel, if the panel supports layout in only a 
+        /// single dimension.
         /// </summary>
-        internal virtual Orientation LogicalOrientation => Orientation.Vertical;
+        /// <returns>
+        /// The <see cref="Orientation"/> of the panel. This property has no default value.
+        /// </returns>
+        protected internal virtual Orientation LogicalOrientation => Orientation.Vertical;
 
         /// <summary>
-        /// HasLogicalOrientation is true in case the panel layout is only one dimension (Stack panel).
+        /// Gets a value that indicates whether this <see cref="Panel"/> arranges its descendants 
+        /// in a single dimension.
         /// </summary>
-        internal virtual bool HasLogicalOrientation => false;
+        /// <returns>
+        /// true if the orientation of the <see cref="Panel"/> is in one dimension; otherwise, false.
+        /// </returns>
+        protected internal virtual bool HasLogicalOrientation => false;
 
         /// <summary>
         /// The generator associated with this panel.
         /// </summary>
-        internal IItemContainerGenerator Generator
-        {
-            get
-            {
-                return _itemContainerGenerator;
-            }
-        }
+        internal IItemContainerGenerator Generator => _itemContainerGenerator;
 
-        internal bool HasChildren
-        {
-            get
-            {
-                return this._uiElementCollection != null &&
-                       this._uiElementCollection.Count > 0;
-            }
-        }
+        internal bool HasChildren => _uiElementCollection is not null && _uiElementCollection.InternalCount > 0;
 
+        /// <summary>
+        /// Creates a new <see cref="UIElementCollection"/>.
+        /// </summary>
+        /// <param name="logicalParent">
+        /// The logical parent element of the collection to be created.
+        /// </param>
+        /// <returns>
+        /// An ordered collection of elements that have the specified logical parent.
+        /// </returns>
         protected virtual UIElementCollection CreateUIElementCollection(FrameworkElement logicalParent)
-        {
-            return new UIElementCollection(this, logicalParent);
-        }
+            => new UIElementCollection(this, logicalParent);
 
-        internal override bool EnablePointerEventsCore
-        {
-            get
-            {
-                // We only check the Background property even if BorderBrush not null
-                // and BorderThickness > 0 is a sufficient condition to enable pointer
-                // events on the borders of the control.
-                // There is no way right now to differentiate the Background and BorderBrush
-                // as they are both defined on the same DOM element.
-                return this.Background != null;
-            }
-        }
+        // We only check the Background property even if BorderBrush not null
+        // and BorderThickness > 0 is a sufficient condition to enable pointer
+        // events on the borders of the control.
+        // There is no way right now to differentiate the Background and BorderBrush
+        // as they are both defined on the same DOM element.
+        internal sealed override bool EnablePointerEventsCore => Background is not null;
 
         private int _progressiveRenderingChunkSize;
 
@@ -158,88 +164,6 @@ namespace System.Windows.Controls
         }
 
         internal static int GlobalProgressiveRenderingChunkSize;
-
-        private void OnChildrenCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-        {
-            switch (e.Action)
-            {
-                case NotifyCollectionChangedAction.Reset:
-                    this.OnChildrenReset();
-                    break;
-                case NotifyCollectionChangedAction.Add:
-                    Debug.Assert(e.NewItems.Count == 1);
-                    this.OnChildrenAdded((UIElement)e.NewItems[0], e.NewStartingIndex);
-                    break;
-                case NotifyCollectionChangedAction.Remove:
-                    Debug.Assert(e.OldItems.Count == 1);
-                    this.OnChildrenRemoved((UIElement)e.OldItems[0], e.OldStartingIndex);
-                    break;
-                case NotifyCollectionChangedAction.Replace:
-                    Debug.Assert(e.OldItems.Count == 1 && e.NewItems.Count == 1);
-                    this.OnChildrenReplaced((UIElement)e.OldItems[0], (UIElement)e.NewItems[0], e.OldStartingIndex);
-                    break;
-                default:
-                    throw new NotSupportedException(string.Format("Unexpected collection change action '{0}'.", e.Action));
-            }
-        }
-
-        #region Children Management
-
-        internal void OnChildrenReset()
-        {
-            if (VisualChildrenInformation != null)
-            {
-                foreach (var oldChild in VisualChildrenInformation.ToArray())
-                {
-                    INTERNAL_VisualTreeManager.DetachVisualChildIfNotNull(oldChild, this);
-                }
-            }
-
-            if (!HasChildren)
-            {
-                return;
-            }
-
-            List<UIElement> children = InternalChildren;
-
-            int chunkSize = ProgressiveRenderingChunkSize;
-            var enableProgressiveRendering = chunkSize > 0 && children.Count > chunkSize;
-            if (enableProgressiveRendering)
-            {
-                ProgressivelyAttachChildren(children);
-            }
-            else
-            {
-                for (int i = 0; i < children.Count; ++i)
-                {
-                    INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(children[i], this, i);
-                }
-            }
-        }
-
-        internal void OnChildrenAdded(UIElement newChild, int index)
-        {
-            INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(newChild, this, index);
-        }
-
-        internal void OnChildrenRemoved(UIElement oldChild, int index)
-        {
-            INTERNAL_VisualTreeManager.DetachVisualChildIfNotNull(oldChild, this);
-        }
-
-        internal void OnChildrenReplaced(UIElement oldChild, UIElement newChild, int index)
-        {
-            if (oldChild == newChild)
-            {
-                return;
-            }
-
-            INTERNAL_VisualTreeManager.DetachVisualChildIfNotNull(oldChild, this);
-
-            INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(newChild, this, index);
-        }
-
-        #endregion Children Management
 
         /// <summary>
         /// Identifies the <see cref="Background"/> dependency property.
@@ -300,7 +224,8 @@ namespace System.Windows.Controls
             }
         }
 
-        internal sealed override void OnRenderSizeChanged(SizeChangedInfo info)
+        /// <inheritdoc />
+        protected internal override void OnRenderSizeChanged(SizeChangedInfo info)
         {
             base.OnRenderSizeChanged(info);
 
@@ -389,7 +314,7 @@ namespace System.Windows.Controls
             if (itemsOwner == null)
             {
                 // This can happen if IsItemsHost=true, but the panel is not nested in an ItemsControl
-                throw new InvalidOperationException("A panel with IsItemsHost=\"true\" is not nested in an ItemsControl. Panel must be nested in ItemsControl to get and show items.");
+                throw new InvalidOperationException(Strings.Panel_ItemsControlNotFound);
             }
 
             IItemContainerGenerator itemsOwnerGenerator = itemsOwner.ItemContainerGenerator;
@@ -417,17 +342,7 @@ namespace System.Windows.Controls
         {
             if ((_uiElementCollection == null) || (_uiElementCollection.LogicalParent != logicalParent))
             {
-                if (_uiElementCollection != null)
-                {
-                    _uiElementCollection.CollectionChanged -= new NotifyCollectionChangedEventHandler(OnChildrenCollectionChanged);
-                }
-
                 _uiElementCollection = CreateUIElementCollection(logicalParent);
-
-                if (_uiElementCollection != null && IsLoaded)
-                {
-                    _uiElementCollection.CollectionChanged += new NotifyCollectionChangedEventHandler(OnChildrenCollectionChanged);
-                }
             }
             else
             {
@@ -458,7 +373,7 @@ namespace System.Windows.Controls
                 ((IItemContainerGenerator)_itemContainerGenerator).RemoveAll();
             }
 
-            if ((_uiElementCollection != null) && (_uiElementCollection.Count > 0))
+            if ((_uiElementCollection != null) && (_uiElementCollection.InternalCount > 0))
             {
                 _uiElementCollection.Clear();
                 OnClearChildrenInternal();
@@ -694,13 +609,26 @@ namespace System.Windows.Controls
         {
             base.INTERNAL_OnAttachedToVisualTree();
 
-            if (this._uiElementCollection != null)
+            if (!HasChildren)
             {
-                this._uiElementCollection.CollectionChanged -= new NotifyCollectionChangedEventHandler(OnChildrenCollectionChanged);
-                this._uiElementCollection.CollectionChanged += new NotifyCollectionChangedEventHandler(OnChildrenCollectionChanged);
+                return;
             }
 
-            this.OnChildrenReset();
+            List<UIElement> children = InternalChildren;
+
+            int chunkSize = ProgressiveRenderingChunkSize;
+            bool enableProgressiveRendering = chunkSize > 0 && children.Count > chunkSize;
+            if (enableProgressiveRendering)
+            {
+                ProgressivelyAttachChildren(children);
+            }
+            else
+            {
+                for (int i = 0; i < children.Count; ++i)
+                {
+                    INTERNAL_VisualTreeManager.AttachVisualChildIfNotAlreadyAttached(children[i], this, i);
+                }
+            }
         }
 
         private async void ProgressivelyAttachChildren(List<UIElement> newChildren)

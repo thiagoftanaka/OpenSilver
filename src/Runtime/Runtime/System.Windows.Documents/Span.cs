@@ -72,9 +72,9 @@ public class Span : Inline
         set => _inlines.IsModel = value;
     }
 
-    internal sealed override int VisualChildrenCount => Inlines.Count;
+    protected sealed override int VisualChildrenCount => Inlines.InternalCount;
 
-    internal sealed override UIElement GetVisualChild(int index)
+    protected sealed override UIElement GetVisualChild(int index)
     {
         if (index >= VisualChildrenCount)
         {
@@ -86,7 +86,7 @@ public class Span : Inline
 
     internal sealed override void AppendHtml(StringBuilder builder)
     {
-        builder.Append($"<{TagName} class=\"opensilver-textelement\">");
+        builder.Append($"<{TagName} class=\"opensilver-inline\">");
         foreach (Inline inline in Inlines.InternalItems)
         {
             inline.AppendHtml(builder);

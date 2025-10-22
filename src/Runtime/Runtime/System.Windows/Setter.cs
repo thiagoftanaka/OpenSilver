@@ -17,6 +17,7 @@ using System.Xaml.Markup;
 using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Media;
+using OpenSilver.Internal;
 
 namespace System.Windows;
 
@@ -98,9 +99,9 @@ public sealed class Setter : SetterBase, ISupportInitialize
                 return;
             }
 
-            if (value is BindingExpression)
+            if (value is Expression)
             {
-                throw new ArgumentException("BindingExpression type is not a valid Style value.");
+                throw new ArgumentException(Strings.StyleValueOfExpressionNotSupported);
             }
 
             _value = value;
@@ -118,9 +119,9 @@ public sealed class Setter : SetterBase, ISupportInitialize
         DependencyProperty dp = Property;
         object value = Value;
 
-        if (dp == null)
+        if (dp is null)
         {
-            throw new ArgumentException("Must have non-null value for 'Setter.Property'.");
+            throw new ArgumentException(string.Format(Strings.NullPropertyIllegal, "Setter.Property"));
         }
 
         if (dp.IsObjectType || !dp.IsValidValue(value))
@@ -129,17 +130,24 @@ public sealed class Setter : SetterBase, ISupportInitialize
             {
                 case Color color:
                     if (dp.PropertyType == typeof(Brush))
+                    {
                         _value = new SolidColorBrush(color);
+                    }
                     break;
 
-                case Binding:
-                    // Bindings are allowed on setters, it will later be transformed into a BindingExpression
+                case MarkupExtension:
+                    // Bindings and dynamic resources are allowed on setters, they will later be transformed into an expression
+                    if (value is not BindingBase && value is not DynamicResourceExtension)
+                    {
+                        throw new ArgumentException(string.Format(Strings.SetterValueOfMarkupExtensionNotSupported, value.GetType().Name));
+                    }
                     break;
 
                 default:
                     if (!dp.IsObjectType)
-                        throw new ArgumentException(
-                            $"'{value}' is not a valid value for the '{dp.OwnerType}.{dp.Name}' property on a Setter.");
+                    {
+                        throw new ArgumentException(string.Format(Strings.InvalidSetterValue, value, dp.OwnerType, dp.Name));
+                    }
                     break;
             }
         }
@@ -149,7 +157,7 @@ public sealed class Setter : SetterBase, ISupportInitialize
 
     private void CheckValidProperty(DependencyProperty property)
     {
-        if (property == null)
+        if (property is null)
         {
             throw new ArgumentNullException(nameof(property));
         }
@@ -158,8 +166,7 @@ public sealed class Setter : SetterBase, ISupportInitialize
         {
             // Note: Silverlight allows this, but will crash as soon as
             // the style is used 2 times in the visual tree.
-            throw new InvalidOperationException(
-                $"'{FrameworkElement.NameProperty.Name}' property cannot be set in the current element's Style.");
+            throw new InvalidOperationException(string.Format(Strings.CannotHavePropertyInStyle, FrameworkElement.NameProperty.Name));
         }
     }
 
@@ -187,9 +194,11 @@ public sealed class Setter : SetterBase, ISupportInitialize
             return;
         }
 
-        if (eventArgs.MarkupExtension is BindingBase binding)
+        MarkupExtension me = eventArgs.MarkupExtension;
+
+        if (me is DynamicResourceExtension || me is BindingBase)
         {
-            setter.Value = binding;
+            setter.Value = me;
             eventArgs.Handled = true;
         }
     }

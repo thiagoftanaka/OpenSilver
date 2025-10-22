@@ -11,7 +11,6 @@
 *  
 \*====================================================================================*/
 
-using System.ComponentModel;
 using System.Windows.Markup;
 using OpenSilver.Internal.Media.Animation;
 
@@ -41,16 +40,65 @@ public class ColorAnimationUsingKeyFrames : AnimationTimeline, IKeyFrameAnimatio
     /// </returns>
     public ColorKeyFrameCollection KeyFrames
     {
-        get => _frames ??= new ColorKeyFrameCollection(this);
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        set => _frames = value;
+        get
+        {
+            if (_frames is null)
+            {
+                SetKeyFrames(new());
+            }
+            return _frames;
+        }
+        set { SetKeyFrames(value); }
     }
 
     IKeyFrameCollection<Color> IKeyFrameAnimation<Color>.KeyFrames => _frames;
 
+    /// <inheritdoc />
+    public sealed override Type TargetPropertyType => typeof(Color);
+
     protected sealed override Duration GetNaturalDurationCore() =>
         KeyFrameAnimationHelpers.GetLargestTimeSpanKeyTime(this);
 
-    internal override TimelineClock CreateClock(bool isRoot) =>
-        new AnimationClock<Color>(this, isRoot, new KeyFramesAnimator<Color>(this));
+    internal override TimelineClock CreateClock() =>
+        new AnimationClock<Color>(this, new KeyFramesAnimator<Color>(this));
+
+    private void SetKeyFrames(ColorKeyFrameCollection keyFrames)
+    {
+        if (_frames is not null)
+        {
+            RemoveSelfAsInheritanceContext(_frames, null);
+        }
+
+        _frames = keyFrames;
+
+        if (_frames is not null)
+        {
+            ProvideSelfAsInheritanceContext(_frames, null);
+        }
+    }
+}
+
+/// <summary>
+/// Represents a collection of <see cref="ColorKeyFrame" /> objects that can be individually accessed by index. 
+/// </summary>
+public sealed class ColorKeyFrameCollection : PresentationFrameworkCollection<ColorKeyFrame>, IKeyFrameCollection<Color>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ColorKeyFrameCollection"/> class.
+    /// </summary>
+    public ColorKeyFrameCollection() { }
+
+    internal override void AddOverride(ColorKeyFrame keyFrame) => AddDependencyObjectInternal(keyFrame);
+
+    internal override void ClearOverride() => ClearDependencyObjectInternal();
+
+    internal override void InsertOverride(int index, ColorKeyFrame keyFrame) => InsertDependencyObjectInternal(index, keyFrame);
+
+    internal override void RemoveAtOverride(int index) => RemoveAtDependencyObjectInternal(index);
+
+    internal override ColorKeyFrame GetItemOverride(int index) => GetItemInternal(index);
+
+    internal override void SetItemOverride(int index, ColorKeyFrame keyFrame) => SetItemDependencyObjectInternal(index, keyFrame);
+
+    IKeyFrame<Color> IKeyFrameCollection<Color>.this[int index] => GetItemInternal(index);
 }

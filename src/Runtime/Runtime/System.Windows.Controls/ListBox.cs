@@ -163,9 +163,14 @@ namespace System.Windows.Controls
             }
             else
             {
-                throw new NotSupportedException("Can only call SelectAll when SelectionMode is Multiple or Extended.");
+                throw new NotSupportedException(Strings.ListBoxSelectAllSelectionMode);
             }
         }
+
+        /// <summary>
+        /// Clears all the selection in a <see cref="ListBox"/>.
+        /// </summary>
+        public void UnselectAll() => UnselectAllImpl();
 
         public override void OnApplyTemplate()
         {

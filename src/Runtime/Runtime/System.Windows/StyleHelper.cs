@@ -12,6 +12,7 @@
 \*====================================================================================*/
 
 using System.Collections.Generic;
+using System.Windows.Controls;
 using System.Windows.Data;
 using OpenSilver.Internal;
 
@@ -100,9 +101,13 @@ namespace System.Windows
                 foreach (var pValue in newStyleValues)
                 {
                     DependencyProperty dp = DependencyProperty.RegisteredPropertyList[pValue.Key];
-                    object value = pValue.Value is Binding binding ?
-                        binding.CreateBindingExpression(fe, dp) :
-                        pValue.Value;
+                    object value = pValue.Value switch
+                    {
+                        BindingBase bindingBase => bindingBase.CreateBindingExpression(fe, dp, null),
+                        DynamicResourceExtension dynamicResource => new ResourceReferenceExpression(dynamicResource.ResourceKey ??
+                            throw new InvalidOperationException(Strings.MarkupExtensionResourceKey)),
+                        _ => pValue.Value,
+                    };
 
                     setValue(fe, dp, value);
                 }
@@ -117,66 +122,28 @@ namespace System.Windows
 
             // Fetch the DefaultStyleKey and the self Style for
             // the given FrameworkElement
-            object themeStyleKey = fe.GetValue(FrameworkElement.DefaultStyleKeyProperty);
-            //Style selfStyle = fe.Style;
-            Style oldThemeStyle = fe.ThemeStyle;
+            object themeStyleKey = fe.DefaultStyleKey;
+            bool overridesDefaultStyle = fe.OverridesDefaultStyle;
             Style newThemeStyle = null;
 
-            // Don't lookup properties from the themes if user has specified OverridesDefaultStyle
-            // or DefaultStyleKey = null
-            if (themeStyleKey != null)
+            // Don't lookup properties from the themes if user has specified OverridesDefaultStyle or
+            // DefaultStyleKey is null.
+            if (!overridesDefaultStyle && themeStyleKey is Type typeKey)
             {
-                // First look for an applicable style in system resources
-                object styleLookup;
                 // Regular lookup based on the DefaultStyleKey. Involves locking and Hashtable lookup
+                newThemeStyle = XamlResources.FindStyleResourceInGenericXaml(typeKey);
 
-                if (themeStyleKey is Type typeKey)
-                {
-                    styleLookup = XamlResources.FindStyleResourceInGenericXaml(typeKey);
-                }
-                else
-                {
-                    styleLookup = null;
-                }
-
-                if (styleLookup != null)
-                {
-                    if (styleLookup is Style)
-                    {
-                        // We have found an applicable Style in system resources
-                        //  let's us use that as second stop to find property values.
-                        newThemeStyle = (Style)styleLookup;
-                    }
-                    else
-                    {
-                        // We found something keyed to the ThemeStyleKey, but it's not
-                        //  a style.  This is a problem, throw an exception here.
-                        throw new InvalidOperationException(string.Format("System resource for type '{0}' is not a Style object.", themeStyleKey));
-                    }
-                }
-
-                if (newThemeStyle == null)
+                if (newThemeStyle is null)
                 {
                     // No style in system resources, try to retrieve the default
                     // style for the target type.
-                    Type themeStyleTypeKey = themeStyleKey as Type;
-                    if (themeStyleTypeKey != null)
-                    {
-                        PropertyMetadata styleMetadata = FrameworkElement.StyleProperty.GetMetadata(themeStyleTypeKey);
 
-                        if (styleMetadata != null)
-                        {
-                            // Have a metadata object, get the default style (if any)
-                            newThemeStyle = styleMetadata.DefaultValue as Style;
-                        }
+                    if (FrameworkElement.StyleProperty.GetMetadata(typeKey) is PropertyMetadata styleMetadata)
+                    {
+                        // Have a metadata object, get the default style (if any)
+                        newThemeStyle = styleMetadata.DefaultValue as Style;
                     }
                 }
-            }
-
-            // Propagate change notification
-            if (oldThemeStyle != newThemeStyle)
-            {
-                FrameworkElement.OnThemeStyleChanged(fe, oldThemeStyle, newThemeStyle);
             }
 
             return newThemeStyle;
@@ -193,5 +160,35 @@ namespace System.Windows
                 style.Seal();
             }
         }
+
+        //
+        //  This method
+        //  1. If the value is an ISealable and it is not sealed
+        //     and can be sealed, seal it now.
+        //  2. Else it returns the value as is.
+        //
+        internal static void SealIfSealable(object value)
+        {
+            // If the value is an ISealable and it is not sealed
+            // and can be sealed, seal it now.
+            if (value is ISealable sealable && !sealable.IsSealed && sealable.CanSeal)
+            {
+                sealable.Seal();
+            }
+        }
+
+        internal static bool ShouldGetValueFromStyle(DependencyProperty dp) => dp != FrameworkElement.StyleProperty;
+
+        internal static bool ShouldGetValueFromThemeStyle(DependencyProperty dp) =>
+            dp != FrameworkElement.StyleProperty &&
+            dp != FrameworkElement.DefaultStyleKeyProperty &&
+            dp != FrameworkElement.OverridesDefaultStyleProperty;
+
+        internal static bool ShouldGetValueFromTemplate(DependencyProperty dp) =>
+            dp != FrameworkElement.StyleProperty &&
+            dp != FrameworkElement.DefaultStyleKeyProperty &&
+            dp != FrameworkElement.OverridesDefaultStyleProperty &&
+            dp != Control.TemplateProperty &&
+            dp != ContentPresenter.TemplateProperty;
     }
 }

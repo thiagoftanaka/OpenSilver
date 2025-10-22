@@ -18,6 +18,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using OpenSilver.Internal;
+using OpenSilver.Internal.Controls;
 
 namespace System.Windows.Controls.Primitives
 {
@@ -27,13 +28,28 @@ namespace System.Windows.Controls.Primitives
     /// </summary>
     public partial class Selector : ItemsControl
     {
-        private bool SelectedValueWaitsForItems;
-        private bool SelectedValueDrivesSelection;
-        private bool SkipCoerceSelectedItemCheck;
-        private bool SyncingSelectionAndCurrency;
+        [Flags]
+        private enum CacheBits
+        {
+            // This flag is true while syncing the selection and the currency.  It
+            // is used to avoid reentrancy:  e.g. when the currency changes we want
+            // to change the selection accordingly, but that selection change should
+            // not try to change currency.
+            SyncingSelectionAndCurrency = 0x00000001,
+            CanSelectMultiple = 0x00000002,
+            IsSynchronizedWithCurrentItem = 0x00000004,
+            SkipCoerceSelectedItemCheck = 0x00000008,
+            SelectedValueDrivesSelection = 0x00000010,
+            SelectedValueWaitsForItems = 0x00000020,
+            NewContainersArePending = 0x00000040,
+        }
+
+        // Condense boolean bits.  Constructor takes the default value, and will resize to access up to 32 bits.
+        private CacheBits _cacheValid;
+
         private ItemInfo PendingSelectionByValue;
-        private bool _canSelectMultiple = false;
         private ChangeInfo _changeInfo;
+        private WeakEventListener<Selector, ICollectionView, EventArgs> _currentChangedListener;
 
         // The selected items that we interact with.  Most of the time when SelectedItems
         // is in use, this is identical to the value of the SelectedItems property, but
@@ -309,22 +325,35 @@ namespace System.Windows.Controls.Primitives
 
             if (!oldSync && newSync)
             {
-                SetSelectedToCurrent();
+                // if the selection has already been set, honor it and bring currency
+                // into sync.  (Typical case:  <ListBox SelectedItem=x IsSync=true/>)
+                // Otherwise, bring selection into sync with currency.
+                if (SelectedItem != null)
+                {
+                    SetCurrentToSelected();
+                }
+                else
+                {
+                    SetSelectedToCurrent();
+                }
             }
         }
 
         private void SetSelectedToCurrent()
         {
             Debug.Assert(IsSynchronizedWithCurrentItemPrivate);
+
+            if (ItemsSource is not ICollectionView icv)
+            {
+                return;
+            }
+
             if (!SyncingSelectionAndCurrency)
             {
                 SyncingSelectionAndCurrency = true;
 
                 try
                 {
-                    ICollectionView icv = ItemsSource as ICollectionView;
-                    Debug.Assert(icv != null);
-
                     object item = icv.CurrentItem;
 
                     if (item != null && ItemGetIsSelectable(item))
@@ -349,8 +378,7 @@ namespace System.Windows.Controls.Primitives
             Debug.Assert(IsSynchronizedWithCurrentItemPrivate);
             if (!SyncingSelectionAndCurrency)
             {
-                ICollectionView icv = ItemsSource as ICollectionView;
-                if (icv == null)
+                if (ItemsSource is not ICollectionView icv)
                 {
                     return;
                 }
@@ -393,8 +421,72 @@ namespace System.Windows.Controls.Primitives
                 SetSelectedToCurrent();
         }
 
+        private bool SyncingSelectionAndCurrency
+        {
+            get { return GetBit(CacheBits.SyncingSelectionAndCurrency); }
+            set { SetBit(CacheBits.SyncingSelectionAndCurrency, value); }
+        }
+
+        internal bool CanSelectMultiple
+        {
+            get { return GetBit(CacheBits.CanSelectMultiple); }
+            set
+            {
+                if (GetBit(CacheBits.CanSelectMultiple) != value)
+                {
+                    SetBit(CacheBits.CanSelectMultiple, value);
+                    if (!value && _selectedItems.Count > 1)
+                    {
+                        SelectionChange.Validate();
+                    }
+                }
+            }
+        }
+
         // True if we're really synchronizing selection and current item
-        private bool IsSynchronizedWithCurrentItemPrivate { get; set; }
+        private bool IsSynchronizedWithCurrentItemPrivate
+        {
+            get { return GetBit(CacheBits.IsSynchronizedWithCurrentItem); }
+            set { SetBit(CacheBits.IsSynchronizedWithCurrentItem, value); }
+        }
+
+        private bool SkipCoerceSelectedItemCheck
+        {
+            get { return GetBit(CacheBits.SkipCoerceSelectedItemCheck); }
+            set { SetBit(CacheBits.SkipCoerceSelectedItemCheck, value); }
+        }
+
+        private bool SelectedValueDrivesSelection
+        {
+            get { return GetBit(CacheBits.SelectedValueDrivesSelection); }
+            set { SetBit(CacheBits.SelectedValueDrivesSelection, value); }
+        }
+
+        private bool SelectedValueWaitsForItems
+        {
+            get { return GetBit(CacheBits.SelectedValueWaitsForItems); }
+            set { SetBit(CacheBits.SelectedValueWaitsForItems, value); }
+        }
+
+        private bool NewContainersArePending
+        {
+            get { return GetBit(CacheBits.NewContainersArePending); }
+            set { SetBit(CacheBits.NewContainersArePending, value); }
+        }
+
+        private void SetBit(CacheBits bit, bool value)
+        {
+            if (value)
+            {
+                _cacheValid |= bit;
+            }
+            else
+            {
+                _cacheValid &= ~bit;
+            }
+        }
+
+        private bool GetBit(CacheBits bit) => (_cacheValid & bit) != 0;
 
         /// <summary>
         /// Builds the visual tree for the <see cref="Selector"/> control
@@ -438,16 +530,20 @@ namespace System.Windows.Controls.Primitives
         {
             base.OnItemsSourceChanged(oldValue, newValue);
 
-            ICollectionView icv = oldValue as ICollectionView;
-            if (icv != null)
+            if (_currentChangedListener != null)
             {
-                icv.CurrentChanged -= new EventHandler(OnCurrentChanged);
+                _currentChangedListener.Detach();
+                _currentChangedListener = null;
             }
 
-            icv = newValue as ICollectionView;
-            if (icv != null)
+            if (newValue is ICollectionView icv)
             {
-                icv.CurrentChanged += new EventHandler(OnCurrentChanged);
+                _currentChangedListener = new(this, icv)
+                {
+                    OnEventAction = static (instance, sender, args) => instance.OnCurrentChanged(sender, args),
+                    OnDetachAction = static (listener, source) => source.CurrentChanged -= listener.OnEvent,
+                };
+                icv.CurrentChanged += _currentChangedListener.OnEvent;
             }
 
             SetSynchronizationWithCurrentItem();
@@ -469,8 +565,13 @@ namespace System.Windows.Controls.Primitives
             if (element is SelectorItem container)
             {
                 container.ParentSelector = this;
-                container.IsSelected = _selectedItems.Contains(NewItemInfo(item, element));
+                if (container.IsSelected)
+                {
+                    NotifyIsSelectedChanged(container, true);
+                }
             }
+
+            OnNewContainer();
         }
 
         /// <summary>
@@ -492,6 +593,12 @@ namespace System.Windows.Controls.Primitives
                 container.ParentSelector = null;
                 container.ClearContentControl(item);
             }
+
+            //This check ensures that selection is cleared only for generated containers.
+            if (!((IGeneratorHost)this).IsItemItsOwnContainer(item))
+            {
+                element.ClearValue(SelectorItem.IsSelectedProperty);
+            }
         }
 
         protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
@@ -501,8 +608,7 @@ namespace System.Windows.Controls.Primitives
             CoerceValue(SelectedIndexProperty);
             CoerceValue(SelectedItemProperty);
 
-            if (SelectedValueWaitsForItems &&
-                !Object.Equals(SelectedValue, InternalSelectedValue))
+            if (SelectedValueWaitsForItems && !Equals(SelectedValue, InternalSelectedValue))
             {
                 // This sets the selection from SelectedValue when SelectedValue
                 // was set prior to the arrival of any items to select, provided
@@ -514,7 +620,7 @@ namespace System.Windows.Controls.Primitives
             {
                 case NotifyCollectionChangedAction.Add:
                     if (e.NewItems.Count != 1)
-                        throw new NotSupportedException("Range actions are not supported.");
+                        throw new NotSupportedException(Strings.RangeActionsNotSupported);
 
                     SelectionChange.Begin();
 
@@ -535,14 +641,14 @@ namespace System.Windows.Controls.Primitives
 
                 case NotifyCollectionChangedAction.Remove:
                     if (e.OldItems.Count != 1)
-                        throw new NotSupportedException("Range actions are not supported.");
+                        throw new NotSupportedException(Strings.RangeActionsNotSupported);
 
                     RemoveFromSelection(e);
                     break;
 
                 case NotifyCollectionChangedAction.Replace:
                     if (e.NewItems.Count != 1 || e.OldItems.Count != 1)
-                        throw new NotSupportedException("Range actions are not supported.");
+                        throw new NotSupportedException(Strings.RangeActionsNotSupported);
 
                     // RemoveFromSelection works, with one wrinkle.  If the
                     // replaced item was selected, the old item is in _selectedItems,
@@ -551,6 +657,18 @@ namespace System.Windows.Controls.Primitives
                     // sets container.IsSelected=false.   We do that here as a special case.
                     ItemSetIsSelected(ItemInfoFromIndex(e.NewStartingIndex), false);
                     RemoveFromSelection(e);
+                    break;
+
+                case NotifyCollectionChangedAction.Move:
+                    // some panels (e.g. VSP) implement Move by removing containers
+                    // from the visual tree directly, bypassing the generator and
+                    // thus bypassing the notification Selector uses to adjust the
+                    // Container field of ItemInfos in the selected item list.
+                    // So do that adjustment now.  Otherwise we can end up with
+                    // multiple ItemInfos representing the same item (Dev11 999613).
+                    AdjustNewContainers();
+
+                    SelectionChange.Validate();
                     break;
 
                 case NotifyCollectionChangedAction.Reset:
@@ -593,7 +711,7 @@ namespace System.Windows.Controls.Primitives
                     break;
 
                 default:
-                    throw new NotSupportedException(string.Format("Unexpected collection change action '{0}'.", e.Action));
+                    throw new NotSupportedException(string.Format(Strings.UnexpectedCollectionChangeAction, e.Action));
             }
         }
 
@@ -609,10 +727,7 @@ namespace System.Windows.Controls.Primitives
         /// <param name="e">The arguments for the event.</param>
         protected virtual void OnSelectionChanged(SelectionChangedEventArgs e)
         {
-            if (this.SelectionChanged != null)
-            {
-                this.SelectionChanged(this, e);
-            }
+            SelectionChanged?.Invoke(this, e);
         }
 
         internal virtual ScrollViewer ScrollHost { get; }
@@ -624,22 +739,6 @@ namespace System.Windows.Controls.Primitives
         internal InternalSelectedItemsStorage SelectedItemsInternal
         {
             get { return _selectedItems; }
-        }
-
-        internal bool CanSelectMultiple
-        {
-            get { return _canSelectMultiple; }
-            set
-            {
-                if (_canSelectMultiple != value)
-                {
-                    _canSelectMultiple = value;
-                    if (!value && _selectedItems.Count > 1)
-                    {
-                        SelectionChange.Validate();
-                    }
-                }
-            }
         }
 
         // Gets the selected item but doesn't use SelectedItem (avoids putting it "in use")
@@ -878,15 +977,36 @@ namespace System.Windows.Controls.Primitives
         }
 
         /// <summary>
+        /// Unselect all items in the collection.
+        /// </summary>
+        internal virtual void UnselectAllImpl()
+        {
+            SelectionChange.Begin();
+            SelectionChange.CleanupDeferSelection();
+            try
+            {
+                object selectedItem = InternalSelectedItem;
+
+                foreach (ItemInfo info in _selectedItems)
+                {
+                    SelectionChange.Unselect(info);
+                }
+            }
+            finally
+            {
+                SelectionChange.End();
+            }
+        }
+
+        /// <summary>
         /// Raise the SelectionChanged event.
         /// </summary>
         private void InvokeSelectionChanged(List<ItemInfo> unselectedInfos, List<ItemInfo> selectedInfos)
         {
-            SelectionChangedEventArgs selectionChanged = new SelectionChangedEventArgs(unselectedInfos, selectedInfos);
-
-            selectionChanged.OriginalSource = this;
-
-            OnSelectionChanged(selectionChanged);
+            OnSelectionChanged(new SelectionChangedEventArgs(unselectedInfos, selectedInfos)
+            {
+                Source = this,
+            });
         }
 
         private static bool ItemGetIsSelectable(object item)
@@ -910,7 +1030,7 @@ namespace System.Windows.Controls.Primitives
             {
                 return;
             }
-                
+
             if (container != null)
             {
                 object item = GetItemOrContainerFromContainer(container);
@@ -934,7 +1054,7 @@ namespace System.Windows.Controls.Primitives
 
             if (selectable == false && selected)
             {
-                throw new InvalidOperationException("Item is not selectable.");
+                throw new InvalidOperationException(Strings.CannotSelectNotSelectableItem);
             }
 
             SelectionChange.Begin();
@@ -998,6 +1118,19 @@ namespace System.Windows.Controls.Primitives
             }
         }
 
+        // when new containers arrive, schedule work for LayoutUpdated time.
+        // (we might actually do it sooner - see OnGeneratorStatusChanged).
+        private void OnNewContainer()
+        {
+            if (!NewContainersArePending)
+            {
+                NewContainersArePending = true;
+                LayoutUpdated += OnLayoutUpdated;
+            }
+        }
+
+        private void OnLayoutUpdated(object sender, EventArgs e) => AdjustNewContainers();
+
         private void OnGeneratorStatusChanged(object sender, EventArgs e)
         {
             if (ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated)
@@ -1011,6 +1144,13 @@ namespace System.Windows.Controls.Primitives
 
         private void AdjustNewContainers()
         {
+            // remove the LayoutUpdate handler, if we'd set one earlier
+            if (NewContainersArePending)
+            {
+                LayoutUpdated -= OnLayoutUpdated;
+                NewContainersArePending = false;
+            }
+
             AdjustItemInfosAfterGeneratorChangeOverride();
 
             if (base.HasItems)
@@ -1047,7 +1187,7 @@ namespace System.Windows.Controls.Primitives
 
             if (!CanSelectMultiple)
             {
-                throw new InvalidOperationException("Can only change SelectedItems collection in multiple selection modes. Use SelectedItem in single select modes.");
+                throw new InvalidOperationException(Strings.ChangingCollectionNotSupported);
             }
 
             SelectionChange.Begin();
@@ -1059,14 +1199,14 @@ namespace System.Windows.Controls.Primitives
                 {
                     case NotifyCollectionChangedAction.Add:
                         if (e.NewItems.Count != 1)
-                            throw new NotSupportedException("Range actions are not supported.");
+                            throw new NotSupportedException(Strings.RangeActionsNotSupported);
 
                         SelectionChange.Select(NewUnresolvedItemInfo(e.NewItems[0]), false /* assumeInItemsCollection */);
                         break;
-                    
+
                     case NotifyCollectionChangedAction.Remove:
                         if (e.OldItems.Count != 1)
-                            throw new NotSupportedException("Range actions are not supported.");
+                            throw new NotSupportedException(Strings.RangeActionsNotSupported);
 
                         SelectionChange.Unselect(NewUnresolvedItemInfo(e.OldItems[0]));
                         break;
@@ -1088,7 +1228,7 @@ namespace System.Windows.Controls.Primitives
 
                     case NotifyCollectionChangedAction.Replace:
                         if (e.NewItems.Count != 1 || e.OldItems.Count != 1)
-                            throw new NotSupportedException("Range actions are not supported.");
+                            throw new NotSupportedException(Strings.RangeActionsNotSupported);
 
                         SelectionChange.Unselect(NewUnresolvedItemInfo(e.OldItems[0]));
                         SelectionChange.Select(NewUnresolvedItemInfo(e.NewItems[0]), false /* assumeInItemsCollection */);
@@ -1098,7 +1238,7 @@ namespace System.Windows.Controls.Primitives
                         break; // order within SelectedItems doesn't matter
 
                     default:
-                        throw new NotSupportedException(string.Format("Unexpected collection change action '{0}'.", e.Action));
+                        throw new NotSupportedException(string.Format(Strings.UnexpectedCollectionChangeAction, e.Action));
                 }
 
                 SelectionChange.End();

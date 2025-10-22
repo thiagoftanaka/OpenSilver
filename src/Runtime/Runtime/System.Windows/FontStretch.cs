@@ -11,8 +11,9 @@
 *  
 \*====================================================================================*/
 
-using System;
+using System.ComponentModel;
 using System.Diagnostics;
+using OpenSilver.Internal;
 
 namespace System.Windows
 {
@@ -20,6 +21,7 @@ namespace System.Windows
     /// Describes the degree to which a font has been stretched, compared to the normal
     /// aspect ratio of that font.
     /// </summary>
+    [TypeConverter(typeof(FontStretchConverter))]
     public struct FontStretch : IFormattable
     {
         private readonly int _stretch;
@@ -105,7 +107,7 @@ namespace System.Windows
         {
             if (stretchValue < 1 || stretchValue > 9)
             {
-                throw new ArgumentOutOfRangeException(nameof(stretchValue), "The parameter value must be between '1' and '9'.");
+                throw new ArgumentOutOfRangeException(nameof(stretchValue), string.Format(Strings.ParameterMustBeBetween, 1, 9));
             }
 
             return new FontStretch(stretchValue);

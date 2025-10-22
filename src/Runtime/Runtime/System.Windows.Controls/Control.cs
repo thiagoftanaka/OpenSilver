@@ -25,6 +25,14 @@ namespace System.Windows.Controls
     /// </summary>
     public partial class Control : FrameworkElement, IInternalControl
     {
+        static Control()
+        {
+            FocusableProperty.OverrideMetadata(typeof(Control), new FrameworkPropertyMetadata(BooleanBoxes.TrueBox));
+
+            EventManager.RegisterClassHandler<Control>(MouseLeftButtonDownEvent, new MouseButtonEventHandler(HandleDoubleClick), true);
+            EventManager.RegisterClassHandler<Control>(MouseRightButtonDownEvent, new MouseButtonEventHandler(HandleDoubleClick), true);
+        }
+
         /// <summary>
         /// Represents the base class for UI elements that use a <see cref="ControlTemplate"/>
         /// to define their appearance.
@@ -38,6 +46,55 @@ namespace System.Windows.Controls
             if (defaultValue != null)
             {
                 OnTemplateChanged(this, new DependencyPropertyChangedEventArgs(null, defaultValue, TemplateProperty, metadata));
+            }
+        }
+
+        /// <summary>
+        /// Identifies the <see cref="MouseDoubleClick"/> routed event.
+        /// </summary>
+        public static readonly RoutedEvent MouseDoubleClickEvent =
+            EventManager.RegisterRoutedEvent(
+                nameof(MouseDoubleClick),
+                RoutingStrategy.Direct,
+                typeof(MouseButtonEventHandler),
+                typeof(Control));
+
+        /// <summary>
+        /// Occurs when a mouse button is clicked two or more times.
+        /// </summary>
+        public event MouseButtonEventHandler MouseDoubleClick
+        {
+            add => AddHandler(MouseDoubleClickEvent, value);
+            remove => RemoveHandler(MouseDoubleClickEvent, value);
+        }
+
+        /// <summary>
+        /// Raises the <see cref="MouseDoubleClick"/> routed event.
+        /// </summary>
+        /// <param name="e">
+        /// The event data.
+        /// </param>
+        protected virtual void OnMouseDoubleClick(MouseButtonEventArgs e) => RaiseEvent(e);
+
+        private static void HandleDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount == 2)
+            {
+                var ctrl = (Control)sender;
+                var doubleClick = new MouseButtonEventArgs(e.IsTouchEvent, e.KeyModifiers, e._pointerAbsoluteX, e._pointerAbsoluteY)
+                {
+                    RoutedEvent = MouseDoubleClickEvent,
+                    Source = e.OriginalSource, // Set OriginalSource because initially is null
+                };
+                doubleClick.OverrideSource(e.Source);
+
+                ctrl.OnMouseDoubleClick(doubleClick);
+
+                // If MouseDoubleClick event is handled - we delegate the state to original MouseButtonEventArgs
+                if (doubleClick.Handled)
+                {
+                    e.Handled = true;
+                }
             }
         }
 
@@ -324,12 +381,7 @@ namespace System.Windows.Controls
         /// <summary>
         /// Identifies the <see cref="TabIndex"/> dependency property.
         /// </summary>
-        public static readonly DependencyProperty TabIndexProperty =
-            DependencyProperty.Register(
-                nameof(TabIndex), 
-                typeof(int), 
-                typeof(Control), 
-                new PropertyMetadata(int.MaxValue));
+        public static readonly DependencyProperty TabIndexProperty = KeyboardNavigation.TabIndexProperty.AddOwner(typeof(Control));
 
         //-----------------------
         // ISTABSTOP
@@ -348,12 +400,7 @@ namespace System.Windows.Controls
         /// <summary>
         /// Identifies the <see cref="IsTabStop"/> dependency property.
         /// </summary>
-        public static readonly DependencyProperty IsTabStopProperty =
-            DependencyProperty.Register(
-                nameof(IsTabStop),    
-                typeof(bool), 
-                typeof(Control), 
-                new PropertyMetadata(true));
+        public static readonly DependencyProperty IsTabStopProperty = KeyboardNavigation.IsTabStopProperty.AddOwner(typeof(Control));
 
         /// <summary>
         /// Gets or sets a value that modifies how tabbing and <see cref="TabIndex"/>
@@ -371,12 +418,7 @@ namespace System.Windows.Controls
         /// <summary>
         /// Identifies the <see cref="TabNavigation"/> dependency property.
         /// </summary>
-        public static readonly DependencyProperty TabNavigationProperty =
-            DependencyProperty.Register(
-                nameof(TabNavigation),
-                typeof(KeyboardNavigationMode),
-                typeof(Control),
-                new PropertyMetadata(KeyboardNavigationMode.Local));
+        public static readonly DependencyProperty TabNavigationProperty = KeyboardNavigation.TabNavigationProperty.AddOwner(typeof(Control));
 
         //-----------------------
         // TEMPLATE
@@ -460,9 +502,7 @@ namespace System.Windows.Controls
         /// true if focus was set to the control, or focus was already on the control.
         /// false if the control is not focusable.
         /// </returns>
-        public bool Focus() =>
-            KeyboardNavigation.Current.Focus(this) is UIElement uie &&
-            InputManager.Current.SetFocus(uie);
+        public new bool Focus() => base.Focus();
 
         [Obsolete(Helper.ObsoleteMemberMessage)]
         [EditorBrowsable(EditorBrowsableState.Never)]

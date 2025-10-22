@@ -15,6 +15,7 @@ using System.Diagnostics;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
+using OpenSilver.Internal.Controls.Primitives;
 
 namespace System.Windows.Controls
 {
@@ -293,7 +294,7 @@ namespace System.Windows.Controls
 
         private static void OnOwnerMouseEnter(object sender, MouseEventArgs e)
         {
-            PopupService.MousePosition = e.GetPosition(null);
+            PopupService.OnMouseEvent(e);
 
             OnOwnerMouseEnterInternal(sender, e.OriginalSource);
         }

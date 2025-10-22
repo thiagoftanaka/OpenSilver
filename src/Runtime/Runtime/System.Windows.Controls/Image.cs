@@ -11,7 +11,6 @@
 *  
 \*====================================================================================*/
 
-using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Automation.Peers;
@@ -44,6 +43,7 @@ namespace System.Windows.Controls
 
         static Image()
         {
+            DefaultStyleKeyProperty.OverrideMetadata(typeof(Image), new PropertyMetadata(typeof(Image)));
             IsHitTestableProperty.OverrideMetadata(typeof(Image), new PropertyMetadata(BooleanBoxes.TrueBox));
         }
 
@@ -71,7 +71,7 @@ namespace System.Windows.Controls
                 typeof(Image),
                 new PropertyMetadata(null, OnSourceChanged)
                 {
-                    MethodToUpdateDom2 = UpdateDomOnSourceChanged,
+                    MethodToUpdateDom2 = (d, oldValue, newValue) => ((Image)d).RefreshSource(),
                 });
 
         private static void OnSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -93,11 +93,6 @@ namespace System.Windows.Controls
                 };
                 source.Changed += image._sourceChangedListener.OnEvent;
             }
-        }
-
-        private static void UpdateDomOnSourceChanged(DependencyObject d, object oldValue, object newValue)
-        {
-            ((Image)d).RefreshSource();
         }
 
         /// <summary>
@@ -263,26 +258,35 @@ namespace System.Windows.Controls
                 _imageDiv.Style.display = "none";
 
                 InvalidateMeasure();
-                InvalidateArrange();
             }
         }
 
         internal void OnLoadNative()
         {
+            InvalidateMeasure();
+
             _naturalSize = ImageManager.Instance.GetNaturalSize(this);
 
-            InvalidateMeasure();
-            InvalidateArrange();
-            ImageOpened?.Invoke(this, new RoutedEventArgs { OriginalSource = this });
+            if (Source is BitmapImage bmi)
+            {
+                bmi.OnImageOpened((int)_naturalSize.Width, (int)_naturalSize.Height);
+            }
+
+            ImageOpened?.Invoke(this, new RoutedEventArgs { Source = this });
         }
 
         internal void OnErrorNative()
         {
+            InvalidateMeasure();
+
             _naturalSize = new Size();
 
-            InvalidateMeasure();
-            InvalidateArrange();
-            ImageFailed?.Invoke(this, new ExceptionRoutedEventArgs { OriginalSource = this });
+            if (Source is BitmapImage bmi)
+            {
+                bmi.OnImageFailed();
+            }
+
+            ImageFailed?.Invoke(this, new ExceptionRoutedEventArgs { Source = this });
         }
     }
 }

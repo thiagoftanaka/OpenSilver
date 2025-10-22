@@ -13,11 +13,13 @@
 
 using System.ComponentModel;
 using System.Windows.Automation.Peers;
+using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Input;
 using CSHTML5;
 using CSHTML5.Internal;
+using OpenSilver.Internal;
 using OpenSilver.Internal.Controls;
 using OpenSilver.Internal.Media;
 
@@ -101,14 +103,12 @@ namespace System.Windows.Controls
         }
 
         /// <summary>
-        /// Identifies the AcceptsReturn dependency property.
+        /// Identifies the <see cref="AcceptsReturn"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty AcceptsReturnProperty =
-            DependencyProperty.Register(
-                nameof(AcceptsReturn),
-                typeof(bool),
+            KeyboardNavigation.AcceptsReturnProperty.AddOwner(
                 typeof(TextBox),
-                new PropertyMetadata(false, OnAcceptsReturnChanged));
+                new FrameworkPropertyMetadata(BooleanBoxes.FalseBox, OnAcceptsReturnChanged));
 
         private static void OnAcceptsReturnChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -137,7 +137,7 @@ namespace System.Windows.Controls
                 nameof(AcceptsTab),
                 typeof(bool),
                 typeof(TextBox),
-                new PropertyMetadata(false));
+                new PropertyMetadata(BooleanBoxes.FalseBox));
 
         /// <summary>
         /// Gets or sets the text that is displayed in the control until the value is changed by a user action or some other operation.
@@ -168,14 +168,19 @@ namespace System.Windows.Controls
         }
 
         /// <summary>
-        /// Identifies the Text dependency property.
+        /// Identifies the <see cref="Text"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty TextProperty =
             DependencyProperty.Register(
                 nameof(Text),
                 typeof(string),
                 typeof(TextBox),
-                new PropertyMetadata(string.Empty, OnTextChanged, CoerceText));
+                new FrameworkPropertyMetadata(
+                    string.Empty,
+                    FrameworkPropertyMetadataOptions.None,
+                    OnTextChanged,
+                    CoerceText,
+                    UpdateSourceTrigger.LostFocus));
 
         private static void OnTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -190,7 +195,7 @@ namespace System.Windows.Controls
                 tb._textViewHost?.View.SetTextNative((string)e.NewValue);
             }
 
-            tb.OnTextChanged(new TextChangedEventArgs() { OriginalSource = tb });
+            tb.OnTextChanged(new TextChangedEventArgs() { Source = tb });
         }
 
         private static object CoerceText(DependencyObject d, object value)
@@ -266,6 +271,74 @@ namespace System.Windows.Controls
         private static void OnCaretBrushChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             ((TextBox)d)._textViewHost?.View.SetCaretBrush((Brush)e.NewValue);
+        }
+
+        /// <summary>
+        /// Identifies the <see cref="SelectionForeground"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty SelectionForegroundProperty =
+            DependencyProperty.Register(
+                nameof(SelectionForeground),
+                typeof(Brush),
+                typeof(TextBox),
+                new PropertyMetadata((object)null)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
+                    {
+                        ((TextBox)d).OuterDiv.Style.setProperty(
+                            "--selection-color",
+                            newValue switch
+                            {
+                                SolidColorBrush scb => scb.ToHtmlString(),
+                                _ => string.Empty,
+                            });
+                    },
+                });
+
+        /// <summary>
+        /// Gets or sets the brush used for the selected text in the text box.
+        /// </summary>
+        /// <returns>
+        /// The brush used for the selected text in the text box.
+        /// </returns>
+        public Brush SelectionForeground
+        {
+            get => (Brush)GetValue(SelectionForegroundProperty);
+            set => SetValueInternal(SelectionForegroundProperty, value);
+        }
+
+        /// <summary>
+        /// Identifies the <see cref="SelectionBackground"/> dependency property.
+        /// </summary>
+        public static readonly DependencyProperty SelectionBackgroundProperty =
+            DependencyProperty.Register(
+                nameof(SelectionBackground),
+                typeof(Brush),
+                typeof(TextBox),
+                new PropertyMetadata((object)null)
+                {
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) =>
+                    {
+                        ((TextBox)d).OuterDiv.Style.setProperty(
+                            "--selection-bg-color",
+                            newValue switch
+                            {
+                                SolidColorBrush scb => scb.ToHtmlString(),
+                                _ => string.Empty,
+                            });
+                    }
+                });
+
+        /// <summary>
+        /// Gets or sets the brush that fills the background of the selected text.
+        /// </summary>
+        /// <returns>
+        /// The brush that fills the background of the selected text.
+        /// </returns>
+        public Brush SelectionBackground
+        {
+            get => (Brush)GetValue(SelectionBackgroundProperty);
+            set => SetValueInternal(SelectionBackgroundProperty, value);
         }
 
         /// <summary>
@@ -434,18 +507,27 @@ namespace System.Windows.Controls
             }
         }
 
+        /// <summary>
+        /// Gets or sets the value that determines if the user can change the text in the text box.
+        /// </summary>
+        /// <returns>
+        /// true if the text box is read-only; otherwise, false. The default is false.
+        /// </returns>
         public bool IsReadOnly
         {
-            get { return (bool)GetValue(IsReadOnlyProperty); }
-            set { SetValueInternal(IsReadOnlyProperty, value); }
+            get => (bool)GetValue(IsReadOnlyProperty);
+            set => SetValueInternal(IsReadOnlyProperty, value);
         }
 
+        /// <summary>
+        /// The identifier for the <see cref="IsReadOnly"/> dependency property.
+        /// </summary>
         public static readonly DependencyProperty IsReadOnlyProperty =
             DependencyProperty.Register(
                 nameof(IsReadOnly),
                 typeof(bool),
                 typeof(TextBox),
-                new PropertyMetadata(false, OnIsReadOnlyChanged));
+                new PropertyMetadata(BooleanBoxes.FalseBox, OnIsReadOnlyChanged));
 
         private static void OnIsReadOnlyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -480,7 +562,7 @@ namespace System.Windows.Controls
                 nameof(IsSpellCheckEnabled),
                 typeof(bool),
                 typeof(TextBox),
-                new PropertyMetadata(false, OnIsSpellCheckEnabledChanged));
+                new PropertyMetadata(BooleanBoxes.FalseBox, OnIsSpellCheckEnabledChanged));
 
         private static void OnIsSpellCheckEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -526,6 +608,15 @@ namespace System.Windows.Controls
             }
         }
 
+        /// <summary>
+        /// Gets or sets the content of the current selection in the text box.
+        /// </summary>
+        /// <returns>
+        /// The currently selected text in the text box. If no text is selected, the value is <see cref="string.Empty"/>.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// value is null.
+        /// </exception>
         public string SelectedText
         {
             get => _textViewHost?.View.SelectedText ?? string.Empty;
@@ -543,6 +634,15 @@ namespace System.Windows.Controls
             }
         }
 
+        /// <summary>
+        /// Gets or sets the starting position of the text selected in the text box.
+        /// </summary>
+        /// <returns>
+        /// The starting position of the current selection.
+        /// </returns>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// value is less than 0.
+        /// </exception>
         public int SelectionStart
         {
             get => _textViewHost?.View.SelectionStart ?? 0;
@@ -550,7 +650,7 @@ namespace System.Windows.Controls
             {
                 if (value < 0)
                 {
-                    throw new ArgumentOutOfRangeException("SelectionStart cannot be lower than 0");
+                    throw new ArgumentOutOfRangeException(Strings.ParameterCannotBeNegative);
                 }
 
                 if (_textViewHost is not null)
@@ -560,6 +660,15 @@ namespace System.Windows.Controls
             }
         }
 
+        /// <summary>
+        /// Gets or sets the number of characters in the current selection in the text box.
+        /// </summary>
+        /// <returns>
+        /// The number of characters in the current selection in the text box, or 0 if there is no selection.
+        /// </returns>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// value is less than 0.
+        /// </exception>
         public int SelectionLength
         {
             get => _textViewHost?.View.SelectionLength ?? 0;
@@ -567,7 +676,7 @@ namespace System.Windows.Controls
             {
                 if (value < 0)
                 {
-                    throw new ArgumentOutOfRangeException("SelectionLength cannot be lower than 0");
+                    throw new ArgumentOutOfRangeException(Strings.ParameterCannotBeNegative);
                 }
 
                 if (_textViewHost is not null)
@@ -575,6 +684,18 @@ namespace System.Windows.Controls
                     _textViewHost.View.SelectionLength = value;
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets or sets the insertion position index of the caret.
+        /// </summary>
+        /// <returns>
+        /// The zero-based insertion position index of the caret.
+        /// </returns>
+        public int CaretIndex
+        {
+            get => SelectionStart;
+            set => Select(value, 0);
         }
 
         /// <summary>
@@ -590,6 +711,11 @@ namespace System.Windows.Controls
         {
             TextChanged?.Invoke(this, eventArgs);
         }
+
+        /// <summary>
+        /// Clears all the content from the text box.
+        /// </summary>
+        public void Clear() => SetCurrentValue(TextProperty, string.Empty);
 
         /// <summary>
         /// Builds the visual tree for the
@@ -736,6 +862,18 @@ namespace System.Windows.Controls
         /// </summary>
         public void SelectAll() => Select(0, int.MaxValue);
 
+        /// <summary>
+        /// Selects a range of text in the text box.
+        /// </summary>
+        /// <param name="start">
+        /// The zero-based index of the first character in the selection.
+        /// </param>
+        /// <param name="length">
+        /// The length of the selection, in characters.
+        /// </param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// start or length value is negative.
+        /// </exception>
         public void Select(int start, int length)
         {
             if (start < 0)
@@ -821,36 +959,6 @@ namespace System.Windows.Controls
         internal void RaiseSelectionChanged()
         {
             SelectionChanged?.Invoke(this, new RoutedEventArgs());
-        }
-
-        [OpenSilver.NotImplemented]
-        public static readonly DependencyProperty SelectionForegroundProperty =
-            DependencyProperty.Register(
-                nameof(SelectionForeground),
-                typeof(Brush),
-                typeof(TextBox),
-                null);
-
-        [OpenSilver.NotImplemented]
-        public Brush SelectionForeground
-        {
-            get { return (Brush)GetValue(SelectionForegroundProperty); }
-            set { SetValueInternal(SelectionForegroundProperty, value); }
-        }
-
-        [OpenSilver.NotImplemented]
-        public static readonly DependencyProperty SelectionBackgroundProperty =
-            DependencyProperty.Register(
-                nameof(SelectionBackground),
-                typeof(Brush),
-                typeof(TextBox),
-                null);
-
-        [OpenSilver.NotImplemented]
-        public Brush SelectionBackground
-        {
-            get { return (Brush)GetValue(SelectionBackgroundProperty); }
-            set { SetValueInternal(SelectionBackgroundProperty, value); }
         }
 
         /// <summary>

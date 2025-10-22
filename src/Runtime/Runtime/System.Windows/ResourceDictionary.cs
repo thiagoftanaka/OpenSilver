@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Windows.Controls;
 using System.Windows.Markup;
 using OpenSilver.Internal;
 
@@ -28,12 +29,11 @@ namespace System.Windows
     /// Alternatively you can access resources by traversing the dictionary at run
     /// time.
     /// </summary>
-    public class ResourceDictionary
-        : DependencyObject,
-          IDictionary<object, object>,
-          IDictionary,
-          ISupportInitialize,
-          INameScope
+    public partial class ResourceDictionary : DependencyObject,
+        IDictionary<object, object>,
+        IDictionary,
+        ISupportInitialize,
+        INameScope
     {
         #region Data
 
@@ -47,22 +47,15 @@ namespace System.Windows
         //
         private Dictionary<object, ResourceDictionary> _themeDictionaries;
 
-        //
-        // Note: In Silverlight, a ResourceDictionary can only be in
-        // one merged dictionary at a time, so we need to store a reference
-        // to its parent dictionary in that case.
-        //
-        internal ResourceDictionary _parentDictionary;
-
-        private WeakReferenceList _ownerFEs = null;
-        private WeakReferenceList _ownerApps = null;
+        private WeakReferenceList<IResourceDictionaryOwner> _owners;
 
         // We store a weak reference so that the dictionary does not leak the owner.
-        private WeakReference _inheritanceContext;
+        private WeakReference<DependencyObject> _inheritanceContext;
 
         // a dummy DO, used as the InheritanceContext when the dictionary's owner is
         // not itself a DO
-        private static readonly DependencyObject DummyInheritanceContext = new DependencyObject();
+        private static readonly DependencyObject _dummyInheritanceContext = new();
+        private static readonly WeakReference<DependencyObject> DummyInheritanceContext = new(_dummyInheritanceContext);
 
         #endregion Data
 
@@ -153,9 +146,31 @@ namespace System.Windows
         /// Gets a value indicating whether the collection is read-only.
         /// </summary>
         /// <returns>
-        /// Always returns false
+        /// true if the hash table is read-only; otherwise, false.
         /// </returns>
-        public bool IsReadOnly => false;
+        public bool IsReadOnly
+        {
+            get => ReadPrivateFlag(PrivateFlags.IsReadOnly);
+            internal set
+            {
+                WritePrivateFlag(PrivateFlags.IsReadOnly, value);
+
+                if (value)
+                {
+                    // Seal all the styles and templates in this dictionary
+                    SealValues();
+                }
+
+                // Set all the merged resource dictionaries as ReadOnly
+                if (_mergedDictionaries is not null)
+                {
+                    foreach (ResourceDictionary mergedDictionary in _mergedDictionaries.InternalItems)
+                    {
+                        mergedDictionary.IsReadOnly = true;
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// Gets an <see cref="ICollection"/> object containing the keys of the <see cref="ResourceDictionary"/>.
@@ -207,6 +222,11 @@ namespace System.Windows
         /// </exception>
         public void Add(object key, object value)
         {
+            if (IsReadOnly)
+            {
+                throw new InvalidOperationException(Strings.ResourceDictionaryIsReadOnly);
+            }
+
             bool isImplicitStyle = false;
             bool isImplicitDataTemplate = false;
 
@@ -215,11 +235,11 @@ namespace System.Windows
                 case Type type:
                     if (value is not Style style)
                     {
-                        throw new ArgumentException("For a Type key the value must be a Style.");
+                        throw new ArgumentException(Strings.ResourceDictionaryValueMustBeStyle);
                     }
                     if (style.TargetType != type)
                     {
-                        throw new ArgumentException("For a Type key the Style value must have TargetType which is equals to key.");
+                        throw new ArgumentException(Strings.ResourceDictionaryValueMustBeStyleWithCorrectTargetType);
                     }
                     isImplicitStyle = true;
                     break;
@@ -227,7 +247,7 @@ namespace System.Windows
                 case DataTemplateKey:
                     if (value is not DataTemplate)
                     {
-                        throw new ArgumentException("For a key of the type DataTemplateKey, value must be a DataTemplate.");
+                        throw new ArgumentException(Strings.ResourceDictionaryValueMustBeDataTemplate);
                     }
                     isImplicitDataTemplate = true;
                     break;
@@ -236,12 +256,12 @@ namespace System.Windows
                     break;
 
                 default:
-                    throw new ArgumentException("Key must be a Type, a DataTemplateKey or a String.");
+                    throw new ArgumentException(Strings.ResourceDictionaryKeyMustBeTypeOrString);
             }
 
             if (value is null)
             {
-                throw new NotSupportedException("Null value not supported in a ResourceDictionary.");
+                throw new NotSupportedException(Strings.ResourceDictionaryNullValueNotSupported);
             }
 
             AddInternal(key, value, isImplicitStyle, isImplicitDataTemplate);
@@ -264,9 +284,14 @@ namespace System.Windows
         /// </exception>
         public void Add(string key, object value)
         {
+            if (IsReadOnly)
+            {
+                throw new InvalidOperationException(Strings.ResourceDictionaryIsReadOnly);
+            }
+
             if (value is null)
             {
-                throw new NotSupportedException("Null value not supported in a ResourceDictionary.");
+                throw new NotSupportedException(Strings.ResourceDictionaryNullValueNotSupported);
             }
 
             AddInternal(key, value, false, false);
@@ -277,6 +302,11 @@ namespace System.Windows
         /// </summary>
         public void Clear()
         {
+            if (IsReadOnly)
+            {
+                throw new InvalidOperationException(Strings.ResourceDictionaryIsReadOnly);
+            }
+
             if (Count > 0)
             {
                 // remove inheritance context from all values that got it from
@@ -397,6 +427,16 @@ namespace System.Windows
         /// </exception>
         public void Remove(object key)
         {
+            if (IsReadOnly)
+            {
+                throw new InvalidOperationException(Strings.ResourceDictionaryIsReadOnly);
+            }
+
+            if (key is null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
+
             if (_baseDictionary.TryGetValue(key, out object resource))
             {
                 // remove the inheritance context from the value, if it came from
@@ -424,15 +464,7 @@ namespace System.Windows
         /// <exception cref="ArgumentNullException">
         /// key is null.
         /// </exception>
-        public void Remove(string key)
-        {
-            if (key is null)
-            {
-                throw new ArgumentNullException(nameof(key));
-            }
-
-            Remove((object)key);
-        }
+        public void Remove(string key) => Remove((object)key);
 
         #region ISupportInitialize
 
@@ -448,7 +480,7 @@ namespace System.Windows
             // Nested BeginInits on the same instance aren't permitted
             if (IsInitializePending)
             {
-                throw new InvalidOperationException("Cannot have nested BeginInit calls on the same instance.");
+                throw new InvalidOperationException(Strings.NestedBeginInitNotSupported);
             }
 
             IsInitializePending = true;
@@ -466,7 +498,7 @@ namespace System.Windows
         {
             if (!IsInitializePending)
             {
-                throw new InvalidOperationException("Must call BeginInit before EndInit.");
+                throw new InvalidOperationException(Strings.EndInitWithoutBeginInitNotSupported);
             }
             Debug.Assert(IsInitialized == false, "Dictionary should not be initialized when EndInit is called");
 
@@ -535,15 +567,17 @@ namespace System.Windows
         #region Helper Methods
 
         // Add an owner for this dictionary
-        internal void AddOwner(object owner)
+        internal void AddOwner(IResourceDictionaryOwner owner)
         {
-            if (_inheritanceContext == null)
+            Debug.Assert(owner is not null);
+
+            if (_inheritanceContext is null)
             {
                 // the first owner gets to be the InheritanceContext for
                 // all the values in the dictionary that want one.
                 if (owner is DependencyObject inheritanceContext)
                 {
-                    _inheritanceContext = new WeakReference(inheritanceContext);
+                    _inheritanceContext = new WeakReference<DependencyObject>(inheritanceContext);
 
                     // set InheritanceContext for the existing values
                     AddInheritanceContextToValues();
@@ -551,7 +585,7 @@ namespace System.Windows
                 else
                 {
                     // if the first owner is ineligible, use a dummy
-                    _inheritanceContext = new WeakReference(DummyInheritanceContext);
+                    _inheritanceContext = DummyInheritanceContext;
 
                     // set InheritanceContext for the existing values
                     AddInheritanceContextToValues();
@@ -569,47 +603,18 @@ namespace System.Windows
                 }
             }
 
-            if (owner is IInternalFrameworkElement fe)
+            if (_owners is null)
             {
-                if (_ownerFEs == null)
-                {
-                    _ownerFEs = new WeakReferenceList(1);
-                }
-                else if (_ownerFEs.Contains(fe) && ContainsCycle(this))
-                {
-                    throw new InvalidOperationException("The merged dictionary is invalid. Either a ResourceDictionary is being placed into its own MergedDictionaries collection or a it is being added to the same MergedDictionary collection twice.");
-                }
-
-                // Propagate the HasImplicitStyles flag to the new owner
-                if (HasImplicitStyles)
-                {
-                    fe.ShouldLookupImplicitStyles = true;
-                }
-
-                _ownerFEs.Add(fe);
+                _owners = new WeakReferenceList<IResourceDictionaryOwner>(1);
             }
-            else
+            else if (_owners.Contains(owner) && ContainsCycle(this))
             {
-                if (owner is Application app)
-                {
-                    if (_ownerApps == null)
-                    {
-                        _ownerApps = new WeakReferenceList(1);
-                    }
-                    else if (_ownerApps.Contains(app) && ContainsCycle(this))
-                    {
-                        throw new InvalidOperationException("The merged dictionary is invalid. Either a ResourceDictionary is being placed into its own MergedDictionaries collection or a it is being added to the same MergedDictionary collection twice.");
-                    }
-
-                    // Propagate the HasImplicitStyles flag to the new owner
-                    if (HasImplicitStyles)
-                    {
-                        app.HasImplicitStylesInResources = true;
-                    }
-
-                    _ownerApps.Add(app);
-                }
+                throw new InvalidOperationException(Strings.ResourceDictionaryInvalidMergedDictionary);
             }
+
+            owner.SetResources(this);
+
+            _owners.Add(owner);
 
             AddOwnerToAllMergedDictionaries(owner);
 
@@ -619,33 +624,17 @@ namespace System.Windows
         }
 
         // Remove an owner for this dictionary
-        internal void RemoveOwner(object owner)
+        internal void RemoveOwner(IResourceDictionaryOwner owner)
         {
-            if (owner is IInternalFrameworkElement fe)
-            {
-                if (_ownerFEs != null)
-                {
-                    _ownerFEs.Remove(fe);
+            Debug.Assert(owner is not null);
 
-                    if (_ownerFEs.Count == 0)
-                    {
-                        _ownerFEs = null;
-                    }
-                }
-            }
-            else
+            if (_owners != null)
             {
-                if (owner is Application app)
-                {
-                    if (_ownerApps != null)
-                    {
-                        _ownerApps.Remove(app);
+                _owners.Remove(owner);
 
-                        if (_ownerApps.Count == 0)
-                        {
-                            _ownerApps = null;
-                        }
-                    }
+                if (_owners.Count == 0)
+                {
+                    _owners = null;
                 }
             }
 
@@ -659,29 +648,13 @@ namespace System.Windows
         }
 
         // Check if the given is an owner to this dictionary
-        internal bool ContainsOwner(object owner)
-        {
-            if (owner is IInternalFrameworkElement fe)
-            {
-                return _ownerFEs != null && _ownerFEs.Contains(fe);
-            }
-            else
-            {
-                if (owner is Application app)
-                {
-                    return _ownerApps != null && _ownerApps.Contains(app);
-                }
-            }
-
-            return false;
-        }
+        internal bool ContainsOwner(IResourceDictionaryOwner owner) => _owners is not null && _owners.Contains(owner);
 
         // Helper method that tries to set IsInitialized to true if BeginInit hasn't been called before this.
         // This method is called on AddOwner
         private void TryInitialize()
         {
-            if (!IsInitializePending &&
-                !IsInitialized)
+            if (!IsInitializePending && !IsInitialized)
             {
                 IsInitialized = true;
             }
@@ -700,49 +673,12 @@ namespace System.Windows
 
             if (shouldInvalidate || hasImplicitStyles)
             {
-                // Invalidate all FE owners
-                if (_ownerFEs != null)
+                // Invalidate all owners
+                if (_owners != null)
                 {
-                    foreach (IInternalFrameworkElement fe in _ownerFEs)
+                    foreach (IResourceDictionaryOwner owner in _owners)
                     {
-                        if (fe != null)
-                        {
-                            // Set the HasImplicitStyles flag on the owner
-                            if (hasImplicitStyles)
-                            {
-                                fe.ShouldLookupImplicitStyles = true;
-                            }
-
-                            // todo: implement this.
-                            //// If this dictionary has been initialized fire an invalidation
-                            //// to let the tree know of this change.
-                            //if (shouldInvalidate)
-                            //{
-                            //    TreeWalkHelper.InvalidateOnResourcesChange(fe, null, info);
-                            //}
-                        }
-                    }
-                }
-
-                // Invalidate all App owners
-                if (_ownerApps != null)
-                {
-                    foreach (Application app in _ownerApps)
-                    {
-                        if (app != null)
-                        {
-                            // Set the HasImplicitStyles flag on the owner
-                            if (hasImplicitStyles)
-                            {
-                                app.HasImplicitStylesInResources = true;
-                            }
-                            
-                            if (shouldInvalidate)
-                            {
-                                app.InvalidateStyleCache(info);
-                                // app.InvalidateResourceReferences(info);
-                            }
-                        }
+                        owner.OnResourcesChange(info, shouldInvalidate, hasImplicitStyles);
                     }
                 }
             }
@@ -750,8 +686,6 @@ namespace System.Windows
 
         private void OnMergedDictionariesChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            ResourceDictionary oldDictionary = null;
-            ResourceDictionary newDictionary = null;
             ResourcesChangeInfo info;
 
             if (e.Action != NotifyCollectionChangedAction.Reset)
@@ -760,6 +694,9 @@ namespace System.Windows
                     (e.NewItems != null && e.NewItems.Count == 1) ||
                     (e.OldItems != null && e.OldItems.Count == 1),
                     "The NotifyCollectionChanged event fired when no dictionaries were added or removed");
+
+                ResourceDictionary oldDictionary = null;
+                ResourceDictionary newDictionary = null;
 
                 // If one or more resource dictionaries were removed we
                 // need to remove the owners they were given by their
@@ -818,7 +755,7 @@ namespace System.Windows
         /// Adds the given owner to all merged dictionaries of this ResourceDictionary
         /// </summary>
         /// <param name="owner"></param>
-        private void AddOwnerToAllMergedDictionaries(object owner)
+        private void AddOwnerToAllMergedDictionaries(IResourceDictionaryOwner owner)
         {
             if (_mergedDictionaries != null)
             {
@@ -834,7 +771,7 @@ namespace System.Windows
         /// Removes the given owner to all merged dictionaries of this ResourceDictionary
         /// </summary>
         /// <param name="owner"></param>
-        private void RemoveOwnerFromAllMergedDictionaries(object owner)
+        private void RemoveOwnerFromAllMergedDictionaries(IResourceDictionaryOwner owner)
         {
             if (_mergedDictionaries != null)
             {
@@ -859,33 +796,15 @@ namespace System.Windows
         /// <param name="mergedDictionary"></param>
         private void PropagateParentOwners(ResourceDictionary mergedDictionary)
         {
-            if (_ownerFEs != null)
+            if (_owners != null)
             {
-                Debug.Assert(_ownerFEs.Count > 0);
+                Debug.Assert(_owners.Count > 0);
 
-                mergedDictionary._ownerFEs ??= new WeakReferenceList(_ownerFEs.Count);
+                mergedDictionary._owners ??= new WeakReferenceList<IResourceDictionaryOwner>(_owners.Count);
 
-                foreach (IInternalFrameworkElement fe in _ownerFEs)
+                foreach (IResourceDictionaryOwner owner in _owners)
                 {
-                    if (fe != null)
-                    {
-                        mergedDictionary.AddOwner(fe);
-                    }
-                }
-            }
-
-            if (_ownerApps != null)
-            {
-                Debug.Assert(_ownerApps.Count > 0);
-
-                mergedDictionary._ownerApps ??= new WeakReferenceList(_ownerApps.Count);
-
-                foreach (Application app in _ownerApps)
-                {
-                    if (app != null)
-                    {
-                        mergedDictionary.AddOwner(app);
-                    }
+                    mergedDictionary.AddOwner(owner);
                 }
             }
         }
@@ -898,33 +817,25 @@ namespace System.Windows
         /// <param name="mergedDictionary"></param>
         internal void RemoveParentOwners(ResourceDictionary mergedDictionary)
         {
-            if (_ownerFEs != null)
+            if (_owners != null)
             {
-                foreach (IInternalFrameworkElement fe in _ownerFEs)
+                foreach (IResourceDictionaryOwner owner in _owners)
                 {
-                    mergedDictionary.RemoveOwner(fe);
-                }
-            }
-
-            if (_ownerApps != null)
-            {
-                Debug.Assert(_ownerApps.Count > 0);
-
-                foreach (Application app in _ownerApps)
-                {
-                    mergedDictionary.RemoveOwner(app);
+                    mergedDictionary.RemoveOwner(owner);
                 }
             }
         }
 
         private bool ContainsCycle(ResourceDictionary origin)
         {
-            for (int i = 0; i < MergedDictionaries.Count; i++)
+            if (_mergedDictionaries != null)
             {
-                ResourceDictionary mergedDictionary = MergedDictionaries[i];
-                if (mergedDictionary == origin || mergedDictionary.ContainsCycle(origin))
+                foreach (ResourceDictionary mergedDictionary in _mergedDictionaries.InternalItems)
                 {
-                    return true;
+                    if (mergedDictionary == origin || mergedDictionary.ContainsCycle(origin))
+                    {
+                        return true;
+                    }
                 }
             }
 
@@ -936,13 +847,35 @@ namespace System.Windows
         #region Inheritance Context
 
         private new DependencyObject InheritanceContext
-            => _inheritanceContext != null ? (DependencyObject)_inheritanceContext.Target : null;
+        {
+            get
+            {
+                if (_inheritanceContext is not null && _inheritanceContext.TryGetTarget(out DependencyObject context))
+                {
+                    return context;
+                }
+                return null;
+            }
+        }
 
-        //
+        //  This method
+        //  1. Seals all the styles/templates that belong to this App/Theme/Style/Template ResourceDictionary
+        private void SealValues()
+        {
+            Debug.Assert(IsReadOnly, "This must be an Style/Template ResourceDictionary");
+
+            if (_baseDictionary.Count > 0)
+            {
+                foreach (object value in _baseDictionary.Values)
+                {
+                    SealValue(value);
+                }
+            }
+        }
+
         //  This method
         //  1. Sets the InheritanceContext of the value to the dictionary's principal owner
-        //  (Not yet) 2. Seals the freezable/style/template that is to be placed in an App/Theme/Style/Template ResourceDictionary
-        //
+        //  (Not yet) 2. Seals the style/template that is to be placed in an App/Theme/Style/Template ResourceDictionary
         private void SealValue(object value)
         {
             DependencyObject inheritanceContext = InheritanceContext;
@@ -951,11 +884,11 @@ namespace System.Windows
                 AddInheritanceContext(inheritanceContext, value);
             }
 
-            //if (IsThemeDictionary || _ownerApps != null || IsReadOnly)
-            //{
-            //    // If the value is a ISealable then seal it
-            //    StyleHelper.SealIfSealable(value);
-            //}
+            if (IsReadOnly)
+            {
+                // If the value is a ISealable then seal it
+                StyleHelper.SealIfSealable(value);
+            }
         }
 
         // add inheritance context to a value
@@ -1020,6 +953,8 @@ namespace System.Windows
 
         #endregion Inheritance Context
 
+        internal bool IsEmpty => Count == 0 && (_mergedDictionaries is null || _mergedDictionaries.InternalCount == 0);
+
         internal bool TryGetResource(object key, out object value) => (value = GetItem(key)) != null;
 
         internal object GetItem(object key)
@@ -1053,13 +988,18 @@ namespace System.Windows
 
         private void SetItem(object key, object value)
         {
-            if (value == null)
+            if (IsReadOnly)
+            {
+                throw new InvalidOperationException(Strings.ResourceDictionaryIsReadOnly);
+            }
+
+            if (value is null)
             {
                 //
                 // Note: Silverlight does not support null values in a 
                 // ResourceDictionary but WPF does.
                 //
-                throw new NotSupportedException("Null value not supported in a ResourceDictionary.");
+                throw new NotSupportedException(Strings.ResourceDictionaryNullValueNotSupported);
             }
 
             if (!_baseDictionary.TryGetValue(key, out object oldItem) || oldItem != value)
@@ -1164,7 +1104,7 @@ namespace System.Windows
             // Update the HasImplicitStyles flag
             if (!HasImplicitStyles)
             {
-                HasImplicitStyles = (key as Type) != null;
+                HasImplicitStyles = key is Type;
             }
         }
 
@@ -1174,7 +1114,7 @@ namespace System.Windows
             // Update the HasImplicitDataTemplates flag
             if (!HasImplicitDataTemplates)
             {
-                HasImplicitDataTemplates = (key is DataTemplateKey);
+                HasImplicitDataTemplates = key is DataTemplateKey;
             }
         }
 
@@ -1217,36 +1157,22 @@ namespace System.Windows
         internal bool HasImplicitStyles
         {
             get => ReadPrivateFlag(PrivateFlags.HasImplicitStyles);
-            set
-            { 
-                WritePrivateFlag(PrivateFlags.HasImplicitStyles, value);
-                if (value && _parentDictionary != null && !_parentDictionary.HasImplicitStyles)
-                {
-                    _parentDictionary.HasImplicitStyles = true;
-                }
-            }
+            set => WritePrivateFlag(PrivateFlags.HasImplicitStyles, value);
         }
 
         internal bool HasImplicitDataTemplates
         {
             get => ReadPrivateFlag(PrivateFlags.HasImplicitDataTemplates);
-            set
-            {
-                WritePrivateFlag(PrivateFlags.HasImplicitDataTemplates, value);
-                if (value && _parentDictionary != null && !_parentDictionary.HasImplicitDataTemplates)
-                {
-                    _parentDictionary.HasImplicitDataTemplates = true;
-                }
-            }
+            set => WritePrivateFlag(PrivateFlags.HasImplicitDataTemplates, value);
         }
 
         /// <summary>
-        ///     Gets or sets a value indicating whether the invalidations fired
-        ///     by the ResourceDictionary when an implicit data template resource
-        ///     changes will cause ContentPresenters to re-evaluate their choice
-        ///     of template.
+        /// Gets or sets a value that indicates whether the invalidations fired by the
+        /// <see cref="ResourceDictionary"/> object cause <see cref="ContentPresenter"/> 
+        /// objects to reevaluate their choice of template. The invalidations happen when
+        /// an implicit data template resource changes.
         /// </summary>
-        internal bool InvalidatesImplicitDataTemplateResources
+        public bool InvalidatesImplicitDataTemplateResources
         {
             get => ReadPrivateFlag(PrivateFlags.InvalidatesImplicitDataTemplateResources);
             set => WritePrivateFlag(PrivateFlags.InvalidatesImplicitDataTemplateResources, value);
@@ -1297,7 +1223,7 @@ namespace System.Windows
         public void RegisterName(string name, object scopedElement)
         {
             if (_nameScopeDictionary.ContainsKey(name) && _nameScopeDictionary[name] != scopedElement)
-                throw new ArgumentException(string.Format("Cannot register duplicate name '{0}' in this scope.", name));
+                throw new ArgumentException(string.Format(Strings.NameScopeDuplicateNamesNotAllowed, name));
 
             _nameScopeDictionary[name] = scopedElement;
         }
@@ -1309,7 +1235,7 @@ namespace System.Windows
         public void UnregisterName(string name)
         {
             if (!_nameScopeDictionary.ContainsKey(name))
-                throw new ArgumentException(string.Format("Name '{0}' was not found.", name));
+                throw new ArgumentException(string.Format(Strings.NameScopeNameNotFound, name));
 
             _nameScopeDictionary.Remove(name);
         }
@@ -1322,7 +1248,7 @@ namespace System.Windows
         {
             IsInitialized = 0x01,
             IsInitializePending = 0x02,
-            IsReadOnly = 0x04, // unused as silverlight ResourceDictionary is never readonly.
+            IsReadOnly = 0x04,
             IsThemeDictionary = 0x08,
             HasImplicitStyles = 0x10,
             CanBeAccessedAcrossThreads = 0x20, // unused
@@ -1334,16 +1260,21 @@ namespace System.Windows
 
         internal static class Helpers
         {
-            internal static Dictionary<object, object> BuildImplicitResourcesCache(ResourceDictionary rd)
+            public static Dictionary<object, object> BuildImplicitResourcesCache(ResourceDictionary rd)
             {
+                Debug.Assert(rd is not null);
+
+                var cache = new Dictionary<object, object>();
+                AddResourcesToCache(rd, cache);
+                return cache;
+
                 static void AddResourcesToCache(ResourceDictionary rd, Dictionary<object, object> cache)
                 {
-                    if (rd._mergedDictionaries != null)
+                    if (rd._mergedDictionaries is not null)
                     {
-                        List<ResourceDictionary> mergedDictionaries = rd._mergedDictionaries.InternalItems;
-                        for (int i = 0; i < mergedDictionaries.Count; i++)
+                        foreach (ResourceDictionary mergedDictionary in rd._mergedDictionaries.InternalItems)
                         {
-                            AddResourcesToCache(mergedDictionaries[i], cache);
+                            AddResourcesToCache(mergedDictionary, cache);
                         }
                     }
 
@@ -1363,10 +1294,29 @@ namespace System.Windows
                         }
                     }
                 }
+            }
 
-                var cache = new Dictionary<object, object>();
-                AddResourcesToCache(rd, cache);
-                return cache;
+            public static bool HasImplicitResources(ResourceDictionary rd)
+            {
+                Debug.Assert(rd is not null);
+
+                if (rd.HasImplicitStyles || rd.HasImplicitDataTemplates)
+                {
+                    return true;
+                }
+
+                if (rd._mergedDictionaries is not null)
+                {
+                    foreach (ResourceDictionary mergedDictionary in rd._mergedDictionaries.InternalItems)
+                    {
+                        if (HasImplicitResources(mergedDictionary))
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
             }
         }
     }

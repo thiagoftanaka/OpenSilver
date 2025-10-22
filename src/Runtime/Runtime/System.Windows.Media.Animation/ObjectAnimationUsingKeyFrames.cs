@@ -41,15 +41,44 @@ public sealed class ObjectAnimationUsingKeyFrames : AnimationTimeline, IKeyFrame
     /// The collection of <see cref="ObjectKeyFrame"/> objects that
     /// define the animation. The default is an empty collection.
     /// </returns>
-    public ObjectKeyFrameCollection KeyFrames => _frames ??= new ObjectKeyFrameCollection(this);
+    public ObjectKeyFrameCollection KeyFrames
+    {
+        get
+        {
+            if (_frames is null)
+            {
+                SetKeyFrames(new());
+            }
+            return _frames;
+        }
+        set { SetKeyFrames(value); }
+    }
 
     IKeyFrameCollection<object> IKeyFrameAnimation<object>.KeyFrames => _frames;
+
+    /// <inheritdoc />
+    public sealed override Type TargetPropertyType => typeof(object);
 
     protected sealed override Duration GetNaturalDurationCore() =>
         KeyFrameAnimationHelpers.GetLargestTimeSpanKeyTime(this);
 
-    internal sealed override TimelineClock CreateClock(bool isRoot) =>
-       new AnimationClock<object>(this, isRoot, new ObjectKeyFramesAnimator(this));
+    internal sealed override TimelineClock CreateClock() =>
+       new AnimationClock<object>(this, new ObjectKeyFramesAnimator(this));
+
+    private void SetKeyFrames(ObjectKeyFrameCollection keyFrames)
+    {
+        if (_frames is not null)
+        {
+            RemoveSelfAsInheritanceContext(_frames, null);
+        }
+
+        _frames = keyFrames;
+
+        if (_frames is not null)
+        {
+            ProvideSelfAsInheritanceContext(_frames, null);
+        }
+    }
 
     private sealed class ObjectKeyFramesAnimator : IValueAnimator<object>
     {
@@ -81,4 +110,29 @@ public sealed class ObjectAnimationUsingKeyFrames : AnimationTimeline, IKeyFrame
             return value;
         }
     }
+}
+
+/// <summary>
+/// Represents a collection of <see cref="ObjectKeyFrame"/> objects that can be individually accessed by index.
+/// </summary>
+public sealed class ObjectKeyFrameCollection : PresentationFrameworkCollection<ObjectKeyFrame>, IKeyFrameCollection<object>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ObjectKeyFrameCollection"/> class.
+    /// </summary>
+    public ObjectKeyFrameCollection() { }
+
+    internal override void AddOverride(ObjectKeyFrame keyFrame) => AddDependencyObjectInternal(keyFrame);
+
+    internal override void ClearOverride() => ClearDependencyObjectInternal();
+
+    internal override void InsertOverride(int index, ObjectKeyFrame keyFrame) => InsertDependencyObjectInternal(index, keyFrame);
+
+    internal override void RemoveAtOverride(int index) => RemoveAtDependencyObjectInternal(index);
+
+    internal override ObjectKeyFrame GetItemOverride(int index) => GetItemInternal(index);
+
+    internal override void SetItemOverride(int index, ObjectKeyFrame keyFrame) => SetItemDependencyObjectInternal(index, keyFrame);
+
+    IKeyFrame<object> IKeyFrameCollection<object>.this[int index] => GetItemInternal(index);
 }

@@ -1115,35 +1115,23 @@ namespace System.Windows.Controls
                     {
                         VisualStates.GoToState(this, true, VisualStates.StateInvalid, VisualStates.StateValid);
                     }
-                    this.SetValueNoCallback(IsValidProperty, value);
+                    this.SetValue(IsValidPropertyKey, value);
                 }
             }
         }
 
-        /// <summary>
-        /// Identifies the IsValid dependency property.
-        /// </summary>
-        public static readonly DependencyProperty IsValidProperty =
-            DependencyProperty.Register(
+        private static readonly DependencyPropertyKey IsValidPropertyKey =
+            DependencyProperty.RegisterReadOnly(
                 "IsValid",
                 typeof(bool),
                 typeof(DataGrid),
-                new PropertyMetadata(true, (OnIsValidPropertyChanged)));
+                new PropertyMetadata(true));
 
         /// <summary>
-        /// IsValidProperty property changed handler.
+        /// Identifies the IsValid dependency property.
         /// </summary>
-        /// <param name="d">DataGrid that changed its IsValid.</param>
-        /// <param name="e">DependencyPropertyChangedEventArgs.</param>
-        private static void OnIsValidPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            DataGrid dataGrid = (DataGrid)d;
-            if (!dataGrid.AreHandlersSuspended())
-            {
-                dataGrid.SetValueNoCallback(DataGrid.IsValidProperty, e.OldValue);
-                throw DataGridError.DataGrid.UnderlyingPropertyIsReadOnly("IsValid");
-            }
-        }
+        public static readonly DependencyProperty IsValidProperty = IsValidPropertyKey.DependencyProperty;
+
         #endregion IsValid
 
         #region ItemsSource
@@ -4850,6 +4838,7 @@ namespace System.Windows.Controls
             }
         }
 
+#if !OPENSILVER
         private void EditingElement_Loaded(object sender, RoutedEventArgs e)
         {
             FrameworkElement element = sender as FrameworkElement;
@@ -4859,6 +4848,7 @@ namespace System.Windows.Controls
             }
             PreparingCellForEditPrivate(element);
         }
+#endif
 
         [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         private bool EndCellEdit(DataGridEditAction editAction, bool exitEditingMode, bool keepFocus, bool raiseEvents)
@@ -5447,7 +5437,17 @@ namespace System.Windows.Controls
                     }
 
                     // Subscribe to the new element's events
+#if OPENSILVER
+                    void EditingElement_LayoutUpdated(object sender, EventArgs e)
+                    {
+                        element.LayoutUpdated -= EditingElement_LayoutUpdated;
+                        PreparingCellForEditPrivate(element);
+                    }
+
+                    element.LayoutUpdated += EditingElement_LayoutUpdated;
+#else
                     element.Loaded += new RoutedEventHandler(EditingElement_Loaded);
+#endif
                 }
             }
             else
@@ -7326,6 +7326,6 @@ namespace System.Windows.Controls
             ProcessVerticalScroll(e.ScrollEventType);
         }
 
-        #endregion Private Methods
+#endregion Private Methods
     }
 }

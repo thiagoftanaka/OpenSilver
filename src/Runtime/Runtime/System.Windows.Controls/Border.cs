@@ -57,20 +57,28 @@ namespace System.Windows.Controls
         private bool _refreshBackgroundOnSizeChange;
 
         /// <summary>
-        /// Returns the Visual children count.
+        /// Gets a value that is equal to the number of visual child elements of this instance of <see cref="Border"/>.
         /// </summary>
-        internal override int VisualChildrenCount
-        {
-            get { return (Child == null) ? 0 : 1; }
-        }
+        /// <returns>
+        /// The number of visual child elements.
+        /// </returns>
+        protected override int VisualChildrenCount => Child is null ? 0 : 1;
 
         /// <summary>
-        /// Returns the child at the specified index.
+        /// Gets the child <see cref="UIElement"/> element at the specified index position.
         /// </summary>
-        internal override UIElement GetVisualChild(int index)
+        /// <param name="index">
+        /// Index position of the child element.
+        /// </param>
+        /// <returns>
+        /// The child element at the specified index position.
+        /// </returns>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// index is greater than the number of visual child elements.
+        /// </exception>
+        protected override UIElement GetVisualChild(int index)
         {
-            if ((Child == null)
-                || (index != 0))
+            if (Child is null || index != 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(index));
             }
@@ -78,15 +86,17 @@ namespace System.Windows.Controls
             return Child;
         }
 
-        /// <summary> 
-        /// Returns enumerator to logical children.
+        /// <summary>
+        /// Gets an enumerator that can be used to iterate the logical child elements of a <see cref="Border"/>.
         /// </summary>
-        /*protected*/
-        internal override IEnumerator LogicalChildren
+        /// <returns>
+        /// An enumerator that can be used to iterate the logical child elements of a <see cref="Border"/>.
+        /// </returns>
+        protected internal override IEnumerator LogicalChildren
         {
             get
             {
-                if (this.Child == null)
+                if (Child is null)
                 {
                     return EmptyEnumerator.Instance;
                 }
@@ -96,18 +106,12 @@ namespace System.Windows.Controls
             }
         }
 
-        internal override bool EnablePointerEventsCore
-        {
-            // We only check the Background property even if BorderBrush not null
-            // and BorderThickness > 0 is a sufficient condition to enable pointer
-            // events on the borders of the control.
-            // There is no way right now to differentiate the Background and BorderBrush
-            // as they are both defined on the same DOM element.
-            get
-            {
-                return this.Background != null;
-            }
-        }
+        // We only check the Background property even if BorderBrush not null
+        // and BorderThickness > 0 is a sufficient condition to enable pointer
+        // events on the borders of the control.
+        // There is no way right now to differentiate the Background and BorderBrush
+        // as they are both defined on the same DOM element.
+        internal override bool EnablePointerEventsCore => Background is not null;
 
         /// <summary>
         /// Identifies the <see cref="Child"/> dependency property.
@@ -214,7 +218,8 @@ namespace System.Windows.Controls
             }
         }
 
-        internal override void OnRenderSizeChanged(SizeChangedInfo info)
+        /// <inheritdoc />
+        protected internal override void OnRenderSizeChanged(SizeChangedInfo info)
         {
             base.OnRenderSizeChanged(info);
 
@@ -234,7 +239,7 @@ namespace System.Windows.Controls
                 typeof(Border),
                 new PropertyMetadata(null, OnBorderBrushChanged)
                 {
-                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ChangeBorderColor((Border)d, oldValue as Brush, (Brush)newValue),
+                    MethodToUpdateDom2 = static (d, oldValue, newValue) => ((Border)d).SetBorderColor(oldValue as Brush, (Brush)newValue),
                 });
 
         /// <summary>
@@ -275,47 +280,7 @@ namespace System.Windows.Controls
             if (INTERNAL_VisualTreeManager.IsElementInVisualTree(this))
             {
                 var brush = (Brush)sender;
-                ChangeBorderColor(this, brush, brush);
-            }
-        }
-
-        private static void ChangeBorderColor(Border border, Brush oldBrush, Brush newBrush)
-        {
-            var cssStyle = border.OuterDiv.Style;
-            switch (oldBrush, newBrush)
-            {
-                case (GradientBrush, SolidColorBrush solid):
-                    cssStyle.borderImageSource = string.Empty;
-                    cssStyle.borderImageSlice = string.Empty;
-                    cssStyle.borderColor = solid.ToHtmlString();
-                    break;
-
-                case (_, SolidColorBrush solid):
-                    cssStyle.borderColor = solid.ToHtmlString();
-                    break;
-
-                case (_, LinearGradientBrush linear):
-                    cssStyle.borderColor = string.Empty;
-                    cssStyle.borderImageSource = linear.ToHtmlString(border);
-                    cssStyle.borderImageSlice = "1";
-                    break;
-
-                case (_, RadialGradientBrush radial):
-                    cssStyle.borderColor = string.Empty;
-                    cssStyle.borderImageSource = radial.ToHtmlString(border);
-                    cssStyle.borderImageSlice = "1";
-                    break;
-
-                case (_, null):
-                    cssStyle.borderColor = "transparent";
-                    cssStyle.borderImageSource = string.Empty;
-                    cssStyle.borderImageSlice = string.Empty;
-                    break;
-
-                default:
-                    // ImageBrush and custom brushes are not supported.
-                    // Keep using old brush.
-                    break;
+                this.SetBorderColor(brush, brush);
             }
         }
 

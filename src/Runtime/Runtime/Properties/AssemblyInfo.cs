@@ -14,6 +14,7 @@
 using System.Runtime.CompilerServices;
 using System.Windows.Markup;
 
+[assembly: InternalsVisibleTo("OpenSilver.Browser")]
 [assembly: InternalsVisibleTo("OpenSilver.Simulator")]
 [assembly: InternalsVisibleTo("Runtime.OpenSilver.Tests")]
 [assembly: InternalsVisibleTo("OpenSilver.ControlsKit.FastControls")]
@@ -23,7 +24,7 @@ using System.Windows.Markup;
 
 [assembly: InternalsVisibleTo("Telerik.Windows.Controls.GridView")]
 
-[assembly: OpenSilver.XamlDesigner(4)]
+[assembly: OpenSilver.XamlDesigner(6)]
 
 [assembly: XmlnsDefinition("http://schemas.microsoft.com/winfx/2006/xaml/presentation", "System.Windows")]
 [assembly: XmlnsDefinition("http://schemas.microsoft.com/winfx/2006/xaml/presentation", "System.Windows.Controls")]

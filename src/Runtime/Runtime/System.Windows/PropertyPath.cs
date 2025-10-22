@@ -23,7 +23,7 @@ namespace System.Windows
     /// </summary>
     public sealed class PropertyPath : DependencyObject
     {
-        private IReadOnlyList<SourceValueInfo> _arySVI;
+        private List<SourceValueInfo> _arySVI;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PropertyPath"/> class.
@@ -79,7 +79,7 @@ namespace System.Windows
 
         internal DependencyProperty DependencyProperty { get; }
 
-        internal IReadOnlyList<SourceValueInfo> SVI => _arySVI ??= ParsePath(Path);
+        internal List<SourceValueInfo> SVI => _arySVI ??= ParsePath(Path);
 
         private static List<SourceValueInfo> ParsePath(string path)
         {
@@ -87,21 +87,21 @@ namespace System.Windows
             var parser = new PropertyPathParser(path, false);
             while (true)
             {
-                switch (parser.Step(out _, out string property, out string index))
+                switch (parser.Step(out string typeName, out string property, out string index))
                 {
                     case PropertyNodeType.Property:
-                    case PropertyNodeType.AttachedProperty:
                         steps.Add(new SourceValueInfo
                         {
                             type = PropertyNodeType.Property,
+                            typeName = typeName,
                             propertyName = property,
                         });
                         break;
 
-                    case PropertyNodeType.Indexed:
+                    case PropertyNodeType.Indexer:
                         steps.Add(new SourceValueInfo
                         {
-                            type = PropertyNodeType.Indexed,
+                            type = PropertyNodeType.Indexer,
                             propertyName = "Item[]",
                             param = index,
                         });
@@ -120,6 +120,7 @@ namespace System.Windows
     internal struct SourceValueInfo
     {
         public PropertyNodeType type;
+        public string typeName;
         public string propertyName;
         public string param; // parameter for indexer
     }

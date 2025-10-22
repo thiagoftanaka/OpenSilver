@@ -83,7 +83,7 @@ namespace System.Windows.Controls
                         VerticalAlignment = VerticalAlignment.Top,
                         HorizontalContentAlignment = HorizontalAlignment.Left,
                         VerticalContentAlignment = VerticalAlignment.Top,
-                        StaysWithinScreenBounds = true
+                        StaysWithinScreenBounds = true,
                     };
 
                     _parentPopup.DataContext = _owner?.DataContext;
@@ -97,7 +97,7 @@ namespace System.Windows.Controls
 
                 VisualStateManager.GoToState(this, VisualStates.StateToolTipOpen, true);
 
-                Opened?.Invoke(this, new RoutedEventArgs { OriginalSource = this });
+                Opened?.Invoke(this, new RoutedEventArgs { Source = this });
             }
             else
             {
@@ -106,7 +106,7 @@ namespace System.Windows.Controls
                     VisualStateManager.GoToState(this, VisualStates.StateToolTipClosed, true);
                     _parentPopup.IsOpen = false;
 
-                    Closed?.Invoke(this, new RoutedEventArgs { OriginalSource = this });
+                    Closed?.Invoke(this, new RoutedEventArgs { Source = this });
                 }
             }
         }
@@ -153,11 +153,7 @@ namespace System.Windows.Controls
         /// Identifies the <see cref="PlacementTarget"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty PlacementTargetProperty =
-            DependencyProperty.Register(
-                nameof(PlacementTarget),
-                typeof(UIElement),
-                typeof(ToolTip),
-                null);
+            ToolTipService.PlacementTargetProperty.AddOwner(typeof(ToolTip));
 
         /// <summary>
         /// Gets or sets the visual element or control that the tool tip should be 
@@ -191,11 +187,7 @@ namespace System.Windows.Controls
         /// Identifies the <see cref="Placement"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty PlacementProperty =
-            DependencyProperty.Register(
-                nameof(Placement),
-                typeof(PlacementMode),
-                typeof(ToolTip),
-                new PropertyMetadata(PlacementMode.Mouse));
+            ToolTipService.PlacementProperty.AddOwner(typeof(ToolTip));
 
         /// <summary>
         /// Gets or sets how the <see cref="ToolTip" /> should be positioned

@@ -16,7 +16,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
 using System.Diagnostics;
-using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -61,9 +60,16 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
             return null;
         }
 
-        private static void AddToGlobalStore(string uniqueIdentifier, UIElement el)
+        private static void AddToGlobalStore(string uid, UIElement element)
         {
-            _store.Add(uniqueIdentifier, new WeakReference<UIElement>(el));
+            _store.Add(uid, new WeakReference<UIElement>(element));
+        }
+
+        private static void AddToGlobalStore(string uid1, string uid2, UIElement element)
+        {
+            var wr = new WeakReference<UIElement>(element);
+            _store.Add(uid1, wr);
+            _store.Add(uid2, wr);
         }
 
         internal static void RemoveFromGlobalStore(INTERNAL_HtmlDomElementReference htmlDomElRef)
@@ -234,13 +240,27 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
             return new(uid);
         }
 
+        internal static INTERNAL_HtmlDomElementReference CreateWindowDomElementAndAppendIt(Window window)
+        {
+            Debug.Assert(window is not null);
+
+            string uid = NewId();
+
+            OpenSilver.Interop.ExecuteJavaScriptVoidAsync(
+                $"document.createWindow('{uid}', '{window.RootDomElement.UniqueIdentifier}')");
+
+            AddToGlobalStore(uid, window);
+
+            return new(uid);
+        }
+
         internal static INTERNAL_HtmlDomElementReference CreatePopupRootDomElementAndAppendIt(PopupRoot popupRoot)
         {
             Debug.Assert(popupRoot != null);
 
             string uid = NewId();
 
-            string sPointerEvents = popupRoot.ParentPopup.StayOpen ? "none" : "auto";
+            string sPointerEvents = popupRoot.Popup.StayOpen ? "none" : "auto";
             OpenSilver.Interop.ExecuteJavaScriptVoidAsync(
                 $"document.createPopupRoot('{uid}','{popupRoot.ParentWindow.RootDomElement.UniqueIdentifier}','{sPointerEvents}')");
 
@@ -284,8 +304,7 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
 
             ImageManager.Instance.CreateImage(uid, imgUid, parent.UniqueIdentifier);
 
-            AddToGlobalStore(uid, image);
-            AddToGlobalStore(imgUid, image);
+            AddToGlobalStore(uid, imgUid, image);
 
             return (new(uid), new(imgUid));
         }
@@ -311,26 +330,46 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
                     $@"document.createInkPresenter('{uid}','{canvasUid}',{sParentRef})");
             }
 
-            AddToGlobalStore(uid, inkPresenter);
-            AddToGlobalStore(canvasUid, inkPresenter);
+            AddToGlobalStore(uid, canvasUid, inkPresenter);
 
             return (new(uid), new(canvasUid));
         }
 
-        internal static INTERNAL_HtmlDomElementReference CreateTextElementDomElementAndAppendIt(object parentRef, TextElement textElement)
+        internal static INTERNAL_HtmlDomElementReference CreateInlineDomElementAndAppendIt(object parentRef, TextElement textElement)
         {
             string uniqueIdentifier = NewId();
 
             if (parentRef is INTERNAL_HtmlDomElementReference parent)
             {
                 OpenSilver.Interop.ExecuteJavaScriptVoidAsync(
-                    $"document.createText('{textElement.TagName}','{uniqueIdentifier}','{parent.UniqueIdentifier}')");
+                    $"document.createInline('{textElement.TagName}','{uniqueIdentifier}','{parent.UniqueIdentifier}')");
             }
             else
             {
                 string sParentRef = OpenSilver.Interop.GetVariableStringForJS(parentRef);
                 OpenSilver.Interop.ExecuteJavaScriptVoidAsync(
-                    $"document.createText('{textElement.TagName}','{uniqueIdentifier}',{sParentRef})");
+                    $"document.createInline('{textElement.TagName}','{uniqueIdentifier}',{sParentRef})");
+            }
+
+            AddToGlobalStore(uniqueIdentifier, textElement);
+
+            return new(uniqueIdentifier);
+        }
+
+        internal static INTERNAL_HtmlDomElementReference CreateBlockDomElementAndAppendIt(object parentRef, TextElement textElement)
+        {
+            string uniqueIdentifier = NewId();
+
+            if (parentRef is INTERNAL_HtmlDomElementReference parent)
+            {
+                OpenSilver.Interop.ExecuteJavaScriptVoidAsync(
+                    $"document.createBlock('{textElement.TagName}','{uniqueIdentifier}','{parent.UniqueIdentifier}')");
+            }
+            else
+            {
+                string sParentRef = OpenSilver.Interop.GetVariableStringForJS(parentRef);
+                OpenSilver.Interop.ExecuteJavaScriptVoidAsync(
+                    $"document.createBlock('{textElement.TagName}','{uniqueIdentifier}',{sParentRef})");
             }
 
             AddToGlobalStore(uniqueIdentifier, textElement);
@@ -374,8 +413,7 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
             OpenSilver.Interop.ExecuteJavaScriptVoidAsync(
                 $"document.createShape('{shape.SvgTagName}','{svgUid}','{shapeUid}','{defsUid}','{parent.UniqueIdentifier}')");
 
-            AddToGlobalStore(svgUid, shape);
-            AddToGlobalStore(shapeUid, shape);
+            AddToGlobalStore(svgUid, shapeUid, shape);
 
             return (new(svgUid), new(shapeUid), new(defsUid));
         }
@@ -596,7 +634,7 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
             return OpenSilver.Interop.IsNull(jsObject) || OpenSilver.Interop.IsUndefined(jsObject);
         }
 
-        internal static void ArrangeNative(INTERNAL_HtmlDomStyleReference style, Point offset, Size size, Rect? clip)
+        internal static void ArrangeNative(INTERNAL_HtmlDomStyleReference style, Vector offset, Size size, Rect? clip)
         {
             string left = Math.Round(offset.X, 2).ToInvariantString();
             string top = Math.Round(offset.Y, 2).ToInvariantString();
@@ -626,19 +664,13 @@ namespace CSHTML5.Internal // IMPORTANT: if you change this namespace, make sure
             if (domRef is not null)
             {
                 string sElement = OpenSilver.Interop.GetVariableStringForJS(domRef);
-                string concatenated = OpenSilver.Interop.ExecuteJavaScriptString(
-                    $"(function() {{ var v = {sElement}.getBoundingClientRect(); return v.width.toFixed(3) + '|' + v.height.toFixed(3) }})()");
-                int sepIndex = concatenated != null ? concatenated.IndexOf('|') : -1;
-                if (sepIndex > -1)
-                {
-                    string widthStr = concatenated.Substring(0, sepIndex);
-                    string heightStr = concatenated.Substring(sepIndex + 1);
-                    if (double.TryParse(widthStr, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out double width)
-                        && double.TryParse(heightStr, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out double height))
-                    {
-                        return new Size(width, height);
-                    }
-                }
+
+                double width = OpenSilver.Interop.ExecuteJavaScriptGetResult<double>(
+                    $"Math.round({sElement}.getBoundingClientRect().width * 1000) / 1000");
+                double height = OpenSilver.Interop.ExecuteJavaScriptGetResult<double>(
+                    $"Math.round({sElement}.getBoundingClientRect().height * 1000) / 1000");
+
+                return new Size(width, height);
             }
 
             return new Size();

@@ -18,7 +18,6 @@ using System.Windows.Markup;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
-using CSHTML5.Internals.Controls;
 using OpenSilver.Internal;
 using OpenSilver.Internal.Xaml.Context;
 using OpenSilver.Internal.Controls;
@@ -133,7 +132,12 @@ namespace System.Windows.Controls
             {
                 Template = new TemplateContent(
                     new XamlContext(),
-                    (owner, context) => new StackPanel { TemplatedParent = (DependencyObject)owner }                    
+                    (owner, context) =>
+                    {
+                        var panel = new StackPanel();
+                        panel.SetTemplatedParent(context.TemplateOwnerReference);
+                        return panel;
+                    }                    
                 )
             };
 
@@ -409,10 +413,13 @@ namespace System.Windows.Controls
         #region Internal Properties
 
         /// <summary>
-        /// Returns enumerator to logical children
+        /// Gets an enumerator for the logical child objects of the <see cref="ItemsControl"/> object.
         /// </summary>
-        /*protected*/
-        internal override IEnumerator LogicalChildren
+        /// <returns>
+        /// An enumerator for the logical child objects of the <see cref="ItemsControl"/> object.
+        /// The default is null.
+        /// </returns>
+        protected internal override IEnumerator LogicalChildren
         {
             get
             {
@@ -424,11 +431,29 @@ namespace System.Windows.Controls
                 // Items in direct-mode of ItemCollection are the only model children.
                 // note: the enumerator walks the ItemCollection.InnerList as-is,
                 // no flattening of any content on model children level!
-                return this.Items.LogicalChildren;
+                return Items.LogicalChildren;
             }
         }
 
         internal override FrameworkTemplate TemplateInternal => base.TemplateInternal ?? DefaultTemplate;
+
+        internal sealed override FrameworkTemplate TemplateCache
+        {
+            get { return base.TemplateCache; }
+            set
+            {
+                base.TemplateCache = value;
+
+                // This is a workaround to ensure that resources held by the current ItemsPresenter and
+                // ItemsHost are are released. We put this code here because this cleanup needs to happen
+                // before the previous template is cleared, and we do not have any other method or event
+                // to do this.
+                if (ItemsPresenter.FromPanel(ItemsHost) is ItemsPresenter ip)
+                {
+                    ip.DetachFromOwner();
+                }
+            }
+        }
 
         internal Panel ItemsHost { get; set; }
 
@@ -443,7 +468,12 @@ namespace System.Windows.Controls
                 TargetType = typeof(ItemsControl),
                 Template = new TemplateContent(
                     new XamlContext(),
-                    static (owner, context) => new ItemsPresenter { TemplatedParent = (DependencyObject)owner }
+                    static (owner, context) =>
+                    {
+                        var presenter = new ItemsPresenter();
+                        presenter.SetTemplatedParent(context.TemplateOwnerReference);
+                        return presenter;
+                    }
                 ),
             };
 
@@ -695,8 +725,7 @@ namespace System.Windows.Controls
                 // verify style is appropriate before applying it
                 if (!style.TargetType.IsInstanceOfType(container))
                 {
-                    throw new InvalidOperationException(
-                        $"A style intended for type '{style.TargetType.Name}' cannot be applied to type '{container.GetType().Name}'.");
+                    throw new InvalidOperationException(string.Format(Strings.StyleForWrongType, style.TargetType.Name, container.GetType().Name));
                 }
 
                 feContainer.Style = style;
@@ -800,7 +829,7 @@ namespace System.Windows.Controls
 
             if (this.ItemTemplate != null && !string.IsNullOrWhiteSpace(this.DisplayMemberPath))
             {
-                throw new InvalidOperationException("Cannot set both DisplayMemberPath and ItemTemplate.");
+                throw new InvalidOperationException(Strings.DisplayMemberPathAndItemTemplateDefined);
             }
 
             DataTemplate template = this.SelectTemplate(element, item);
@@ -843,8 +872,8 @@ namespace System.Windows.Controls
                     (control, context) =>
                     {
                         TextBlock textBlock = new TextBlock();
+                        textBlock.SetTemplatedParent(context.TemplateOwnerReference);
                         textBlock.SetBinding(TextBlock.TextProperty, new Binding(displayMemberPath ?? string.Empty));
-                        textBlock.TemplatedParent = (DependencyObject)control;
 
                         return textBlock;
                     }                    

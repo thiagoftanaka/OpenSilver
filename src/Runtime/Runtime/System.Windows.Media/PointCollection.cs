@@ -12,6 +12,7 @@
 \*====================================================================================*/
 
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using OpenSilver.Internal;
 
@@ -21,13 +22,13 @@ namespace System.Windows.Media
     /// Represents a collection of <see cref="Point"/> values that can be individually
     /// accessed by index.
     /// </summary>
+    [TypeConverter(typeof(PointCollectionConverter))]
     public sealed class PointCollection : PresentationFrameworkCollection<Point>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="PointCollection"/> class.
         /// </summary>
         public PointCollection()
-            : base(true)
         {
         }
 
@@ -40,7 +41,7 @@ namespace System.Windows.Media
         /// capable of storing.
         /// </param>
         public PointCollection(int capacity)
-            : base(capacity, true)
+            : base(capacity)
         {
         }
 
@@ -53,7 +54,7 @@ namespace System.Windows.Media
         /// The collection whose items are copied to the new <see cref="PointCollection"/>.
         /// </param>
         public PointCollection(IEnumerable<Point> points)
-            : base(points, true)
+            : base(points)
         {
         }
 
@@ -69,44 +70,58 @@ namespace System.Windows.Media
         /// </returns>
         public static PointCollection Parse(string source)
         {
-            var result = new PointCollection();
+            IFormatProvider formatProvider = CultureInfo.InvariantCulture;
 
-            if (source != null)
+            var th = new TokenizerHelper(source, formatProvider);
+
+            var collection = new PointCollection();
+
+            while (th.NextToken())
             {
-                IFormatProvider formatProvider = CultureInfo.InvariantCulture;
-                char[] separator = new char[2] { TokenizerHelper.GetNumericListSeparator(formatProvider), ' ' };
-                string[] split = source.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+                var value = new Point(
+                    Convert.ToDouble(th.GetCurrentToken(), formatProvider),
+                    Convert.ToDouble(th.NextTokenRequired(), formatProvider));
 
-                // Points count needs to be an even number
-                if (split.Length % 2 == 1)
-                {
-                    throw new FormatException($"'{source}' is not an eligible value for a {typeof(PointCollection)}.");
-                }
-
-                for (int i = 0; i < split.Length; i += 2)
-                {
-                    result.Add(
-                        new Point(
-                            Convert.ToDouble(split[i], formatProvider),
-                            Convert.ToDouble(split[i + 1], formatProvider)
-                        )
-                    );
-                }
+                collection.Add(value);
             }
 
-            return result;
+            return collection;
         }
 
-        internal override void AddOverride(Point point) => AddInternal(point);
+        internal event EventHandler Changed;
 
-        internal override void ClearOverride() => ClearInternal();
+        private void OnChanged() => Changed?.Invoke(this, EventArgs.Empty);
 
-        internal override void RemoveAtOverride(int index) => RemoveAtInternal(index);
+        internal override void AddOverride(Point point)
+        {
+            AddInternal(point);
+            OnChanged();
+        }
 
-        internal override void InsertOverride(int index, Point point) => InsertInternal(index, point);
+        internal override void ClearOverride()
+        {
+            ClearInternal();
+            OnChanged();
+        }
+
+        internal override void RemoveAtOverride(int index)
+        {
+            RemoveAtInternal(index);
+            OnChanged();
+        }
+
+        internal override void InsertOverride(int index, Point point)
+        {
+            InsertInternal(index, point);
+            OnChanged();
+        }
 
         internal override Point GetItemOverride(int index) => GetItemInternal(index);
 
-        internal override void SetItemOverride(int index, Point point) => SetItemInternal(index, point);
+        internal override void SetItemOverride(int index, Point point)
+        {
+            SetItemInternal(index, point);
+            OnChanged();
+        }
     }
 }

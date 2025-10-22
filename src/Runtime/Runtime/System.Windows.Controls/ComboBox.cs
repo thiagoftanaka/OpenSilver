@@ -11,6 +11,7 @@
 *  
 \*====================================================================================*/
 
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls.Primitives;
@@ -146,13 +147,11 @@ namespace System.Windows.Controls
             if (_popup != null)
             {
                 _popup.PlacementTarget = null;
-                _popup.OutsideClick -= new EventHandler<OutsideClickEventArgs>(OnOutsideClick);
+                _popup.OutsideClick -= new EventHandler<CancelEventArgs>(OnOutsideClick);
             }
 
             if (_popupChild != null)
             {
-                if (_popupChild is FrameworkElement fe)
-                    fe.SizeChanged -= new SizeChangedEventHandler(OnPopupChildSizeChanged);
                 _popupChild.KeyDown -= new KeyEventHandler(OnPopupKeyDown);
                 _popupChild.TextInput -= new TextCompositionEventHandler(OnPopupTextInput);
                 _popupChild.GotFocus -= new RoutedEventHandler(OnPopupGotFocus);
@@ -171,21 +170,17 @@ namespace System.Windows.Controls
             if (_popup != null)
             {
                 _popup.MaxHeight = MaxDropDownHeight;
-
-                //todo: once we will have made the following properties (PlacementTarget and Placement) Dependencyproperties, unset it here and set it in the default style.
                 _popup.PlacementTarget = this;
                 _popup.Placement = PlacementMode.Bottom;
                 _popup.StaysWithinScreenBounds = true;
 
                 // Make sure the popup gets closed when the user clicks outside the combo box, and listen to the Closed event in order to update the drop-down toggle:
                 _popup.StayOpen = false;
-                _popup.OutsideClick += new EventHandler<OutsideClickEventArgs>(OnOutsideClick);
+                _popup.OutsideClick += new EventHandler<CancelEventArgs>(OnOutsideClick);
 
                 _popupChild = _popup.Child;
                 if (_popupChild != null)
                 {
-                    if (_popupChild is FrameworkElement fe)
-                        fe.SizeChanged += new SizeChangedEventHandler(OnPopupChildSizeChanged);
                     _popupChild.KeyDown += new KeyEventHandler(OnPopupKeyDown);
                     _popupChild.TextInput += new TextCompositionEventHandler(OnPopupTextInput);
                     _popupChild.GotFocus += new RoutedEventHandler(OnPopupGotFocus);
@@ -527,10 +522,8 @@ namespace System.Windows.Controls
 
         private void OnPopupTextInput(object sender, TextCompositionEventArgs e) => OnTextInput(e);
 
-        private void OnPopupChildSizeChanged(object sender, SizeChangedEventArgs e) => _popup?.Reposition();
-
         private void OnPopupGotFocus(object sender, RoutedEventArgs e) => SetValueInternal(IsSelectionActivePropertyKey, true);
-        
+
         private void OnPopupLostFocus(object sender, RoutedEventArgs e) => SetValueInternal(IsSelectionActivePropertyKey, false);
 
         private void OnDropDownToggleClick(object sender, RoutedEventArgs e)
@@ -542,19 +535,13 @@ namespace System.Windows.Controls
         /// Invoked when the DropDownClosed event is raised.
         /// </summary>
         /// <param name="e">Event data for the event.</param>
-        protected virtual void OnDropDownClosed(EventArgs e)
-        {
-            DropDownClosed?.Invoke(this, e);
-        }
+        protected virtual void OnDropDownClosed(EventArgs e) => DropDownClosed?.Invoke(this, e);
 
         /// <summary>
         /// Invoked when the DropDownOpened event is raised.
         /// </summary>
         /// <param name="e">Event data for the event.</param>
-        protected virtual void OnDropDownOpened(EventArgs e)
-        {
-            DropDownOpened?.Invoke(this, e);
-        }
+        protected virtual void OnDropDownOpened(EventArgs e) => DropDownOpened?.Invoke(this, e);
 
         /// <summary>
         /// Occurs when the drop-down portion of the ComboBox closes.
@@ -584,7 +571,7 @@ namespace System.Windows.Controls
                 nameof(IsDropDownOpen),
                 typeof(bool),
                 typeof(ComboBox),
-                new PropertyMetadata(false, OnIsDropDownOpenChanged, CoerceIsDropDownOpen));
+                new PropertyMetadata(BooleanBoxes.FalseBox, OnIsDropDownOpenChanged, CoerceIsDropDownOpen));
 
         private static void OnIsDropDownOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -722,9 +709,9 @@ namespace System.Windows.Controls
                 typeof(ComboBox),
                 new PropertyMetadata(200d));
 
-        private void OnOutsideClick(object sender, OutsideClickEventArgs e)
+        private void OnOutsideClick(object sender, CancelEventArgs e)
         {
-            e.Handled = true;
+            e.Cancel = true;
 
             IsDropDownOpen = false;
         }
@@ -733,10 +720,7 @@ namespace System.Windows.Controls
         /// Gets a value that indicates whether the user can edit text in the text box
         /// portion of the ComboBox. This property always returns false.
         /// </summary>
-        public bool IsEditable 
-        { 
-            get { return false; } 
-        }
+        public bool IsEditable => false;
 
         /// <summary>
         /// Identifies the <see cref="SelectionBoxItem"/> dependency property.
@@ -795,7 +779,7 @@ namespace System.Windows.Controls
                 nameof(IsSelectionBoxHighlighted),
                 typeof(bool),
                 typeof(ComboBox),
-                new PropertyMetadata(false));
+                new PropertyMetadata(BooleanBoxes.FalseBox));
 
         /// <summary>
         /// Gets a value that indicates whether the SelectionBoxItem component is highlighted.

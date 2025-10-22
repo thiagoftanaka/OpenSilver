@@ -20,6 +20,29 @@ namespace System.Windows
     public class DependencyProperty
     {
         /// <summary>
+        /// Registers a dependency property with the specified property name, property type, and owner type.
+        /// </summary>
+        /// <param name="name">
+        /// The name of the dependency property to register. The name must be unique within the registration 
+        /// namespace of the owner type.
+        /// </param>
+        /// <param name="propertyType">
+        /// The type of the property.
+        /// </param>
+        /// <param name="ownerType">
+        /// The owner type that is registering the dependency property.
+        /// </param>
+        /// <returns>
+        /// A dependency property identifier that should be used to set the value of a public static readonly 
+        /// field in your class. That identifier is then used to reference the dependency property later, for 
+        /// operations such as setting its value programmatically or obtaining metadata.
+        /// </returns>
+        public static DependencyProperty Register(string name, Type propertyType, Type ownerType)
+        {
+            return Register(name, propertyType, ownerType, null);
+        }
+
+        /// <summary>
         /// Registers a dependency property with the specified property name, property type,
         /// owner type, and property metadata for the property.
         /// </summary>
@@ -62,15 +85,31 @@ namespace System.Windows
         }
 
         /// <summary>
-        /// Register a Dependency Property
+        /// Registers a dependency property with the specified property name, property type, owner type, 
+        /// property metadata, and a value validation callback for the property.
         /// </summary>
-        /// <param name="name">Name of property</param>
-        /// <param name="propertyType">Type of the property</param>
-        /// <param name="ownerType">Type that is registering the property</param>
-        /// <param name="typeMetadata">Metadata to use if current type doesn't specify type-specific metadata</param>
-        /// <param name="validateValueCallback">Provides additional value validation outside automatic type validation</param>
-        /// <returns>Dependency Property</returns>
-        internal static DependencyProperty Register(
+        /// <param name="name">
+        /// The name of the dependency property to register.
+        /// </param>
+        /// <param name="propertyType">
+        /// The type of the property.
+        /// </param>
+        /// <param name="ownerType">
+        /// The owner type that is registering the dependency property.
+        /// </param>
+        /// <param name="typeMetadata">
+        /// Property metadata for the dependency property.
+        /// </param>
+        /// <param name="validateValueCallback">
+        /// A reference to a callback that should perform any custom validation of the dependency property 
+        /// value beyond typical type validation.
+        /// </param>
+        /// <returns>
+        /// A dependency property identifier that should be used to set the value of a public static readonly 
+        /// field in your class. That identifier is then used to reference the dependency property later, for 
+        /// operations such as setting its value programmatically or obtaining metadata.
+        /// </returns>
+        public static DependencyProperty Register(
             string name,
             Type propertyType,
             Type ownerType,
@@ -117,7 +156,7 @@ namespace System.Windows
         /// A dependency property key that should be used to set the value of a static read-only
         /// field in your class, which is then used to reference the dependency property.
         /// </returns>
-        internal static DependencyPropertyKey RegisterReadOnly(
+        public static DependencyPropertyKey RegisterReadOnly(
             string name,
             Type propertyType,
             Type ownerType,
@@ -127,11 +166,30 @@ namespace System.Windows
         }
 
         /// <summary>
-        /// Simple registration, metadata, validation, and a read-only property
-        /// key.  Calling this version restricts the property such that it can
-        /// only be set via the corresponding overload of DependencyObject.SetValue.
+        /// Registers a read-only dependency property, with the specified property type, owner type, 
+        /// property metadata, and a validation callback.
         /// </summary>
-        internal static DependencyPropertyKey RegisterReadOnly(
+        /// <param name="name">
+        /// The name of the dependency property to register.
+        /// </param>
+        /// <param name="propertyType">
+        /// The type of the property.
+        /// </param>
+        /// <param name="ownerType">
+        /// The owner type that is registering the dependency property.
+        /// </param>
+        /// <param name="typeMetadata">
+        /// Property metadata for the dependency property.
+        /// </param>
+        /// <param name="validateValueCallback">
+        /// A reference to a user-created callback that should perform any custom validation of the 
+        /// dependency property value beyond typical type validation.
+        /// </param>
+        /// <returns>
+        /// A dependency property key that should be used to set the value of a static read-only field 
+        /// in your class, which is then used to reference the dependency property later.
+        /// </returns>
+        public static DependencyPropertyKey RegisterReadOnly(
             string name,
             Type propertyType,
             Type ownerType,
@@ -201,7 +259,7 @@ namespace System.Windows
         /// A dependency property key that should be used to set the value of a static read-only
         /// field in your class, which is then used to reference the dependency property later.
         /// </returns>
-        internal static DependencyPropertyKey RegisterAttachedReadOnly(
+        public static DependencyPropertyKey RegisterAttachedReadOnly(
             string name,
             Type propertyType,
             Type ownerType,
@@ -234,7 +292,7 @@ namespace System.Windows
         /// A dependency property key that should be used to set the value of a static read-only
         /// field in your class, which is then used to reference the dependency property.
         /// </returns>
-        internal static DependencyPropertyKey RegisterAttachedReadOnly(
+        public static DependencyPropertyKey RegisterAttachedReadOnly(
             string name,
             Type propertyType,
             Type ownerType,
@@ -268,6 +326,28 @@ namespace System.Windows
             authorizedKey.SetDependencyProperty(property);
 
             return authorizedKey;
+        }
+
+        /// <summary>
+        /// Registers an attached property with the specified property name, property type, and owner type.
+        /// </summary>
+        /// <param name="name">
+        /// The name of the dependency property to register.
+        /// </param>
+        /// <param name="propertyType">
+        /// The type of the property.
+        /// </param>
+        /// <param name="ownerType">
+        /// The owner type that is registering the dependency property.
+        /// </param>
+        /// <returns>
+        /// A dependency property identifier that should be used to set the value of a public static readonly 
+        /// field in your class. That identifier is then used to reference the dependency property later, for 
+        /// operations such as setting its value programmatically or obtaining metadata.
+        /// </returns>
+        public static DependencyProperty RegisterAttached(string name, Type propertyType, Type ownerType)
+        {
+            return RegisterAttached(name, propertyType, ownerType, null);
         }
 
         /// <summary>
@@ -330,7 +410,7 @@ namespace System.Windows
         /// the dependency property later, for operations such as setting its value programmatically
         /// or obtaining metadata.
         /// </returns>
-        internal static DependencyProperty RegisterAttached(
+        public static DependencyProperty RegisterAttached(
             string name,
             Type propertyType,
             Type ownerType,
@@ -358,7 +438,7 @@ namespace System.Windows
 
             if (name.Length == 0)
             {
-                throw new ArgumentException("Parameter cannot be a zero-length string.");
+                throw new ArgumentException(Strings.StringEmpty);
             }
 
             if (ownerType == null)
@@ -452,8 +532,7 @@ namespace System.Windows
                 !validateValueCallback(defaultValue))
             {
                 // Didn't work - require the caller to specify one.
-                throw new ArgumentException(
-                    string.Format("Cannot automatically generate a valid default value for property '{0}'. Specify a default value explicitly when owner type '{1}' is registering this DependencyProperty.", name, ownerType.Name));
+                throw new ArgumentException(string.Format(Strings.DefaultValueAutoAssignFailed, name, ownerType.Name));
             }
 
             return new PropertyMetadata(defaultValue);
@@ -494,15 +573,14 @@ namespace System.Windows
             // Ensure default value is the correct type
             if (!IsValidType(defaultValue, propertyType))
             {
-                throw new ArgumentException(
-                    string.Format("Default value type does not match type of property '{0}'.", propertyName));
+                throw new ArgumentException(string.Format(Strings.DefaultValuePropertyTypeMismatch, propertyName));
             }
 
             // An Expression used as default value won't behave as expected since
             //  it doesn't get evaluated.  We explicitly fail it here.
-            if (defaultValue is BindingExpression)
+            if (defaultValue is Expression)
             {
-                throw new ArgumentException("A BindingExpression object is not a valid default value for a DependencyProperty.");
+                throw new ArgumentException(Strings.DefaultValueMayNotBeExpression);
             }
 
             // After checking for correct type, check default value against
@@ -510,8 +588,7 @@ namespace System.Windows
             if (validateValueCallback != null &&
                 !validateValueCallback(defaultValue))
             {
-                throw new ArgumentException(
-                    string.Format("Default value for '{0}' property is not valid because ValidateValueCallback failed.", propertyName));
+                throw new ArgumentException(string.Format(Strings.DefaultValueInvalid, propertyName));
             }
         }
 
@@ -538,12 +615,12 @@ namespace System.Windows
 
             if (typeMetadata.Sealed)
             {
-                throw new ArgumentException("Metadata is already associated with a type and property. A new one must be created.");
+                throw new ArgumentException(Strings.TypeMetadataAlreadyInUse);
             }
 
             if (!typeof(DependencyObject).IsAssignableFrom(forType))
             {
-                throw new ArgumentException(string.Format("'{0}' type must derive from DependencyObject.", forType.Name));
+                throw new ArgumentException(string.Format(Strings.TypeMustBeDependencyObjectDerived, forType.Name));
             }
 
             // Ensure default value is a correct value (if it was supplied,
@@ -556,7 +633,7 @@ namespace System.Windows
             }
 
             // Force all base classes to register their metadata
-            dType = DependencyObjectType.FromSystemType(forType);
+            dType = DependencyObjectType.FromSystemTypeInternal(forType);
 
             // Get metadata for the base type
             baseMetadata = GetMetadata(dType.BaseType);
@@ -565,7 +642,7 @@ namespace System.Windows
             // the base metadata
             if (!baseMetadata.GetType().IsAssignableFrom(typeMetadata.GetType()))
             {
-                throw new ArgumentException("Metadata override and base metadata must be of the same type or derived type.");
+                throw new ArgumentException(Strings.OverridingMetadataDoesNotMatchBaseMetadataType);
             }
         }
 
@@ -592,8 +669,7 @@ namespace System.Windows
             if (ReadOnly)
             {
                 // Readonly and no DependencyPropertyKey - not allowed.
-                throw new InvalidOperationException(
-                    string.Format("'{0}' property was registered as read-only and its metadata cannot be overridden without an authorization key.", Name));
+                throw new InvalidOperationException(string.Format(Strings.ReadOnlyOverrideNotAllowed, Name));
             }
 
             ProcessOverrideMetadata(forType, typeMetadata, dType, baseMetadata);
@@ -615,7 +691,7 @@ namespace System.Windows
         /// <param name="key">
         /// The access key for a read-only dependency property.
         /// </param>
-        internal void OverrideMetadata(Type forType, PropertyMetadata typeMetadata, DependencyPropertyKey key)
+        public void OverrideMetadata(Type forType, PropertyMetadata typeMetadata, DependencyPropertyKey key)
         {
             SetupOverrideMetadata(forType, typeMetadata, out DependencyObjectType dType, out PropertyMetadata baseMetadata);
 
@@ -631,16 +707,14 @@ namespace System.Windows
 
                 if (key.DependencyProperty != this)
                 {
-                    throw new ArgumentException(
-                        string.Format("Property key is not authorized to override metadata of property '{0}'.", Name));
+                    throw new ArgumentException(string.Format(Strings.ReadOnlyOverrideKeyNotAuthorized, Name));
                 }
 
                 VerifyReadOnlyKey(key);
             }
             else
             {
-                throw new InvalidOperationException(
-                    "This method overrides metadata only on read-only properties. This property is not read-only.");
+                throw new InvalidOperationException(Strings.PropertyNotReadOnly);
             }
 
             // Either the property doesn't require a key, or the key match was
@@ -668,7 +742,7 @@ namespace System.Windows
                 }
                 else
                 {
-                    throw new ArgumentException(string.Format("PropertyMetadata is already registered for type '{0}'.", forType.Name));
+                    throw new ArgumentException(string.Format(Strings.TypeMetadataAlreadyRegistered, forType.Name));
                 }
             }
 
@@ -741,7 +815,7 @@ namespace System.Windows
         /// <exception cref="ArgumentNullException">
         /// <paramref name="dependencyObject"/> is null.
         /// </exception>
-        internal PropertyMetadata GetMetadata(DependencyObject dependencyObject)
+        public PropertyMetadata GetMetadata(DependencyObject dependencyObject)
         {
             if (dependencyObject == null)
             {
@@ -761,7 +835,7 @@ namespace System.Windows
         /// <returns>
         /// A property metadata object.
         /// </returns>
-        internal PropertyMetadata GetMetadata(DependencyObjectType dependencyObjectType)
+        public PropertyMetadata GetMetadata(DependencyObjectType dependencyObjectType)
         {
             // All static constructors for this DType and all base types have already
             // been run. If no overriden metadata was provided, then look up base types.
@@ -892,8 +966,7 @@ namespace System.Windows
             {
                 if (PropertyFromName.ContainsKey(key))
                 {
-                    throw new ArgumentException(
-                        string.Format("'{0}' property was already registered by '{1}'.", Name, ownerType.Name));
+                    throw new ArgumentException(string.Format(Strings.PropertyAlreadyRegistered, Name, ownerType.Name));
                 }
             }
 
@@ -909,37 +982,37 @@ namespace System.Windows
 
             return this;
         }
-        
+
         /// <summary>
         /// Gets the name of the <see cref="DependencyProperty"/>.
         /// </summary>
-        internal string Name { get; }
+        public string Name { get; }
 
         /// <summary>
         /// Gets the type that the <see cref="DependencyProperty"/> uses for its value.
         /// </summary>
-        internal Type PropertyType { get; }
+        public Type PropertyType { get; }
 
         /// <summary>
         /// Gets the type of the object that registered the <see cref="DependencyProperty"/> with the
         /// property system, or added itself as owner of the property.
         /// </summary>
-        internal Type OwnerType { get; }
+        public Type OwnerType { get; }
 
         /// <summary>
         /// Gets the default metadata of the <see cref="DependencyProperty"/>.
         /// </summary>
-        internal PropertyMetadata DefaultMetadata { get; }
+        public PropertyMetadata DefaultMetadata { get; }
 
         /// <summary>
         /// Gets the value validation callback for the <see cref="DependencyProperty"/>.
         /// </summary>
-        internal ValidateValueCallback ValidateValueCallback { get; }
+        public ValidateValueCallback ValidateValueCallback { get; }
 
         /// <summary>
         /// Gets an internally generated value that uniquely identifies the <see cref="DependencyProperty"/>.
         /// </summary>
-        internal int GlobalIndex { get; }
+        public int GlobalIndex { get; }
 
         public bool IsAttached
         {
@@ -989,7 +1062,7 @@ namespace System.Windows
         /// true if the specified value is the registered property type or an acceptable
         /// derived type; otherwise, false.
         /// </returns>
-        internal bool IsValidType(object value)
+        public bool IsValidType(object value)
         {
             return IsValidType(value, PropertyType);
         }
@@ -1006,7 +1079,7 @@ namespace System.Windows
         /// true if the value is acceptable and is of the correct type or a derived type;
         /// otherwise, false.
         /// </returns>
-        internal bool IsValidValue(object value)
+        public bool IsValidValue(object value)
         {
             if (!IsValidType(value, PropertyType))
             {
@@ -1029,7 +1102,7 @@ namespace System.Windows
         /// <returns>
         /// true if the dependency property is read-only; otherwise, false.
         /// </returns>
-        internal bool ReadOnly
+        public bool ReadOnly
         {
             get
             {
@@ -1054,7 +1127,7 @@ namespace System.Windows
 
             if (_readOnlyKey != candidateKey)
             {
-                throw new ArgumentException(string.Format("Property key is not authorized to modify property '{0}'.", Name));
+                throw new ArgumentException(string.Format(Strings.ReadOnlyKeyNotAuthorized, Name));
             }
         }
 
@@ -1086,35 +1159,30 @@ namespace System.Windows
         /// <returns>Dependency property</returns>
         internal static DependencyProperty FromName(string name, Type ownerType)
         {
-            DependencyProperty dp = null;
+            DependencyProperty dp;
 
-            if (name == null)
+            if (name is null)
             {
                 throw new ArgumentNullException(nameof(name));
             }
 
-            if (ownerType == null)
+            if (ownerType is null)
             {
                 throw new ArgumentNullException(nameof(ownerType));
             }
 
-            FromNameKey key = new FromNameKey(name, ownerType);
-
-            while ((dp == null) && (ownerType != null))
+            do
             {
                 // Ensure static constructor of type has run
                 RuntimeHelpers.RunClassConstructor(ownerType.TypeHandle);
 
-                // Locate property
-                key.UpdateNameKey(ownerType);
-
                 lock (Synchronized)
                 {
-                    PropertyFromName.TryGetValue(key, out dp);
+                    PropertyFromName.TryGetValue(new FromNameKey(name, ownerType), out dp);
                 }
 
                 ownerType = ownerType.BaseType;
-            }
+            } while (dp is null && ownerType is not null);
 
             return dp;
         }
@@ -1125,6 +1193,21 @@ namespace System.Windows
         public override string ToString()
         {
             return Name;
+        }
+
+        /// <summary>
+        /// Returns a hash code for this <see cref="DependencyProperty"/>.
+        /// </summary>
+        /// <returns>
+        /// The hash code for this <see cref="DependencyProperty"/>.
+        /// </returns>
+        /// <remarks>
+        /// The property system uses its own unique identifier <see cref="GlobalIndex"/>, and the value of 
+        /// that property is returned by <see cref="GetHashCode"/>.
+        /// </remarks>
+        public override int GetHashCode()
+        {
+            return GlobalIndex;
         }
 
         internal static bool IsValidType(object value, Type propertyType)
@@ -1150,49 +1233,22 @@ namespace System.Windows
             return true;
         }
 
-        private sealed class FromNameKey
+        private readonly struct FromNameKey
         {
+            private readonly string _name;
+            private readonly Type _ownerType;
+
             public FromNameKey(string name, Type ownerType)
             {
                 _name = name;
                 _ownerType = ownerType;
-
-                _hashCode = _name.GetHashCode() ^ _ownerType.GetHashCode();
             }
 
-            public void UpdateNameKey(Type ownerType)
-            {
-                _ownerType = ownerType;
+            public override int GetHashCode() => _name.GetHashCode() ^ _ownerType.GetHashCode();
 
-                _hashCode = _name.GetHashCode() ^ _ownerType.GetHashCode();
-            }
+            public override bool Equals(object o) => o is FromNameKey key && Equals(key);
 
-            public override int GetHashCode()
-            {
-                return _hashCode;
-            }
-
-            public override bool Equals(object o)
-            {
-                if (o is FromNameKey key)
-                {
-                    return Equals(key);
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            public bool Equals(FromNameKey key)
-            {
-                return (_name.Equals(key._name) && (_ownerType == key._ownerType));
-            }
-
-            private readonly string _name;
-            private Type _ownerType;
-
-            private int _hashCode;
+            public bool Equals(FromNameKey key) => _name.Equals(key._name) && _ownerType == key._ownerType;
         }
 
         private DependencyProperty(
@@ -1283,7 +1339,7 @@ namespace System.Windows
         private static int GlobalIndexCount;
 
         // Global, cross-object synchronization
-        private static object Synchronized = new object();
+        private static readonly object Synchronized = new object();
 
         // Nullable Type
         private static readonly Type NullableType = typeof(Nullable<>);

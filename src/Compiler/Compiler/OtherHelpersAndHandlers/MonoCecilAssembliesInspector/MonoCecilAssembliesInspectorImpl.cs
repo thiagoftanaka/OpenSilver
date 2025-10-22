@@ -14,6 +14,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Xml.Linq;
@@ -170,7 +171,7 @@ namespace OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspect
             }
         }
 
-        private TypeDefinition FindType(string namespaceName, string localTypeName, string assemblyName = null,
+        internal TypeDefinition FindType(string namespaceName, string typeName, string assemblyName = null,
             bool doNotRaiseExceptionIfNotFound = false)
         {
             // Fix the namespace:
@@ -194,20 +195,18 @@ namespace OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspect
             }
 
             // Handle special cases:
-            if (localTypeName == StaticRes)
+            if (typeName == StaticRes)
             {
-                localTypeName = StaticResExtension;
+                typeName = StaticResExtension;
             }
 
             // Generate string representing the type:
             string fullTypeNameWithNamespaceInsideBraces = !string.IsNullOrEmpty(namespaceName)
-                ? "{" + namespaceName + "}" + localTypeName
-                : localTypeName;
-
-            TypeDefinition type;
+                ? "{" + namespaceName + "}" + typeName
+                : typeName;
 
             // Start by looking in the cache dictionary:
-            if (_typeNameToType.TryGetValue(fullTypeNameWithNamespaceInsideBraces, out type))
+            if (_typeNameToType.TryGetValue(fullTypeNameWithNamespaceInsideBraces, out TypeDefinition type))
             {
                 return type;
             }
@@ -217,7 +216,7 @@ namespace OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspect
             {
                 AssemblyDefinition assembly = asmData.Assembly;
 
-                if (assemblyName != null && assembly.Name.Name != assemblyName)
+                if (assemblyName != null && !string.Equals(assembly.Name.Name, assemblyName, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -236,16 +235,24 @@ namespace OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspect
                 }
 
                 // Search for the type:
-                foreach (string namespaceToLookInto in namespacesToLookInto)
+                foreach (string ns in namespacesToLookInto)
                 {
-                    string fullName = string.IsNullOrEmpty(namespaceToLookInto) ? localTypeName : $"{namespaceToLookInto}.{localTypeName}";
+                    // First, try to get the type from the assembly
+                    type = assembly.MainModule.GetType(ns, typeName);
 
-                    type = assembly.MainModule.Types.FirstOrDefault(x => x.FullName == fullName);
-                    if (type == null)
+                    // If type is not found, look for an exported type (TypeForwardedToAttribute)
+                    if (type is null &&
+                        assembly.MainModule.HasExportedTypes &&
+                        assembly.MainModule.ExportedTypes.FirstOrDefault(x => x.Name == typeName && x.Namespace == ns) is ExportedType exportedType)
                     {
-                        //try to find a matching nested type.
-                        TypeDefinition containerType = assembly.MainModule.Types.FirstOrDefault(x => x.FullName == namespaceToLookInto);
-                        type = containerType?.NestedTypes.FirstOrDefault(x => x.Name == localTypeName);
+                        type = exportedType.Resolve();
+                    }
+
+                    // Finally, try to find a nested type
+                    if (type is null &&
+                        assembly.MainModule.GetType(ns) is TypeDefinition containerType)
+                    {
+                        type = containerType.NestedTypes.FirstOrDefault(x => x.Name == typeName);
                     }
 
                     if (type != null)
@@ -312,7 +319,37 @@ namespace OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspect
             return null;
         }
 
-        private static FieldDefinition FindFieldDeep(TypeDefinition elementType, string propertyName,
+        internal static PropertyDefinition FindPropertyGetterDeep(TypeDefinition type, string name, out TypeReference ownerElementType,
+            bool staticOnly = false, bool publicOnly = false)
+        {
+            ownerElementType = type;
+            while (ownerElementType != null)
+            {
+                var resolved = ownerElementType.ResolveOrThrow();
+                var propertyDefinition = resolved.Properties.FirstOrDefault(p =>
+                {
+                    if (p.Name != name)
+                    {
+                        return false;
+                    }
+
+                    if (p.GetMethod is MethodDefinition getMethod)
+                    {
+                        return (!staticOnly || getMethod.IsStatic) && (!publicOnly || getMethod.IsPublic);
+                    }
+
+                    return false;
+                });
+
+                if (propertyDefinition != null) return propertyDefinition;
+
+                ownerElementType = resolved.BaseType?.PopulateGeneric(type, ownerElementType);
+            }
+
+            return null;
+        }
+
+        internal static FieldDefinition FindFieldDeep(TypeDefinition elementType, string propertyName,
             out TypeReference ownerElementType, bool ignoreCase = false, bool staticOnly = false, bool publicOnly = false)
         {
             ownerElementType = elementType;
@@ -330,13 +367,17 @@ namespace OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspect
             return null;
         }
 
-        private static MethodDefinition FindMethodDeep(TypeDefinition elementType, string methodName, out TypeReference ownerElementType)
+        private static MethodDefinition FindMethodDeep(TypeDefinition elementType,
+            string methodName,
+            bool onlyPublic,
+            bool onlyStatic,
+            out TypeReference ownerElementType)
         {
             ownerElementType = elementType;
             while (ownerElementType != null)
             {
                 var resolved = ownerElementType.ResolveOrThrow();
-                var methodInfo = FindMethod(resolved, methodName);
+                var methodInfo = FindMethod(resolved, methodName, onlyPublic, onlyStatic);
                 if (methodInfo != null)
                 {
                     return methodInfo;
@@ -378,7 +419,7 @@ namespace OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspect
             string assemblyNameIfAny = null)
         {
             var elementType = FindType(namespaceName, localTypeName, assemblyNameIfAny);
-            var methodInfo = FindMethodDeep(elementType, methodName, out var ownerElementType);
+            var methodInfo = FindMethodDeep(elementType, methodName, false, false, out var ownerElementType);
 
             if (methodInfo == null)
             {
@@ -535,6 +576,28 @@ namespace OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspect
             }
         }
 
+        public (MemberTypes Type, MethodDefinition Method, TypeReference DeclaringType) GetAttachedMemberType(
+            string memberName, string ownerTypeNamespace, string ownerTypeName, string ownerTypeAssemblyName)
+        {
+            TypeDefinition ownerType = FindType(ownerTypeNamespace, ownerTypeName, ownerTypeAssemblyName);
+
+            TypeReference declaringType;
+
+            // First try attached property
+            if (FindMethodDeep(ownerType, $"Set{memberName}", true, true, out declaringType) is MethodDefinition setMethod)
+            {
+                return (MemberTypes.Property, setMethod, declaringType);
+            }
+
+            // Then attached event
+            if (FindMethodDeep(ownerType, $"Add{memberName}Handler", true, true, out declaringType) is MethodDefinition addMethod)
+            {
+                return (MemberTypes.Event, addMethod, declaringType);
+            }
+
+            return (MemberTypes.Custom, null, null);
+        }
+
         public void GetPropertyOrFieldTypeInfo(string propertyOrFieldName, string namespaceName, string localTypeName,
             out string propertyNamespaceName, out string propertyLocalTypeName, out string propertyAssemblyName,
             out bool isTypeEnum, string assemblyNameIfAny = null, bool isAttached = false)
@@ -566,9 +629,7 @@ namespace OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspect
 
             var markupExtensionGeneric = FindType(SystemXamlNamespace, GenericMarkupExtension);
 
-            var isAssignableFrom = markupExtensionGeneric.IsAssignableFrom(elementType);
-            var typeIsAMarkupExtension = isAssignableFrom && !elementType.IsString();
-            return typeIsAMarkupExtension;
+            return markupExtensionGeneric.IsAssignableFrom(elementType);
         }
 
         public bool IsTypeAssignableFrom(string nameSpaceOfTypeToAssignFrom, string nameOfTypeToAssignFrom,
@@ -753,26 +814,6 @@ namespace OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspect
             return null;
         }
 
-        public string GetKeyNameOfProperty(string namespaceName, string localTypeName, string assemblyNameIfAny,
-            string propertyName)
-        {
-            var type = FindType(namespaceName, localTypeName, assemblyNameIfAny);
-
-            var property = FindPropertyDeep(type, propertyName, out _);
-            if (property == null) return null;
-
-            // Look for the static dependency property field in the type and its ancestors:
-            var fieldName = propertyName + PropertySuffix;
-            var field = FindFieldDeep(type, fieldName, out _, true, true, true);
-            if (field != null)
-            {
-                string prefix = GetGlobalPrefixFromCompilerType();
-                return prefix + type + "." + fieldName;
-            }
-
-            return null;
-        }
-
         public void GetPropertyOrFieldInfo(string propertyOrFieldName, string namespaceName, string localTypeName,
             out string memberDeclaringTypeName, out string memberTypeNamespace, out string memberTypeName,
             string assemblyNameIfAny = null, bool isAttached = false)
@@ -843,24 +884,33 @@ namespace OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspect
             var type = FindType(namespaceName, enumName, assembly)
                 ?? throw new XamlParseException($"Type '{enumName}' not found in namespace '{namespaceName}'.");
 
+            return GetEnumValue(type, name, ignoreCase, allowIntegerValue);
+        }
+
+        public string GetEnumValue(TypeDefinition enumType, string name, bool ignoreCase, bool allowIntegerValue)
+        {
+            Debug.Assert(enumType is not null && enumType.IsEnum);
+
+            name = name.Trim();
+
             string prefix = GetGlobalPrefixFromCompilerType();
-            var field = FindFieldDeep(type, name, out _, ignoreCase, true, true);
+            var field = FindFieldDeep(enumType, name, out _, ignoreCase, true, true);
 
             if (_compilerType == SupportedLanguage.CSharp)
             {
                 if (field is not null)
                 {
-                    return $"{prefix}{type.ConvertToString(_compilerType)}.{field.Name}";
+                    return $"{prefix}{enumType.ConvertToString(_compilerType)}.{field.Name}";
                 }
                 if (allowIntegerValue)
                 {
                     if (long.TryParse(name, out var l))
                     {
-                        return $"({prefix}{type.ConvertToString(_compilerType)}){l}";
+                        return $"({prefix}{enumType.ConvertToString(_compilerType)}){l}";
                     }
                     if (ulong.TryParse(name, out var ul))
                     {
-                        return $"({prefix}{type.ConvertToString(_compilerType)}){ul}";
+                        return $"({prefix}{enumType.ConvertToString(_compilerType)}){ul}";
                     }
                 }
             }
@@ -868,17 +918,17 @@ namespace OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspect
             {
                 if (field is not null)
                 {
-                    return $"{prefix}{type.ConvertToString(_compilerType)}.{field.Name}";
+                    return $"{prefix}{enumType.ConvertToString(_compilerType)}.{field.Name}";
                 }
                 if (allowIntegerValue)
                 {
                     if (long.TryParse(name, out var l))
                     {
-                        return $"CType({l}, {prefix}{type.ConvertToString(_compilerType)})";
+                        return $"CType({l}, {prefix}{enumType.ConvertToString(_compilerType)})";
                     }
                     if (ulong.TryParse(name, out var ul))
                     {
-                        return $"CType({ul}, {prefix}{type.ConvertToString(_compilerType)})";
+                        return $"CType({ul}, {prefix}{enumType.ConvertToString(_compilerType)})";
                     }
                 }
             }
@@ -886,25 +936,25 @@ namespace OpenSilver.Compiler.OtherHelpersAndHandlers.MonoCecilAssembliesInspect
             {
                 if (field is not null)
                 {
-                    return $"{prefix}{type.ConvertToString(_compilerType)}.{field.Name}";
+                    return $"{prefix}{enumType.ConvertToString(_compilerType)}.{field.Name}";
                 }
 
                 // At F#, Enum works like property
-                var property = FindPropertyDeep(type, name, out _);
+                var property = FindPropertyDeep(enumType, name, out _);
                 if (property is not null)
                 {
-                    return $"{prefix}{type.ConvertToString(_compilerType)}.{property.Name}";
+                    return $"{prefix}{enumType.ConvertToString(_compilerType)}.{property.Name}";
                 }
 
                 if (allowIntegerValue)
                 {
                     if (long.TryParse(name, out var l))
                     {
-                        return $"enum<{prefix}{type.ConvertToString(_compilerType)}> {1}";
+                        return $"enum<{prefix}{enumType.ConvertToString(_compilerType)}> {1}";
                     }
                     if (ulong.TryParse(name, out var ul))
                     {
-                        return $"enum<{prefix}{type.ConvertToString(_compilerType)}> {ul}";
+                        return $"enum<{prefix}{enumType.ConvertToString(_compilerType)}> {ul}";
                     }
                 }
             }

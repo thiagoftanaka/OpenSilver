@@ -14,7 +14,6 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
-using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -136,6 +135,11 @@ internal static class UIElementHelpers
         uie.OuterDiv.Style.padding = CollapseThicknessHelper(padding);
     }
 
+    internal static void SetMargin(this UIElement uie, Thickness margin)
+    {
+        uie.OuterDiv.Style.margin = CollapseThicknessHelper(margin);
+    }
+
     internal static void SetTextAlignment(this UIElement uie, TextAlignment textAlignment)
     {
         uie.OuterDiv.Style.textAlign = FontProperties.ToCssTextAlignment(textAlignment);
@@ -175,7 +179,7 @@ internal static class UIElementHelpers
 
     internal static void SetTextSelection(this UIElement uie, bool enabled)
     {
-        uie.OuterDiv.Style.userSelect = enabled ? "auto" : "none";
+        uie.OuterDiv.Style.userSelect = enabled ? "text" : "none";
     }
 
     internal static void SetInnerText(this UIElement uie, string text)
@@ -186,6 +190,13 @@ internal static class UIElementHelpers
         INTERNAL_HtmlDomManager.SetDomElementProperty(uie.OuterDiv,
             "innerText",
             escapedText);
+    }
+
+    internal static void SetDirection(this UIElement uie, FlowDirection flowDirection)
+    {
+        INTERNAL_HtmlDomManager.SetDomElementAttribute(uie.OuterDiv,
+            "dir",
+            flowDirection == FlowDirection.LeftToRight ? "ltr" : "rtl");
     }
 
     internal static void SetOpacity(this UIElement uie, double opacity)
@@ -248,11 +259,6 @@ internal static class UIElementHelpers
         };
     }
 
-    internal static void SetTransformOrigin(this UIElement uie, Point origin)
-    {
-        uie.OuterDiv.Style.transformOrigin = $"{Math.Round(origin.X * 100, 4).ToInvariantString()}% {Math.Round(origin.Y * 100, 4).ToInvariantString()}%";
-    }
-
     internal static void SetZIndex(this UIElement uie, int value)
     {
         Debug.Assert(uie is not null);
@@ -275,6 +281,46 @@ internal static class UIElementHelpers
     {
         Debug.Assert(uie is not null);
         uie.OuterDiv.Style.borderWidth = CollapseThicknessHelper(width);
+    }
+
+    internal static void SetBorderColor(this UIElement uie, Brush oldBrush, Brush newBrush)
+    {
+        var cssStyle = uie.OuterDiv.Style;
+        switch (oldBrush, newBrush)
+        {
+            case (GradientBrush, SolidColorBrush solid):
+                cssStyle.borderImageSource = string.Empty;
+                cssStyle.borderImageSlice = string.Empty;
+                cssStyle.borderColor = solid.ToHtmlString();
+                break;
+
+            case (_, SolidColorBrush solid):
+                cssStyle.borderColor = solid.ToHtmlString();
+                break;
+
+            case (_, LinearGradientBrush linear):
+                cssStyle.borderColor = string.Empty;
+                cssStyle.borderImageSource = linear.ToHtmlString(uie);
+                cssStyle.borderImageSlice = "1";
+                break;
+
+            case (_, RadialGradientBrush radial):
+                cssStyle.borderColor = string.Empty;
+                cssStyle.borderImageSource = radial.ToHtmlString(uie);
+                cssStyle.borderImageSlice = "1";
+                break;
+
+            case (_, null):
+                cssStyle.borderColor = "transparent";
+                cssStyle.borderImageSource = string.Empty;
+                cssStyle.borderImageSlice = string.Empty;
+                break;
+
+            default:
+                // ImageBrush and custom brushes are not supported.
+                // Keep using old brush.
+                break;
+        }
     }
 
     internal static void SetClipPath(this UIElement uie, Geometry geometry)

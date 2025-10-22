@@ -340,7 +340,7 @@ namespace System.Windows
         /// <param name="dp">
         /// The dependency property to which this metadata is being applied.
         /// </param>
-        internal virtual void Merge(PropertyMetadata baseMetadata, DependencyProperty dp)
+        protected virtual void Merge(PropertyMetadata baseMetadata, DependencyProperty dp)
         {
             if (baseMetadata == null)
             {
@@ -379,7 +379,7 @@ namespace System.Windows
             }
 
             _coerceValueCallback ??= baseMetadata.CoerceValueCallback;
-            
+
             _methodToUpdateDom ??= baseMetadata.MethodToUpdateDom;
             _methodToUpdateDom2 ??= baseMetadata.MethodToUpdateDom2;
         }
@@ -400,7 +400,7 @@ namespace System.Windows
         /// The type associated with this metadata if this is type-specific metadata. If
         /// this is default metadata, this value is a null reference.
         /// </param>
-        internal virtual void OnApply(DependencyProperty dp, Type targetType)
+        protected virtual void OnApply(DependencyProperty dp, Type targetType)
         {
         }
 
@@ -457,15 +457,17 @@ namespace System.Windows
             // Unused                                    = 0x00000004,
             // Unused                                    = 0x00000008,
             Inherited = 0x00000010,
-            // Unused                                    = 0x00000020,
+
+            UI_IsAnimationProhibitedID = 0x00000020,
+
             FW_AffectsMeasureID = 0x00000040,
             FW_AffectsArrangeID = 0x00000080,
             FW_AffectsParentMeasureID = 0x00000100,
             FW_AffectsParentArrangeID = 0x00000200,
             FW_AffectsRenderID = 0x00000400,
             // Unused                                    = 0x00000800,
-            // Unused                                    = 0x00001000,
-            // Unused                                    = 0x00002000,
+            FW_IsNotDataBindableID = 0x00001000,
+            FW_BindsTwoWayByDefaultID = 0x00002000,
             // Unused                                    = 0x00004000,
             // Unused                                    = 0x00008000,
             // Unused                                    = 0x00010000,
@@ -478,12 +480,12 @@ namespace System.Windows
             // Unused                                    = 0x00800000,
             // Unused                                    = 0x01000000,
             // Unused                                    = 0x02000000,
-            // Unused                                    = 0x04000000,
+            FW_DefaultUpdateSourceTriggerModifiedID = 0x04000000,
             FW_ReadOnlyID = 0x08000000,
             // Unused                                    = 0x10000000,
             // Unused                                    = 0x20000000,
-            // Unused                                    = 0x40000000,
-            // Unused                                    = 0x80000000,
+            FW_DefaultUpdateSourceTriggerEnumBit1 = 0x40000000, // Must match constants used in FrameworkPropertyMetadata
+            FW_DefaultUpdateSourceTriggerEnumBit2 = 0x80000000, // Must match constants used in FrameworkPropertyMetadata
         }
 
 
@@ -523,7 +525,7 @@ namespace System.Windows
         {
             if (Sealed)
             {
-                throw new InvalidOperationException("Cannot change property metadata after it has been associated with a property.");
+                throw new InvalidOperationException(Strings.TypeMetadataCannotChangeAfterUse);
             }
         }
 
@@ -548,7 +550,7 @@ namespace System.Windows
             set
             {
                 CheckSealed();
-                
+
                 IsInherited = value;
                 SetModified(MetadataFlags.FW_InheritsModifiedID);
             }
