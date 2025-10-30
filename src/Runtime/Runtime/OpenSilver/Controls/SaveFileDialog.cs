@@ -509,7 +509,7 @@ public sealed class SaveFileDialog
                 await Task.Delay(1);
 
                 i += bytesToWrite;
-            } while (i < bytes.Length - 1);
+            } while (i < length - offset);
         }
 
         private async void Close()
