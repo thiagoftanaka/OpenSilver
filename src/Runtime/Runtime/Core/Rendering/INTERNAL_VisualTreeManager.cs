@@ -373,13 +373,10 @@ namespace CSHTML5.Internal
                                 valueWasRetrieved = true;
                             }
 
-                            if (value?.Equals(metadata.DefaultValue) == false)
-                            {
-                                // Raise the "PropertyChanged" event
-                                metadata.PropertyChangedCallback(
-                                uie,
-                                new DependencyPropertyChangedEventArgs(value, value, dp, metadata));
-                            }
+                            // Raise the "PropertyChanged" event
+                            metadata.PropertyChangedCallback(
+                            uie,
+                            new DependencyPropertyChangedEventArgs(value, value, dp, metadata));
                         }
                     }
                 }
