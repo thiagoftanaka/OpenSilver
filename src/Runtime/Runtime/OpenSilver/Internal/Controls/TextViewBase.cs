@@ -23,7 +23,8 @@ namespace OpenSilver.Internal.Controls;
 
 internal abstract partial class TextViewBase : FrameworkElement
 {
-    static TextViewBase()
+    private static bool _initialized = false;
+    private static void Initialize()
     {
         TextElement.CharacterSpacingProperty.AddOwner(
             typeof(TextViewBase),
@@ -87,6 +88,12 @@ internal abstract partial class TextViewBase : FrameworkElement
 
     internal TextViewBase(UIElement host)
     {
+        if (!_initialized)
+        {
+            Initialize();
+            _initialized = true;
+        }
+
         Debug.Assert(host is TextBox || host is PasswordBox || host is RichTextBox);
 
         Host = host ?? throw new ArgumentNullException(nameof(host));
