@@ -11,6 +11,8 @@
 *  
 \*====================================================================================*/
 
+using System.Windows.Input;
+
 namespace System.Windows;
 
 internal readonly struct RoutedEventHandlerInfo
@@ -45,6 +47,12 @@ internal readonly struct RoutedEventHandlerInfo
     // invocation preferences
     internal void InvokeHandler(object target, RoutedEventArgs routedEventArgs)
     {
+        if ((routedEventArgs.RoutedEvent.Name == "KeyDown" || routedEventArgs.RoutedEvent.Name == "KeyUp") &&
+            FocusManager.GetFocusedElement()?.GetType().Name == "RadRichTextBoxView" &&
+            target?.GetType().Name != "RadRichTextBoxView")
+        {
+            return;
+        }
         if (!routedEventArgs.Handled || InvokeHandledEventsToo)
         {
             if (Handler is RoutedEventHandler handler)
