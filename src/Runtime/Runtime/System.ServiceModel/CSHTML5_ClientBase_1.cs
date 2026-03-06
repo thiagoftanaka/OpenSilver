@@ -77,10 +77,12 @@ namespace System.ServiceModel
     public abstract partial class CSHTML5_ClientBase<TChannel> /*: ICommunicationObject, IDisposable*/ where TChannel : class
     {
         //Note: Adding this because they are in the file generated when adding a Service Reference through the "Add Connected Service" for OpenSilver.
-        public ServiceEndpoint Endpoint { get; } = new ServiceEndpoint(new ContractDescription("none"));
+        public ServiceEndpoint Endpoint => ChannelFactory.Endpoint;
         public ClientCredentials ClientCredentials { get; } = new ClientCredentials();
 
         public TChannel Channel { get; }
+
+        public ChannelFactory<TChannel> ChannelFactory { get; set; }
 
         /// <summary>
         /// Provides support for implementing the event-based asynchronous pattern.
@@ -271,7 +273,7 @@ namespace System.ServiceModel
 
             INTERNAL_RemoteAddressAsString = remoteAddress.Uri.OriginalString;
 
-            //todo: finish the implementation.
+            ChannelFactory = new ChannelFactory<TChannel>(binding, remoteAddress);
         }
 
         /// <summary>
@@ -931,6 +933,8 @@ namespace System.ServiceModel
             {
                 headers = [];
 
+                string soapAction = operation.Messages[0].Action;
+
                 var bodyBuilder = new StringBuilder();
                 using (var xmlWriter = XmlDictionaryWriter.CreateDictionaryWriter(XmlWriter.Create(bodyBuilder, new XmlWriterSettings { OmitXmlDeclaration = true })))
                 {
@@ -952,8 +956,18 @@ namespace System.ServiceModel
                             foreach (MessagePartDescription part in messageDescription.Body.Parts)
                             {
                                 var requestBody = requestParameters[part.Name];
-                                var serializer = new DataContractSerializer(part.Type, part.Name, part.Namespace, types);
-                                serializer.WriteObject(xmlWriter, requestBody);
+                                if (requestBody is Message message)
+                                {
+                                    message.WriteBodyContents(xmlWriter);
+
+                                    soapAction = message.Headers.Action;
+                                }
+                                else
+                                {
+                                    var serializer = new DataContractSerializer(part.Type, part.Name, part.Namespace, types);
+
+                                    serializer.WriteObject(xmlWriter, requestBody);
+                                }
                             }
                         }
                         else
@@ -979,9 +993,6 @@ namespace System.ServiceModel
                 }
 
                 string elementAsString = bodyBuilder.ToString();
-
-                // Look for the soapAction.
-                string soapAction = operation.Messages[0].Action;
 
                 switch (soapVersion)
                 {
@@ -1124,14 +1135,17 @@ namespace System.ServiceModel
                 }
 
                 string ns;
+                MessageVersion messageVersion;
                 if (soapVersion == "1.1")
                 {
                     ns = MessageStrings.SOAP11.Namespace;
+                    messageVersion = MessageVersion.Soap11;
                 }
                 else
                 {
                     Debug.Assert(soapVersion == "1.2", $"Unexpected soap version ({soapVersion}) !");
                     ns = MessageStrings.SOAP12.Namespace;
+                    messageVersion = MessageVersion.Soap12;
                 }
 
                 var envelopeElement = DataContractSerializerCustom.ParseToXDocument(responseAsString).Root;
@@ -1158,6 +1172,11 @@ namespace System.ServiceModel
                 if (operation.IsOneWay)
                 {
                     return (null, null);
+                }
+
+                if (requestResponseType == typeof(Message))
+                {
+                    return (Message.CreateMessage(messageVersion, operation.Messages[1].Action, bodyElement), null);
                 }
 
                 object result = ReadResponseReferenceType(
