@@ -26,6 +26,8 @@ namespace System
     {
         object _xmlHttpRequest;
 
+        private const string ArrayBufferResponseType = "arraybuffer";
+
         /// <summary>
         /// Occurs when the string download is completed.
         /// </summary>
@@ -43,7 +45,7 @@ namespace System
         string _Method;
         static object _sender;
         Dictionary<string, string> _headers;
-        string _body;
+        object _body;
         bool _isAsync;
         INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventHandler _callback;
         static INTERNAL_WebRequestHelper_JSOnly _requester;
@@ -68,7 +70,7 @@ namespace System
             string Method, 
             object sender, 
             Dictionary<string, string> headers, 
-            string body, 
+            object body, 
             INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventHandler callbackMethod, 
             bool isAsync, 
             CredentialsMode mode = CredentialsMode.Disabled)
@@ -80,7 +82,7 @@ namespace System
                 Debug.WriteLine(string.Format("CSHTML5.Internal.WebRequestsHelper.MakeRequest({0}, {1}, {2}, {3}, {4});",
                     EscapeStringAndSurroundWithQuotes(address.ToString()),
                     EscapeStringAndSurroundWithQuotes(Method),
-                    EscapeStringAndSurroundWithQuotes(body),
+                    EscapeStringAndSurroundWithQuotes(body?.ToString()),
                     headersCode,
                     "false"
                     ));
@@ -133,7 +135,11 @@ namespace System
                 }
             }
 
-            if (askForUnsafeRequest) // if the settings of the request are still unsafe
+            if (body is byte[] bytes)
+            {
+                SendJavaScriptBinaryXmlHttpRequest(_xmlHttpRequest, bytes);
+            }
+            else if (askForUnsafeRequest) // if the settings of the request are still unsafe
             {
                 // handle special errors especially crash in pre flight, that GetHasError doesn't catch
                 SetErrorCallback((object)_xmlHttpRequest, OnError);
@@ -142,7 +148,7 @@ namespace System
                 SaveParameters(address, Method, sender, headers, callbackMethod, body, isAsync);
 
                 // safe request, will resend the request with different settings if it crashes.
-                return SendUnsafeRequest((object)_xmlHttpRequest, address.OriginalString, Method, isAsync, body);
+                return SendUnsafeRequest(address.OriginalString, Method, isAsync, body);
             }
             else
             {
@@ -183,7 +189,7 @@ namespace System
 
         // special version of sendRequest, it handles some errors and modifies the credentials mode if needed
         // return directly the result of the right response
-        private string SendUnsafeRequest(object xmlHttpRequest, string address, string method, bool isAsync, string body)
+        private string SendUnsafeRequest(string address, string method, bool isAsync, object body)
         {
             ConsoleLog_JSOnly("CredentialsMode is set to Auto: if a preflight error appears below, please ignore it.");
 
@@ -278,7 +284,7 @@ namespace System
             object sender, 
             Dictionary<string, string> headers, 
             INTERNAL_WebRequestHelper_JSOnly_RequestCompletedEventHandler callback, 
-            string body, 
+            object body, 
             bool isAsync)
         {
             _address = address;
@@ -343,11 +349,23 @@ namespace System
             OpenSilver.Interop.ExecuteJavaScriptVoid($"console.log({OpenSilver.Interop.GetVariableStringForJS(message)})");
         }
 
-        internal static void SendRequest(object xmlHttpRequest, string address, string method, bool isAsync, string body)
+        internal static void SendRequest(object xmlHttpRequest, string address, string method, bool isAsync, object body)
         {
             string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
             string sBody = OpenSilver.Interop.GetVariableStringForJS(body);
             OpenSilver.Interop.ExecuteJavaScriptVoid($"{sRequest}.send({sBody})");
+        }
+
+        internal static void SendJavaScriptBinaryXmlHttpRequest(object xmlHttpRequest, byte[] body)
+        {
+            string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
+            string sBody = OpenSilver.Interop.GetVariableStringForJS(Convert.ToBase64String(body));
+            // Converting base64 string to ArrayBuffer to send
+            OpenSilver.Interop.ExecuteJavaScriptVoid($@"{sRequest}.responseType = '{ArrayBufferResponseType}';
+                var binaryString = atob({sBody});
+                var bufView = new Uint8Array(binaryString.length);
+                for (var i = 0; i < binaryString.length; i++) bufView[i] = binaryString.charCodeAt(i);
+                {sRequest}.send(bufView.buffer);");
         }
 
         private void OnDownloadStringCompleted()
@@ -414,11 +432,18 @@ namespace System
             string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
             return OpenSilver.Interop.ExecuteJavaScriptString($"{sRequest}.statusText");
         }
-
+         
         private static string GetResult(object xmlHttpRequest)
         {
             string sRequest = OpenSilver.Interop.GetVariableStringForJS(xmlHttpRequest);
-            return OpenSilver.Interop.ExecuteJavaScriptString($"{sRequest}.responseText");
+            return OpenSilver.Interop.ExecuteJavaScriptString($@"if ({sRequest}.responseType === '{ArrayBufferResponseType}') {{
+                    const bufView = new Uint8Array({sRequest}.response);
+                    var binaryString = '';
+                    for (let i = 0; i < bufView.byteLength; i++) binaryString += String.fromCharCode(bufView[i]);
+                    btoa(binaryString);
+                }} else {{
+                    {sRequest}.responseText;
+                }}");
         }
 
         private static bool GetHasError(object xmlHttpRequest)
